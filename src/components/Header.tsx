@@ -66,7 +66,7 @@ export function Header() {
   // Global Search State
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [lastFetchedYear, setLastFetchedYear] = useState('');
 
@@ -142,8 +142,6 @@ export function Header() {
         const rollStr = (s.roll || '').toString();
         const idStr = (s.generatedId || '').toLowerCase();
         
-        // Logic: Exact match for roll and ID to avoid showing roll 10 when searching for 1.
-        // Names still use partial matching (includes).
         const matchesName = nameBn.includes(q) || nameEn.includes(q);
         const matchesRoll = rollStr === qEn;
         const matchesId = idStr === qEn;
@@ -368,7 +366,7 @@ export function Header() {
                                             onClick={() => {
                                                 setSearchOpen(false);
                                                 setSearchQuery('');
-                                                router.push(`/student-list`); 
+                                                router.push(`/student-list?class=${s.className}&studentId=${s.id}`); 
                                             }}
                                         >
                                             <div className="flex items-center gap-3">

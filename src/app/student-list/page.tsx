@@ -10,6 +10,7 @@ import { deleteStudent, Student, studentFromDoc } from '@/lib/student-data';
 import { Eye, FilePen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,13 +39,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
 
 export default function StudentListPage() {
+  const searchParams = useSearchParams();
+  const targetClass = searchParams.get('class');
+  const targetStudentId = searchParams.get('studentId');
+
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { selectedYear } = useAcademicYear();
   const [studentToView, setStudentToView] = useState<Student | null>(null);
+  const [activeTab, setActiveTab] = useState('6');
   const db = useFirestore();
   const [isClient, setIsClient] = useState(false);
   const { user, hasPermission } = useAuth();
@@ -53,6 +60,12 @@ export default function StudentListPage() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (targetClass) {
+        setActiveTab(targetClass);
+    }
+  }, [targetClass]);
 
   useEffect(() => {
     if (!db || !user) return;
@@ -78,6 +91,19 @@ export default function StudentListPage() {
 
     return () => unsubscribe();
   }, [db, user]);
+
+  // Scroll to targeted student
+  useEffect(() => {
+    if (targetStudentId && !isLoading) {
+        const timer = setTimeout(() => {
+            const element = document.getElementById(`student-row-${targetStudentId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }
+  }, [targetStudentId, isLoading, activeTab]);
 
   const studentsForYear = useMemo(() => {
     return allStudents.filter(student => student.academicYear === selectedYear);
@@ -132,7 +158,7 @@ export default function StudentListPage() {
           </CardHeader>
           <CardContent>
              {isClient ? (
-                <Tabs defaultValue="6">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="grid w-full grid-cols-5">
                     {classes.map((className) => (
                       <TabsTrigger key={className} value={className}>
@@ -173,7 +199,14 @@ export default function StudentListPage() {
                                    </TableRow>
                                 ) : (
                                   getStudentsByClass(className).map((student, index) => (
-                                  <TableRow key={student.id}>
+                                  <TableRow 
+                                    key={student.id} 
+                                    id={`student-row-${student.id}`}
+                                    className={cn(
+                                        "transition-colors duration-1000",
+                                        student.id === targetStudentId && "bg-yellow-100 ring-2 ring-yellow-400 z-10"
+                                    )}
+                                  >
                                     <TableCell>{(index + 1).toLocaleString('bn-BD')}</TableCell>
                                     <TableCell>
                                       <Image
@@ -186,7 +219,7 @@ export default function StudentListPage() {
                                     </TableCell>
                                     <TableCell>{student.roll.toLocaleString('bn-BD')}</TableCell>
                                     <TableCell>{student.generatedId || '-'}</TableCell>
-                                    <TableCell className="whitespace-nowrap">{student.studentNameBn}</TableCell>
+                                    <TableCell className="whitespace-nowrap font-bold">{student.studentNameBn}</TableCell>
                                     <TableCell className="whitespace-nowrap">{student.fatherNameBn}</TableCell>
                                     <TableCell>
                                       <div className="flex flex-col whitespace-nowrap">
