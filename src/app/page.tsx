@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, Sparkles, Loader2, FileText, Upload } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2 } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -41,7 +40,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { generateNotice } from '@/ai/flows/generate-notice-flow';
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
@@ -71,11 +69,9 @@ const NoticeBoard = () => {
     const [notices, setNotices] = useState<Notice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
     const isAdmin = user?.role === 'admin';
 
-    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'], pdfUrl: '' });
-    const [uploadingPdf, setUploadingPdf] = useState(false);
+    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'] });
 
     const fetchNotices = useCallback(async () => {
         if (!db || !user) return;
@@ -95,34 +91,6 @@ const NoticeBoard = () => {
         }
     }, [user, fetchNotices]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (file.type !== 'application/pdf') {
-            toast({ variant: 'destructive', title: 'ভুল ফাইল ফরম্যাট', description: 'শুধুমাত্র পিডিএফ ফাইল আপলোড করুন।' });
-            return;
-        }
-
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit
-            toast({ variant: 'destructive', title: 'ফাইল সাইজ অনেক বড়', description: '২ মেগাবাইটের কম সাইজের পিডিএফ আপলোড করুন।' });
-            return;
-        }
-
-        setUploadingPdf(true);
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            setNewNotice(prev => ({ ...prev, pdfUrl: event.target?.result as string }));
-            setUploadingPdf(false);
-            toast({ title: 'পিডিএফ ফাইল যুক্ত হয়েছে' });
-        };
-        reader.onerror = () => {
-            setUploadingPdf(false);
-            toast({ variant: 'destructive', title: 'ফাইল পড়তে সমস্যা হয়েছে' });
-        };
-        reader.readAsDataURL(file);
-    };
-
     const handleAddNotice = async () => {
         if (!db || !user) return;
         if (!newNotice.title || !newNotice.content) {
@@ -137,38 +105,13 @@ const NoticeBoard = () => {
                 title: newNotice.title,
                 content: newNotice.content,
                 priority: newNotice.priority,
-                pdfUrl: newNotice.pdfUrl || undefined,
                 senderName: senderName
             });
             toast({ title: 'নোটিশ প্রকাশিত হয়েছে' });
             setIsAddOpen(false);
-            setNewNotice({ title: '', content: '', priority: 'normal', pdfUrl: '' });
+            setNewNotice({ title: '', content: '', priority: 'normal' });
             fetchNotices();
         } catch (e) {}
-    };
-
-    const handleAIGenerate = async () => {
-        if (!newNotice.title) {
-            toast({ variant: 'destructive', title: 'শিরোনাম লিখুন', description: 'এআই দিয়ে জেনারেট করতে প্রথমে একটি সংক্ষিপ্ত শিরোনাম বা বিষয় লিখুন।' });
-            return;
-        }
-        setIsGenerating(true);
-        try {
-            const result = await generateNotice({ topic: newNotice.title });
-            if (result) {
-                setNewNotice(prev => ({
-                    ...prev,
-                    title: result.title,
-                    content: result.content
-                }));
-                toast({ title: 'নোটিশ তৈরি হয়েছে' });
-            }
-        } catch (e) {
-            console.error("AI Generation Error:", e);
-            toast({ variant: 'destructive', title: 'এআই কাজ করছে না', description: 'সার্ভারে সমস্যা অথবা API Key সেটিংস চেক করুন।' });
-        } finally {
-            setIsGenerating(false);
-        }
     };
 
     const handleDelete = async (id: string) => {
@@ -178,13 +121,6 @@ const NoticeBoard = () => {
             toast({ title: 'নোটিশ মুছে ফেলা হয়েছে' });
             fetchNotices();
         } catch (e) {}
-    };
-
-    const openPdf = (url: string) => {
-        const win = window.open();
-        if (win) {
-            win.document.write(`<iframe src="${url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-        }
     };
 
     return (
@@ -203,19 +139,7 @@ const NoticeBoard = () => {
                             <DialogHeader><DialogTitle>নতুন নোটিশ তৈরি করুন</DialogTitle></DialogHeader>
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label>শিরোনাম / বিষয়</Label>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="h-7 text-xs text-primary bg-primary/5 hover:bg-primary/10"
-                                            onClick={handleAIGenerate}
-                                            disabled={isGenerating}
-                                        >
-                                            {isGenerating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                                            AI দিয়ে লিখুন
-                                        </Button>
-                                    </div>
+                                    <Label>শিরোনাম / বিষয়</Label>
                                     <Input 
                                         placeholder="উদা: শীতকালীন ছুটি সংক্রান্ত"
                                         value={newNotice.title} 
@@ -242,21 +166,10 @@ const NoticeBoard = () => {
                                         className="min-h-[150px]" 
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>পিডিএফ ফাইল (ঐচ্ছিক)</Label>
-                                    <div className="flex items-center gap-4">
-                                        <Button variant="outline" type="button" onClick={() => document.getElementById('pdf-upload')?.click()} className="w-full border-dashed" disabled={uploadingPdf}>
-                                            {uploadingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                                            {newNotice.pdfUrl ? 'ফাইল পরিবর্তন করুন' : 'পিডিএফ আপলোড করুন'}
-                                        </Button>
-                                        <input id="pdf-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
-                                        {newNotice.pdfUrl && <Badge variant="secondary" className="whitespace-nowrap"><FileText className="mr-1 h-3 w-3" /> ফাইল যুক্ত হয়েছে</Badge>}
-                                    </div>
-                                </div>
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild><Button variant="ghost">বাতিল</Button></DialogClose>
-                                <Button onClick={handleAddNotice} disabled={uploadingPdf || isGenerating}>প্রকাশ করুন</Button>
+                                <Button onClick={handleAddNotice}>প্রকাশ করুন</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -298,17 +211,6 @@ const NoticeBoard = () => {
                                 </div>
                                 <p className="text-xs text-muted-foreground mb-3 whitespace-pre-wrap leading-relaxed text-justify">{notice.content}</p>
                                 
-                                {notice.pdfUrl && (
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-7 text-[10px] w-full mb-3 bg-white hover:bg-primary hover:text-white transition-colors"
-                                        onClick={() => openPdf(notice.pdfUrl!)}
-                                    >
-                                        <FileText className="mr-1 h-3 w-3" /> পিডিএফ দেখুন
-                                    </Button>
-                                )}
-
                                 <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold border-t border-dashed pt-2">
                                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(notice.date, 'dd MMM p', { locale: bn })}</span>
                                     <span>{notice.senderName === 'dlswf.roy@gmail.com' ? 'প্রধান শিক্ষক' : notice.senderName}</span>
