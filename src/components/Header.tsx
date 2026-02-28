@@ -159,7 +159,7 @@ export function Header() {
               <ArrowLeft className="h-6 w-6" />
               <span className="sr-only">Go back</span>
             </Button>
-            {isClient ? (
+            {isClient && (
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">
@@ -169,8 +169,8 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="left" className="flex flex-col p-0">
                 <SheetHeader className="p-4 border-b bg-red-100">
-                    <SheetTitle className="sr-only"></SheetTitle>
-                    <SheetDescription className="sr-only"></SheetDescription>
+                    <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                    <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
                   <Link
                     href="/"
                     className="flex items-center gap-2 text-lg font-semibold text-foreground"
@@ -183,7 +183,7 @@ export function Header() {
                 </SheetHeader>
                 <div className="p-4 border-b bg-blue-100">
                     <Label htmlFor="academic-year-select" className="text-sm font-medium text-muted-foreground">শিক্ষাবর্ষ</Label>
-                     {isClient && availableYears.length > 0 ? (
+                     {availableYears.length > 0 ? (
                         <Select value={selectedYear} onValueChange={setSelectedYear}>
                             <SelectTrigger id="academic-year-select" className="mt-1">
                                 <SelectValue placeholder="" />
@@ -316,11 +316,6 @@ export function Header() {
                 </div>
               </SheetContent>
             </Sheet>
-            ) : (
-              <Button variant="ghost" size="icon" className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100" disabled>
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
             )}
           </>
         )}

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { deleteStudent, Student, studentFromDoc } from '@/lib/student-data';
 import { Eye, FilePen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   AlertDialog,
@@ -41,7 +41,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-export default function StudentListPage() {
+function StudentListContent() {
   const searchParams = useSearchParams();
   const targetClass = searchParams.get('class');
   const targetStudentId = searchParams.get('studentId');
@@ -53,13 +53,8 @@ export default function StudentListPage() {
   const [studentToView, setStudentToView] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState('6');
   const db = useFirestore();
-  const [isClient, setIsClient] = useState(false);
   const { user, hasPermission } = useAuth();
   const canManageStudents = hasPermission('manage:students');
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
     if (targetClass) {
@@ -147,7 +142,7 @@ export default function StudentListPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <CardTitle>শিক্ষার্থীদের তালিকা</CardTitle>
-                {isClient && <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
+                <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
               </div>
               {canManageStudents && (
                 <Link href="/add-student">
@@ -157,7 +152,6 @@ export default function StudentListPage() {
             </div>
           </CardHeader>
           <CardContent>
-             {isClient ? (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="grid w-full grid-cols-5">
                     {classes.map((className) => (
@@ -277,53 +271,6 @@ export default function StudentListPage() {
                     </TabsContent>
                   ))}
                 </Tabs>
-             ) : (
-                <div>
-                <div className="grid w-full grid-cols-5 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex justify-center"><Skeleton className="h-8 w-[80%]" /></div>
-                  ))}
-                </div>
-                <div className="border rounded-md">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ক্রমিক নং</TableHead>
-                          <TableHead>ছবি</TableHead>
-                          <TableHead>রোল</TableHead>
-                          <TableHead>আইডি</TableHead>
-                          <TableHead>শিক্ষার্থীর নাম</TableHead>
-                          <TableHead>পিতার নাম</TableHead>
-                          <TableHead>মোবাইল নম্বর</TableHead>
-                          <TableHead className="text-right">কার্যক্রম</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {[...Array(5)].map((_, i) => (
-                          <TableRow key={i}>
-                            <TableCell><Skeleton className="h-6 w-10" /></TableCell>
-                            <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-10" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Skeleton className="h-9 w-9" />
-                                <Skeleton className="h-9 w-9" />
-                                <Skeleton className="h-9 w-9" />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </div>
-             )}
           </CardContent>
         </Card>
       </main>
@@ -418,5 +365,17 @@ export default function StudentListPage() {
         </DialogContent>
     </Dialog>
     </>
+  );
+}
+
+export default function StudentListPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen w-full flex-col bg-rose-100 items-center justify-center">
+        <p>লোড হচ্ছে...</p>
+      </div>
+    }>
+      <StudentListContent />
+    </Suspense>
   );
 }
