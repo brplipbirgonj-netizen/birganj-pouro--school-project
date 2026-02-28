@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useAuth as useFirebaseRootAuth } from '@/firebase';
 import { collection, onSnapshot, query, where, FirestoreError } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -76,7 +76,7 @@ const NoticeBoard = () => {
     const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'], pdfUrl: '' });
     const [uploadingPdf, setUploadingPdf] = useState(false);
 
-    const fetchNotices = async () => {
+    const fetchNotices = useCallback(async () => {
         if (!db || !user) return;
         setIsLoading(true);
         try {
@@ -86,13 +86,13 @@ const NoticeBoard = () => {
             console.error(e);
         }
         setIsLoading(false);
-    };
+    }, [db, user]);
 
     useEffect(() => {
         if (user) {
             fetchNotices();
         }
-    }, [db, user]);
+    }, [user, fetchNotices]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -552,7 +552,9 @@ export default function Home() {
         setClassAttendance(classMap);
       },
       async (error: FirestoreError) => {
-        if (error.code !== 'permission-denied') {
+        // Only emit if user is logged in to avoid logout permission errors
+        if (error.code === 'permission-denied' && !db.app.options.apiKey) return;
+        if (user) {
             const permissionError = new FirestorePermissionError({
                 path: 'students',
                 operation: 'list',
@@ -566,7 +568,8 @@ export default function Home() {
         setTotalTeachers(querySnapshot.size);
       },
       async (error: FirestoreError) => {
-        if (error.code !== 'permission-denied') {
+        if (error.code === 'permission-denied' && !db.app.options.apiKey) return;
+        if (user) {
             const permissionError = new FirestorePermissionError({
                 path: 'staff',
                 operation: 'list',

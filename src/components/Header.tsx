@@ -94,6 +94,9 @@ export function Header() {
           setDisplayPhoto(null);
           setDisplayName(user.displayName || null);
         }
+      }, (error) => {
+          // Ignore permission errors on logout
+          if (error.code === 'permission-denied') return;
       });
     } else {
       setDisplayPhoto(user.photoUrl || null);

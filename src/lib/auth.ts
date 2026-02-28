@@ -1,4 +1,3 @@
-
 'use client';
 import {
   getAuth,
@@ -18,7 +17,8 @@ import {
   getDocs,
   query,
   where,
-  limit
+  limit,
+  updateDoc
 } from 'firebase/firestore';
 import type { UserRole } from './user';
 import { defaultPermissions } from './permissions';
@@ -127,7 +127,8 @@ export async function signOut() {
   if (user) {
     const userDocRef = doc(db, 'users', user.uid);
     try {
-      await setDoc(userDocRef, { isOnline: false }, { merge: true });
+      // Use standard updateDoc and don't await strictly to avoid logout delay
+      updateDoc(userDocRef, { isOnline: false }).catch(() => {});
     } catch (e) {}
   }
   

@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Triggering a redeploy of security rules.
+    // Improved security rules for logout and profile management.
     
     function isAuthed() {
       return request.auth != null;
@@ -23,15 +23,17 @@ service cloud.firestore {
     // প্রতিষ্ঠানের তথ্য সবাই দেখতে পারবে
     match /school/info {
       allow read: if true;
-      allow write: if isAuthed();
+      allow write: if isAdmin();
     }
 
     // ইউজার প্রোফাইল রুলস
     match /users/{userId} {
       allow get: if isAuthed() && (request.auth.uid == userId || isAdmin());
       allow create: if isAuthed() && request.auth.uid == userId;
+      // Allow users to update their own online status even when logging out
       allow update: if isAuthed() && (request.auth.uid == userId || isAdmin());
       allow list: if isAuthed(); 
+      allow delete: if isAdmin();
     }
 
     // সাধারণ রিসোর্স যা সকল লগইন করা ইউজার পড়তে পারবে
@@ -80,6 +82,7 @@ service cloud.firestore {
     match /messageLogs/{id} {
       allow read: if isAuthed();
       allow write: if isAuthed();
+      allow delete: if isAdmin();
     }
 
     match /emailLogs/{id} {
