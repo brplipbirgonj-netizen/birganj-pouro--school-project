@@ -164,7 +164,7 @@ const NoticeBoard = () => {
             }
         } catch (e) {
             console.error("AI Generation Error:", e);
-            toast({ variant: 'destructive', title: 'এআই কাজ করছে না', description: 'সার্ভারে সমস্যা হতে পারে, আবার চেষ্টা করুন।' });
+            toast({ variant: 'destructive', title: 'এআই কাজ করছে না', description: 'API Key ভুল হতে পারে অথবা সার্ভারে সমস্যা। দয়া করে সেটিংস চেক করুন।' });
         } finally {
             setIsGenerating(false);
         }
