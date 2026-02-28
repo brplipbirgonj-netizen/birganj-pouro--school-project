@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2 } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -41,7 +41,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { generateNotice } from '@/ai/flows/generate-notice-flow';
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
@@ -70,7 +69,6 @@ const NoticeBoard = () => {
     const { toast } = useToast();
     const [notices, setNotices] = useState<Notice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isGenerating, setIsGenerating] = useState(false);
     const [isAddOpen, setIsAddOpen] = useState(false);
     const isAdmin = user?.role === 'admin';
 
@@ -93,26 +91,6 @@ const NoticeBoard = () => {
             fetchNotices();
         }
     }, [user, fetchNotices]);
-
-    const handleGenerateWithAI = async () => {
-        if (!newNotice.title.trim()) {
-            toast({ variant: 'destructive', title: 'শিরোনাম লিখুন', description: 'AI দিয়ে লিখতে প্রথমে একটি বিষয় বা শিরোনাম দিন।' });
-            return;
-        }
-        setIsGenerating(true);
-        try {
-            const result = await generateNotice({ topic: newNotice.title });
-            if (result) {
-                setNewNotice(prev => ({ ...prev, title: result.title, content: result.content }));
-                toast({ title: 'AI নোটিশ তৈরি করেছে' });
-            }
-        } catch (e: any) {
-            console.error("AI Generation Error:", e);
-            toast({ variant: 'destructive', title: 'AI কাজ করেনি', description: 'API Key বা সংযোগ পরীক্ষা করুন।' });
-        } finally {
-            setIsGenerating(false);
-        }
-    };
 
     const handleAddNotice = async () => {
         if (!db || !user) return;
@@ -162,19 +140,7 @@ const NoticeBoard = () => {
                             <DialogHeader><DialogTitle>নতুন নোটিশ তৈরি করুন</DialogTitle></DialogHeader>
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <Label>শিরোনাম / বিষয়</Label>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="h-7 text-xs text-primary gap-1"
-                                            onClick={handleGenerateWithAI}
-                                            disabled={isGenerating}
-                                        >
-                                            {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                                            AI দিয়ে লিখুন
-                                        </Button>
-                                    </div>
+                                    <Label>শিরোনাম / বিষয়</Label>
                                     <Input 
                                         placeholder="উদা: শীতকালীন ছুটি সংক্রান্ত"
                                         value={newNotice.title} 
