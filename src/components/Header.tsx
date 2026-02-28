@@ -95,7 +95,6 @@ export function Header() {
           setDisplayName(user.displayName || null);
         }
       }, (error) => {
-          // Ignore permission errors on logout
           if (error.code === 'permission-denied') return;
       });
     } else {
@@ -118,7 +117,7 @@ export function Header() {
   // Search Logic
   const handleSearchOpen = async (open: boolean) => {
     setSearchOpen(open);
-    if (open && db && (allStudents.length === 0 || lastFetchedYear !== selectedYear)) {
+    if (open && db && user && (allStudents.length === 0 || lastFetchedYear !== selectedYear)) {
         setIsSearching(true);
         try {
             const q = query(collection(db, 'students'), where('academicYear', '==', selectedYear));

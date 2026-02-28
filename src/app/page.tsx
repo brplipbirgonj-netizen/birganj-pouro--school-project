@@ -164,7 +164,7 @@ const NoticeBoard = () => {
             }
         } catch (e) {
             console.error("AI Generation Error:", e);
-            toast({ variant: 'destructive', title: 'এআই কাজ করছে না', description: 'API Key ভুল হতে পারে অথবা সার্ভারে সমস্যা। দয়া করে সেটিংস চেক করুন।' });
+            toast({ variant: 'destructive', title: 'এআই কাজ করছে না', description: 'সার্ভারে সমস্যা অথবা API Key সেটিংস চেক করুন।' });
         } finally {
             setIsGenerating(false);
         }
@@ -499,6 +499,7 @@ export default function Home() {
       const studentsQuery = query(collection(db, 'students'), where('academicYear', '==', selectedYear));
       
       const unsubscribeStudents = onSnapshot(studentsQuery, async (studentsSnapshot) => {
+        if (!user) return;
         const studentsForYear = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
         setTotalStudents(studentsForYear.length);
         
@@ -569,6 +570,7 @@ export default function Home() {
 
       const staffQuery = query(collection(db, 'staff'), where('isActive', '==', true), where('staffType', '==', 'teacher'));
       const unsubscribeStaff = onSnapshot(staffQuery, (querySnapshot) => {
+        if (!user) return;
         setTotalTeachers(querySnapshot.size);
       },
       async (error: FirestoreError) => {
