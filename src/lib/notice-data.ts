@@ -23,6 +23,7 @@ export interface Notice {
   date: Date;
   priority: 'normal' | 'important' | 'urgent';
   senderName: string;
+  pdfUrl?: string;
 }
 
 export type NewNoticeData = Omit<Notice, 'id' | 'date'>;

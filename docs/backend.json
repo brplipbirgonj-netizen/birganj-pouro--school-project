@@ -335,6 +335,7 @@
         "content": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "priority": { "type": "string", "enum": ["normal", "important", "urgent"] },
+        "pdfUrl": { "type": "string", "description": "Optional data URI for an attached PDF file." },
         "senderName": { "type": "string" }
       },
       "required": ["title", "content", "date", "senderName"]
