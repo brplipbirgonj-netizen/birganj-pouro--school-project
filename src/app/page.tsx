@@ -12,7 +12,7 @@ import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { useFirestore, useAuth as useFirebaseRootAuth } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, FirestoreError } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -129,13 +129,16 @@ const NoticeBoard = () => {
             return;
         }
 
+        // Set sender name: If admin, show 'প্রধান শিক্ষক', otherwise use display name/email
+        const senderName = user.role === 'admin' ? 'প্রধান শিক্ষক' : (user.displayName || user.email || 'শিক্ষক');
+
         try {
             await addNotice(db, {
                 title: newNotice.title,
                 content: newNotice.content,
                 priority: newNotice.priority,
                 pdfUrl: newNotice.pdfUrl || undefined,
-                senderName: user.displayName || user.email || 'Admin'
+                senderName: senderName
             });
             toast({ title: 'নোটিশ প্রকাশিত হয়েছে' });
             setIsAddOpen(false);
@@ -243,7 +246,7 @@ const NoticeBoard = () => {
                                             {uploadingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                                             {newNotice.pdfUrl ? 'ফাইল পরিবর্তন করুন' : 'পিডিএফ আপলোড করুন'}
                                         </Button>
-                                        <Input id="pdf-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
+                                        <input id="pdf-upload" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
                                         {newNotice.pdfUrl && <Badge variant="secondary" className="whitespace-nowrap"><FileText className="mr-1 h-3 w-3" /> ফাইল যুক্ত হয়েছে</Badge>}
                                     </div>
                                 </div>
@@ -305,7 +308,7 @@ const NoticeBoard = () => {
 
                                 <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold border-t border-dashed pt-2">
                                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(notice.date, 'dd MMM p', { locale: bn })}</span>
-                                    <span>{notice.senderName}</span>
+                                    <span>{notice.senderName === 'dlswf.roy@gmail.com' ? 'প্রধান শিক্ষক' : notice.senderName}</span>
                                 </div>
                             </div>
                         ))
@@ -552,8 +555,7 @@ export default function Home() {
         setClassAttendance(classMap);
       },
       async (error: FirestoreError) => {
-        // Only emit if user is logged in to avoid logout permission errors
-        if (error.code === 'permission-denied' && !db.app.options.apiKey) return;
+        if (error.code === 'permission-denied') return;
         if (user) {
             const permissionError = new FirestorePermissionError({
                 path: 'students',
@@ -568,7 +570,7 @@ export default function Home() {
         setTotalTeachers(querySnapshot.size);
       },
       async (error: FirestoreError) => {
-        if (error.code === 'permission-denied' && !db.app.options.apiKey) return;
+        if (error.code === 'permission-denied') return;
         if (user) {
             const permissionError = new FirestorePermissionError({
                 path: 'staff',
