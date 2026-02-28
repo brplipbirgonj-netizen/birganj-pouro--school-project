@@ -15,6 +15,7 @@ import { collection, onSnapshot, query, FirestoreError } from 'firebase/firestor
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
 
 const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten' };
 const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce' };
@@ -148,7 +149,7 @@ function MarksheetContent() {
     const studentOptionalSubject = student.optionalSubject;
 
     return (
-        <div className="bg-slate-100 min-h-screen p-4 font-sans">
+        <div className="bg-slate-100 min-h-screen p-4 font-sans print:p-0 print:bg-white">
             <div className="fixed top-4 right-4 no-print z-50">
                 <Button onClick={() => window.print()} size="lg" className="shadow-lg">
                     <Printer className="mr-2 h-5 w-5" />
@@ -157,32 +158,32 @@ function MarksheetContent() {
             </div>
             
             {/* Main A4 Marksheet */}
-            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto p-6 shadow-lg relative flex flex-col box-border border border-gray-200">
+            <div className="w-[210mm] h-[297mm] bg-white mx-auto p-6 relative flex flex-col box-border border border-gray-200 print:shadow-none print:border-none print:m-0">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={400} height={400} className="opacity-10" />
                     </div>
                 )}
                 
-                <div className="relative z-10 border-4 border-black p-4 h-full flex flex-col flex-grow">
-                    <header className="mb-4">
+                <div className="relative z-10 border-4 border-black p-4 h-full flex flex-col">
+                    <header className="mb-2">
                          <div className="flex justify-between items-start">
                             <div className="flex items-center gap-4">
                                 {schoolInfo.logoUrl && (
-                                    <div className="w-20 h-20 relative">
+                                    <div className="w-16 h-16 relative">
                                         <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="object-contain" />
                                     </div>
                                 )}
                                 <div className="text-left">
-                                    <h1 className="text-2xl font-bold uppercase">{schoolInfo.nameEn || schoolInfo.name}</h1>
-                                    <p className="text-xs">{schoolInfo.address}</p>
-                                    <p className="mt-1 text-sm"><b>Academic Session:</b> {academicYear}</p>
+                                    <h1 className="text-xl font-bold uppercase">{schoolInfo.nameEn || schoolInfo.name}</h1>
+                                    <p className="text-[10px]">{schoolInfo.address}</p>
+                                    <p className="mt-1 text-xs"><b>Academic Session:</b> {academicYear}</p>
                                 </div>
                             </div>
-                            <div className="text-[9px] w-auto">
-                                <table className="border-collapse border-2 border-black text-center">
+                            <div className="text-[8px] w-auto">
+                                <table className="border-collapse border border-black text-center">
                                     <thead className="bg-gray-100">
-                                        <tr className="border-b-2 border-black">
+                                        <tr className="border-b border-black">
                                             <th className="p-0.5 px-1 border-r border-black">Interval</th>
                                             <th className="p-0.5 px-1 border-r border-black">Point</th>
                                             <th className="p-0.5 px-1">Grade</th>
@@ -200,50 +201,50 @@ function MarksheetContent() {
                                 </table>
                             </div>
                         </div>
-                        <div className="text-center mt-2">
-                            <h2 className="text-lg font-bold underline uppercase">Annual Exam Progress Report</h2>
+                        <div className="text-center mt-1">
+                            <h2 className="text-md font-bold underline uppercase">Annual Exam Progress Report</h2>
                         </div>
                     </header>
 
-                    <section className="mb-4 text-[13px] leading-relaxed">
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 border-b border-black/10 pb-1">
+                    <section className="mb-3 text-[12px] leading-relaxed">
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 border-b border-black/10 pb-0.5">
                             <div className="font-bold">Student's Name</div><div className="border-b border-dotted border-black">: {student.studentNameEn || student.studentNameBn}</div>
                             <div className="font-bold text-right">Class</div><div className="border-b border-dotted border-black">: {classMap[student.className] || student.className}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-1 border-b border-black/10 pb-1">
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-0.5 border-b border-black/10 pb-0.5">
                             <div className="font-bold">Father's Name</div><div className="border-b border-dotted border-black">: {student.fatherNameEn || student.fatherNameBn}</div>
                             <div className="font-bold text-right">Roll No.</div><div className="border-b border-dotted border-black">: {student.roll}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-1 border-b border-black/10 pb-1">
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-0.5 border-b border-black/10 pb-0.5">
                             <div className="font-bold">Mother's Name</div><div className="border-b border-dotted border-black">: {student.motherNameEn || student.motherNameBn}</div>
                             <div className="font-bold text-right">Group</div><div className="border-b border-dotted border-black">: {student.group ? groupMap[student.group] : 'N/A'}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-1">
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-0.5">
                             <div className="font-bold">Date of Birth</div><div className="border-b border-dotted border-black">: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
                             <div className="font-bold text-right">Religion</div><div className="border-b border-dotted border-black">: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
                         </div>
                     </section>
 
-                    <section className="mb-4">
-                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-sm bg-gray-50">
-                            <div className="py-1">Result: <span className={processedResult.isPass ? "text-green-700 font-bold" : "text-red-700 font-bold"}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
-                            <div className="py-1">Grade: <span className="font-bold">{processedResult.finalGrade}</span></div>
-                            <div className="py-1">GPA: <span className="font-bold">{processedResult.gpa.toFixed(2)}</span></div>
-                            <div className="py-1">Merit Rank: <span className="font-bold">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</span></div>
+                    <section className="mb-3">
+                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[12px] bg-gray-50">
+                            <div className="py-0.5">Result: <span className={processedResult.isPass ? "text-green-700 font-bold" : "text-red-700 font-bold"}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
+                            <div className="py-0.5">Grade: <span className="font-bold">{processedResult.finalGrade}</span></div>
+                            <div className="py-0.5">GPA: <span className="font-bold">{processedResult.gpa.toFixed(2)}</span></div>
+                            <div className="py-0.5">Merit Rank: <span className="font-bold">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</span></div>
                         </div>
                     </section>
 
                     <section className="flex-grow">
-                        <table className="w-full border-collapse border-2 border-black text-[12px]">
+                        <table className="w-full border-collapse border-2 border-black text-[11px]">
                             <thead>
                                 <tr className="border-b-2 border-black bg-gray-100">
-                                    <th className="border-r border-black p-1 w-10">SL</th>
+                                    <th className="border-r border-black p-1 w-8">SL</th>
                                     <th className="border-r border-black p-1 text-left">Subject Name</th>
-                                    <th className="border-r border-black p-1 w-16">Code</th>
-                                    <th className="border-r border-black p-1 w-16">Full Marks</th>
-                                    <th className="border-r border-black p-1 w-16">Obtained</th>
-                                    <th className="border-r border-black p-1 w-16">Grade</th>
-                                    <th className="p-1 w-16">Point</th>
+                                    <th className="border-r border-black p-1 w-12">Code</th>
+                                    <th className="border-r border-black p-1 w-12">Full Marks</th>
+                                    <th className="border-r border-black p-1 w-12">Obtained</th>
+                                    <th className="border-r border-black p-1 w-12">Grade</th>
+                                    <th className="p-1 w-12">Point</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -251,41 +252,41 @@ function MarksheetContent() {
                                     const result = processedResult.subjectResults.get(subject.name);
                                     return (
                                         <tr key={subject.code} className="border-b border-black last:border-b-0">
-                                            <td className="border-r border-black p-1 text-center">{index + 1}</td>
-                                            <td className="border-r border-black p-1 px-2">
+                                            <td className="border-r border-black p-0.5 text-center">{index + 1}</td>
+                                            <td className="border-r border-black p-0.5 px-2">
                                                 {subject.englishName}
                                                 {studentOptionalSubject === subject.name && <span className="font-bold italic"> (Optional)</span>}
                                             </td>
-                                            <td className="border-r border-black p-1 text-center">{subject.code}</td>
-                                            <td className="border-r border-black p-1 text-center">{subject.fullMarks}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-semibold", result?.isPass === false ? "text-red-600" : "")}>{result?.marks ?? '-'}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-bold", result?.isPass === false ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
-                                            <td className="p-1 text-center">{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
+                                            <td className="border-r border-black p-0.5 text-center">{subject.code}</td>
+                                            <td className="border-r border-black p-0.5 text-center">{subject.fullMarks}</td>
+                                            <td className={cn("border-r border-black p-0.5 text-center font-semibold", result?.isPass === false ? "text-red-600" : "")}>{result?.marks ?? '-'}</td>
+                                            <td className={cn("border-r border-black p-0.5 text-center font-bold", result?.isPass === false ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
+                                            <td className="p-0.5 text-center">{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
                             <tfoot>
                                 <tr className="border-t-2 border-black font-bold bg-gray-50">
-                                    <td colSpan={4} className="p-1.5 pr-4 text-right border-r border-black">Total Marks Obtained & Final Grade</td>
-                                    <td className="p-1.5 text-center border-r border-black">{processedResult.totalMarks}</td>
-                                    <td className="p-1.5 text-center border-r border-black">{processedResult.finalGrade}</td>
-                                    <td className="p-1.5 text-center">{processedResult.gpa.toFixed(2)}</td>
+                                    <td colSpan={4} className="p-1 pr-4 text-right border-r border-black">Total Marks Obtained & Final Grade</td>
+                                    <td className="p-1 text-center border-r border-black">{processedResult.totalMarks}</td>
+                                    <td className="p-1 text-center border-r border-black">{processedResult.finalGrade}</td>
+                                    <td className="p-1 text-center">{processedResult.gpa.toFixed(2)}</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </section>
 
-                    <footer className="mt-8 pt-12 pb-4 text-sm">
+                    <footer className="mt-4 pt-10 pb-2 text-[12px]">
                         <div className="flex justify-between px-4">
                             <div className="text-center">
-                                <div className="w-40 border-t border-black pt-1">Class Teacher</div>
+                                <div className="w-32 border-t border-black pt-1">Class Teacher</div>
                             </div>
                             <div className="text-center">
-                                <div className="w-40 border-t border-black pt-1">Headmaster's Signature</div>
+                                <div className="w-32 border-t border-black pt-1">Headmaster's Signature</div>
                             </div>
                         </div>
-                        <div className="text-center mt-8 text-[10px] text-muted-foreground italic">
+                        <div className="text-center mt-6 text-[9px] text-muted-foreground italic">
                             Report generated on: {new Date().toLocaleDateString('en-GB')}
                         </div>
                     </footer>
