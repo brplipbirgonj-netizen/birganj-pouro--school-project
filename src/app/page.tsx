@@ -129,7 +129,6 @@ const NoticeBoard = () => {
             return;
         }
 
-        // Set sender name: If admin, show 'প্রধান শিক্ষক', otherwise use display name/email
         const senderName = user.role === 'admin' ? 'প্রধান শিক্ষক' : (user.displayName || user.email || 'শিক্ষক');
 
         try {
@@ -155,14 +154,17 @@ const NoticeBoard = () => {
         setIsGenerating(true);
         try {
             const result = await generateNotice({ topic: newNotice.title });
-            setNewNotice(prev => ({
-                ...prev,
-                title: result.title,
-                content: result.content
-            }));
-            toast({ title: 'নোটিশ তৈরি হয়েছে' });
+            if (result) {
+                setNewNotice(prev => ({
+                    ...prev,
+                    title: result.title,
+                    content: result.content
+                }));
+                toast({ title: 'নোটিশ তৈরি হয়েছে' });
+            }
         } catch (e) {
-            toast({ variant: 'destructive', title: 'এআই কাজ করছে না' });
+            console.error("AI Generation Error:", e);
+            toast({ variant: 'destructive', title: 'এআই কাজ করছে না', description: 'সার্ভারে সমস্যা হতে পারে, আবার চেষ্টা করুন।' });
         } finally {
             setIsGenerating(false);
         }
@@ -253,7 +255,7 @@ const NoticeBoard = () => {
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild><Button variant="ghost">বাতিল</Button></DialogClose>
-                                <Button onClick={handleAddNotice} disabled={uploadingPdf}>প্রকাশ করুন</Button>
+                                <Button onClick={handleAddNotice} disabled={uploadingPdf || isGenerating}>প্রকাশ করুন</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
