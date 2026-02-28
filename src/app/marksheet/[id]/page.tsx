@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { getStudentById, getStudents, Student } from '@/lib/student-data';
 import { getSubjects, Subject } from '@/lib/subjects';
@@ -20,7 +20,7 @@ const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Ei
 const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce' };
 const religionMap: { [key: string]: string } = { 'islam': 'Islam', 'hinduism': 'Hinduism', 'buddhism': 'Buddhism', 'christianity': 'Christianity', 'other': 'Other' };
 
-export default function MarksheetPage() {
+function MarksheetContent() {
     const params = useParams();
     const searchParams = useSearchParams();
     const studentId = params.id as string;
@@ -297,5 +297,13 @@ export default function MarksheetPage() {
                 </Button>
             </div>
         </div>
+    );
+}
+
+export default function MarksheetPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+            <MarksheetContent />
+        </Suspense>
     );
 }
