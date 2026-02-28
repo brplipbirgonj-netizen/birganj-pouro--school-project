@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { getStudentById, getStudents, Student } from '@/lib/student-data';
+import { Student } from '@/lib/student-data';
 import { getSubjects, Subject } from '@/lib/subjects';
 import { getResultsForClass, ClassResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
@@ -70,7 +70,6 @@ function MarksheetContent() {
             }
             setStudent(studentData);
 
-            // Get all students for the class to calculate merit rank correctly
             const allStudentsInClass = allStudents.filter(s => 
                 s.academicYear === academicYear && 
                 s.className === studentData.className &&
@@ -82,28 +81,23 @@ function MarksheetContent() {
                 return;
             }
             
-            // Get all available results for those subjects
             const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
             
-            // Get all available results for those subjects
             const resultsPromises = allSubjectsForGroup
                 .map(subject => getResultsForClass(db, academicYear, studentData.className, subject.name, studentData.group || undefined));
             
             const resultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
             
-            // Process results for the entire class to get correct merit positions
             const allFinalResults = processStudentResults(allStudentsInClass, resultsBySubject, allSubjectsForGroup);
 
-            // Find the result for the current student
             const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
 
             if (!finalResultForThisStudent) {
                 setIsLoading(false);
-                setProcessedResult(null); // Set to null to show error message
+                setProcessedResult(null);
                 return;
             }
 
-            // Determine the subjects to display on this student's marksheet
             const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
                 if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
                      if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
@@ -143,56 +137,63 @@ function MarksheetContent() {
 
 
     if (isLoading) {
-        return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+        return <div className="flex items-center justify-center min-h-screen">লোড হচ্ছে...</div>;
     }
 
     if (!student || !processedResult) {
-        return <div className="flex items-center justify-center min-h-screen">Marksheet data not found or could not be processed. Please ensure all marks are entered correctly.</div>;
+        return <div className="flex items-center justify-center min-h-screen p-4 text-center">মার্কশিটের তথ্য পাওয়া যায়নি। অনুগ্রহ করে সকল বিষয়ের নম্বর ইনপুট করা হয়েছে কি না নিশ্চিত করুন।</div>;
     }
 
     const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
     const studentOptionalSubject = student.optionalSubject;
 
     return (
-        <div className="bg-slate-100 p-4 font-sans">
-            <div className="fixed top-4 right-4 no-print">
-                <Button onClick={() => window.print()}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    মার্কশিট প্রিন্ট করুন
+        <div className="bg-slate-100 min-h-screen p-4 font-sans">
+            <div className="fixed top-4 right-4 no-print z-50">
+                <Button onClick={() => window.print()} size="lg" className="shadow-lg">
+                    <Printer className="mr-2 h-5 w-5" />
+                    প্রিন্ট করুন
                 </Button>
             </div>
-            <div className="w-[210mm] h-[297mm] bg-white mx-auto p-8 shadow-lg printable-area relative">
+            
+            {/* Main A4 Marksheet */}
+            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto p-6 shadow-lg relative flex flex-col box-border border border-gray-200">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={400} height={400} className="opacity-10" />
                     </div>
                 )}
-                <div className="relative z-10 border-4 border-black p-4 h-full flex flex-col">
+                
+                <div className="relative z-10 border-4 border-black p-4 h-full flex flex-col flex-grow">
                     <header className="mb-4">
                          <div className="flex justify-between items-start">
                             <div className="flex items-center gap-4">
-                                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={80} height={80} />}
+                                {schoolInfo.logoUrl && (
+                                    <div className="w-20 h-20 relative">
+                                        <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="object-contain" />
+                                    </div>
+                                )}
                                 <div className="text-left">
-                                    <h1 className="text-3xl font-bold">{schoolInfo.nameEn || ''}</h1>
-                                    <p className="text-sm">{schoolInfo.address}</p>
-                                    <p className="mt-1"><b>Academic Session:</b> {academicYear}</p>
+                                    <h1 className="text-2xl font-bold uppercase">{schoolInfo.nameEn || schoolInfo.name}</h1>
+                                    <p className="text-xs">{schoolInfo.address}</p>
+                                    <p className="mt-1 text-sm"><b>Academic Session:</b> {academicYear}</p>
                                 </div>
                             </div>
-                            <div className="text-xs w-auto mt-2">
-                                <table className="w-full border-collapse border-2 border-black text-center">
-                                    <thead className="bg-gray-200">
+                            <div className="text-[9px] w-auto">
+                                <table className="border-collapse border-2 border-black text-center">
+                                    <thead className="bg-gray-100">
                                         <tr className="border-b-2 border-black">
-                                            <th className="p-1 px-2 border-r border-black">Interval</th>
-                                            <th className="p-1 px-2 border-r border-black">Point</th>
-                                            <th className="p-1 px-2">Grade</th>
+                                            <th className="p-0.5 px-1 border-r border-black">Interval</th>
+                                            <th className="p-0.5 px-1 border-r border-black">Point</th>
+                                            <th className="p-0.5 px-1">Grade</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {gradingScale.map(g => (
                                             <tr key={g.grade} className="border-b border-black last:border-b-0">
-                                                <td className="p-0.5 px-2 border-r border-black">{g.interval}</td>
-                                                <td className="p-0.5 px-2 border-r border-black">{g.point}</td>
-                                                <td className="p-0.5 px-2">{g.grade}</td>
+                                                <td className="p-0 border-r border-black">{g.interval}</td>
+                                                <td className="p-0 border-r border-black">{g.point}</td>
+                                                <td className="p-0">{g.grade}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -200,101 +201,95 @@ function MarksheetContent() {
                             </div>
                         </div>
                         <div className="text-center mt-2">
-                            <h2 className="text-xl font-semibold underline">Annual Exam Results</h2>
+                            <h2 className="text-lg font-bold underline uppercase">Annual Exam Progress Report</h2>
                         </div>
                     </header>
 
-                    <section className="mb-4 text-sm">
-                        <div className="grid grid-cols-[1fr_3fr] gap-x-4">
-                            <div className="font-bold">Class</div><div>: {classMap[student.className] || student.className}</div>
-                            <div className="font-bold">Student's name</div><div>: {student.studentNameEn || ''}</div>
-                            <div className="font-bold">Father's name</div><div>: {student.fatherNameEn || ''}</div>
-                            <div className="font-bold">Mother's name</div><div>: {student.motherNameEn || ''}</div>
+                    <section className="mb-4 text-[13px] leading-relaxed">
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 border-b border-black/10 pb-1">
+                            <div className="font-bold">Student's Name</div><div className="border-b border-dotted border-black">: {student.studentNameEn || student.studentNameBn}</div>
+                            <div className="font-bold text-right">Class</div><div className="border-b border-dotted border-black">: {classMap[student.className] || student.className}</div>
                         </div>
-                         <div className="grid grid-cols-[1fr_3fr_1.5fr_1.5fr_2fr_2fr] gap-x-4">
-                            <div className="font-bold">Date of birth</div><div>: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
-                            <div className="font-bold">Class Roll</div><div>: {student.roll}</div>
-                             <div className="font-bold">Group</div><div>: {student.group ? groupMap[student.group] : 'N/A'}</div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-1 border-b border-black/10 pb-1">
+                            <div className="font-bold">Father's Name</div><div className="border-b border-dotted border-black">: {student.fatherNameEn || student.fatherNameBn}</div>
+                            <div className="font-bold text-right">Roll No.</div><div className="border-b border-dotted border-black">: {student.roll}</div>
                         </div>
-                        <div className="grid grid-cols-[1fr_3fr] gap-x-4">
-                            <div className="font-bold">Religion</div><div>: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-1 border-b border-black/10 pb-1">
+                            <div className="font-bold">Mother's Name</div><div className="border-b border-dotted border-black">: {student.motherNameEn || student.motherNameBn}</div>
+                            <div className="font-bold text-right">Group</div><div className="border-b border-dotted border-black">: {student.group ? groupMap[student.group] : 'N/A'}</div>
                         </div>
-                    </section>
-
-                    <section className="mb-4 text-sm font-bold">
-                        <div className="grid grid-cols-[1fr_1fr_1fr_1fr] border-2 border-black p-1">
-                            <div>Result : {processedResult.isPass ? 'PASSED' : 'FAILED'}</div>
-                            <div>Grade: {processedResult.finalGrade}</div>
-                            <div>Point: {processedResult.gpa.toFixed(2)}</div>
-                            <div>Merit rank: {processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-1">
+                            <div className="font-bold">Date of Birth</div><div className="border-b border-dotted border-black">: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
+                            <div className="font-bold text-right">Religion</div><div className="border-b border-dotted border-black">: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
                         </div>
                     </section>
 
-                    <section className="flex-grow text-sm">
-                        <table className="w-full border-collapse border-2 border-black">
+                    <section className="mb-4">
+                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-sm bg-gray-50">
+                            <div className="py-1">Result: <span className={processedResult.isPass ? "text-green-700 font-bold" : "text-red-700 font-bold"}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
+                            <div className="py-1">Grade: <span className="font-bold">{processedResult.finalGrade}</span></div>
+                            <div className="py-1">GPA: <span className="font-bold">{processedResult.gpa.toFixed(2)}</span></div>
+                            <div className="py-1">Merit Rank: <span className="font-bold">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</span></div>
+                        </div>
+                    </section>
+
+                    <section className="flex-grow">
+                        <table className="w-full border-collapse border-2 border-black text-[12px]">
                             <thead>
-                                <tr className="border-2 border-black">
-                                    <th className="border-r border-black p-1">Serial No.</th>
-                                    <th className="border-r border-black p-1">Subject Name</th>
-                                    <th className="border-r border-black p-1">Subject code</th>
-                                    <th className="border-r border-black p-1">Full Marks</th>
-                                    <th colSpan={3} className="p-1">Annual exam results</th>
-                                </tr>
-                                <tr className="border-2 border-black">
-                                    <th colSpan={4}></th>
-                                    <th className="border-l border-black p-1">Marks</th>
-                                    <th className="border-l border-black p-1">Grade</th>
-                                    <th className="border-l border-black p-1">Point</th>
+                                <tr className="border-b-2 border-black bg-gray-100">
+                                    <th className="border-r border-black p-1 w-10">SL</th>
+                                    <th className="border-r border-black p-1 text-left">Subject Name</th>
+                                    <th className="border-r border-black p-1 w-16">Code</th>
+                                    <th className="border-r border-black p-1 w-16">Full Marks</th>
+                                    <th className="border-r border-black p-1 w-16">Obtained</th>
+                                    <th className="border-r border-black p-1 w-16">Grade</th>
+                                    <th className="p-1 w-16">Point</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sortedSubjects.map((subject, index) => {
                                     const result = processedResult.subjectResults.get(subject.name);
-                                    const fullMarks = subject.fullMarks;
                                     return (
-                                        <tr key={subject.code} className="border-b border-black">
+                                        <tr key={subject.code} className="border-b border-black last:border-b-0">
                                             <td className="border-r border-black p-1 text-center">{index + 1}</td>
-                                            <td className="border-r border-black p-1">
+                                            <td className="border-r border-black p-1 px-2">
                                                 {subject.englishName}
-                                                {studentOptionalSubject === subject.name && <span className="font-bold"> (Optional)</span>}
+                                                {studentOptionalSubject === subject.name && <span className="font-bold italic"> (Optional)</span>}
                                             </td>
                                             <td className="border-r border-black p-1 text-center">{subject.code}</td>
-                                            <td className="border-r border-black p-1 text-center">{fullMarks}</td>
-                                            <td className="border-r border-black p-1 text-center">{result?.marks ?? '-'}</td>
-                                            <td className="border-r border-black p-1 text-center">{result?.grade ?? '-'}</td>
+                                            <td className="border-r border-black p-1 text-center">{subject.fullMarks}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-semibold", result?.isPass === false ? "text-red-600" : "")}>{result?.marks ?? '-'}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-bold", result?.isPass === false ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
                                             <td className="p-1 text-center">{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
                                         </tr>
                                     );
                                 })}
-                                <tr className="font-bold">
-                                    <td colSpan={4} className="p-1 text-right border-t-2 border-black">Total marks obtained</td>
-                                    <td className="p-1 text-center border-t-2 border-black">{processedResult.totalMarks}</td>
-                                    <td className="p-1 text-center border-t-2 border-black">Grade</td>
-                                    <td className="p-1 text-center border-t-2 border-black">{processedResult.finalGrade}</td>
-                                </tr>
-                                 <tr className="font-bold">
-                                    <td colSpan={4} className="p-1 text-right"></td>
-                                    <td className="p-1 text-center"></td>
-                                    <td className="p-1 text-center">Points</td>
-                                    <td className="p-1 text-center">{processedResult.gpa.toFixed(2)}</td>
-                                </tr>
                             </tbody>
+                            <tfoot>
+                                <tr className="border-t-2 border-black font-bold bg-gray-50">
+                                    <td colSpan={4} className="p-1.5 pr-4 text-right border-r border-black">Total Marks Obtained & Final Grade</td>
+                                    <td className="p-1.5 text-center border-r border-black">{processedResult.totalMarks}</td>
+                                    <td className="p-1.5 text-center border-r border-black">{processedResult.finalGrade}</td>
+                                    <td className="p-1.5 text-center">{processedResult.gpa.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </section>
 
-                    <footer className="mt-auto pt-16 text-sm">
-                        <div className="flex justify-between">
-                            <div className="border-t-2 border-dashed border-black px-8">Class teacher's signature</div>
-                            <div className="border-t-2 border-dashed border-black px-8">Headmaster's signature</div>
+                    <footer className="mt-8 pt-12 pb-4 text-sm">
+                        <div className="flex justify-between px-4">
+                            <div className="text-center">
+                                <div className="w-40 border-t border-black pt-1">Class Teacher</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-40 border-t border-black pt-1">Headmaster's Signature</div>
+                            </div>
+                        </div>
+                        <div className="text-center mt-8 text-[10px] text-muted-foreground italic">
+                            Report generated on: {new Date().toLocaleDateString('en-GB')}
                         </div>
                     </footer>
                 </div>
-            </div>
-            <div className="flex justify-center mt-4 no-print">
-                <Button onClick={() => window.print()}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    মার্কশিট প্রিন্ট করুন
-                </Button>
             </div>
         </div>
     );
@@ -302,7 +297,7 @@ function MarksheetContent() {
 
 export default function MarksheetPage() {
     return (
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">লোড হচ্ছে...</div>}>
             <MarksheetContent />
         </Suspense>
     );

@@ -58,6 +58,7 @@
     @apply bg-background text-foreground;
   }
 
+  /* Marksheet and Documents Preview */
   .printable-area {
     display: none;
   }
