@@ -633,11 +633,11 @@ export default function RoutinesPage() {
     const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
     const [targetYear, setTargetYear] = useState('');
     const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
-    const { hasPermission } = useAuth();
+    const { user, hasPermission } = useAuth();
     const canManageRoutines = hasPermission('manage:routines');
 
     const fetchData = useCallback(async () => {
-        if (!db) return;
+        if (!db || !user) return;
         setIsLoading(true);
         const routinesFromDb = await getFullRoutine(db, selectedYear);
         const transformedData: Record<string, Record<string, string[]>> = {};
@@ -654,7 +654,7 @@ export default function RoutinesPage() {
         setRoutineData(transformedData);
         setOriginalRoutineData(transformedData);
         setIsLoading(false);
-    }, [db, selectedYear]);
+    }, [db, user, selectedYear]);
 
     useEffect(() => {
         setIsClient(true);
