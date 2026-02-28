@@ -96,7 +96,7 @@ const NoticeBoard = () => {
 
     const handleGenerateWithAI = async () => {
         if (!newNotice.title.trim()) {
-            toast({ variant: 'destructive', title: 'শিরোনাম লিখুন', description: 'AI দিয়ে নোটিশ লিখতে প্রথমে একটি বিষয় বা শিরোনাম দিন।' });
+            toast({ variant: 'destructive', title: 'শিরোনাম লিখুন', description: 'AI দিয়ে লিখতে প্রথমে একটি বিষয় বা শিরোনাম দিন।' });
             return;
         }
         setIsGenerating(true);
@@ -107,6 +107,7 @@ const NoticeBoard = () => {
                 toast({ title: 'AI নোটিশ তৈরি করেছে' });
             }
         } catch (e: any) {
+            console.error("AI Generation Error:", e);
             toast({ variant: 'destructive', title: 'AI কাজ করেনি', description: 'API Key বা সংযোগ পরীক্ষা করুন।' });
         } finally {
             setIsGenerating(false);
@@ -247,7 +248,7 @@ const NoticeBoard = () => {
                                 
                                 <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold border-t border-dashed pt-2">
                                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(notice.date, 'dd MMM p', { locale: bn })}</span>
-                                    <span>{notice.senderName === 'dlswf.roy@gmail.com' ? 'প্রধান শিক্ষক' : notice.senderName}</span>
+                                    <span>{(notice.senderName === 'dlswf.roy@gmail.com' || notice.senderName === 'System Admin') ? 'প্রধান শিক্ষক' : notice.senderName}</span>
                                 </div>
                             </div>
                         ))
