@@ -104,9 +104,9 @@ export default function TestimonialPage() {
             {/* Testimonial Page */}
             <div className="w-[210mm] min-h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none p-10 box-border">
                 
-                {/* Header Section (Enhanced to match user image) */}
-                <header 
-                    className="w-full p-4 relative text-center bg-white border-b-4 border-gray-300 mb-6 min-h-[150px] flex items-center justify-center"
+                {/* Header Section - Uses div with printable-header to avoid being hidden */}
+                <div 
+                    className="printable-header w-full p-4 relative text-center bg-white border-b-4 border-gray-300 mb-6 min-h-[150px] flex items-center justify-center"
                     style={{
                         backgroundImage: `
                             linear-gradient(to right, rgba(45, 87, 44, 0.08) 1px, transparent 1px),
@@ -122,7 +122,7 @@ export default function TestimonialPage() {
                         <div className="text-center flex-grow">
                             <p className="text-xl font-bold text-[#2d572c] mb-1">প্রধান শিক্ষকের কার্যালয়</p>
                             <h1 className="text-5xl font-black mb-2 tracking-tight" style={{color: '#2d572c'}}>
-                                {schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'}
+                                {schoolInfo.name || 'वीरগঞ্জ পৌর উচ্চ বিদ্যালয়'}
                             </h1>
                             <p className="text-lg font-bold text-[#2d572c] mb-1">স্থাপিতঃ ২০১৯ খ্রিঃ</p>
                             <p className="text-sm font-bold text-[#2d572c] tracking-wide">
@@ -134,7 +134,7 @@ export default function TestimonialPage() {
                         </div>
                         <div className="w-24 h-24"></div>
                     </div>
-                </header>
+                </div>
 
                 <div className="pt-4 pb-2 flex justify-between text-lg font-bold">
                     <span>স্মারক নং- বিপৌউবি/......................</span>
@@ -175,8 +175,8 @@ export default function TestimonialPage() {
                     </p>
                 </main>
                 
-                {/* Footer Section */}
-                <footer className="pb-24 z-10 text-right mt-auto print-footer">
+                {/* Footer Section - Uses div with print-footer to avoid being hidden */}
+                <div className="print-footer pb-24 z-10 text-right mt-auto">
                     <div className="inline-block text-center">
                         <div className="w-80 border-t-2 border-black pt-2">
                             <p className="font-black text-xl mb-1">{headmaster?.nameBn || '[প্রধান শিক্ষকের নাম]'}</p>
@@ -184,7 +184,7 @@ export default function TestimonialPage() {
                             <p className="font-bold text-gray-700 text-lg">{schoolInfo.name}</p>
                         </div>
                     </div>
-                </footer>
+                </div>
             </div>
         </div>
     );
