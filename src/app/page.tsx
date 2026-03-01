@@ -319,7 +319,7 @@ const LiveRoutineCard = () => {
             status = 'এখন কোনো ক্লাস চলছে না।';
         }
 
-        return { status, runningClasses, isSpecialStatus };
+        return { status, runningClasses, isSpecialStatus: false };
     };
 
     const { status, runningClasses, isSpecialStatus } = getCurrentPeriodInfo();

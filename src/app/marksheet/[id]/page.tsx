@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -157,30 +158,30 @@ function MarksheetContent() {
                 </Button>
             </div>
             
-            {/* Main A4 Marksheet */}
-            <div className="w-[210mm] h-[297mm] bg-white mx-auto p-6 relative flex flex-col box-border border border-gray-200 print:shadow-none print:border-none print:m-0">
+            {/* Main A4 Marksheet Container */}
+            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto p-4 sm:p-8 relative flex flex-col box-border border border-gray-200 print:shadow-none print:border-none print:m-0 print:p-6">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0">
-                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={400} height={400} className="opacity-10" />
+                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-10" />
                     </div>
                 )}
                 
-                <div className="relative z-10 border-4 border-black p-4 h-full flex flex-col">
+                <div className="relative z-10 border-4 border-black p-3 h-full flex flex-col flex-grow">
                     <header className="mb-2">
                          <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
                                 {schoolInfo.logoUrl && (
-                                    <div className="w-16 h-16 relative">
+                                    <div className="w-14 h-14 relative">
                                         <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="object-contain" />
                                     </div>
                                 )}
                                 <div className="text-left">
-                                    <h1 className="text-xl font-bold uppercase">{schoolInfo.nameEn || schoolInfo.name}</h1>
-                                    <p className="text-[10px]">{schoolInfo.address}</p>
-                                    <p className="mt-1 text-xs"><b>Academic Session:</b> {academicYear}</p>
+                                    <h1 className="text-lg font-bold uppercase">{schoolInfo.nameEn || schoolInfo.name}</h1>
+                                    <p className="text-[9px]">{schoolInfo.address}</p>
+                                    <p className="mt-0.5 text-[11px]"><b>Academic Session:</b> {academicYear}</p>
                                 </div>
                             </div>
-                            <div className="text-[8px] w-auto">
+                            <div className="text-[7.5px] w-auto">
                                 <table className="border-collapse border border-black text-center">
                                     <thead className="bg-gray-100">
                                         <tr className="border-b border-black">
@@ -202,31 +203,31 @@ function MarksheetContent() {
                             </div>
                         </div>
                         <div className="text-center mt-1">
-                            <h2 className="text-md font-bold underline uppercase">Annual Exam Progress Report</h2>
+                            <h2 className="text-sm font-bold underline uppercase">Annual Exam Progress Report</h2>
                         </div>
                     </header>
 
-                    <section className="mb-3 text-[12px] leading-relaxed">
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 border-b border-black/10 pb-0.5">
+                    <section className="mb-2 text-[11px] leading-relaxed">
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-2 border-b border-black/10 pb-0.5">
                             <div className="font-bold">Student's Name</div><div className="border-b border-dotted border-black">: {student.studentNameEn || student.studentNameBn}</div>
                             <div className="font-bold text-right">Class</div><div className="border-b border-dotted border-black">: {classMap[student.className] || student.className}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-0.5 border-b border-black/10 pb-0.5">
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-2 mt-0.5 border-b border-black/10 pb-0.5">
                             <div className="font-bold">Father's Name</div><div className="border-b border-dotted border-black">: {student.fatherNameEn || student.fatherNameBn}</div>
                             <div className="font-bold text-right">Roll No.</div><div className="border-b border-dotted border-black">: {student.roll}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-0.5 border-b border-black/10 pb-0.5">
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-2 mt-0.5 border-b border-black/10 pb-0.5">
                             <div className="font-bold">Mother's Name</div><div className="border-b border-dotted border-black">: {student.motherNameEn || student.motherNameBn}</div>
                             <div className="font-bold text-right">Group</div><div className="border-b border-dotted border-black">: {student.group ? groupMap[student.group] : 'N/A'}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1.5fr_2.5fr] gap-x-2 mt-0.5">
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-2 mt-0.5">
                             <div className="font-bold">Date of Birth</div><div className="border-b border-dotted border-black">: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
                             <div className="font-bold text-right">Religion</div><div className="border-b border-dotted border-black">: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
                         </div>
                     </section>
 
-                    <section className="mb-3">
-                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[12px] bg-gray-50">
+                    <section className="mb-2">
+                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[11px] bg-gray-50">
                             <div className="py-0.5">Result: <span className={processedResult.isPass ? "text-green-700 font-bold" : "text-red-700 font-bold"}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
                             <div className="py-0.5">Grade: <span className="font-bold">{processedResult.finalGrade}</span></div>
                             <div className="py-0.5">GPA: <span className="font-bold">{processedResult.gpa.toFixed(2)}</span></div>
@@ -235,7 +236,7 @@ function MarksheetContent() {
                     </section>
 
                     <section className="flex-grow">
-                        <table className="w-full border-collapse border-2 border-black text-[11px]">
+                        <table className="w-full border-collapse border-2 border-black text-[10px]">
                             <thead>
                                 <tr className="border-b-2 border-black bg-gray-100">
                                     <th className="border-r border-black p-1 w-8">SL</th>
@@ -277,16 +278,16 @@ function MarksheetContent() {
                         </table>
                     </section>
 
-                    <footer className="mt-4 pt-10 pb-2 text-[12px]">
+                    <footer className="mt-auto pt-8 pb-2 text-[11px]">
                         <div className="flex justify-between px-4">
                             <div className="text-center">
-                                <div className="w-32 border-t border-black pt-1">Class Teacher</div>
+                                <div className="w-28 border-t border-black pt-1">Class Teacher</div>
                             </div>
                             <div className="text-center">
-                                <div className="w-32 border-t border-black pt-1">Headmaster's Signature</div>
+                                <div className="w-28 border-t border-black pt-1">Headmaster's Signature</div>
                             </div>
                         </div>
-                        <div className="text-center mt-6 text-[9px] text-muted-foreground italic">
+                        <div className="text-center mt-4 text-[8px] text-muted-foreground italic">
                             Report generated on: {new Date().toLocaleDateString('en-GB')}
                         </div>
                     </footer>
