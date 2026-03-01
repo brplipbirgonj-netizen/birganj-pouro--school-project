@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -69,6 +69,14 @@ const AdmitCardGeneratorPage = () => {
         setStudentsInClass(filteredStudents);
         setIsLoading(false);
     };
+
+    const studentsGroupedByFour = useMemo(() => {
+        const groups: Student[][] = [];
+        for (let i = 0; i < studentsInClass.length; i += 4) {
+            groups.push(studentsInClass.slice(i, i + 4));
+        }
+        return groups;
+    }, [studentsInClass]);
 
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
@@ -176,12 +184,16 @@ const AdmitCardGeneratorPage = () => {
                 </main>
             </div>
             {studentsInClass.length > 0 && selectedExam && (
-                <div className="printable-area bg-white">
-                    <div className="admit-card-grid">
-                        {studentsInClass.map(student => (
-                            <AdmitCard key={student.id} student={student} schoolInfo={schoolInfo} examName={selectedExam.name} />
-                        ))}
-                    </div>
+                <div className="printable-area-container bg-white">
+                    {studentsGroupedByFour.map((group, groupIndex) => (
+                        <div key={groupIndex} className="printable-area">
+                            <div className="admit-card-grid">
+                                {group.map(student => (
+                                    <AdmitCard key={student.id} student={student} schoolInfo={schoolInfo} examName={selectedExam.name} />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </>

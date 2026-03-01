@@ -22,6 +22,7 @@ import {
   BookOpen,
   FileBadge,
   PieChart,
+  IdCard,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -438,6 +439,16 @@ export function Header() {
                         }}
                     >
                         <Banknote className="mr-3 h-5 w-5 text-teal-600" /> বেতন আদায় করুন
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        className="justify-start h-12 text-md font-medium bg-fuchsia-50 hover:bg-fuchsia-100 border-fuchsia-200 text-fuchsia-900"
+                        onClick={() => {
+                            setActionsDialogOpen(false);
+                            router.push(`/documents/admit-card/${selectedStudent?.id}`);
+                        }}
+                    >
+                        <IdCard className="mr-3 h-5 w-5 text-fuchsia-600" /> প্রবেশ পত্র (একক)
                     </Button>
                     <Button 
                         variant="outline" 

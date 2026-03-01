@@ -77,8 +77,8 @@
     
     .printable-area {
       width: 210mm !important;
-      height: 296mm !important;
-      padding: 10mm !important;
+      height: 297mm !important;
+      padding: 5mm !important;
       margin: 0 !important;
       box-sizing: border-box !important;
       page-break-after: always !important;
@@ -89,15 +89,14 @@
 
     .admit-card-grid {
       display: grid !important;
-      grid-template-columns: repeat(2, 100mm) !important;
-      grid-auto-rows: 138mm !important;
+      grid-template-columns: repeat(2, 98mm) !important;
+      grid-auto-rows: 140mm !important;
       gap: 4mm !important;
-      width: 210mm !important;
+      width: 200mm !important;
       justify-content: center !important;
-      padding: 2mm !important;
+      align-content: start !important;
     }
 
-    /* Force the header to be visible during print */
     .printable-header {
       display: flex !important;
       visibility: visible !important;
