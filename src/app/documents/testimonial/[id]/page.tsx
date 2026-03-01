@@ -102,11 +102,11 @@ export default function TestimonialPage() {
             </div>
 
             {/* Testimonial Page */}
-            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none p-10 box-border">
+            <div className="w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none p-10 box-border overflow-hidden">
                 
-                {/* Header Section - Uses div with printable-header to avoid being hidden */}
+                {/* Header Section */}
                 <div 
-                    className="printable-header w-full p-4 relative text-center bg-white border-b-4 border-gray-300 mb-6 min-h-[150px] flex items-center justify-center"
+                    className="printable-header w-full p-2 relative text-center bg-white border-b-4 border-gray-300 mb-4 min-h-[140px] flex items-center justify-center"
                     style={{
                         backgroundImage: `
                             linear-gradient(to right, rgba(45, 87, 44, 0.08) 1px, transparent 1px),
@@ -116,27 +116,27 @@ export default function TestimonialPage() {
                     }}
                 >
                     <div className="flex justify-between items-center w-full relative z-10">
-                        <div className="w-24 h-24 flex items-center justify-center">
-                            {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={90} height={90} className="object-contain" />}
+                        <div className="w-20 h-20 flex items-center justify-center">
+                            {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={80} height={80} className="object-contain" />}
                         </div>
-                        <div className="text-center flex-grow px-2">
-                            <p className="text-xl font-bold text-[#2d572c] mb-1">প্রধান শিক্ষকের কার্যালয়</p>
-                            <h1 className="text-4xl sm:text-5xl font-black mb-2 tracking-tight whitespace-nowrap" style={{color: '#2d572c'}}>
+                        <div className="text-center flex-grow px-2 overflow-hidden">
+                            <p className="text-lg font-bold text-[#2d572c] mb-0.5">প্রধান শিক্ষকের কার্যালয়</p>
+                            <h1 className="text-3xl sm:text-4xl font-black mb-1 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{color: '#2d572c'}}>
                                 {schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'}
                             </h1>
-                            <p className="text-lg font-bold text-[#2d572c] mb-1">স্থাপিতঃ ২০১৯ খ্রিঃ</p>
-                            <p className="text-sm font-bold text-[#2d572c] tracking-wide">
+                            <p className="text-md font-bold text-[#2d572c] mb-0.5">স্থাপিতঃ ২০১৯ খ্রিঃ</p>
+                            <p className="text-[11px] font-bold text-[#2d572c] tracking-wide">
                                 Upazila: Birganj, Post: Birganj, Zila: Dinajpur | মোবাইলঃ ০১৭১৭৫৭৬০৩০
                             </p>
-                            <p className="text-sm text-red-600 font-bold mt-1">
+                            <p className="text-[11px] text-red-600 font-bold">
                                 ই-মেইল: birganjpourohsch2019@gmail.com
                             </p>
                         </div>
-                        <div className="w-24 h-24"></div>
+                        <div className="w-20 h-20"></div>
                     </div>
                 </div>
 
-                <div className="pt-4 pb-2 flex justify-between text-lg font-bold">
+                <div className="pt-2 pb-1 flex justify-between text-md font-bold">
                     <span>স্মারক নং- বিপৌউবি/......................</span>
                     <span>তারিখঃ {issueDate}</span>
                 </div>
@@ -144,44 +144,44 @@ export default function TestimonialPage() {
                 {/* Watermark */}
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={450} height={450} className="opacity-10" />
+                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={400} height={400} className="opacity-10" />
                     </div>
                 )}
                 
                 {/* Body Section */}
-                <main className="py-12 z-10 relative text-justify flex-grow">
-                    <div className="text-center mb-12">
-                        <h2 className="text-4xl font-black inline-block border-b-4 border-black pb-1 uppercase tracking-widest">প্রত্যয়ন পত্র</h2>
+                <main className="py-6 z-10 relative text-justify flex-grow">
+                    <div className="text-center mb-8">
+                        <h2 className="text-3xl font-black inline-block border-b-4 border-black pb-1 uppercase tracking-widest">প্রত্যয়ন পত্র</h2>
                     </div>
 
-                    <p className="text-2xl leading-[2.4] indent-16">
-                        এই মর্মে প্রত্যয়ন করা যাচ্ছে যে, <span className="font-black text-3xl underline decoration-dotted">{student.studentNameBn}</span>, 
+                    <p className="text-xl leading-[2.2] indent-12">
+                        এই মর্মে প্রত্যয়ন করা যাচ্ছে যে, <span className="font-black text-2xl underline decoration-dotted">{student.studentNameBn}</span>, 
                         পিতা: <span className="font-bold">{student.fatherNameBn}</span>, 
                         মাতা: <span className="font-bold">{student.motherNameBn}</span>, 
                         গ্রাম: <span className="font-bold">{student.permanentVillage || student.presentVillage || 'বিবিধ'}</span>, 
                         ডাকঘর: <span className="font-bold">{student.permanentPostOffice || student.presentPostOffice || 'বিবিধ'}</span>, 
                         উপজেলা: <span className="font-bold">{student.permanentUpazila || student.presentUpazila || 'বীরগঞ্জ'}</span>, 
                         জেলা: <span className="font-bold">{student.permanentDistrict || student.presentDistrict || 'দিনাজপুর'}</span>। 
-                        সে অত্র বিদ্যালয়ে <span className="font-black text-3xl">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে অধ্যয়নরত আছে। 
+                        সে অত্র বিদ্যালয়ে <span className="font-black text-2xl">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে অধ্যয়নরত আছে। 
                         তার শ্রেণি রোল নম্বর <span className="font-bold">{toBengaliNumber(student.roll)}</span> এবং জন্ম তারিখ <span className="font-bold">{studentDob}</span>।
                     </p>
 
-                    <p className="text-2xl leading-[2.4] mt-12">
+                    <p className="text-xl leading-[2.2] mt-8">
                         আমার জানামতে সে রাষ্ট্রবিরোধী বা আইন শৃঙ্খলা পরিপন্থী কোনো কাজের সাথে জড়িত নয়। তার স্বভাব এবং চরিত্র অত্যন্ত প্রশংসনীয়। সে বিদ্যালয়ের সকল নিয়ম-কানুন মেনে চলে।
                     </p>
 
-                    <p className="text-2xl leading-[2.4] mt-12">
+                    <p className="text-xl leading-[2.2] mt-8">
                         আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ উন্নতি কামনা করি।
                     </p>
                 </main>
                 
-                {/* Footer Section - Uses div with print-footer to avoid being hidden */}
-                <div className="print-footer pb-24 z-10 text-right mt-auto">
+                {/* Footer Section */}
+                <div className="print-footer pb-8 z-10 text-right mt-auto">
                     <div className="inline-block text-center">
-                        <div className="w-80 border-t-2 border-black pt-2">
-                            <p className="font-black text-xl mb-1">{headmaster?.nameBn || '[প্রধান শিক্ষকের নাম]'}</p>
-                            <p className="font-bold text-gray-700 text-lg">{headmaster?.designation || 'প্রধান শিক্ষক'}</p>
-                            <p className="font-bold text-gray-700 text-lg">{schoolInfo.name}</p>
+                        <div className="w-72 border-t-2 border-black pt-1">
+                            <p className="font-black text-lg mb-0.5">{headmaster?.nameBn || '[প্রধান শিক্ষকের নাম]'}</p>
+                            <p className="font-bold text-gray-700 text-md">{headmaster?.designation || 'প্রধান শিক্ষক'}</p>
+                            <p className="font-bold text-gray-700 text-md">{schoolInfo.name}</p>
                         </div>
                     </div>
                 </div>
