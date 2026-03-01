@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -262,6 +261,9 @@ const LiveRoutineCard = () => {
     const getCurrentPeriodInfo = () => {
         const now = currentTime;
         const currentDayName = dayMap[now.getDay()];
+        let status = 'ক্লাস চলছে';
+        let runningClasses: any[] = [];
+        let isSpecialStatus = false;
 
         if (activeHoliday) {
             return { status: `আজ ${activeHoliday.description}।`, runningClasses: [], isSpecialStatus: true };
@@ -274,7 +276,6 @@ const LiveRoutineCard = () => {
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
         let periodIndex = -1;
-        let status = 'ক্লাস চলছে';
         
         for(let i=0; i<periodTimes.length; i++) {
             const period = periodTimes[i];
@@ -295,7 +296,7 @@ const LiveRoutineCard = () => {
              return { status: 'এখন কোনো ক্লাস চলছে না।', runningClasses: [], isSpecialStatus: false };
         }
 
-        const runningClasses = fullRoutine
+        runningClasses = fullRoutine
             .filter(r => r.day === currentDayName)
             .map(r => {
                 const periodContent = r.periods[periodIndex];
@@ -319,7 +320,7 @@ const LiveRoutineCard = () => {
             status = 'এখন কোনো ক্লাস চলছে না।';
         }
 
-        return { status, runningClasses, isSpecialStatus: false };
+        return { status, runningClasses, isSpecialStatus };
     };
 
     const { status, runningClasses, isSpecialStatus } = getCurrentPeriodInfo();

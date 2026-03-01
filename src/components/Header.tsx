@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -20,6 +19,9 @@ import {
   UserSearch,
   MessageSquare,
   Search,
+  BookOpen,
+  FileBadge,
+  PieChart,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -50,9 +52,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Student, studentFromDoc } from '@/lib/student-data';
+import { StudentFeeDialog } from './StudentFeeDialog';
 
 export function Header() {
   const [isClient, setIsClient] = useState(false);
@@ -70,6 +73,11 @@ export function Header() {
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [lastFetchedYear, setLastFetchedYear] = useState('');
+
+  // Action Popup State
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
+  const [feeDialogOpen, setFeeDialogOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -152,6 +160,13 @@ export function Header() {
         return matchesName || matchesRoll || matchesId;
     }).slice(0, 10);
   }, [searchQuery, allStudents]);
+
+  const handleStudentClick = (student: Student) => {
+    setSelectedStudent(student);
+    setSearchOpen(false);
+    setSearchQuery('');
+    setActionsDialogOpen(true);
+  };
 
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
@@ -361,11 +376,7 @@ export function Header() {
                                         <div 
                                             key={s.id} 
                                             className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors mb-2 last:mb-0"
-                                            onClick={() => {
-                                                setSearchOpen(false);
-                                                setSearchQuery('');
-                                                router.push(`/student-list?class=${s.className}&studentId=${s.id}`); 
-                                            }}
+                                            onClick={() => handleStudentClick(s)}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-8 w-8">
@@ -388,6 +399,88 @@ export function Header() {
                     </div>
                 </DialogContent>
             </Dialog>
+        )}
+
+        {/* Action Popup for Search Result */}
+        <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <div className="flex items-center gap-4 mb-4">
+                        <Avatar className="h-16 w-16 border-2 border-primary/20">
+                            <AvatarImage src={selectedStudent?.photoUrl} />
+                            <AvatarFallback>{selectedStudent?.studentNameBn?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <DialogTitle className="text-xl">{selectedStudent?.studentNameBn}</DialogTitle>
+                            <DialogDescription>
+                                রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | শ্রেণি: {selectedStudent?.className} | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+                <div className="grid grid-cols-1 gap-3 py-4">
+                    <Button 
+                        variant="outline" 
+                        className="justify-start h-12 text-md font-medium bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900"
+                        onClick={() => {
+                            setActionsDialogOpen(false);
+                            router.push(`/student-list?class=${selectedStudent?.className}&studentId=${selectedStudent?.id}`);
+                        }}
+                    >
+                        <Users className="mr-3 h-5 w-5 text-rose-600" /> বিস্তারিত প্রোফাইল
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        className="justify-start h-12 text-md font-medium bg-teal-50 hover:bg-teal-100 border-teal-200 text-teal-900"
+                        onClick={() => {
+                            setActionsDialogOpen(false);
+                            setFeeDialogOpen(true);
+                        }}
+                    >
+                        <Banknote className="mr-3 h-5 w-5 text-teal-600" /> বেতন আদায় করুন
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        className="justify-start h-12 text-md font-medium bg-violet-50 hover:bg-violet-100 border-violet-200 text-violet-900"
+                        onClick={() => {
+                            setActionsDialogOpen(false);
+                            window.open(`/marksheet/${selectedStudent?.id}?academicYear=${selectedYear}`, '_blank');
+                        }}
+                    >
+                        <BookOpen className="mr-3 h-5 w-5 text-violet-600" /> ফলাফল (মার্কশিট)
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        className="justify-start h-12 text-md font-medium bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900"
+                        onClick={() => {
+                            setActionsDialogOpen(false);
+                            window.open(`/documents/testimonial/${selectedStudent?.id}`, '_blank');
+                        }}
+                    >
+                        <FileBadge className="mr-3 h-5 w-5 text-slate-600" /> প্রত্যয়ন পত্র
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        className="justify-start h-12 text-md font-medium bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
+                        onClick={() => {
+                            setActionsDialogOpen(false);
+                            router.push(`/student-profile?roll=${selectedStudent?.roll}&class=${selectedStudent?.className}`);
+                        }}
+                    >
+                        <PieChart className="mr-3 h-5 w-5 text-indigo-600" /> হাজিরা ও পরিসংখ্যান
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        {/* Global Fee Dialog */}
+        {selectedStudent && (
+            <StudentFeeDialog 
+                student={selectedStudent} 
+                open={feeDialogOpen} 
+                onOpenChange={setFeeDialogOpen} 
+                onFeeCollected={() => {}} 
+            />
         )}
 
         {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (

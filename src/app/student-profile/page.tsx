@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import { Search, CheckCircle2, XCircle, User, Banknote, CalendarCheck, AlertTria
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 
@@ -39,13 +39,14 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-export default function StudentProfileSearchPage() {
+function StudentProfileSearchContent() {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
     const { user, loading: authLoading } = useAuth();
     const { schoolInfo } = useSchoolInfo();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const [isMounted, setIsMounted] = useState(false);
     const [roll, setRoll] = useState<string>('');
@@ -63,24 +64,43 @@ export default function StudentProfileSearchPage() {
         setIsMounted(true);
     }, []);
 
+    // Handle incoming search params from action popup
+    useEffect(() => {
+        if (isMounted && !authLoading && user) {
+            const urlRoll = searchParams.get('roll');
+            const urlClass = searchParams.get('class');
+            if (urlRoll && urlClass) {
+                setRoll(urlRoll);
+                setClassName(urlClass);
+                // Trigger search after a tiny delay to ensure states are updated
+                setTimeout(() => {
+                    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                    handleSearch(fakeEvent, urlRoll, urlClass);
+                }, 100);
+            }
+        }
+    }, [isMounted, authLoading, user, searchParams]);
+
     useEffect(() => {
         if (isMounted && !authLoading && !user) {
             router.push('/login');
         }
     }, [user, authLoading, router, isMounted]);
 
-    const handleSearch = async (e: React.FormEvent) => {
+    const handleSearch = async (e: React.FormEvent, overrideRoll?: string, overrideClass?: string) => {
         e.preventDefault();
-        if (!db || !roll || !className || !user) {
+        const searchRoll = overrideRoll || roll;
+        const searchClass = overrideClass || className;
+
+        if (!db || !searchRoll || !searchClass || !user) {
             toast({ variant: 'destructive', title: 'অনুগ্রহ করে রোল এবং শ্রেণি পূরণ করুন।' });
             return;
         }
 
         setIsLoading(true);
         try {
-            // Convert Bengali digits to English for Firestore query
             const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
-            const rollEn = parseInt(bnToEn(roll), 10);
+            const rollEn = parseInt(bnToEn(searchRoll), 10);
 
             if (isNaN(rollEn)) {
                 toast({ variant: 'destructive', title: 'ভুল রোল নম্বর', description: 'অনুগ্রহ করে সঠিক সংখ্যা ব্যবহার করুন।' });
@@ -91,7 +111,7 @@ export default function StudentProfileSearchPage() {
             const studentQuery = query(
                 collection(db, 'students'),
                 where('academicYear', '==', selectedYear),
-                where('className', '==', className),
+                where('className', '==', searchClass),
                 where('roll', '==', rollEn)
             );
             const studentSnap = await getDocs(studentQuery);
@@ -114,7 +134,7 @@ export default function StudentProfileSearchPage() {
             const attQuery = query(
                 collection(db, 'attendance'),
                 where('academicYear', '==', selectedYear),
-                where('className', '==', className),
+                where('className', '==', searchClass),
                 where('date', '>=', startDate),
                 where('date', '<=', endDate)
             );
@@ -264,7 +284,6 @@ export default function StudentProfileSearchPage() {
                 </main>
             </div>
 
-            {/* Hidden Printable Area - Optimized for one page */}
             {studentData && (
                 <div className="printable-area p-10 text-black bg-white min-h-screen">
                     <header className="flex items-center justify-between border-b-4 border-black pb-4 mb-6">
@@ -433,5 +452,13 @@ export default function StudentProfileSearchPage() {
                 </DialogContent>
             </Dialog>
         </div>
+    );
+}
+
+export default function StudentProfileSearchPage() {
+    return (
+        <Suspense fallback={<div className="flex min-h-screen w-full flex-col bg-indigo-50"><Header /><main className="flex-1 flex items-center justify-center">লোড হচ্ছে...</main></div>}>
+            <StudentProfileSearchContent />
+        </Suspense>
     );
 }

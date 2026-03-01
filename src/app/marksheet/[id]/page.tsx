@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -158,8 +157,8 @@ function MarksheetContent() {
                 </Button>
             </div>
             
-            {/* Main A4 Marksheet Container */}
-            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto p-4 sm:p-8 relative flex flex-col box-border border border-gray-200 print:shadow-none print:border-none print:m-0 print:p-6">
+            {/* Main A4 Marksheet Container - Visible on screen and optimized for print */}
+            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto p-4 sm:p-6 relative flex flex-col box-border border border-gray-200 print:shadow-none print:border-none print:m-0">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-10" />
@@ -181,7 +180,7 @@ function MarksheetContent() {
                                     <p className="mt-0.5 text-[11px]"><b>Academic Session:</b> {academicYear}</p>
                                 </div>
                             </div>
-                            <div className="text-[7.5px] w-auto">
+                            <div className="text-[7px] w-auto">
                                 <table className="border-collapse border border-black text-center">
                                     <thead className="bg-gray-100">
                                         <tr className="border-b border-black">
@@ -207,7 +206,7 @@ function MarksheetContent() {
                         </div>
                     </header>
 
-                    <section className="mb-2 text-[11px] leading-relaxed">
+                    <section className="mb-2 text-[10px] leading-relaxed">
                         <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-2 border-b border-black/10 pb-0.5">
                             <div className="font-bold">Student's Name</div><div className="border-b border-dotted border-black">: {student.studentNameEn || student.studentNameBn}</div>
                             <div className="font-bold text-right">Class</div><div className="border-b border-dotted border-black">: {classMap[student.className] || student.className}</div>
@@ -227,7 +226,7 @@ function MarksheetContent() {
                     </section>
 
                     <section className="mb-2">
-                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[11px] bg-gray-50">
+                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[10px] bg-gray-50">
                             <div className="py-0.5">Result: <span className={processedResult.isPass ? "text-green-700 font-bold" : "text-red-700 font-bold"}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
                             <div className="py-0.5">Grade: <span className="font-bold">{processedResult.finalGrade}</span></div>
                             <div className="py-0.5">GPA: <span className="font-bold">{processedResult.gpa.toFixed(2)}</span></div>
@@ -236,16 +235,16 @@ function MarksheetContent() {
                     </section>
 
                     <section className="flex-grow">
-                        <table className="w-full border-collapse border-2 border-black text-[10px]">
+                        <table className="w-full border-collapse border-2 border-black text-[9px]">
                             <thead>
                                 <tr className="border-b-2 border-black bg-gray-100">
-                                    <th className="border-r border-black p-1 w-8">SL</th>
-                                    <th className="border-r border-black p-1 text-left">Subject Name</th>
-                                    <th className="border-r border-black p-1 w-12">Code</th>
-                                    <th className="border-r border-black p-1 w-12">Full Marks</th>
-                                    <th className="border-r border-black p-1 w-12">Obtained</th>
-                                    <th className="border-r border-black p-1 w-12">Grade</th>
-                                    <th className="p-1 w-12">Point</th>
+                                    <th className="border-r border-black p-0.5 w-8">SL</th>
+                                    <th className="border-r border-black p-0.5 text-left pl-2">Subject Name</th>
+                                    <th className="border-r border-black p-0.5 w-10">Code</th>
+                                    <th className="border-r border-black p-0.5 w-10">Full Marks</th>
+                                    <th className="border-r border-black p-0.5 w-10">Obtained</th>
+                                    <th className="border-r border-black p-0.5 w-10">Grade</th>
+                                    <th className="p-0.5 w-10">Point</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -278,16 +277,16 @@ function MarksheetContent() {
                         </table>
                     </section>
 
-                    <footer className="mt-auto pt-8 pb-2 text-[11px]">
+                    <footer className="mt-auto pt-6 pb-2 text-[10px]">
                         <div className="flex justify-between px-4">
                             <div className="text-center">
-                                <div className="w-28 border-t border-black pt-1">Class Teacher</div>
+                                <div className="w-24 border-t border-black pt-1">Class Teacher</div>
                             </div>
                             <div className="text-center">
-                                <div className="w-28 border-t border-black pt-1">Headmaster's Signature</div>
+                                <div className="w-24 border-t border-black pt-1">Headmaster's Signature</div>
                             </div>
                         </div>
-                        <div className="text-center mt-4 text-[8px] text-muted-foreground italic">
+                        <div className="text-center mt-2 text-[7px] text-muted-foreground italic">
                             Report generated on: {new Date().toLocaleDateString('en-GB')}
                         </div>
                     </footer>
