@@ -4,7 +4,7 @@
 
 @page {
   size: A4;
-  margin: 10mm;
+  margin: 0;
 }
 
 @page routine {
@@ -58,7 +58,6 @@
     @apply bg-background text-foreground;
   }
 
-  /* Preview and Print logic */
   @media print {
     html, body {
       background: white !important;
@@ -71,7 +70,7 @@
     
     .no-print,
     .no-print *,
-    header,
+    header:not(.printable-header),
     footer:not(.print-footer),
     [role="dialog"],
     [data-radix-portal],
@@ -89,6 +88,16 @@
         padding: 0 !important;
         background: white !important;
         color: black !important;
+    }
+
+    .marksheet-container, .printable-area {
+      width: 210mm !important;
+      height: 297mm !important;
+      padding: 10mm !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+      page-break-after: always !important;
+      overflow: hidden !important;
     }
 
     .printable-content * {

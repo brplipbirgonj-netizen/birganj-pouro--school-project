@@ -154,7 +154,35 @@ function MarksheetContent() {
     const studentOptionalSubject = student.optionalSubject;
 
     return (
-        <div className="bg-slate-100 min-h-screen p-4 sm:p-8 font-sans print:p-0 print:bg-white flex flex-col items-center">
+        <div className="bg-slate-100 min-h-screen p-4 sm:p-8 font-sans print:p-0 print:bg-white flex flex-col items-center overflow-x-hidden">
+            <style jsx global>{`
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 0 !important;
+                    }
+                    body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                    .marksheet-container {
+                        width: 210mm !important;
+                        height: 297mm !important;
+                        margin: 0 !important;
+                        padding: 10mm !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        page-break-after: always;
+                        overflow: hidden;
+                    }
+                }
+            `}</style>
+
             {/* Action Bar */}
             <div className="w-full max-w-[210mm] flex justify-between items-center mb-6 no-print bg-white p-4 rounded-lg shadow-sm border">
                 <div>
@@ -168,14 +196,14 @@ function MarksheetContent() {
             </div>
             
             {/* Printable Marksheet Card */}
-            <div className="w-[210mm] min-h-[297mm] bg-white p-6 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0 print:p-0">
+            <div className="marksheet-container w-[210mm] h-[297mm] bg-white p-10 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-10" />
                     </div>
                 )}
                 
-                <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col flex-grow">
+                <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col">
                     {/* Header */}
                     <header className="mb-4">
                          <div className="flex justify-between items-start">
@@ -251,7 +279,7 @@ function MarksheetContent() {
 
                     {/* Table */}
                     <section className="flex-grow overflow-hidden">
-                        <table className="w-full border-collapse border-[1.5px] border-black text-[9px]">
+                        <table className="w-full border-collapse border-[1.5px] border-black text-[10px]">
                             <thead>
                                 <tr className="border-b-[1.5px] border-black bg-gray-100 font-bold">
                                     <th className="border-r border-black p-1 w-8 text-center">SL</th>
@@ -284,7 +312,7 @@ function MarksheetContent() {
                                 })}
                             </tbody>
                             <tfoot>
-                                <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[10px]">
+                                <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[11px]">
                                     <td colSpan={4} className="p-1 pr-6 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
                                     <td className="p-1 text-center border-r border-black text-base text-blue-950">{processedResult.totalMarks}</td>
                                     <td className="p-1 text-center border-r border-black text-base text-blue-950">{processedResult.finalGrade}</td>
@@ -295,7 +323,7 @@ function MarksheetContent() {
                     </section>
 
                     {/* Footer */}
-                    <footer className="mt-auto pt-6 pb-2 text-[9px] print-footer">
+                    <footer className="mt-auto pt-6 pb-2 text-[10px] print-footer">
                         <div className="flex justify-between px-12">
                             <div className="text-center">
                                 <div className="w-24 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>
@@ -304,7 +332,7 @@ function MarksheetContent() {
                                 <div className="w-24 border-t border-black pt-1 font-bold text-gray-700 uppercase">Headmaster</div>
                             </div>
                         </div>
-                        <div className="mt-6 flex justify-between items-center text-[7px] text-muted-foreground italic border-t pt-1">
+                        <div className="mt-6 flex justify-between items-center text-[8px] text-muted-foreground italic border-t pt-1">
                             <span>Issue Date: {new Date().toLocaleDateString('en-GB')}</span>
                             <span>Powered by: Birganj Pouro High School Management System</span>
                         </div>
