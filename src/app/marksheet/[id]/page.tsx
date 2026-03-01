@@ -35,7 +35,7 @@ function MarksheetContent() {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const academicYear = searchParams.get('academicYear');
+    const academicYear = searchParams.get('academicYear') || new Date().getFullYear().toString();
 
     useEffect(() => {
       if (!db || !user) return;
