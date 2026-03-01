@@ -119,10 +119,10 @@ export default function TestimonialPage() {
                         <div className="w-24 h-24 flex items-center justify-center">
                             {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={90} height={90} className="object-contain" />}
                         </div>
-                        <div className="text-center flex-grow">
+                        <div className="text-center flex-grow px-2">
                             <p className="text-xl font-bold text-[#2d572c] mb-1">প্রধান শিক্ষকের কার্যালয়</p>
-                            <h1 className="text-5xl font-black mb-2 tracking-tight" style={{color: '#2d572c'}}>
-                                {schoolInfo.name || 'वीरগঞ্জ পৌর উচ্চ বিদ্যালয়'}
+                            <h1 className="text-4xl sm:text-5xl font-black mb-2 tracking-tight whitespace-nowrap" style={{color: '#2d572c'}}>
+                                {schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'}
                             </h1>
                             <p className="text-lg font-bold text-[#2d572c] mb-1">স্থাপিতঃ ২০১৯ খ্রিঃ</p>
                             <p className="text-sm font-bold text-[#2d572c] tracking-wide">
