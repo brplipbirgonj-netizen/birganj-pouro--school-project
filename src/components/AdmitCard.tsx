@@ -38,7 +38,7 @@ export const AdmitCard = ({ student, schoolInfo, examName }: AdmitCardProps) => 
                 </div>
             </header>
 
-            <main className="flex flex-col flex-1 py-1">
+            <main className="flex flex-col py-1">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1.5 text-[13px] flex-1">
                         <div className="flex">
@@ -80,8 +80,8 @@ export const AdmitCard = ({ student, schoolInfo, examName }: AdmitCardProps) => 
                 </div>
             </main>
 
-            <footer className="mt-auto print-footer">
-                <div className="text-[10px] leading-tight mb-8 bg-gray-50 p-2 rounded border border-dashed border-gray-300">
+            <footer className="mt-auto print-footer flex flex-col h-full max-h-[140px]">
+                <div className="text-[10px] leading-tight bg-gray-50 p-2 rounded border border-dashed border-gray-300">
                     <p className="font-black underline mb-1">পরীক্ষার্থীদের নিয়মাবলী:</p>
                     <ul className="list-disc list-inside space-y-0.5 text-gray-900 font-bold">
                         <li>পরীক্ষা শুরুর ৩০ মিনিট পূর্বে আসনে বসতে হবে।</li>
@@ -89,7 +89,8 @@ export const AdmitCard = ({ student, schoolInfo, examName }: AdmitCardProps) => 
                         <li>প্রবেশপত্র অবশ্যই সাথে আনতে হবে।</li>
                     </ul>
                 </div>
-                <div className="flex justify-between items-end px-2 pb-2">
+                
+                <div className="flex justify-between items-end px-2 pb-2 mt-auto">
                     <div className="text-center w-32 border-t-2 border-black pt-1">
                         <p className="font-black text-[10px]">শ্রেণি শিক্ষকের স্বাক্ষর</p>
                     </div>
