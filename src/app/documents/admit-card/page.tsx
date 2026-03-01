@@ -11,10 +11,11 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { AdmitCard } from '@/components/AdmitCard';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import Link from 'next/link';
 
 const AdmitCardGeneratorPage = () => {
     const db = useFirestore();
@@ -94,8 +95,15 @@ const AdmitCardGeneratorPage = () => {
                 <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
                     <Card>
                         <CardHeader>
-                            <CardTitle>প্রবেশ পত্র জেনারেটর</CardTitle>
-                            <CardDescription>পরীক্ষা এবং শ্রেণি নির্বাচন করে প্রবেশপত্র তৈরি করুন।</CardDescription>
+                            <div className="flex items-center gap-4">
+                                <Link href="/documents">
+                                    <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+                                </Link>
+                                <div>
+                                    <CardTitle>প্রবেশ পত্র জেনারেটর</CardTitle>
+                                    <CardDescription>পরীক্ষা এবং শ্রেণি নির্বাচন করে প্রবেশপত্র তৈরি করুন।</CardDescription>
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg items-end">

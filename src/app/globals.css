@@ -7,11 +7,6 @@
   margin: 0;
 }
 
-@page routine {
-  size: legal landscape;
-  margin: 0;
-}
-
 @layer base {
   :root {
     --background: 170 43% 96.1%;
@@ -80,29 +75,16 @@
       visibility: hidden !important;
     }
     
-    .printable-content {
-        display: block !important;
-        visibility: visible !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: white !important;
-        color: black !important;
-    }
-
-    .marksheet-container, .printable-area {
+    .printable-area {
       width: 210mm !important;
-      height: 296mm !important; /* Slightly less than 297 to avoid page break */
+      height: 296mm !important;
       padding: 10mm !important;
       margin: 0 !important;
       box-sizing: border-box !important;
       page-break-after: always !important;
       overflow: hidden !important;
-    }
-
-    .printable-content * {
-        color: black !important;
-        border-color: #000 !important;
+      background: white !important;
+      position: relative !important;
     }
 
     .admit-card-grid {
@@ -115,15 +97,10 @@
       padding: 2mm !important;
     }
 
-    .admit-card {
-      break-inside: avoid !important;
-      page-break-inside: avoid !important;
-      height: 135mm !important;
-      width: 100mm !important;
-      border: 1.5px solid black !important;
-      padding: 5mm !important;
-      position: relative !important;
-      box-sizing: border-box !important;
+    /* Force the header to be visible during print */
+    .printable-header {
+      display: flex !important;
+      visibility: visible !important;
     }
   }
 }
