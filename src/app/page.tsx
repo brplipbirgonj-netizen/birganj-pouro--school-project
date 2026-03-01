@@ -266,11 +266,13 @@ const LiveRoutineCard = () => {
         let isSpecialStatus = false;
 
         if (activeHoliday) {
-            return { status: `আজ ${activeHoliday.description}।`, runningClasses: [], isSpecialStatus: true };
+            isSpecialStatus = true;
+            return { status: `আজ ${activeHoliday.description}।`, runningClasses: [], isSpecialStatus };
         }
         
         if (currentDayName === 'শুক্রবার' || currentDayName === 'শনিবার') {
-            return { status: 'আজ সাপ্তাহিক ছুটি।', runningClasses: [], isSpecialStatus: true };
+            isSpecialStatus = true;
+            return { status: 'আজ সাপ্তাহিক ছুটি।', runningClasses: [], isSpecialStatus };
         }
 
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -284,7 +286,7 @@ const LiveRoutineCard = () => {
 
             if(currentMinutes >= startMinutes && currentMinutes < endMinutes) {
                 if (period.name === 'বিরতি') {
-                    return { status: 'এখন টিফিনের বিরতি চলছে।', runningClasses: [], isSpecialStatus: false };
+                    return { status: 'এখন টিফিনের বিরতি চলছে।', runningClasses: [], isSpecialStatus };
                 }
                 if (i < 3) periodIndex = i;
                 if (i > 3) periodIndex = i - 1;
@@ -293,7 +295,7 @@ const LiveRoutineCard = () => {
         }
         
         if (periodIndex === -1) {
-             return { status: 'এখন কোনো ক্লাস চলছে না।', runningClasses: [], isSpecialStatus: false };
+             return { status: 'এখন কোনো ক্লাস চলছে না।', runningClasses: [], isSpecialStatus };
         }
 
         runningClasses = fullRoutine
