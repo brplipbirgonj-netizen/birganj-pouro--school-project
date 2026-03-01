@@ -73,7 +73,7 @@ export default function TestimonialPage() {
     const studentDob = student.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
-        <div className="bg-gray-100 p-8 font-kalpurush">
+        <div className="bg-gray-100 p-8 font-kalpurush print:p-0 print:bg-white">
             <div className="fixed top-8 right-8 z-50 no-print">
                 <Button onClick={() => window.print()} size="lg" className="shadow-lg">
                     <Printer className="mr-2 h-5 w-5" />
@@ -81,7 +81,7 @@ export default function TestimonialPage() {
                 </Button>
             </div>
 
-            <div className="w-[210mm] h-[297mm] bg-white mx-auto shadow-lg printable-area relative text-black flex flex-col">
+            <div className="w-[210mm] h-[297mm] bg-white mx-auto shadow-lg relative text-black flex flex-col print:shadow-none print:m-0 print:border-none">
                 {/* Header Section */}
                 <header 
                     className="h-[100px] p-2 relative text-center bg-white border-b-2 border-gray-300"
