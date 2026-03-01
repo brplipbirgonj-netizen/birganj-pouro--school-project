@@ -14,7 +14,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2 } from 'lucide-react';
+import { FilePen, Trash2, Smartphone } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -23,6 +23,7 @@ import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DatePicker } from './ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const feeFields: { key: keyof FeeBreakdown; label: string }[] = [
     { key: 'tuitionCurrent', label: 'চলতি' },
@@ -70,6 +71,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     const [description, setDescription] = useState('');
     const [breakdown, setBreakdown] = useState<FeeBreakdown>(emptyBreakdown);
     const [collectorName, setCollectorName] = useState<string>('');
+    const [shouldSendSMS, setShouldSendSMS] = useState(true);
 
     const bengaliMonths = useMemo(() => [
         'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -198,6 +200,26 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         try {
             await batch.commit();
             toast({ title: "ফি আদায় সফল হয়েছে", description: `শিক্ষার্থীর ফি এবং ক্যাশবুক সফলভাবে আপডেট করা হয়েছে।` });
+            
+            // Direct SMS Logic
+            if (shouldSendSMS) {
+                const mobile = student.guardianMobile || student.studentMobile || '';
+                if (mobile) {
+                    const cleanNumber = mobile.replace(/[^\d+]/g, '');
+                    // Format: সম্মানিত অভিভাবক, [নাম] এর [মাসের নাম] বাবদ মোট [টাকা] টাকা আদায় করা হয়েছে। বীপৌউবি
+                    const msg = `সম্মানিত অভিভাবক, ${student.studentNameBn} এর ${description} বাবদ মোট ${totalAmount.toLocaleString('bn-BD')} টাকা আদায় করা হয়েছে। বীপৌউবি`;
+                    const encodedMsg = encodeURIComponent(msg);
+                    
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    const separator = isIOS ? '&' : '?';
+                    const smsUrl = `sms:${cleanNumber}${separator}body=${encodedMsg}`;
+                    
+                    setTimeout(() => {
+                        window.location.href = smsUrl;
+                    }, 500);
+                }
+            }
+
             onSave();
             onOpenChange(false);
         } catch (error) {
@@ -205,6 +227,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
             const permissionError = new FirestorePermissionError({
                 path: 'feeCollections/ or transactions/',
                 operation: 'write',
+                requestResourceData: feeCollectionData,
             });
             errorEmitter.emit('permission-error', permissionError);
         }
@@ -261,17 +284,33 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                             ))}
                         </div>
                     </div>
-                    <div className="bg-muted p-3 rounded-md text-xs text-muted-foreground">
-                        আদায়কারী: {collectorName || 'লোড হচ্ছে...'}
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/50 p-4 rounded-lg mt-4">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox 
+                                id="send-sms" 
+                                checked={shouldSendSMS} 
+                                onCheckedChange={(checked) => setShouldSendSMS(!!checked)} 
+                            />
+                            <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer">
+                                <Smartphone className="h-4 w-4 text-primary" />
+                                সেভ করার পর ফোনে মেসেজ ড্রাফট করুন
+                            </Label>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            আদায়কারী: {collectorName || 'লোড হচ্ছে...'}
+                        </div>
                     </div>
                 </div>
 
                 <DialogFooter className="pt-4 border-t -mx-6 px-6 pb-6 mt-auto">
                     <div className="flex justify-between w-full items-center">
-                        <p className="font-semibold">মোট আদায়: {totalAmount.toLocaleString('bn-BD')} টাকা</p>
-                        <div>
+                        <p className="font-semibold text-lg">মোট আদায়: {totalAmount.toLocaleString('bn-BD')} টাকা</p>
+                        <div className="flex gap-2">
                              <DialogClose asChild><Button variant="ghost">বাতিল</Button></DialogClose>
-                            <Button onClick={handleSave}>সেভ করুন</Button>
+                            <Button onClick={handleSave} className="min-w-[120px]">
+                                {shouldSendSMS ? 'সেভ ও মেসেজ' : 'শুধুমাত্র সেভ'}
+                            </Button>
                         </div>
                     </div>
                 </DialogFooter>
