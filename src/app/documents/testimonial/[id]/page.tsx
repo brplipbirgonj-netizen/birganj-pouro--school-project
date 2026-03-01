@@ -81,7 +81,7 @@ export default function TestimonialPage() {
                 </Button>
             </div>
 
-            <div className="w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none">
+            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none">
                 {/* Header Section */}
                 <header 
                     className="h-[100px] p-2 relative text-center bg-white border-b-2 border-gray-300"
