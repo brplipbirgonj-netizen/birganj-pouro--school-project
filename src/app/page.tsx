@@ -509,7 +509,7 @@ export default function Home() {
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-          <Card className="bg-sky-100 border-sky-200">
+          <Card className="bg-sky-100 border-sky-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-sky-800">
                 মোট শিক্ষার্থী
@@ -524,7 +524,7 @@ export default function Home() {
             </CardContent>
           </Card>
           
-           <Card className="bg-emerald-100 border-emerald-200">
+           <Card className="bg-emerald-100 border-emerald-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-emerald-800">
                 মোট উপস্থিত
@@ -539,7 +539,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="bg-rose-100 border-rose-200">
+          <Card className="bg-rose-100 border-rose-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-rose-800">
                 মোট অনুপস্থিত
@@ -554,7 +554,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="bg-amber-100 border-amber-200">
+          <Card className="bg-amber-100 border-amber-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-amber-800">
                 মোট শিক্ষক
