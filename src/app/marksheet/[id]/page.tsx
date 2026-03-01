@@ -167,8 +167,8 @@ function MarksheetContent() {
                 </Button>
             </div>
             
-            {/* Printable Marksheet Card - Visible on Screen */}
-            <div className="w-[210mm] min-h-[297mm] bg-white p-6 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0 print:p-[5mm]">
+            {/* Printable Marksheet Card */}
+            <div className="w-[210mm] min-h-[297mm] bg-white p-6 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0 print:p-[5mm] printable-content">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-10" />
@@ -295,7 +295,7 @@ function MarksheetContent() {
                     </section>
 
                     {/* Footer */}
-                    <footer className="mt-auto pt-8 pb-4 text-[10px]">
+                    <footer className="mt-auto pt-8 pb-4 text-[10px] print-footer">
                         <div className="flex justify-between px-12">
                             <div className="text-center">
                                 <div className="w-28 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>

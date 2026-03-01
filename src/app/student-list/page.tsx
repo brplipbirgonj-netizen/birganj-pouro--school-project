@@ -103,7 +103,7 @@ function StudentListContent() {
         }, 500);
         return () => clearTimeout(timer);
     }
-  }, [targetStudentId, isLoading, activeTab, isMounted]);
+  }, [targetStudentId, isLoading, isMounted]);
 
   const studentsForYear = useMemo(() => {
     return allStudents.filter(student => student.academicYear === selectedYear);
@@ -314,7 +314,7 @@ function StudentListContent() {
                             <Separator />
 
                             <div>
-                                <h3 className="font-semibold text-lg mb-2 border-b pb-1">অভিভাবকের তথ্য</h3>
+                                <h3 className="font-semibold text-lg mb-2 border-b pb-1">অভিভাগকের তথ্য</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                     <p><span className="font-medium text-muted-foreground">পিতার নাম (বাংলা):</span> {studentToView.fatherNameBn}</p>
                                     <p><span className="font-medium text-muted-foreground">পিতার নাম (ইংরেজি):</span> {studentToView.fatherNameEn || 'N/A'}</p>

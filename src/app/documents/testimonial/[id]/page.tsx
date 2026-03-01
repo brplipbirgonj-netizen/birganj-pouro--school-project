@@ -91,8 +91,8 @@ export default function TestimonialPage() {
                 </Button>
             </div>
 
-            {/* Testimonial Page - Visible on Screen */}
-            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none p-10 box-border">
+            {/* Testimonial Page */}
+            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none p-10 box-border printable-content">
                 {/* Header Section */}
                 <header 
                     className="h-[120px] p-4 relative text-center bg-white border-b-2 border-gray-300 mb-6"
@@ -159,7 +159,7 @@ export default function TestimonialPage() {
                 </main>
                 
                 {/* Footer Section */}
-                <footer className="pb-24 z-10 text-right mt-auto">
+                <footer className="pb-24 z-10 text-right mt-auto print-footer">
                     <div className="inline-block text-center">
                         <div className="w-72 border-t-2 border-black pt-2">
                             <p className="font-black text-lg mb-1">{headmaster?.nameBn || '[প্রধান শিক্ষকের নাম]'}</p>
