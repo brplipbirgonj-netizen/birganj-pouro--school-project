@@ -7,7 +7,7 @@ import { getSubjects, Subject } from '@/lib/subjects';
 import { getResultsForClass, ClassResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Button } from '@/components/ui/button';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useFirestore } from '@/firebase';
@@ -16,6 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten' };
 const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce' };
@@ -48,6 +49,7 @@ function MarksheetContent() {
         })) as Student[];
         setAllStudents(studentsData);
       }, async (error: FirestoreError) => {
+          if (error.code === 'permission-denied') return;
           const permissionError = new FirestorePermissionError({
             path: 'students',
             operation: 'list',
@@ -161,11 +163,11 @@ function MarksheetContent() {
                         size: A4;
                         margin: 0 !important;
                     }
-                    body {
+                    html, body {
+                        height: 100%;
                         margin: 0 !important;
                         padding: 0 !important;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
+                        overflow: hidden !important;
                     }
                     .no-print {
                         display: none !important;
@@ -174,20 +176,28 @@ function MarksheetContent() {
                         width: 210mm !important;
                         height: 297mm !important;
                         margin: 0 !important;
-                        padding: 10mm !important;
+                        padding: 8mm !important;
                         border: none !important;
                         box-shadow: none !important;
                         page-break-after: always;
-                        overflow: hidden;
+                        overflow: hidden !important;
+                        position: absolute;
+                        top: 0;
+                        left: 0;
                     }
                 }
             `}</style>
 
             {/* Action Bar */}
             <div className="w-full max-w-[210mm] flex justify-between items-center mb-6 no-print bg-white p-4 rounded-lg shadow-sm border">
-                <div>
-                    <h1 className="text-xl font-bold text-primary">মার্কশিট প্রিভিউ</h1>
-                    <p className="text-sm text-muted-foreground">শিক্ষার্থীর নাম: {student.studentNameBn}</p>
+                <div className="flex items-center gap-4">
+                    <Link href="/student-list">
+                        <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+                    </Link>
+                    <div>
+                        <h1 className="text-xl font-bold text-primary">মার্কশিট প্রিভিউ</h1>
+                        <p className="text-sm text-muted-foreground">{student.studentNameBn}</p>
+                    </div>
                 </div>
                 <Button onClick={() => window.print()} size="lg" className="shadow-md hover:shadow-lg transition-all">
                     <Printer className="mr-2 h-5 w-5" />
@@ -205,7 +215,7 @@ function MarksheetContent() {
                 
                 <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col">
                     {/* Header */}
-                    <header className="mb-4">
+                    <header className="mb-3">
                          <div className="flex justify-between items-start">
                             <div className="flex items-center gap-4">
                                 {schoolInfo.logoUrl && (
@@ -216,18 +226,18 @@ function MarksheetContent() {
                                 <div className="text-left">
                                     <h1 className="text-xl font-black uppercase text-blue-900 tracking-tight leading-none mb-1">{schoolInfo.nameEn || schoolInfo.name}</h1>
                                     <p className="text-[10px] font-medium text-gray-700">{schoolInfo.address}</p>
-                                    <div className="mt-2 inline-block bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                    <div className="mt-1.5 inline-block bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                                         <p className="text-[11px] text-blue-800 font-bold">Academic Session: {academicYear}</p>
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-[7.5px] w-auto">
+                            <div className="text-[7px] w-auto">
                                 <table className="border-collapse border border-black text-center w-full">
                                     <thead className="bg-gray-100">
                                         <tr className="border-b border-black">
-                                            <th className="p-1 px-2 border-r border-black font-bold">Range</th>
-                                            <th className="p-1 px-2 border-r border-black font-bold">GP</th>
-                                            <th className="p-1 px-2 font-bold">Grade</th>
+                                            <th className="p-0.5 px-1.5 border-r border-black font-bold">Range</th>
+                                            <th className="p-0.5 px-1.5 border-r border-black font-bold">GP</th>
+                                            <th className="p-0.5 px-1.5 font-bold">Grade</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -242,33 +252,33 @@ function MarksheetContent() {
                                 </table>
                             </div>
                         </div>
-                        <div className="text-center mt-2">
+                        <div className="text-center mt-1">
                             <h2 className="text-sm font-black underline underline-offset-4 uppercase tracking-wider text-blue-950">Annual Exam Progress Report</h2>
                         </div>
                     </header>
 
                     {/* Student Info */}
-                    <section className="mb-4 text-[11px] leading-relaxed bg-slate-50/50 p-3 border border-dashed border-gray-300 rounded">
-                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 border-b border-black/10 pb-1">
-                            <div className="font-bold text-gray-600">Student's Name</div><div className="font-bold">: {student.studentNameEn || student.studentNameBn}</div>
+                    <section className="mb-3 text-[11px] leading-relaxed bg-slate-50/50 p-2 border border-dashed border-gray-300 rounded">
+                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 border-b border-black/10 pb-0.5">
+                            <div className="font-bold text-gray-600">Student's Name</div><div className="font-bold uppercase">: {student.studentNameEn || student.studentNameBn}</div>
                             <div className="font-bold text-gray-600 text-right">Class</div><div className="font-bold">: {classMap[student.className] || student.className}</div>
                         </div>
-                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
+                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 mt-0.5 border-b border-black/10 pb-0.5">
                             <div className="font-bold text-gray-600">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
                             <div className="font-bold text-gray-600 text-right">Roll No.</div><div className="font-bold">: {student.roll}</div>
                         </div>
-                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
+                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 mt-0.5 border-b border-black/10 pb-0.5">
                             <div className="font-bold text-gray-600">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
                             <div className="font-bold text-gray-600 text-right">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
                         </div>
-                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 mt-1">
+                        <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 mt-0.5">
                             <div className="font-bold text-gray-600">Date of Birth</div><div>: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
                             <div className="font-bold text-gray-600 text-right">Religion</div><div>: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
                         </div>
                     </section>
 
                     {/* Summary Bar */}
-                    <section className="mb-4">
+                    <section className="mb-3">
                         <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[11px] bg-blue-900 text-white rounded-sm">
                             <div className="py-1">Status: <span className={cn("font-black", processedResult.isPass ? "text-green-400" : "text-red-400")}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
                             <div className="py-1">GPA: <span className="font-black text-amber-300">{processedResult.gpa.toFixed(2)}</span></div>
@@ -304,7 +314,7 @@ function MarksheetContent() {
                                             </td>
                                             <td className="border-r border-black p-0.5 text-center text-gray-600">{subject.code}</td>
                                             <td className="border-r border-black p-0.5 text-center font-medium">{subject.fullMarks}</td>
-                                            <td className={cn("border-r border-black p-0.5 text-center font-bold text-sm", isFail ? "text-red-600" : "text-blue-900")}>{result?.marks ?? '-'}</td>
+                                            <td className={cn("border-r border-black p-0.5 text-center font-bold text-[13px]", isFail ? "text-red-600" : "text-blue-900")}>{result?.marks ?? '-'}</td>
                                             <td className={cn("border-r border-black p-0.5 text-center font-black text-[11px]", isFail ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
                                             <td className={cn("p-0.5 text-center font-bold", isFail ? "text-red-600" : "")}>{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
                                         </tr>
@@ -314,9 +324,9 @@ function MarksheetContent() {
                             <tfoot>
                                 <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[11px]">
                                     <td colSpan={4} className="p-1 pr-6 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
-                                    <td className="p-1 text-center border-r border-black text-base text-blue-950">{processedResult.totalMarks}</td>
-                                    <td className="p-1 text-center border-r border-black text-base text-blue-950">{processedResult.finalGrade}</td>
-                                    <td className="p-1 text-center text-base text-blue-950">{processedResult.gpa.toFixed(2)}</td>
+                                    <td className="p-1 text-center border-r border-black text-[14px] text-blue-950">{processedResult.totalMarks}</td>
+                                    <td className="p-1 text-center border-r border-black text-[14px] text-blue-950">{processedResult.finalGrade}</td>
+                                    <td className="p-1 text-center text-[14px] text-blue-950">{processedResult.gpa.toFixed(2)}</td>
                                 </tr>
                             </tfoot>
                         </table>

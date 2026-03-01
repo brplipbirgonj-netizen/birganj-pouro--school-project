@@ -92,7 +92,7 @@
 
     .marksheet-container, .printable-area {
       width: 210mm !important;
-      height: 297mm !important;
+      height: 296mm !important; /* Slightly less than 297 to avoid page break */
       padding: 10mm !important;
       margin: 0 !important;
       box-sizing: border-box !important;
