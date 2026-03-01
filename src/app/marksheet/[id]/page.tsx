@@ -250,8 +250,8 @@ function MarksheetContent() {
                     </section>
 
                     {/* Table */}
-                    <section className="flex-grow">
-                        <table className="w-full border-collapse border-[1.5px] border-black text-[10px]">
+                    <section className="flex-grow overflow-hidden">
+                        <table className="w-full border-collapse border-[1.5px] border-black text-[9px]">
                             <thead>
                                 <tr className="border-b-[1.5px] border-black bg-gray-100 font-bold">
                                     <th className="border-r border-black p-1 w-8 text-center">SL</th>
@@ -269,42 +269,42 @@ function MarksheetContent() {
                                     const isFail = result?.isPass === false;
                                     return (
                                         <tr key={subject.code} className={cn("border-b border-black last:border-b-0", isFail ? "bg-red-50/30" : "")}>
-                                            <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
-                                            <td className="border-r border-black p-1 px-3 font-semibold">
+                                            <td className="border-r border-black p-0.5 text-center font-medium text-gray-500">{index + 1}</td>
+                                            <td className="border-r border-black p-0.5 px-3 font-semibold">
                                                 {subject.englishName}
-                                                {studentOptionalSubject === subject.name && <span className="text-[8px] text-blue-600 font-bold italic ml-1">(Optional)</span>}
+                                                {studentOptionalSubject === subject.name && <span className="text-[7px] text-blue-600 font-bold italic ml-1">(Optional)</span>}
                                             </td>
-                                            <td className="border-r border-black p-1 text-center text-gray-600">{subject.code}</td>
-                                            <td className="border-r border-black p-1 text-center font-medium">{subject.fullMarks}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-bold text-base", isFail ? "text-red-600" : "text-blue-900")}>{result?.marks ?? '-'}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-black text-sm", isFail ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
-                                            <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
+                                            <td className="border-r border-black p-0.5 text-center text-gray-600">{subject.code}</td>
+                                            <td className="border-r border-black p-0.5 text-center font-medium">{subject.fullMarks}</td>
+                                            <td className={cn("border-r border-black p-0.5 text-center font-bold text-sm", isFail ? "text-red-600" : "text-blue-900")}>{result?.marks ?? '-'}</td>
+                                            <td className={cn("border-r border-black p-0.5 text-center font-black text-[11px]", isFail ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
+                                            <td className={cn("p-0.5 text-center font-bold", isFail ? "text-red-600" : "")}>{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
                             <tfoot>
-                                <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[11px]">
-                                    <td colSpan={4} className="p-2 pr-6 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
-                                    <td className="p-2 text-center border-r border-black text-lg text-blue-950">{processedResult.totalMarks}</td>
-                                    <td className="p-2 text-center border-r border-black text-lg text-blue-950">{processedResult.finalGrade}</td>
-                                    <td className="p-2 text-center text-lg text-blue-950">{processedResult.gpa.toFixed(2)}</td>
+                                <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[10px]">
+                                    <td colSpan={4} className="p-1 pr-6 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
+                                    <td className="p-1 text-center border-r border-black text-base text-blue-950">{processedResult.totalMarks}</td>
+                                    <td className="p-1 text-center border-r border-black text-base text-blue-950">{processedResult.finalGrade}</td>
+                                    <td className="p-1 text-center text-base text-blue-950">{processedResult.gpa.toFixed(2)}</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </section>
 
                     {/* Footer */}
-                    <footer className="mt-auto pt-8 pb-4 text-[10px] print-footer">
+                    <footer className="mt-auto pt-6 pb-2 text-[9px] print-footer">
                         <div className="flex justify-between px-12">
                             <div className="text-center">
-                                <div className="w-28 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>
+                                <div className="w-24 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>
                             </div>
                             <div className="text-center">
-                                <div className="w-28 border-t border-black pt-1 font-bold text-gray-700 uppercase">Headmaster</div>
+                                <div className="w-24 border-t border-black pt-1 font-bold text-gray-700 uppercase">Headmaster</div>
                             </div>
                         </div>
-                        <div className="mt-8 flex justify-between items-center text-[8px] text-muted-foreground italic border-t pt-2">
+                        <div className="mt-6 flex justify-between items-center text-[7px] text-muted-foreground italic border-t pt-1">
                             <span>Issue Date: {new Date().toLocaleDateString('en-GB')}</span>
                             <span>Powered by: Birganj Pouro High School Management System</span>
                         </div>
