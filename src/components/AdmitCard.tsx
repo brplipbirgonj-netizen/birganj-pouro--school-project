@@ -81,14 +81,17 @@ export const AdmitCard = ({ student, schoolInfo, examName }: AdmitCardProps) => 
             </main>
 
             <footer className="mt-auto">
-                <div className="flex justify-between items-end gap-4">
-                    <div className="text-[9px] leading-tight flex-1">
-                        <p className="font-black underline mb-1">পরীক্ষার্থীদের নিয়মাবলী:</p>
-                        <ul className="list-decimal list-inside space-y-0.5 text-gray-800 font-medium">
-                            <li>পরীক্ষা শুরুর ৩০ মিনিট পূর্বে আসনে বসতে হবে।</li>
-                            <li>অবৈধ কিছু বা মোবাইল ফোন আনা নিষেধ।</li>
-                            <li>প্রবেশপত্র অবশ্যই সাথে আনতে হবে।</li>
-                        </ul>
+                <div className="text-[9px] leading-tight mb-4">
+                    <p className="font-black underline mb-1">পরীক্ষার্থীদের নিয়মাবলী:</p>
+                    <ul className="list-decimal list-inside space-y-0.5 text-gray-800 font-medium">
+                        <li>পরীক্ষা শুরুর ৩০ মিনিট পূর্বে আসনে বসতে হবে।</li>
+                        <li>অবৈধ কিছু বা মোবাইল ফোন আনা নিষেধ।</li>
+                        <li>প্রবেশপত্র অবশ্যই সাথে আনতে হবে।</li>
+                    </ul>
+                </div>
+                <div className="flex justify-between items-end">
+                    <div className="text-center w-32 border-t-2 border-black pt-1">
+                        <p className="font-black text-[10px]">শ্রেণি শিক্ষকের স্বাক্ষর</p>
                     </div>
                     <div className="text-center w-32 border-t-2 border-black pt-1">
                         <p className="font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর</p>
