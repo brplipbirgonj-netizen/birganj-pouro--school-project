@@ -91,7 +91,7 @@ export default function TestimonialPage() {
                 </Button>
             </div>
 
-            {/* Testimonial Page */}
+            {/* Testimonial Page - Visible on Screen */}
             <div className="w-[210mm] min-h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none p-10 box-border">
                 {/* Header Section */}
                 <header 

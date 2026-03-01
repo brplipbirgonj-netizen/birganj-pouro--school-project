@@ -167,7 +167,7 @@ function MarksheetContent() {
                 </Button>
             </div>
             
-            {/* Printable Marksheet Card */}
+            {/* Printable Marksheet Card - Visible on Screen */}
             <div className="w-[210mm] min-h-[297mm] bg-white p-6 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0 print:p-[5mm]">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
@@ -219,7 +219,7 @@ function MarksheetContent() {
                         </div>
                     </header>
 
-                    {/* Student Info Info */}
+                    {/* Student Info */}
                     <section className="mb-4 text-[11px] leading-relaxed bg-slate-50/50 p-3 border border-dashed border-gray-300 rounded">
                         <div className="grid grid-cols-[1.2fr_4fr_1fr_2fr] gap-x-4 border-b border-black/10 pb-1">
                             <div className="font-bold text-gray-600">Student's Name</div><div className="font-bold">: {student.studentNameEn || student.studentNameBn}</div>
@@ -295,7 +295,7 @@ function MarksheetContent() {
                     </section>
 
                     {/* Footer */}
-                    <footer className="mt-8 pt-8 pb-4 text-[10px]">
+                    <footer className="mt-auto pt-8 pb-4 text-[10px]">
                         <div className="flex justify-between px-12">
                             <div className="text-center">
                                 <div className="w-28 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>

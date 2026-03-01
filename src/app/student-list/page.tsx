@@ -55,6 +55,11 @@ function StudentListContent() {
   const db = useFirestore();
   const { user, hasPermission } = useAuth();
   const canManageStudents = hasPermission('manage:students');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (targetClass) {
@@ -89,7 +94,7 @@ function StudentListContent() {
 
   // Scroll to targeted student
   useEffect(() => {
-    if (targetStudentId && !isLoading) {
+    if (targetStudentId && !isLoading && isMounted) {
         const timer = setTimeout(() => {
             const element = document.getElementById(`student-row-${targetStudentId}`);
             if (element) {
@@ -98,7 +103,7 @@ function StudentListContent() {
         }, 500);
         return () => clearTimeout(timer);
     }
-  }, [targetStudentId, isLoading, activeTab]);
+  }, [targetStudentId, isLoading, activeTab, isMounted]);
 
   const studentsForYear = useMemo(() => {
     return allStudents.filter(student => student.academicYear === selectedYear);
@@ -131,6 +136,8 @@ function StudentListContent() {
   const getStudentsByClass = (className: string): Student[] => {
     return studentsForYear.filter((student) => student.className === className);
   };
+
+  if (!isMounted) return <Header />;
 
   return (
     <>

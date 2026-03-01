@@ -168,6 +168,8 @@ export function Header() {
     setActionsDialogOpen(true);
   };
 
+  if (!isClient) return <header className="h-16 bg-primary" />;
+
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
       <div className="flex items-center gap-2">
@@ -177,7 +179,6 @@ export function Header() {
               <ArrowLeft className="h-6 w-6" />
               <span className="sr-only">Go back</span>
             </Button>
-            {isClient && (
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">
@@ -334,7 +335,6 @@ export function Header() {
                 </div>
               </SheetContent>
             </Sheet>
-            )}
           </>
         )}
       </div>

@@ -266,7 +266,7 @@ function StudentProfileSearchContent() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="end-month">শেষের মাস</Label>
-                                        <Select value={endMonth} onValueChange={setEndMonth}>
+                                        <Select value={endMonth} onValueChange={endMonth => setEndMonth(endMonth)}>
                                             <SelectTrigger id="end-month"><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
