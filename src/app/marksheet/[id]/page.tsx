@@ -157,10 +157,10 @@ function MarksheetContent() {
                 </Button>
             </div>
             
-            {/* Main A4 Marksheet Container - Preview version */}
-            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto p-4 sm:p-6 relative flex flex-col box-border border border-gray-200 print:shadow-none print:border-none print:m-0 print:p-5mm">
+            {/* Main A4 Marksheet Container - Enhanced for Screen Visibility */}
+            <div className="w-[210mm] min-h-[297mm] bg-white mx-auto p-4 sm:p-6 relative flex flex-col box-border border border-gray-200 shadow-xl print:shadow-none print:border-none print:m-0 print:p-5mm">
                 {schoolInfo.logoUrl && (
-                    <div className="absolute inset-0 flex items-center justify-center z-0">
+                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-10" />
                     </div>
                 )}
@@ -234,7 +234,7 @@ function MarksheetContent() {
                         </div>
                     </section>
 
-                    <section className="flex-grow">
+                    <section className="flex-grow overflow-hidden">
                         <table className="w-full border-collapse border-2 border-black text-[9px]">
                             <thead>
                                 <tr className="border-b-2 border-black bg-gray-100">

@@ -73,7 +73,7 @@ export default function TestimonialPage() {
     const studentDob = student.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
-        <div className="bg-gray-100 p-8 font-kalpurush print:p-0 print:bg-white">
+        <div className="bg-gray-100 p-8 font-kalpurush print:p-0 print:bg-white min-h-screen">
             <div className="fixed top-8 right-8 z-50 no-print">
                 <Button onClick={() => window.print()} size="lg" className="shadow-lg">
                     <Printer className="mr-2 h-5 w-5" />
@@ -81,7 +81,7 @@ export default function TestimonialPage() {
                 </Button>
             </div>
 
-            <div className="w-[210mm] h-[297mm] bg-white mx-auto shadow-lg relative text-black flex flex-col print:shadow-none print:m-0 print:border-none">
+            <div className="w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 print:border-none">
                 {/* Header Section */}
                 <header 
                     className="h-[100px] p-2 relative text-center bg-white border-b-2 border-gray-300"
@@ -114,7 +114,7 @@ export default function TestimonialPage() {
 
                 {/* Watermark */}
                 {schoolInfo.logoUrl && (
-                    <div className="absolute inset-0 flex items-center justify-center z-0">
+                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={350} height={350} className="opacity-10" />
                     </div>
                 )}
