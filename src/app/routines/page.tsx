@@ -436,20 +436,20 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
 
     return (
         <div className="overflow-x-auto w-full border rounded-lg shadow-inner bg-white">
-           <Table className="border w-full min-w-[900px] print:min-w-full print:text-[10px]">
+           <Table className="border w-full min-w-[900px] print:min-w-full print:text-[8px]">
                 <TableHeader>
-                   <TableRow className="bg-muted/50 h-14">
-                       <TableHead className="border-r font-bold align-middle text-center w-[100px]">বার</TableHead>
-                       <TableHead className="border-r font-bold align-middle text-center w-[80px]">শ্রেণি</TableHead>
+                   <TableRow className="bg-muted/50 h-14 print:h-8">
+                       <TableHead className="border-r font-bold align-middle text-center w-[100px] print:w-[60px]">বার</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[80px] print:w-[40px]">শ্রেণি</TableHead>
                        {periods.map(p => (
-                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px]">
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px]">
                                {p.name}<br/>
                                <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
                            </TableHead>
                        ))}
-                       <TableHead className="border-r text-center font-bold bg-amber-50 text-amber-900 w-[50px]">বিরতি</TableHead>
+                       <TableHead className="border-r text-center font-bold bg-amber-50 text-amber-900 w-[50px] print:w-[30px] print:text-[7px]">বিরতি</TableHead>
                        {postBreakPeriods.map(p => (
-                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px]">
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px]">
                                {p.name}<br/>
                                <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
                            </TableHead>
@@ -459,20 +459,20 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
                <TableBody>
                    {days.map((day) => (
                        classes.map((cls, classIndex) => (
-                           <TableRow key={`${day}-${cls}`} className="h-12 hover:bg-muted/20 transition-colors">
+                           <TableRow key={`${day}-${cls}`} className="h-12 print:h-7 hover:bg-muted/20 transition-colors">
                                {classIndex === 0 && (
-                                    <TableCell className="font-black border-r align-middle text-center bg-gray-50 print:bg-white text-sm" rowSpan={classes.length}>
+                                    <TableCell className="font-black border-r align-middle text-center bg-gray-50 print:bg-white text-sm print:text-[10px]" rowSpan={classes.length}>
                                         {day}
                                     </TableCell>
                                )}
-                               <TableCell className="font-bold border-r text-center bg-gray-50/50 print:bg-white text-xs">{classNamesMap[cls]}</TableCell>
+                               <TableCell className="font-bold border-r text-center bg-gray-50/50 print:bg-white text-xs print:text-[8px]">{classNamesMap[cls]}</TableCell>
                                {[...Array(3)].map((_, periodIdx) => {
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
                                    return <EditableCell key={`${day}-${cls}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(cls, day, periodIdx, value)} conflictKey={`${cls}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                })}
                                {classIndex === 0 && (
-                                    <TableCell className="border-r text-center bg-amber-50/30 font-black text-[11px] print:text-[10px] align-middle text-amber-800" rowSpan={classes.length}>
-                                        <div className="[writing-mode:vertical-lr] rotate-180 py-4 tracking-widest uppercase">টিফিন</div>
+                                    <TableCell className="border-r text-center bg-amber-50/30 font-black text-[11px] print:text-[8px] align-middle text-amber-800" rowSpan={classes.length}>
+                                        <div className="[writing-mode:vertical-lr] rotate-180 py-4 print:py-1 tracking-widest uppercase">টিফিন</div>
                                     </TableCell>
                                )}
                                {[...Array(3)].map((_, i) => {
@@ -516,7 +516,7 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
             className={cn("w-full h-full p-1 text-[11px] border-transparent rounded-none focus:bg-amber-100 text-center min-h-[40px]", { "bg-red-100": isConflict })}
         />
     ) : (
-        <div className="p-2 text-[11px] print:text-[9px] text-center leading-tight break-words font-medium">
+        <div className="p-2 print:p-0.5 text-[11px] print:text-[8px] text-center leading-tight break-words font-medium">
             {content || <>&nbsp;</>}
         </div>
     );
@@ -926,8 +926,13 @@ export default function RoutinesPage() {
                     <style jsx global>{`
                         @media print {
                             .routine-print-container {
-                                display: block !important;
+                                display: flex !important;
+                                flex-direction: column !important;
                                 visibility: visible !important;
+                                width: 210mm !important;
+                                height: 297mm !important;
+                                padding: 5mm 8mm !important;
+                                box-sizing: border-box !important;
                             }
                             .routine-print-container table {
                                 width: 100% !important;
@@ -935,16 +940,30 @@ export default function RoutinesPage() {
                                 table-layout: auto !important;
                             }
                             .routine-print-container td, .routine-print-container th {
-                                font-size: 9px !important;
-                                padding: 2px !important;
+                                font-size: 8px !important;
+                                padding: 1.5px 2px !important;
                                 border: 1px solid black !important;
                                 vertical-align: middle !important;
+                                line-height: 1 !important;
+                            }
+                            .routine-print-container header {
+                                margin-bottom: 4px !important;
                             }
                             .routine-print-container header h1 {
-                                font-size: 18px !important;
+                                font-size: 16px !important;
+                                margin-bottom: 1px !important;
+                            }
+                            .routine-print-container header p {
+                                font-size: 10px !important;
+                                margin-bottom: 1px !important;
                             }
                             .routine-print-container header h2 {
-                                font-size: 14px !important;
+                                font-size: 12px !important;
+                                margin-top: 2px !important;
+                            }
+                            .routine-print-container footer {
+                                margin-top: 6px !important;
+                                padding-top: 4px !important;
                             }
                         }
                     `}</style>
@@ -952,8 +971,8 @@ export default function RoutinesPage() {
                         <div className="flex items-center justify-center h-full">লোড হচ্ছে...</div>
                     ) : (
                         <div className="flex flex-col h-full w-full">
-                             <header className="flex items-center gap-4 mb-4 border-b-2 border-black pb-2 printable-header">
-                                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={60} height={60} className="object-contain" />}
+                             <header className="flex items-center gap-4 border-b-2 border-black pb-1 printable-header">
+                                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={50} height={50} className="object-contain" />}
                                 <div className="text-center flex-grow">
                                     <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
                                     <p className="text-xs font-bold">{schoolInfo.address}</p>
@@ -961,9 +980,9 @@ export default function RoutinesPage() {
                                         ক্লাস রুটিন - {selectedYear.toLocaleString('bn-BD')}
                                     </h2>
                                 </div>
-                                <div className="w-[60px]"></div>
+                                <div className="w-[50px]"></div>
                             </header>
-                            <div className="flex-1 w-full overflow-hidden">
+                            <div className="flex-1 w-full overflow-hidden mt-1">
                                 <CombinedRoutineTable 
                                     routineData={routineData}
                                     conflicts={conflicts}
@@ -973,9 +992,9 @@ export default function RoutinesPage() {
                                     isMounted={isMounted}
                                 />
                             </div>
-                            <footer className="mt-8 pt-4 flex justify-between text-[11px] font-bold print-footer">
-                                <div className="text-center w-40 border-t-2 border-black pt-1">রুটিন কমিটির স্বাক্ষর</div>
-                                <div className="text-center w-40 border-t-2 border-black pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
+                            <footer className="mt-4 pt-4 flex justify-between text-[10px] font-bold print-footer">
+                                <div className="text-center w-40 border-t border-black pt-1">রুটিন কমিটির স্বাক্ষর</div>
+                                <div className="text-center w-40 border-t border-black pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
                             </footer>
                         </div>
                     )}
