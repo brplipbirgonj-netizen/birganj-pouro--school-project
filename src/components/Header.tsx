@@ -492,7 +492,7 @@ export function Header() {
           variant="outline" 
           size="icon" 
           onClick={() => router.back()} 
-          className="fixed bottom-20 left-6 z-[60] h-12 w-12 rounded-full bg-white text-primary shadow-2xl hover:bg-gray-100 border-2 border-primary/20 no-print transition-transform active:scale-95 flex items-center justify-center"
+          className="fixed bottom-24 left-6 z-[60] h-12 w-12 rounded-full bg-white text-primary shadow-2xl hover:bg-gray-100 border-2 border-primary/20 no-print transition-transform active:scale-95 flex items-center justify-center"
         >
           <ArrowLeft className="h-6 w-6" />
           <span className="sr-only">Go back</span>

@@ -353,7 +353,7 @@ const LiveRoutineCard = () => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>সময়</TableHead>
-                                <TableHead>শিক্ষক</TableHead>
+                                <TableHead>শিক্ষকর</TableHead>
                                 <TableHead>শ্রেণি</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -509,7 +509,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-sky-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
           <Card className="bg-sky-100 border-sky-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
