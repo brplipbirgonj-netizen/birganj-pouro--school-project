@@ -24,7 +24,7 @@ import {
   PieChart,
   IdCard,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -57,10 +57,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { StudentFeeDialog } from './StudentFeeDialog';
+import { cn } from '@/lib/utils';
 
 export function Header() {
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { selectedYear, setSelectedYear, availableYears } = useAcademicYear();
   const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
   const { user, loading: authLoading, hasPermission } = useAuth();
@@ -168,6 +170,14 @@ export function Header() {
     setSearchQuery('');
     setActionsDialogOpen(true);
   };
+
+  const bottomNavItems = [
+    { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
+    { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
+    { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
+    { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: 'manage:results' },
+    { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
+  ];
 
   if (!isClient) return <header className="h-16 bg-primary" />;
 
@@ -532,11 +542,36 @@ export function Header() {
           variant="outline" 
           size="icon" 
           onClick={() => router.back()} 
-          className="fixed bottom-6 left-6 z-[60] h-12 w-12 rounded-full bg-white text-primary shadow-2xl hover:bg-gray-100 border-2 border-primary/20 no-print transition-transform active:scale-95 flex items-center justify-center"
+          className="fixed bottom-20 left-6 z-[60] h-12 w-12 rounded-full bg-white text-primary shadow-2xl hover:bg-gray-100 border-2 border-primary/20 no-print transition-transform active:scale-95 flex items-center justify-center"
         >
           <ArrowLeft className="h-6 w-6" />
           <span className="sr-only">Go back</span>
         </Button>
+      )}
+
+      {/* Fixed Bottom Navigation Bar */}
+      {user && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary border-t border-white/10 flex items-center justify-around px-2 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
+          {bottomNavItems.map((item) => {
+            const isActive = pathname === item.href;
+            if (!hasPermission(item.permission)) return null;
+            
+            return (
+              <Link key={item.href} href={item.href} className="flex-1">
+                <div className={cn(
+                  "flex flex-col items-center justify-center gap-1 transition-colors py-1",
+                  isActive ? "text-white" : "text-primary-foreground/60 hover:text-white"
+                )}>
+                  <item.icon className={cn("h-5 w-5", isActive && "scale-110")} />
+                  <span className={cn("text-[10px] font-bold", isActive ? "opacity-100" : "opacity-80")}>
+                    {item.label}
+                  </span>
+                  {isActive && <div className="h-1 w-1 rounded-full bg-white animate-in zoom-in" />}
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
       )}
     </>
   );
