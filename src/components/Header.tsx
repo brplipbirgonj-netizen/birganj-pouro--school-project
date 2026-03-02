@@ -172,6 +172,7 @@ export function Header() {
   };
 
   // Bottom Navigation configuration
+  // 4 items on left, Search in center, 4 items on right
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
     { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
@@ -181,6 +182,7 @@ export function Header() {
     { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: 'manage:results' },
     { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
     { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: 'manage:messaging' },
+    { label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines' },
   ];
 
   if (!isClient) return <header className="h-16 bg-primary" />;
