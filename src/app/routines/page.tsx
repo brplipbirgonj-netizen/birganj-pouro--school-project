@@ -394,24 +394,24 @@ const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellCha
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
-                    <Table className="border">
+                    <Table className="border min-w-[800px]">
                         <TableHeader>
-                            <TableRow>
-                                <TableHead className="border-r font-bold align-middle text-center">বার</TableHead>
-                                {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-xs">{p.time}</span></TableHead>)}
-                                <TableHead className="border-r text-center font-semibold bg-gray-100">বিরতি<br/><span className="font-normal text-xs">০১:০০ - ০১:৪০</span></TableHead>
-                                {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-xs">{p.time}</span></TableHead>)}
+                            <TableRow className="bg-muted/50">
+                                <TableHead className="border-r font-bold align-middle text-center w-[100px]">বার</TableHead>
+                                {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-[10px] text-muted-foreground">{p.time}</span></TableHead>)}
+                                <TableHead className="border-r text-center font-semibold bg-amber-50 text-amber-900 w-[80px]">বিরতি<br/><span className="font-normal text-[10px]">০১:০০-০১:৪০</span></TableHead>
+                                {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-[10px] text-muted-foreground">{p.time}</span></TableHead>)}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {days.map(day => (
                                 <TableRow key={day}>
-                                    <TableCell className="font-semibold border-r">{day}</TableCell>
+                                    <TableCell className="font-bold border-r text-center bg-gray-50">{day}</TableCell>
                                     {[...Array(3)].map((_, periodIdx) => {
                                         const cellContent = (routineForClass[day] || [])[periodIdx] || '';
                                         return <EditableCell key={`${day}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(className, day, periodIdx, value)} conflictKey={`${className}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                     })}
-                                    <TableCell className="border-r text-center bg-muted font-semibold">টিফিন</TableCell>
+                                    <TableCell className="border-r text-center bg-amber-50/50 font-bold text-amber-800 text-xs">টিফিন</TableCell>
                                     {[...Array(3)].map((_, i) => {
                                         const periodIdx = i + 3;
                                         const cellContent = (routineForClass[day] || [])[periodIdx] || '';
@@ -435,32 +435,44 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     return (
-        <div className="overflow-x-auto w-full">
-           <Table className="border w-full table-fixed print:text-[10px]">
+        <div className="overflow-x-auto w-full border rounded-lg shadow-inner bg-white">
+           <Table className="border w-full min-w-[900px] print:min-w-full print:text-[10px]">
                 <TableHeader>
-                   <TableRow>
-                       <TableHead className="border-r font-bold align-middle text-center w-[10%] print:w-[10%]">বার</TableHead>
-                       <TableHead className="border-r font-bold align-middle text-center w-[8%] print:w-[8%]">শ্রেণি</TableHead>
-                       {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[12%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
-                       <TableHead className="border-r text-center font-semibold bg-gray-100 w-[6%] print:w-[6%]">বিরতি</TableHead>
-                       {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[12%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
+                   <TableRow className="bg-muted/50 h-14">
+                       <TableHead className="border-r font-bold align-middle text-center w-[100px]">বার</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[80px]">শ্রেণি</TableHead>
+                       {periods.map(p => (
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px]">
+                               {p.name}<br/>
+                               <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
+                           </TableHead>
+                       ))}
+                       <TableHead className="border-r text-center font-bold bg-amber-50 text-amber-900 w-[50px]">বিরতি</TableHead>
+                       {postBreakPeriods.map(p => (
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px]">
+                               {p.name}<br/>
+                               <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
+                           </TableHead>
+                       ))}
                    </TableRow>
                </TableHeader>
                <TableBody>
                    {days.map((day) => (
                        classes.map((cls, classIndex) => (
-                           <TableRow key={`${day}-${cls}`} className="h-auto">
+                           <TableRow key={`${day}-${cls}`} className="h-12 hover:bg-muted/20 transition-colors">
                                {classIndex === 0 && (
-                                    <TableCell className="font-semibold border-r align-middle text-center bg-gray-50 print:bg-white" rowSpan={classes.length}>{day}</TableCell>
+                                    <TableCell className="font-black border-r align-middle text-center bg-gray-50 print:bg-white text-sm" rowSpan={classes.length}>
+                                        {day}
+                                    </TableCell>
                                )}
-                               <TableCell className="font-semibold border-r text-center bg-gray-50 print:bg-white">{classNamesMap[cls]}</TableCell>
+                               <TableCell className="font-bold border-r text-center bg-gray-50/50 print:bg-white text-xs">{classNamesMap[cls]}</TableCell>
                                {[...Array(3)].map((_, periodIdx) => {
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
                                    return <EditableCell key={`${day}-${cls}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(cls, day, periodIdx, value)} conflictKey={`${cls}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                })}
                                {classIndex === 0 && (
-                                    <TableCell className="border-r text-center bg-muted/30 font-bold text-[10px] print:text-[10px] align-middle" rowSpan={classes.length}>
-                                        <div className="[writing-mode:vertical-lr] rotate-180 py-4">টিফিন</div>
+                                    <TableCell className="border-r text-center bg-amber-50/30 font-black text-[11px] print:text-[10px] align-middle text-amber-800" rowSpan={classes.length}>
+                                        <div className="[writing-mode:vertical-lr] rotate-180 py-4 tracking-widest uppercase">টিফিন</div>
                                     </TableCell>
                                )}
                                {[...Array(3)].map((_, i) => {
@@ -501,16 +513,18 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
         <Input
             value={content}
             onChange={(e) => onCellChange(e.target.value)}
-            className={cn("w-full h-full p-1 text-[10px] border-transparent rounded-none focus:bg-amber-100 text-center", { "bg-red-100": isConflict })}
+            className={cn("w-full h-full p-1 text-[11px] border-transparent rounded-none focus:bg-amber-100 text-center min-h-[40px]", { "bg-red-100": isConflict })}
         />
     ) : (
-        <div className="p-1 text-[10px] print:text-[9px] text-center leading-tight break-words">{content || <>&nbsp;</>}</div>
+        <div className="p-2 text-[11px] print:text-[9px] text-center leading-tight break-words font-medium">
+            {content || <>&nbsp;</>}
+        </div>
     );
 
     if (!isMounted || !isConflict) {
         return (
             <TableCell 
-                className={cn("border-r p-0 h-auto", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
+                className={cn("border-r p-0 h-auto align-middle", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
                 style={!isEditMode && !isConflict && color ? { backgroundColor: color } : {}}
             >
                 {cellContent}
@@ -519,7 +533,7 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
     }
     
     return (
-        <TableCell className="border-r p-0 h-auto">
+        <TableCell className="border-r p-0 h-auto align-middle">
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -544,29 +558,32 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
     
     return (
         <div className="space-y-6">
-             <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg items-end no-print">
+             <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg items-end no-print bg-white/50">
                 <div className="space-y-2 flex-1">
-                    <Label htmlFor="class-name">শ্রেণি</Label>
+                    <Label htmlFor="class-name" className="font-bold text-primary">শ্রেণি নির্বাচন করুন</Label>
                     <Select value={className} onValueChange={setClassName}>
-                        <SelectTrigger id="class-name"><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
+                        <SelectTrigger id="class-name" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
                         <SelectContent>
-                           <SelectItem value="all">সকল শ্রেণি</SelectItem>
-                           <SelectItem value="6">৬ষ্ঠ</SelectItem>
-                           <SelectItem value="7">৭ম</SelectItem>
-                           <SelectItem value="8">৮ম</SelectItem>
-                           <SelectItem value="9">৯ম</SelectItem>
-                           <SelectItem value="10">১০ম</SelectItem>
+                           <SelectItem value="all">সকল শ্রেণির সম্মিলিত রুটিন</SelectItem>
+                           <SelectItem value="6">৬ষ্ঠ শ্রেণি</SelectItem>
+                           <SelectItem value="7">৭ম শ্রেণি</SelectItem>
+                           <SelectItem value="8">৮ম শ্রেণি</SelectItem>
+                           <SelectItem value="9">৯ম শ্রেণি</SelectItem>
+                           <SelectItem value="10">১০ম শ্রেণি</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
             
             {className === 'all' ? (
-                 <Card>
-                    <CardHeader className="no-print">
-                        <CardTitle>সকল শ্রেণির সম্মিলিত ক্লাস রুটিন</CardTitle>
+                 <Card className="border-primary/10 overflow-hidden">
+                    <CardHeader className="no-print bg-primary/5">
+                        <CardTitle className="text-xl flex items-center gap-2">
+                            <Users className="h-5 w-5 text-primary" /> সকল শ্রেণির সম্মিলিত ক্লাস রুটিন
+                        </CardTitle>
+                        <CardDescription>নিচে স্ক্রল করে ডানে-বামে সব তথ্য দেখুন</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0 sm:p-6">
                         <CombinedRoutineTable routineData={routineData} conflicts={conflicts} isEditMode={isEditMode} onCellChange={onCellChange} teacherColorMap={teacherColorMap} isMounted={isMounted} />
                     </CardContent>
                 </Card>
@@ -590,11 +607,11 @@ const ExamRoutineTab = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg">
+            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white/50">
                 <div className="space-y-2 flex-1">
                     <Label htmlFor="exam-name">পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
-                        <SelectTrigger id="exam-name"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                        <SelectTrigger id="exam-name" className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="half-yearly">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
                             <SelectItem value="annual">বার্ষিক পরীক্ষা</SelectItem>
@@ -604,7 +621,7 @@ const ExamRoutineTab = () => {
                     </Select>
                 </div>
                  <div className="flex items-end">
-                     <Button>রুটিন দেখুন</Button>
+                     <Button className="w-full sm:w-auto">রুটিন দেখুন</Button>
                 </div>
             </div>
              <Card>
@@ -612,7 +629,7 @@ const ExamRoutineTab = () => {
                     <CardTitle>পরীক্ষার রুটিন</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-center text-muted-foreground p-8">
+                    <div className="text-center text-muted-foreground p-12 bg-muted/20 rounded-lg border-2 border-dashed">
                         পরীক্ষার রুটিন পরিচালনা করার ফিচার শীঘ্রই আসছে।
                     </div>
                 </CardContent>
@@ -767,7 +784,6 @@ export default function RoutinesPage() {
             setIsCopyDialogOpen(false);
             setTargetYear('');
         } catch (error) {
-            // The error is handled by the saveRoutinesBatch function's catch block
             toast({ variant: 'destructive', title: 'রুটিন কপি করা যায়নি।' });
         }
     };
@@ -776,14 +792,14 @@ export default function RoutinesPage() {
         <>
             <div className="flex min-h-screen w-full flex-col bg-fuchsia-100 no-print">
                 <Header />
-                <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-                    <Card>
-                        <CardHeader>
+                <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
+                    <Card className="shadow-xl border-primary/10">
+                        <CardHeader className="bg-white/50">
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                                 <div>
-                                    <CardTitle>রুটিন</CardTitle>
+                                    <CardTitle className="text-2xl font-black text-primary">রুটিন ব্যবস্থাপনা</CardTitle>
                                     {isClient ? (
-                                        <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+                                        <p className="text-sm text-muted-foreground font-medium">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
                                     ) : (
                                         <Skeleton className="h-5 w-32 mt-1" />
                                     )}
@@ -794,18 +810,18 @@ export default function RoutinesPage() {
                                             {isEditMode && canManageRoutines ? (
                                                 <>
                                                     <Button variant="outline" onClick={handleCancelEdit}>বাতিল</Button>
-                                                    <Button onClick={handleSaveChanges}>পরিবর্তন সেভ করুন</Button>
+                                                    <Button onClick={handleSaveChanges} className="shadow-md">পরিবর্তন সেভ করুন</Button>
                                                 </>
                                             ) : (
                                                 <>
-                                                     <Button variant="outline" onClick={handlePrint} className="no-print">
+                                                     <Button variant="outline" onClick={handlePrint} className="no-print bg-white">
                                                         <Printer className="mr-2 h-4 w-4" /> রুটিন প্রিন্ট করুন
                                                     </Button>
                                                     {canManageRoutines && (
                                                         <>
                                                         <AlertDialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
                                                             <AlertDialogTrigger asChild>
-                                                                <Button variant="outline" className="no-print">
+                                                                <Button variant="outline" className="no-print bg-white">
                                                                     <Copy className="mr-2 h-4 w-4" /> রুটিন কপি করুন
                                                                 </Button>
                                                             </AlertDialogTrigger>
@@ -837,8 +853,8 @@ export default function RoutinesPage() {
                                                         </AlertDialog>
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
-                                                                <Button variant="outline">
-                                                                    <FilePlus className="mr-2 h-4 w-4" /> ফাঁকা রুটিন তৈরি করুন
+                                                                <Button variant="outline" className="bg-white">
+                                                                    <FilePlus className="mr-2 h-4 w-4" /> ফাঁকা রুটিন
                                                                 </Button>
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent>
@@ -856,7 +872,7 @@ export default function RoutinesPage() {
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>
                                                         </AlertDialog>
-                                                        <Button variant="outline" onClick={() => setIsEditMode(true)}><FilePen className="mr-2 h-4 w-4" /> রুটিন এডিট করুন</Button>
+                                                        <Button variant="outline" className="bg-white" onClick={() => setIsEditMode(true)}><FilePen className="mr-2 h-4 w-4" /> রুটিন এডিট</Button>
                                                         </>
                                                     )}
                                                 </>
@@ -871,21 +887,21 @@ export default function RoutinesPage() {
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-6">
                             {isClient && !isLoading ? (
                                 <Tabs defaultValue="class-routine">
-                                    <TabsList className="grid w-full grid-cols-3">
-                                        <TabsTrigger value="class-routine">ক্লাস রুটিন</TabsTrigger>
-                                        <TabsTrigger value="exam-routine">পরীক্ষার রুটিন</TabsTrigger>
-                                        <TabsTrigger value="statistics">পরিসংখ্যান</TabsTrigger>
+                                    <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-lg h-12">
+                                        <TabsTrigger value="class-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">ক্লাস রুটিন</TabsTrigger>
+                                        <TabsTrigger value="exam-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরীক্ষার রুটিন</TabsTrigger>
+                                        <TabsTrigger value="statistics" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরিসংখ্যান</TabsTrigger>
                                     </TabsList>
-                                    <TabsContent value="class-routine" className="mt-4">
+                                    <TabsContent value="class-routine" className="mt-6">
                                         <ClassRoutineTab routineData={routineData} conflicts={conflicts} isEditMode={isEditMode && canManageRoutines} onCellChange={handleCellChange} teacherColorMap={teacherColorMap!} isMounted={isMounted} />
                                     </TabsContent>
-                                    <TabsContent value="exam-routine" className="mt-4">
+                                    <TabsContent value="exam-routine" className="mt-6">
                                         <ExamRoutineTab />
                                     </TabsContent>
-                                    <TabsContent value="statistics" className="mt-4">
+                                    <TabsContent value="statistics" className="mt-6">
                                         <RoutineStatistics stats={stats} />
                                     </TabsContent>
                                 </Tabs>
@@ -916,7 +932,7 @@ export default function RoutinesPage() {
                             .routine-print-container table {
                                 width: 100% !important;
                                 border-collapse: collapse !important;
-                                table-layout: fixed !important;
+                                table-layout: auto !important;
                             }
                             .routine-print-container td, .routine-print-container th {
                                 font-size: 9px !important;
