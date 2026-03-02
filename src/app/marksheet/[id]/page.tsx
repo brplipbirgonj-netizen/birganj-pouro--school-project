@@ -128,6 +128,17 @@ function MarksheetContent() {
         return `${position}th`;
     }
 
+    const getRemarks = (gpa: number, isPass: boolean) => {
+        if (!isPass) return "Failed. Work hard to do well in the next exam";
+        if (gpa >= 5.0) return "Congratulations! Excellent results. Keep it up";
+        if (gpa >= 4.0) return "Satisfactory performance - with a little more effort, you will reach greater heights";
+        if (gpa >= 3.5) return "Satisfactory results, further improvement is possible with more attention";
+        if (gpa >= 3.0) return "The results are satisfactory, but more attention and perseverance are needed";
+        if (gpa >= 2.0) return "Results are less than expected. It is important to increase regular diligence and focus";
+        if (gpa >= 1.0) return "The results are not as expected. Improvement is possible through regular perseverance and study";
+        return "Failed. Work hard to do well in the next exam";
+    };
+
     const gradingScale = [
         { interval: '80-100', point: '5.00', grade: 'A+' },
         { interval: '70-79', point: '4.00', grade: 'A' },
@@ -338,6 +349,14 @@ function MarksheetContent() {
                                 </tr>
                             </tfoot>
                         </table>
+                    </section>
+
+                    {/* Remarks Section */}
+                    <section className="mt-4 mb-2 p-2 border border-black rounded bg-gray-50/30">
+                        <p className="text-[10px] font-bold uppercase text-gray-600 mb-1">Remarks:</p>
+                        <p className="text-[12px] font-black italic text-blue-900 leading-tight">
+                            "{getRemarks(processedResult.gpa, processedResult.isPass)}"
+                        </p>
                     </section>
 
                     {/* Footer */}
