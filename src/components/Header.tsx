@@ -171,14 +171,15 @@ export function Header() {
     setActionsDialogOpen(true);
   };
 
+  // Bottom Navigation configuration based on the provided image
   const bottomNavItems = [
-    { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
+    { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
-    { label: 'প্রোফাইল', icon: UserSearch, href: '/student-profile', permission: 'view:student-profile' },
-    { label: 'সার্চ', icon: Search, type: 'search', permission: 'view:students' },
     { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
+    { label: '', icon: Search, type: 'search', permission: 'view:students' }, // Center item
     { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: 'manage:results' },
     { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
+    { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: 'manage:messaging' },
   ];
 
   if (!isClient) return <header className="h-16 bg-primary" />;
@@ -486,39 +487,21 @@ export function Header() {
         </div>
       </header>
 
-      {/* Floating Back Button at Bottom Left */}
+      {/* Fixed Bottom Navigation Bar - Redesigned to match request */}
       {user && (
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={() => router.back()} 
-          className="fixed bottom-24 left-6 z-[60] h-12 w-12 rounded-full bg-white text-primary shadow-2xl hover:bg-gray-100 border-2 border-primary/20 no-print transition-transform active:scale-95 flex items-center justify-center"
-        >
-          <ArrowLeft className="h-6 w-6" />
-          <span className="sr-only">Go back</span>
-        </Button>
-      )}
-
-      {/* Fixed Bottom Navigation Bar */}
-      {user && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary border-t border-white/10 flex items-center justify-around px-2 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
-          {bottomNavItems.map((item) => {
+        <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary flex items-center justify-between px-4 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
+          {bottomNavItems.map((item, index) => {
             const isActive = item.href ? pathname === item.href : false;
-            if (!hasPermission(item.permission)) return null;
+            if (!hasPermission(item.permission)) return <div key={index} className="flex-1" />;
             
+            // Special rendering for center search button
             if (item.type === 'search') {
                 return (
                     <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
                         <DialogTrigger asChild>
-                            <button className="flex-1">
-                                <div className={cn(
-                                    "flex flex-col items-center justify-center gap-1 transition-colors py-1",
-                                    searchOpen ? "text-white" : "text-primary-foreground/60 hover:text-white"
-                                )}>
-                                    <item.icon className={cn("h-5 w-5", searchOpen && "scale-110")} />
-                                    <span className={cn("text-[10px] font-bold", searchOpen ? "opacity-100" : "opacity-80")}>
-                                        {item.label}
-                                    </span>
+                            <button className="relative -mt-10 mb-auto flex items-center justify-center">
+                                <div className="h-16 w-16 bg-white rounded-full border-4 border-primary shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+                                    <Search className="h-8 w-8 text-primary" />
                                 </div>
                             </button>
                         </DialogTrigger>
@@ -568,17 +551,29 @@ export function Header() {
                 )
             }
 
+            if (item.type === 'back') {
+                return (
+                    <button 
+                        key="back-item" 
+                        onClick={() => router.back()} 
+                        className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors text-primary-foreground/70 hover:text-white"
+                    >
+                        <item.icon className="h-5 w-5" />
+                        <span className="text-[10px] font-bold uppercase">{item.label}</span>
+                    </button>
+                )
+            }
+
             return (
-              <Link key={item.href} href={item.href!} className="flex-1">
+              <Link key={item.href || index} href={item.href!} className="flex-1">
                 <div className={cn(
                   "flex flex-col items-center justify-center gap-1 transition-colors py-1",
-                  isActive ? "text-white" : "text-primary-foreground/60 hover:text-white"
+                  isActive ? "text-white" : "text-primary-foreground/70 hover:text-white"
                 )}>
                   <item.icon className={cn("h-5 w-5", isActive && "scale-110")} />
-                  <span className={cn("text-[10px] font-bold", isActive ? "opacity-100" : "opacity-80")}>
+                  <span className="text-[10px] font-bold uppercase">
                     {item.label}
                   </span>
-                  {isActive && <div className="h-1 w-1 rounded-full bg-white animate-in zoom-in" />}
                 </div>
               </Link>
             );
