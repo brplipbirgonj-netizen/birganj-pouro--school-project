@@ -171,7 +171,7 @@ export function Header() {
     setActionsDialogOpen(true);
   };
 
-  // Bottom Navigation configuration based on the provided image
+  // Bottom Navigation configuration
   const bottomNavItems = [
     { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
@@ -487,7 +487,7 @@ export function Header() {
         </div>
       </header>
 
-      {/* Fixed Bottom Navigation Bar - Redesigned to match request */}
+      {/* Fixed Bottom Navigation Bar */}
       {user && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary flex items-center justify-between px-4 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
           {bottomNavItems.map((item, index) => {
@@ -499,7 +499,7 @@ export function Header() {
                 return (
                     <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
                         <DialogTrigger asChild>
-                            <button className="relative -mt-10 mb-auto flex items-center justify-center">
+                            <button className="relative -mt-6 mb-auto flex items-center justify-center">
                                 <div className="h-16 w-16 bg-white rounded-full border-4 border-primary shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                                     <Search className="h-8 w-8 text-primary" />
                                 </div>
