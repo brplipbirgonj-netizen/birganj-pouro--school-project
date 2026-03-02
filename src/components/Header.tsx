@@ -157,7 +157,7 @@ export function Header() {
         const idStr = (s.generatedId || '').toLowerCase();
         
         const matchesName = nameBn.includes(q) || nameEn.includes(q);
-        const matchesRoll = rollStr === qEn;
+        const matchesRoll = rollEn === s.roll;
         const matchesId = idStr === qEn;
         
         return matchesName || matchesRoll || matchesId;
@@ -172,7 +172,6 @@ export function Header() {
   };
 
   // Bottom Navigation configuration
-  // 4 items on left, Search in center, 4 items on right
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
     { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
@@ -357,7 +356,7 @@ export function Header() {
             {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : (schoolInfo.logoUrl && (
               <Image src={schoolInfo.logoUrl} alt="School Logo" width={40} height={40} className="rounded-full" />
             ))}
-            <h1 className="text-[23px] font-bold whitespace-nowrap drop-shadow-md">
+            <h1 className="text-[23px] font-black whitespace-nowrap drop-shadow-md">
               {isSchoolInfoLoading ? <Skeleton className="h-7 w-48" /> : schoolInfo.name}
             </h1>
         </Link>
@@ -513,11 +512,12 @@ export function Header() {
                                 <DialogTitle>শিক্ষার্থী খুঁজুন</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
-                                <Input 
+                                <input 
                                     placeholder="নাম বা রোল লিখে খুঁজুন..." 
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     autoFocus
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                 />
                                 <div className="space-y-2">
                                     {isSearching ? (
