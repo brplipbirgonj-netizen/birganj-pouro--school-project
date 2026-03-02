@@ -172,361 +172,372 @@ export function Header() {
   if (!isClient) return <header className="h-16 bg-primary" />;
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
-      <div className="flex items-center gap-2">
-        {user && (
-          <>
-            <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">
-              <ArrowLeft className="h-6 w-6" />
-              <span className="sr-only">Go back</span>
-            </Button>
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">
-                  <Menu className="h-6 w-6" />
-                  <span className="sr-only">Toggle navigation menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="flex flex-col p-0">
-                <SheetHeader className="p-4 border-b bg-red-100">
-                    <SheetTitle className="sr-only">Main Menu</SheetTitle>
-                    <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
-                  <Link
-                    href="/"
-                    className="flex items-center gap-2 text-lg font-semibold text-foreground"
-                  >
-                    {isSchoolInfoLoading ? <Skeleton className="h-8 w-8 rounded-full" /> : (schoolInfo.logoUrl && (
-                       <Image src={schoolInfo.logoUrl} alt="School Logo" width={32} height={32} className="rounded-full" />
-                    ))}
-                    <span className="">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
-                  </Link>
-                </SheetHeader>
-                <div className="p-4 border-b bg-blue-100">
-                    <Label htmlFor="academic-year-select" className="text-sm font-medium text-muted-foreground">শিক্ষাবর্ষ</Label>
-                     {availableYears.length > 0 ? (
-                        <Select value={selectedYear} onValueChange={setSelectedYear}>
-                            <SelectTrigger id="academic-year-select" className="mt-1">
-                                <SelectValue placeholder="" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableYears.map(year => (
-                                    <SelectItem key={year} value={year}>{year.toLocaleString('bn-BD')}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                        <div className="mt-1 h-10 w-full animate-pulse rounded-md bg-muted" />
-                    )}
-                </div>
-                <nav className="flex-1 overflow-y-auto">
-                  <div className="grid gap-1 p-2 text-base font-medium">
-                    {hasPermission('view:dashboard') && (
-                      <Link
-                        href="/"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-sky-100 text-sky-800 hover:bg-sky-200"
-                      >
-                        <LayoutDashboard className="h-5 w-5" />
-                        ড্যাসবোর্ড
-                      </Link>
-                    )}
-                    {hasPermission('view:student-profile') && (
-                      <Link
-                        href="/student-profile"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
-                      >
-                        <UserSearch className="h-5 w-5" />
-                        শিক্ষার্থী প্রোফাইল
-                      </Link>
-                    )}
-                    {hasPermission('manage:students') && (
-                      <Link
-                        href="/add-student"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                      >
-                        <UserPlus className="h-5 w-5" />
-                        নতুন শিক্ষার্থী যোগ
-                      </Link>
-                    )}
-                     {hasPermission('view:students') && (
-                      <Link
-                        href="/student-list"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-rose-100 text-rose-800 hover:bg-rose-200"
-                      >
-                        <Users className="h-5 w-5" />
-                        শিক্ষার্থী তালিকা
-                      </Link>
-                    )}
-                     {hasPermission('manage:attendance') && (
-                      <Link
-                        href="/attendance"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-amber-100 text-amber-800 hover:bg-amber-200"
-                      >
-                        <CalendarCheck className="h-5 w-5" />
-                        হাজিরা
-                      </Link>
-                    )}
-                     {hasPermission('manage:results') && (
-                      <Link
-                        href="/results"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-violet-100 text-violet-800 hover:bg-violet-200"
-                      >
-                        < BookMarked className="h-5 w-5" />
-                        ফলাফল
-                      </Link>
-                    )}
-                    {hasPermission('manage:messaging') && (
-                      <Link
-                        href="/messaging"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-lime-100 text-lime-800 hover:bg-lime-200"
-                      >
-                        <MessageSquare className="h-5 w-5" />
-                        মেসেজ
-                      </Link>
-                    )}
-                    {hasPermission('view:accounts') && (
-                      <Link
-                        href="/accounts"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-teal-100 text-teal-800 hover:bg-teal-200"
-                      >
-                        <Banknote className="h-5 w-5" />
-                        হিসাব শাখা
-                      </Link>
-                    )}
-                    {hasPermission('view:staff') && (
-                      <Link
-                        href="/staff"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-orange-100 text-orange-800 hover:bg-orange-200"
-                      >
-                        <Users2 className="h-5 w-5" />
-                        শিক্ষক ও কর্মচারী
-                      </Link>
-                    )}
-                    {hasPermission('manage:documents') && (
-                      <Link
-                        href="/documents"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-slate-100 text-slate-800 hover:bg-slate-200"
-                      >
-                        <FileText className="h-5 w-5" />
-                        ডকুমেন্ট
-                      </Link>
-                    )}
-                    {hasPermission('view:routines') && (
-                      <Link
-                        href="/routines"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200"
-                      >
-                        <CalendarClock className="h-5 w-5" />
-                        রুটিন
-                      </Link>
-                    )}
-                    {hasPermission('manage:settings') && (
-                      <Link
-                        href="/settings"
-                        className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-gray-100 text-gray-800 hover:bg-gray-200"
-                      >
-                        <Settings className="h-5 w-5" />
-                        সেটিং
-                      </Link>
-                    )}
+    <>
+      <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
+        <div className="flex items-center gap-2">
+          {user && (
+            <>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">Toggle navigation menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="flex flex-col p-0">
+                  <SheetHeader className="p-4 border-b bg-red-100">
+                      <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                      <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
+                    <Link
+                      href="/"
+                      className="flex items-center gap-2 text-lg font-semibold text-foreground"
+                    >
+                      {isSchoolInfoLoading ? <Skeleton className="h-8 w-8 rounded-full" /> : (schoolInfo.logoUrl && (
+                        <Image src={schoolInfo.logoUrl} alt="School Logo" width={32} height={32} className="rounded-full" />
+                      ))}
+                      <span className="">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
+                    </Link>
+                  </SheetHeader>
+                  <div className="p-4 border-b bg-blue-100">
+                      <Label htmlFor="academic-year-select" className="text-sm font-medium text-muted-foreground">শিক্ষাবর্ষ</Label>
+                      {availableYears.length > 0 ? (
+                          <Select value={selectedYear} onValueChange={setSelectedYear}>
+                              <SelectTrigger id="academic-year-select" className="mt-1">
+                                  <SelectValue placeholder="" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {availableYears.map(year => (
+                                      <SelectItem key={year} value={year}>{year.toLocaleString('bn-BD')}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      ) : (
+                          <div className="mt-1 h-10 w-full animate-pulse rounded-md bg-muted" />
+                      )}
                   </div>
-                </nav>
-                <div className="p-4 border-t bg-muted/20 text-center text-[10px] text-muted-foreground">
-                  <p>© ২০২৬ {schoolInfo.name}।</p>
-                  <p>সর্বস্বত্ব সংরক্ষিত।</p>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </>
-        )}
-      </div>
-
-      <Link href="/" className="flex items-center gap-2">
-          {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full hidden sm:block" /> : (schoolInfo.logoUrl && (
-            <Image src={schoolInfo.logoUrl} alt="School Logo" width={40} height={40} className="rounded-full hidden sm:block" />
-          ))}
-          <h1 className="text-xl font-bold whitespace-nowrap drop-shadow-md">
-            {isSchoolInfoLoading ? <Skeleton className="h-7 w-48" /> : schoolInfo.name}
-          </h1>
-      </Link>
-      
-      <div className="flex items-center gap-2 sm:gap-4">
-        {user && (
-            <Dialog open={searchOpen} onOpenChange={handleSearchOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full bg-white/10 hover:bg-white/20 text-white">
-                        <Search className="h-5 w-5" />
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>শিক্ষার্থী খুঁজুন</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <Input 
-                            placeholder="নাম বা রোল লিখে খুঁজুন..." 
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            autoFocus
-                        />
-                        <div className="space-y-2">
-                            {isSearching ? (
-                                <p className="text-center text-sm text-muted-foreground py-4">ডাটা লোড হচ্ছে...</p>
-                            ) : filteredResults.length > 0 ? (
-                                <div className="max-h-[300px] overflow-y-auto pr-2">
-                                    {filteredResults.map(s => (
-                                        <div 
-                                            key={s.id} 
-                                            className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors mb-2 last:mb-0"
-                                            onClick={() => handleStudentClick(s)}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={s.photoUrl} />
-                                                    <AvatarFallback>{s.studentNameBn?.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="text-sm font-bold">{s.studentNameBn}</p>
-                                                    <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | শ্রেণি: {s.className}</p>
-                                                </div>
-                                            </div>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : searchQuery.trim() ? (
-                                <p className="text-center text-sm text-muted-foreground py-4">কোনো তথ্য পাওয়া যায়নি।</p>
-                            ) : null}
-                        </div>
+                  <nav className="flex-1 overflow-y-auto">
+                    <div className="grid gap-1 p-2 text-base font-medium">
+                      {hasPermission('view:dashboard') && (
+                        <Link
+                          href="/"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-sky-100 text-sky-800 hover:bg-sky-200"
+                        >
+                          <LayoutDashboard className="h-5 w-5" />
+                          ড্যাসবোর্ড
+                        </Link>
+                      )}
+                      {hasPermission('view:student-profile') && (
+                        <Link
+                          href="/student-profile"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
+                        >
+                          <UserSearch className="h-5 w-5" />
+                          শিক্ষার্থী প্রোফাইল
+                        </Link>
+                      )}
+                      {hasPermission('manage:students') && (
+                        <Link
+                          href="/add-student"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                        >
+                          <UserPlus className="h-5 w-5" />
+                          নতুন শিক্ষার্থী যোগ
+                        </Link>
+                      )}
+                      {hasPermission('view:students') && (
+                        <Link
+                          href="/student-list"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-rose-100 text-rose-800 hover:bg-rose-200"
+                        >
+                          <Users className="h-5 w-5" />
+                          শিক্ষার্থী তালিকা
+                        </Link>
+                      )}
+                      {hasPermission('manage:attendance') && (
+                        <Link
+                          href="/attendance"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-amber-100 text-amber-800 hover:bg-amber-200"
+                        >
+                          <CalendarCheck className="h-5 w-5" />
+                          হাজিরা
+                        </Link>
+                      )}
+                      {hasPermission('manage:results') && (
+                        <Link
+                          href="/results"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-violet-100 text-violet-800 hover:bg-violet-200"
+                        >
+                          < BookMarked className="h-5 w-5" />
+                          ফলাফল
+                        </Link>
+                      )}
+                      {hasPermission('manage:messaging') && (
+                        <Link
+                          href="/messaging"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-lime-100 text-lime-800 hover:bg-lime-200"
+                        >
+                          <MessageSquare className="h-5 w-5" />
+                          মেসেজ
+                        </Link>
+                      )}
+                      {hasPermission('view:accounts') && (
+                        <Link
+                          href="/accounts"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-teal-100 text-teal-800 hover:bg-teal-200"
+                        >
+                          <Banknote className="h-5 w-5" />
+                          হিসাব শাখা
+                        </Link>
+                      )}
+                      {hasPermission('view:staff') && (
+                        <Link
+                          href="/staff"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-orange-100 text-orange-800 hover:bg-orange-200"
+                        >
+                          <Users2 className="h-5 w-5" />
+                          শিক্ষক ও কর্মচারী
+                        </Link>
+                      )}
+                      {hasPermission('manage:documents') && (
+                        <Link
+                          href="/documents"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-slate-100 text-slate-800 hover:bg-slate-200"
+                        >
+                          <FileText className="h-5 w-5" />
+                          ডকুমেন্ট
+                        </Link>
+                      )}
+                      {hasPermission('view:routines') && (
+                        <Link
+                          href="/routines"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200"
+                        >
+                          <CalendarClock className="h-5 w-5" />
+                          রুটিন
+                        </Link>
+                      )}
+                      {hasPermission('manage:settings') && (
+                        <Link
+                          href="/settings"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        >
+                          <Settings className="h-5 w-5" />
+                          সেটিং
+                        </Link>
+                      )}
                     </div>
-                </DialogContent>
-            </Dialog>
-        )}
-
-        {/* Action Popup for Search Result */}
-        <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <div className="flex items-center gap-4 mb-4">
-                        <Avatar className="h-16 w-16 border-2 border-primary/20">
-                            <AvatarImage src={selectedStudent?.photoUrl} />
-                            <AvatarFallback>{selectedStudent?.studentNameBn?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <DialogTitle className="text-xl">{selectedStudent?.studentNameBn}</DialogTitle>
-                            <DialogDescription>
-                                রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | শ্রেণি: {selectedStudent?.className} | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
-                            </DialogDescription>
-                        </div>
-                    </div>
-                </DialogHeader>
-                <div className="grid grid-cols-1 gap-3 py-4">
-                    <Button 
-                        variant="outline" 
-                        className="justify-start h-12 text-md font-medium bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900"
-                        onClick={() => {
-                            setActionsDialogOpen(false);
-                            router.push(`/student-list?class=${selectedStudent?.className}&studentId=${selectedStudent?.id}`);
-                        }}
-                    >
-                        <Users className="mr-3 h-5 w-5 text-rose-600" /> বিস্তারিত প্রোফাইল
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        className="justify-start h-12 text-md font-medium bg-teal-50 hover:bg-teal-100 border-teal-200 text-teal-900"
-                        onClick={() => {
-                            setActionsDialogOpen(false);
-                            setFeeDialogOpen(true);
-                        }}
-                    >
-                        <Banknote className="mr-3 h-5 w-5 text-teal-600" /> বেতন আদায় করুন
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        className="justify-start h-12 text-md font-medium bg-fuchsia-50 hover:bg-fuchsia-100 border-fuchsia-200 text-fuchsia-900"
-                        onClick={() => {
-                            setActionsDialogOpen(false);
-                            router.push(`/documents/admit-card/${selectedStudent?.id}`);
-                        }}
-                    >
-                        <IdCard className="mr-3 h-5 w-5 text-fuchsia-600" /> প্রবেশ পত্র (একক)
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        className="justify-start h-12 text-md font-medium bg-violet-50 hover:bg-violet-100 border-violet-200 text-violet-900"
-                        onClick={() => {
-                            setActionsDialogOpen(false);
-                            window.open(`/marksheet/${selectedStudent?.id}?academicYear=${selectedYear}`, '_blank');
-                        }}
-                    >
-                        <BookOpen className="mr-3 h-5 w-5 text-violet-600" /> ফলাফল (মার্কশিট)
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        className="justify-start h-12 text-md font-medium bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900"
-                        onClick={() => {
-                            setActionsDialogOpen(false);
-                            window.open(`/documents/testimonial/${selectedStudent?.id}`, '_blank');
-                        }}
-                    >
-                        <FileBadge className="mr-3 h-5 w-5 text-slate-600" /> প্রত্যয়ন পত্র
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        className="justify-start h-12 text-md font-medium bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
-                        onClick={() => {
-                            setActionsDialogOpen(false);
-                            router.push(`/student-profile?roll=${selectedStudent?.roll}&class=${selectedStudent?.className}`);
-                        }}
-                    >
-                        <PieChart className="mr-3 h-5 w-5 text-indigo-600" /> হাজিরা ও পরিসংখ্যান
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
-
-        {/* Global Fee Dialog */}
-        {selectedStudent && (
-            <StudentFeeDialog 
-                student={selectedStudent} 
-                open={feeDialogOpen} 
-                onOpenChange={setFeeDialogOpen} 
-                onFeeCollected={() => {}} 
-            />
-        )}
-
-        {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Avatar className="h-10 w-10 border-2 border-white cursor-pointer">
-                <AvatarImage src={displayPhoto || undefined} alt={user.email || 'user'} />
-                <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <span>{displayName || 'Admin'}</span>
-                    <span className="text-xs font-normal text-muted-foreground">{user.email}</span>
+                  </nav>
+                  <div className="p-4 border-t bg-muted/20 text-center text-[10px] text-muted-foreground">
+                    <p>© ২০২৬ {schoolInfo.name}।</p>
+                    <p>সর্বস্বত্ব সংরক্ষিত।</p>
                   </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>প্রোফাইল সেটিংস</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>লগ আউট</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Link href="/login">
-            <Button variant="secondary">লগইন করুন</Button>
-          </Link>
-        )}
-      </div>
-    </header>
+                </SheetContent>
+              </Sheet>
+            </>
+          )}
+        </div>
+
+        <Link href="/" className="flex items-center gap-2">
+            {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full hidden sm:block" /> : (schoolInfo.logoUrl && (
+              <Image src={schoolInfo.logoUrl} alt="School Logo" width={40} height={40} className="rounded-full hidden sm:block" />
+            ))}
+            <h1 className="text-xl font-bold whitespace-nowrap drop-shadow-md">
+              {isSchoolInfoLoading ? <Skeleton className="h-7 w-48" /> : schoolInfo.name}
+            </h1>
+        </Link>
+        
+        <div className="flex items-center gap-2 sm:gap-4">
+          {user && (
+              <Dialog open={searchOpen} onOpenChange={handleSearchOpen}>
+                  <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full bg-white/10 hover:bg-white/20 text-white">
+                          <Search className="h-5 w-5" />
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                          <DialogTitle>শিক্ষার্থী খুঁজুন</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                          <Input 
+                              placeholder="নাম বা রোল লিখে খুঁজুন..." 
+                              value={searchQuery}
+                              onChange={e => setSearchQuery(e.target.value)}
+                              autoFocus
+                          />
+                          <div className="space-y-2">
+                              {isSearching ? (
+                                  <p className="text-center text-sm text-muted-foreground py-4">ডাটা লোড হচ্ছে...</p>
+                              ) : filteredResults.length > 0 ? (
+                                  <div className="max-h-[300px] overflow-y-auto pr-2">
+                                      {filteredResults.map(s => (
+                                          <div 
+                                              key={s.id} 
+                                              className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors mb-2 last:mb-0"
+                                              onClick={() => handleStudentClick(s)}
+                                          >
+                                              <div className="flex items-center gap-3">
+                                                  <Avatar className="h-8 w-8">
+                                                      <AvatarImage src={s.photoUrl} />
+                                                      <AvatarFallback>{s.studentNameBn?.charAt(0)}</AvatarFallback>
+                                                  </Avatar>
+                                                  <div>
+                                                      <p className="text-sm font-bold">{s.studentNameBn}</p>
+                                                      <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | শ্রেণি: {s.className}</p>
+                                                  </div>
+                                              </div>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
+                                          </div>
+                                      ))}
+                                  </div>
+                              ) : searchQuery.trim() ? (
+                                  <p className="text-center text-sm text-muted-foreground py-4">কোনো তথ্য পাওয়া যায়নি।</p>
+                              ) : null}
+                          </div>
+                      </div>
+                  </DialogContent>
+              </Dialog>
+          )}
+
+          {/* Action Popup for Search Result */}
+          <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
+              <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                      <div className="flex items-center gap-4 mb-4">
+                          <Avatar className="h-16 w-16 border-2 border-primary/20">
+                              <AvatarImage src={selectedStudent?.photoUrl} />
+                              <AvatarFallback>{selectedStudent?.studentNameBn?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                              <DialogTitle className="text-xl">{selectedStudent?.studentNameBn}</DialogTitle>
+                              <DialogDescription>
+                                  রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | শ্রেণি: {selectedStudent?.className} | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
+                              </DialogDescription>
+                          </div>
+                      </div>
+                  </DialogHeader>
+                  <div className="grid grid-cols-1 gap-3 py-4">
+                      <Button 
+                          variant="outline" 
+                          className="justify-start h-12 text-md font-medium bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900"
+                          onClick={() => {
+                              setActionsDialogOpen(false);
+                              router.push(`/student-list?class=${selectedStudent?.className}&studentId=${selectedStudent?.id}`);
+                          }}
+                      >
+                          <Users className="mr-3 h-5 w-5 text-rose-600" /> বিস্তারিত প্রোফাইল
+                      </Button>
+                      <Button 
+                          variant="outline" 
+                          className="justify-start h-12 text-md font-medium bg-teal-50 hover:bg-teal-100 border-teal-200 text-teal-900"
+                          onClick={() => {
+                              setActionsDialogOpen(false);
+                              setFeeDialogOpen(true);
+                          }}
+                      >
+                          <Banknote className="mr-3 h-5 w-5 text-teal-600" /> বেতন আদায় করুন
+                      </Button>
+                      <Button 
+                          variant="outline" 
+                          className="justify-start h-12 text-md font-medium bg-fuchsia-50 hover:bg-fuchsia-100 border-fuchsia-200 text-fuchsia-900"
+                          onClick={() => {
+                              setActionsDialogOpen(false);
+                              router.push(`/documents/admit-card/${selectedStudent?.id}`);
+                          }}
+                      >
+                          <IdCard className="mr-3 h-5 w-5 text-fuchsia-600" /> প্রবেশ পত্র (একক)
+                      </Button>
+                      <Button 
+                          variant="outline" 
+                          className="justify-start h-12 text-md font-medium bg-violet-50 hover:bg-violet-100 border-violet-200 text-violet-900"
+                          onClick={() => {
+                              setActionsDialogOpen(false);
+                              window.open(`/marksheet/${selectedStudent?.id}?academicYear=${selectedYear}`, '_blank');
+                          }}
+                      >
+                          <BookOpen className="mr-3 h-5 w-5 text-violet-600" /> ফলাফল (মার্কশিট)
+                      </Button>
+                      <Button 
+                          variant="outline" 
+                          className="justify-start h-12 text-md font-medium bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900"
+                          onClick={() => {
+                              setActionsDialogOpen(false);
+                              window.open(`/documents/testimonial/${selectedStudent?.id}`, '_blank');
+                          }}
+                      >
+                          <FileBadge className="mr-3 h-5 w-5 text-slate-600" /> প্রত্যয়ন পত্র
+                      </Button>
+                      <Button 
+                          variant="outline" 
+                          className="justify-start h-12 text-md font-medium bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
+                          onClick={() => {
+                              setActionsDialogOpen(false);
+                              router.push(`/student-profile?roll=${selectedStudent?.roll}&class=${selectedStudent?.className}`);
+                          }}
+                      >
+                          <PieChart className="mr-3 h-5 w-5 text-indigo-600" /> হাজিরা ও পরিসংখ্যান
+                      </Button>
+                  </div>
+              </DialogContent>
+          </Dialog>
+
+          {/* Global Fee Dialog */}
+          {selectedStudent && (
+              <StudentFeeDialog 
+                  student={selectedStudent} 
+                  open={feeDialogOpen} 
+                  onOpenChange={setFeeDialogOpen} 
+                  onFeeCollected={() => {}} 
+              />
+          )}
+
+          {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="h-10 w-10 border-2 border-white cursor-pointer">
+                  <AvatarImage src={displayPhoto || undefined} alt={user.email || 'user'} />
+                  <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span>{displayName || 'Admin'}</span>
+                      <span className="text-xs font-normal text-muted-foreground">{user.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>প্রোফাইল সেটিংস</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>লগ আউট</span>
+                  </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link href="/login">
+              <Button variant="secondary">লগইন করুন</Button>
+            </Link>
+          )}
+        </div>
+      </header>
+
+      {/* Floating Back Button at Bottom Left */}
+      {user && (
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => router.back()} 
+          className="fixed bottom-6 left-6 z-[60] h-12 w-12 rounded-full bg-white text-primary shadow-2xl hover:bg-gray-100 border-2 border-primary/20 no-print transition-transform active:scale-95 flex items-center justify-center"
+        >
+          <ArrowLeft className="h-6 w-6" />
+          <span className="sr-only">Go back</span>
+        </Button>
+      )}
+    </>
   );
 }
