@@ -157,7 +157,8 @@ export function Header() {
         const idStr = (s.generatedId || '').toLowerCase();
         
         const matchesName = nameBn.includes(q) || nameEn.includes(q);
-        const matchesRoll = rollEn === s.roll;
+        const rollEn = parseInt(qEn, 10);
+        const matchesRoll = !isNaN(rollEn) && rollEn === s.roll;
         const matchesId = idStr === qEn;
         
         return matchesName || matchesRoll || matchesId;
