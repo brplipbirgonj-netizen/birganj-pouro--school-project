@@ -174,6 +174,7 @@ export function Header() {
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
+    { label: 'সার্চ', icon: Search, type: 'search', permission: 'view:students' },
     { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
     { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: 'manage:results' },
     { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
@@ -357,57 +358,7 @@ export function Header() {
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
-          {user && (
-              <Dialog open={searchOpen} onOpenChange={handleSearchOpen}>
-                  <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full bg-white/10 hover:bg-white/20 text-white">
-                          <Search className="h-5 w-5" />
-                      </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                          <DialogTitle>শিক্ষার্থী খুঁজুন</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                          <Input 
-                              placeholder="নাম বা রোল লিখে খুঁজুন..." 
-                              value={searchQuery}
-                              onChange={e => setSearchQuery(e.target.value)}
-                              autoFocus
-                          />
-                          <div className="space-y-2">
-                              {isSearching ? (
-                                  <p className="text-center text-sm text-muted-foreground py-4">ডাটা লোড হচ্ছে...</p>
-                              ) : filteredResults.length > 0 ? (
-                                  <div className="max-h-[300px] overflow-y-auto pr-2">
-                                      {filteredResults.map(s => (
-                                          <div 
-                                              key={s.id} 
-                                              className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors mb-2 last:mb-0"
-                                              onClick={() => handleStudentClick(s)}
-                                          >
-                                              <div className="flex items-center gap-3">
-                                                  <Avatar className="h-8 w-8">
-                                                      <AvatarImage src={s.photoUrl} />
-                                                      <AvatarFallback>{s.studentNameBn?.charAt(0)}</AvatarFallback>
-                                                  </Avatar>
-                                                  <div>
-                                                      <p className="text-sm font-bold">{s.studentNameBn}</p>
-                                                      <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | শ্রেণি: {s.className}</p>
-                                                  </div>
-                                              </div>
-                                              <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
-                                          </div>
-                                      ))}
-                                  </div>
-                              ) : searchQuery.trim() ? (
-                                  <p className="text-center text-sm text-muted-foreground py-4">কোনো তথ্য পাওয়া যায়নি।</p>
-                              ) : null}
-                          </div>
-                      </div>
-                  </DialogContent>
-              </Dialog>
-          )}
+          {/* Top header search icon removed as it's now in bottom nav */}
 
           {/* Action Popup for Search Result */}
           <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
@@ -553,11 +504,73 @@ export function Header() {
       {user && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary border-t border-white/10 flex items-center justify-around px-2 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
           {bottomNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.href ? pathname === item.href : false;
             if (!hasPermission(item.permission)) return null;
             
+            if (item.type === 'search') {
+                return (
+                    <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
+                        <DialogTrigger asChild>
+                            <button className="flex-1">
+                                <div className={cn(
+                                    "flex flex-col items-center justify-center gap-1 transition-colors py-1",
+                                    searchOpen ? "text-white" : "text-primary-foreground/60 hover:text-white"
+                                )}>
+                                    <item.icon className={cn("h-5 w-5", searchOpen && "scale-110")} />
+                                    <span className={cn("text-[10px] font-bold", searchOpen ? "opacity-100" : "opacity-80")}>
+                                        {item.label}
+                                    </span>
+                                </div>
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>শিক্ষার্থী খুঁজুন</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <Input 
+                                    placeholder="নাম বা রোল লিখে খুঁজুন..." 
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                                <div className="space-y-2">
+                                    {isSearching ? (
+                                        <p className="text-center text-sm text-muted-foreground py-4">ডাটা লোড হচ্ছে...</p>
+                                    ) : filteredResults.length > 0 ? (
+                                        <div className="max-h-[300px] overflow-y-auto pr-2">
+                                            {filteredResults.map(s => (
+                                                <div 
+                                                    key={s.id} 
+                                                    className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors mb-2 last:mb-0"
+                                                    onClick={() => handleStudentClick(s)}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarImage src={s.photoUrl} />
+                                                            <AvatarFallback>{s.studentNameBn?.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <p className="text-sm font-bold">{s.studentNameBn}</p>
+                                                            <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | শ্রেণি: {s.className}</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : searchQuery.trim() ? (
+                                        <p className="text-center text-sm text-muted-foreground py-4">কোনো তথ্য পাওয়া যায়নি।</p>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                )
+            }
+
             return (
-              <Link key={item.href} href={item.href} className="flex-1">
+              <Link key={item.href} href={item.href!} className="flex-1">
                 <div className={cn(
                   "flex flex-col items-center justify-center gap-1 transition-colors py-1",
                   isActive ? "text-white" : "text-primary-foreground/60 hover:text-white"
