@@ -173,6 +173,7 @@ export function Header() {
 
   // Bottom Navigation configuration
   const bottomNavItems = [
+    { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
     { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
     { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
@@ -499,7 +500,7 @@ export function Header() {
                 return (
                     <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
                         <DialogTrigger asChild>
-                            <button className="relative -mt-6 mb-auto flex items-center justify-center">
+                            <button className="relative -mt-4 mb-auto flex items-center justify-center">
                                 <div className="h-16 w-16 bg-white rounded-full border-4 border-primary shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                                     <Search className="h-8 w-8 text-primary" />
                                 </div>
