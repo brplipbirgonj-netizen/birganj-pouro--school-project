@@ -435,30 +435,30 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     return (
-        <div className="overflow-x-auto">
-           <Table className="border">
+        <div className="overflow-x-auto w-full">
+           <Table className="border w-full table-fixed print:text-[10px]">
                 <TableHeader>
                    <TableRow>
-                       <TableHead className="border-r font-bold align-middle text-center min-w-[100px]">বার</TableHead>
-                       <TableHead className="border-r font-bold align-middle text-center min-w-[80px]">শ্রেণি</TableHead>
-                       {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold min-w-[150px]">{p.name} পিরিয়ড<br/><span className="font-normal text-xs">{p.time}</span></TableHead>)}
-                       <TableHead className="border-r text-center font-semibold bg-gray-100 min-w-[100px]">বিরতি<br/><span className="font-normal text-xs">০১:০০ - ০১:৪০</span></TableHead>
-                       {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold min-w-[150px]">{p.name} পিরিয়ড<br/><span className="font-normal text-xs">{p.time}</span></TableHead>)}
+                       <TableHead className="border-r font-bold align-middle text-center w-[10%] print:w-[8%]">বার</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[8%] print:w-[6%]">শ্রেণি</TableHead>
+                       {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[11%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
+                       <TableHead className="border-r text-center font-semibold bg-gray-100 w-[8%] print:w-[6%]">বিরতি</TableHead>
+                       {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[11%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
                    </TableRow>
                </TableHeader>
                <TableBody>
                    {days.map((day) => (
                        classes.map((cls, classIndex) => (
-                           <TableRow key={`${day}-${cls}`}>
+                           <TableRow key={`${day}-${cls}`} className="h-auto">
                                {classIndex === 0 && (
-                                    <TableCell className="font-semibold border-r align-middle text-center" rowSpan={classes.length}>{day}</TableCell>
+                                    <TableCell className="font-semibold border-r align-middle text-center bg-gray-50 print:bg-white" rowSpan={classes.length}>{day}</TableCell>
                                )}
-                               <TableCell className="font-semibold border-r text-center">{classNamesMap[cls]}</TableCell>
+                               <TableCell className="font-semibold border-r text-center bg-gray-50 print:bg-white">{classNamesMap[cls]}</TableCell>
                                {[...Array(3)].map((_, periodIdx) => {
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
                                    return <EditableCell key={`${day}-${cls}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(cls, day, periodIdx, value)} conflictKey={`${cls}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                })}
-                               <TableCell className="border-r text-center bg-muted font-semibold">টিফিন</TableCell>
+                               <TableCell className="border-r text-center bg-muted/30 font-semibold text-[10px] print:text-[8px]">টিফিন</TableCell>
                                {[...Array(3)].map((_, i) => {
                                    const periodIdx = i + 3;
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
@@ -497,16 +497,16 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
         <Input
             value={content}
             onChange={(e) => onCellChange(e.target.value)}
-            className={cn("w-full h-full p-1 text-xs border-transparent rounded-none focus:bg-amber-100 text-center", { "bg-red-100": isConflict })}
+            className={cn("w-full h-full p-1 text-[10px] border-transparent rounded-none focus:bg-amber-100 text-center", { "bg-red-100": isConflict })}
         />
     ) : (
-        <div className="p-2 text-xs text-center">{content || <>&nbsp;</>}</div>
+        <div className="p-1 text-[10px] print:text-[9px] text-center leading-tight break-words">{content || <>&nbsp;</>}</div>
     );
 
     if (!isMounted || !isConflict) {
         return (
             <TableCell 
-                className={cn("border-r p-0", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
+                className={cn("border-r p-0 h-auto", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
                 style={!isEditMode && !isConflict && color ? { backgroundColor: color } : {}}
             >
                 {cellContent}
@@ -515,7 +515,7 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
     }
     
     return (
-        <TableCell className="border-r p-0">
+        <TableCell className="border-r p-0 h-auto">
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -903,11 +903,30 @@ export default function RoutinesPage() {
             </div>
             {isClient && (
                  <div className="printable-area routine-print-container">
+                    <style jsx global>{`
+                        @media print {
+                            .routine-print-container table {
+                                width: 100% !important;
+                                border-collapse: collapse !important;
+                            }
+                            .routine-print-container td, .routine-print-container th {
+                                font-size: 8px !important;
+                                padding: 2px !important;
+                                border: 1px solid black !important;
+                            }
+                            .routine-print-container header h1 {
+                                font-size: 16px !important;
+                            }
+                            .routine-print-container header h2 {
+                                font-size: 12px !important;
+                            }
+                        }
+                    `}</style>
                     {isLoading || isSchoolInfoLoading ? (
                         <div className="flex items-center justify-center h-full">লোড হচ্ছে...</div>
                     ) : (
-                        <>
-                             <header className="flex items-center gap-4 mb-2">
+                        <div className="flex flex-col h-full w-full">
+                             <header className="flex items-center gap-4 mb-4 border-b pb-2">
                                 {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={50} height={50} className="object-contain" />}
                                 <div className="text-center flex-grow">
                                     <h1 className="text-xl font-bold">{schoolInfo.name}</h1>
@@ -916,17 +935,23 @@ export default function RoutinesPage() {
                                         ক্লাস রুটিন - {selectedYear.toLocaleString('bn-BD')}
                                     </h2>
                                 </div>
-                                <div className="w-[50px]"></div> {/* Spacer */}
+                                <div className="w-[50px]"></div>
                             </header>
-                            <CombinedRoutineTable 
-                                routineData={routineData}
-                                conflicts={conflicts}
-                                isEditMode={false}
-                                onCellChange={() => {}}
-                                teacherColorMap={teacherColorMap}
-                                isMounted={isMounted}
-                            />
-                        </>
+                            <div className="flex-1 w-full overflow-hidden">
+                                <CombinedRoutineTable 
+                                    routineData={routineData}
+                                    conflicts={conflicts}
+                                    isEditMode={false}
+                                    onCellChange={() => {}}
+                                    teacherColorMap={teacherColorMap}
+                                    isMounted={isMounted}
+                                />
+                            </div>
+                            <footer className="mt-4 pt-4 border-t flex justify-between text-[10px] font-bold">
+                                <div className="text-center w-32 border-t border-black pt-1">রুটিন কমিটির স্বাক্ষর</div>
+                                <div className="text-center w-32 border-t border-black pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
+                            </footer>
+                        </div>
                     )}
                 </div>
             )}
