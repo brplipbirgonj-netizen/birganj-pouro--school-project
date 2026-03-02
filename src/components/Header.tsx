@@ -174,6 +174,7 @@ export function Header() {
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
+    { label: 'প্রোফাইল', icon: UserSearch, href: '/student-profile', permission: 'view:student-profile' },
     { label: 'সার্চ', icon: Search, type: 'search', permission: 'view:students' },
     { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
     { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: 'manage:results' },
@@ -349,17 +350,15 @@ export function Header() {
         </div>
 
         <Link href="/" className="flex items-center gap-2">
-            {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full hidden sm:block" /> : (schoolInfo.logoUrl && (
-              <Image src={schoolInfo.logoUrl} alt="School Logo" width={40} height={40} className="rounded-full hidden sm:block" />
+            {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : (schoolInfo.logoUrl && (
+              <Image src={schoolInfo.logoUrl} alt="School Logo" width={40} height={40} className="rounded-full" />
             ))}
-            <h1 className="text-xl font-bold whitespace-nowrap drop-shadow-md">
+            <h1 className="text-[23px] font-bold whitespace-nowrap drop-shadow-md">
               {isSchoolInfoLoading ? <Skeleton className="h-7 w-48" /> : schoolInfo.name}
             </h1>
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Top header search icon removed as it's now in bottom nav */}
-
           {/* Action Popup for Search Result */}
           <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
               <DialogContent className="sm:max-w-md">
