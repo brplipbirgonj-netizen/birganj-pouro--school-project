@@ -749,9 +749,11 @@ export default function RoutinesPage() {
         toast({ title: 'ফাঁকা রুটিন তৈরি হয়েছে', description: 'এখন আপনি রুটিনটি পূরণ করতে পারেন।' });
     };
 
-    const handlePrint = () => {
-        window.print();
-    };
+    const handlePrint = useCallback(() => {
+        if (typeof window !== 'undefined') {
+            window.print();
+        }
+    }, []);
 
     const handleCopyRoutine = async () => {
         if (!db) return;
