@@ -439,11 +439,11 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
            <Table className="border w-full table-fixed print:text-[10px]">
                 <TableHeader>
                    <TableRow>
-                       <TableHead className="border-r font-bold align-middle text-center w-[10%] print:w-[8%]">বার</TableHead>
-                       <TableHead className="border-r font-bold align-middle text-center w-[8%] print:w-[6%]">শ্রেণি</TableHead>
-                       {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[11%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
-                       <TableHead className="border-r text-center font-semibold bg-gray-100 w-[8%] print:w-[6%]">বিরতি</TableHead>
-                       {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[11%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
+                       <TableHead className="border-r font-bold align-middle text-center w-[10%] print:w-[10%]">বার</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[8%] print:w-[8%]">শ্রেণি</TableHead>
+                       {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[12%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
+                       <TableHead className="border-r text-center font-semibold bg-gray-100 w-[6%] print:w-[6%]">বিরতি</TableHead>
+                       {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold w-[12%] print:w-[12%]">{p.name}<br/><span className="font-normal text-[8px] print:hidden">{p.time}</span></TableHead>)}
                    </TableRow>
                </TableHeader>
                <TableBody>
@@ -458,7 +458,11 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
                                    return <EditableCell key={`${day}-${cls}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(cls, day, periodIdx, value)} conflictKey={`${cls}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                })}
-                               <TableCell className="border-r text-center bg-muted/30 font-semibold text-[10px] print:text-[8px]">টিফিন</TableCell>
+                               {classIndex === 0 && (
+                                    <TableCell className="border-r text-center bg-muted/30 font-bold text-[10px] print:text-[10px] align-middle" rowSpan={classes.length}>
+                                        <div className="[writing-mode:vertical-lr] rotate-180 py-4">টিফিন</div>
+                                    </TableCell>
+                               )}
                                {[...Array(3)].map((_, i) => {
                                    const periodIdx = i + 3;
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
@@ -902,23 +906,29 @@ export default function RoutinesPage() {
                 </main>
             </div>
             {isClient && (
-                 <div className="printable-area routine-print-container">
+                 <div className="printable-area routine-print-container text-black bg-white">
                     <style jsx global>{`
                         @media print {
+                            .routine-print-container {
+                                display: block !important;
+                                visibility: visible !important;
+                            }
                             .routine-print-container table {
                                 width: 100% !important;
                                 border-collapse: collapse !important;
+                                table-layout: fixed !important;
                             }
                             .routine-print-container td, .routine-print-container th {
-                                font-size: 8px !important;
+                                font-size: 9px !important;
                                 padding: 2px !important;
                                 border: 1px solid black !important;
+                                vertical-align: middle !important;
                             }
                             .routine-print-container header h1 {
-                                font-size: 16px !important;
+                                font-size: 18px !important;
                             }
                             .routine-print-container header h2 {
-                                font-size: 12px !important;
+                                font-size: 14px !important;
                             }
                         }
                     `}</style>
@@ -926,16 +936,16 @@ export default function RoutinesPage() {
                         <div className="flex items-center justify-center h-full">লোড হচ্ছে...</div>
                     ) : (
                         <div className="flex flex-col h-full w-full">
-                             <header className="flex items-center gap-4 mb-4 border-b pb-2">
-                                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={50} height={50} className="object-contain" />}
+                             <header className="flex items-center gap-4 mb-4 border-b-2 border-black pb-2 printable-header">
+                                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={60} height={60} className="object-contain" />}
                                 <div className="text-center flex-grow">
-                                    <h1 className="text-xl font-bold">{schoolInfo.name}</h1>
-                                    <p className="text-[10px]">{schoolInfo.address}</p>
-                                    <h2 className="text-base font-semibold mt-1">
+                                    <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
+                                    <p className="text-xs font-bold">{schoolInfo.address}</p>
+                                    <h2 className="text-lg font-extrabold mt-1 underline">
                                         ক্লাস রুটিন - {selectedYear.toLocaleString('bn-BD')}
                                     </h2>
                                 </div>
-                                <div className="w-[50px]"></div>
+                                <div className="w-[60px]"></div>
                             </header>
                             <div className="flex-1 w-full overflow-hidden">
                                 <CombinedRoutineTable 
@@ -947,9 +957,9 @@ export default function RoutinesPage() {
                                     isMounted={isMounted}
                                 />
                             </div>
-                            <footer className="mt-4 pt-4 border-t flex justify-between text-[10px] font-bold">
-                                <div className="text-center w-32 border-t border-black pt-1">রুটিন কমিটির স্বাক্ষর</div>
-                                <div className="text-center w-32 border-t border-black pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
+                            <footer className="mt-8 pt-4 flex justify-between text-[11px] font-bold print-footer">
+                                <div className="text-center w-40 border-t-2 border-black pt-1">রুটিন কমিটির স্বাক্ষর</div>
+                                <div className="text-center w-40 border-t-2 border-black pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
                             </footer>
                         </div>
                     )}
