@@ -417,8 +417,8 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                     </div>
 
                     {selectedTeacher ? (
-                        <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
-                            <Table>
+                        <div className="border rounded-lg overflow-x-auto bg-white shadow-sm">
+                            <Table className="min-w-[800px]">
                                 <TableHeader>
                                     <TableRow className="bg-primary/5">
                                         <TableHead className="font-bold border-r text-center w-24">বার</TableHead>
