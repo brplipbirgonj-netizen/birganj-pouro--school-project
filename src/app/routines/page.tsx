@@ -180,6 +180,10 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
         });
         
         days.forEach(day => {
+            // Global Break Clash Check: Any teacher having class at 4th AND 5th period across ANY classes
+            const teachersAt4th = new Map<string, string[]>(); // teacher -> [classNames]
+            const teachersAt5th = new Map<string, string[]>(); // teacher -> [classNames]
+
             for (let periodIdx = 0; periodIdx < periodsCount; periodIdx++) {
                 const periodTeachers = new Map<string, string>();
                 classes.forEach(cls => {
@@ -190,6 +194,8 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                             teacher.split('/').forEach(t => {
                                 const trimmedTeacher = t.trim();
                                 if (!trimmedTeacher) return;
+
+                                // Teacher Clash Check (Same period, different classes)
                                 if (periodTeachers.has(trimmedTeacher)) {
                                     teacherClashes.add(`${cls}-${day}-${periodIdx}`);
                                     const existingCls = periodTeachers.get(trimmedTeacher)!;
@@ -197,11 +203,29 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 } else {
                                     periodTeachers.set(trimmedTeacher, cls);
                                 }
+
+                                // Collect for Break Clash check
+                                if (periodIdx === 3) {
+                                    if (!teachersAt4th.has(trimmedTeacher)) teachersAt4th.set(trimmedTeacher, []);
+                                    teachersAt4th.get(trimmedTeacher)!.push(cls);
+                                } else if (periodIdx === 4) {
+                                    if (!teachersAt5th.has(trimmedTeacher)) teachersAt5th.set(trimmedTeacher, []);
+                                    teachersAt5th.get(trimmedTeacher)!.push(cls);
+                                }
                             })
                         }
                     }
                 });
             }
+
+            // Mark Break Clashes (Teacher has class in both 4th and 5th period on the same day)
+            teachersAt4th.forEach((classesBefore, teacher) => {
+                if (teachersAt5th.has(teacher)) {
+                    const classesAfter = teachersAt5th.get(teacher)!;
+                    classesBefore.forEach(cls => breakClashes.add(`${cls}-${day}-3`));
+                    classesAfter.forEach(cls => breakClashes.add(`${cls}-${day}-4`));
+                }
+            });
         });
 
         classes.forEach(cls => {
@@ -285,7 +309,7 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         }
                     });
 
-                    // 4+3 split validation
+                    // 4+3 split validation (Consecutive in SAME class)
                     const consecutivePairs = [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6]];
                     consecutivePairs.forEach(([p1, p2]) => {
                         const teacher1 = parseSubjectTeacher(dayRoutine[p1]).teacher;
@@ -300,19 +324,6 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                             }
                         }
                     });
-
-                    // Break is between 4th (idx 3) and 5th (idx 4)
-                    const teacherBeforeBreak = parseSubjectTeacher(dayRoutine[3]).teacher;
-                    const teacherAfterBreak = parseSubjectTeacher(dayRoutine[4]).teacher;
-                    if (teacherBeforeBreak && teacherAfterBreak) {
-                        const teachersBefore = teacherBeforeBreak.split('/').map(t => t.trim()).filter(Boolean);
-                        const teachersAfter = teacherAfterBreak.split('/').map(t => t.trim()).filter(Boolean);
-                        const hasOverlap = teachersBefore.some(t => teachersAfter.includes(t));
-                         if (hasOverlap) {
-                            breakClashes.add(`${cls}-${day}-3`);
-                            breakClashes.add(`${cls}-${day}-4`);
-                        }
-                    }
                 }
             });
         });
@@ -397,7 +408,6 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                                     
                                     const rows = subjectsForClass.map((subject, subjectIndex) => {
                                         const count = classStats[cls]?.[subject.name] || 0;
-                                        const expectedCount = subject.name.includes('বাংলা') || subject.name.includes('ইংরেজি') || subject.name === 'গণিত' ? 5 : 3;
                                         
                                         return (
                                             <TableRow key={`${cls}-${subject.name}`} className="h-8">
@@ -494,7 +504,7 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
     ];
     const postBreakPeriods = [ 
         { name: "৫ম", time: "০২:১০ - ০২:৫০" }, 
-        { name: "৬ষ্ঠ", time: "০২:৫০ - ৩:৩০" }, 
+        { name: "৬ষ্ঠ", time: "০২:৫০ - ০৩:৩০" }, 
         { name: "৭ম", time: "০৩:৩০ - ০৪:১০" } 
     ];
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
@@ -687,8 +697,8 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
                         <div className="flex gap-3">
                             <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                             <div>
-                                <p className="font-bold text-blue-900">বিরতির আগে-পরে একই শিক্ষক</p>
-                                <p className="text-xs text-blue-700 leading-relaxed">টিফিনের ঠিক আগে (৪র্থ পিরিয়ড) এবং ঠিক পরে (৫ম পিরিয়ড) একই শিক্ষক ক্লাস নিতে পারবেন না।</p>
+                                <p className="font-bold text-blue-900">বিরতি সংঘর্ষ (Break Clash)</p>
+                                <p className="text-xs text-blue-700 leading-relaxed">টিফিনের ঠিক আগে (৪র্থ পিরিয়ড) এবং ঠিক পরে (৫ম পিরিয়ড) একই শিক্ষক কোনো ক্লাস নিতে পারবেন না (পুরো স্কুলের জন্য প্রযোজ্য)।</p>
                             </div>
                         </div>
                     </div>
@@ -737,7 +747,7 @@ const ExamRoutineTab = () => {
                     </Select>
                 </div>
                  <div className="flex items-end">
-                     <Button className="w-full sm:w-auto">রুটিন দেখুন</Button>
+                     <Button className="w-full sm:auto">রুটিন দেখুন</Button>
                 </div>
             </div>
              <Card>
