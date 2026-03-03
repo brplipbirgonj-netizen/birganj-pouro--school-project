@@ -240,7 +240,7 @@ export default function EditStudentPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-rose-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
@@ -417,7 +417,7 @@ export default function EditStudentPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="mother-nid">মাতার NID</Label>
-                            <Input id="mother-nid" name="mother-nid" value={student.motherNid || ''} onChange={e => handleInputChange('motherNid', e.target.value)} />
+                            <Input id="mother-nid" name="mother-nid" value={student.motherNameNid || ''} onChange={e => handleInputChange('motherNid', e.target.value)} />
                         </div>
                    </div>
               </div>
@@ -608,5 +608,3 @@ export default function EditStudentPage() {
     </div>
   );
 }
-
-    
