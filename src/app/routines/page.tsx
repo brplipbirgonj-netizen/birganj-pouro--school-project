@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getFullRoutine, saveRoutinesBatch, ClassRoutine } from '@/lib/routine-data';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle } from 'lucide-react';
+import { Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -128,7 +128,12 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
         const subjectRepetitionClashes = new Set<string>();
         const teacherSubjectMismatchClashes = new Set<string>();
         
-        const teacherStats: { [teacher: string]: { total: number, sixthPeriods: { [day: string]: string[] }, daily: { [day: string]: { classes: string[], before: number, after: number }} } } = {};
+        const teacherStats: { [teacher: string]: { 
+            total: number, 
+            sixthPeriods: { [day: string]: string[] }, 
+            daily: { [day: string]: { classes: string[], before: number, after: number }},
+            fullSchedule: { [day: string]: string[] } 
+        } } = {};
         const classStats: { [cls: string]: { [subject: string]: number } } = {};
         
         const allIndividualTeachers = new Set<string>();
@@ -169,7 +174,14 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                     'মঙ্গলবার': { classes: [], before: 0, after: 0 }, 
                     'বুধবার': { classes: [], before: 0, after: 0 }, 
                     'বৃহস্পতিবার': { classes: [], before: 0, after: 0 } 
-                } 
+                },
+                fullSchedule: {
+                    'রবিবার': Array(7).fill(''),
+                    'সোমবার': Array(7).fill(''),
+                    'মঙ্গলবার': Array(7).fill(''),
+                    'বুধবার': Array(7).fill(''),
+                    'বৃহস্পতিবার': Array(7).fill('')
+                }
             };
         });
         
@@ -180,22 +192,25 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
         });
         
         days.forEach(day => {
-            // Global Break Clash Check: Any teacher having class at 4th AND 5th period across ANY classes
-            const teachersAt4th = new Map<string, string[]>(); // teacher -> [classNames]
-            const teachersAt5th = new Map<string, string[]>(); // teacher -> [classNames]
+            const teachersAt4th = new Map<string, string[]>();
+            const teachersAt5th = new Map<string, string[]>();
 
             for (let periodIdx = 0; periodIdx < periodsCount; periodIdx++) {
                 const periodTeachers = new Map<string, string>();
                 classes.forEach(cls => {
                     const cell = routine[cls]?.[day]?.[periodIdx];
                     if (cell) {
-                        const { teacher } = parseSubjectTeacher(cell);
+                        const { subject, teacher } = parseSubjectTeacher(cell);
                         if (teacher) {
                             teacher.split('/').forEach(t => {
                                 const trimmedTeacher = t.trim();
                                 if (!trimmedTeacher) return;
 
-                                // Teacher Clash Check (Same period, different classes)
+                                // Populate Teacher Schedule
+                                if (teacherStats[trimmedTeacher]) {
+                                    teacherStats[trimmedTeacher].fullSchedule[day][periodIdx] = cls;
+                                }
+
                                 if (periodTeachers.has(trimmedTeacher)) {
                                     teacherClashes.add(`${cls}-${day}-${periodIdx}`);
                                     const existingCls = periodTeachers.get(trimmedTeacher)!;
@@ -204,7 +219,6 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                     periodTeachers.set(trimmedTeacher, cls);
                                 }
 
-                                // Collect for Break Clash check
                                 if (periodIdx === 3) {
                                     if (!teachersAt4th.has(trimmedTeacher)) teachersAt4th.set(trimmedTeacher, []);
                                     teachersAt4th.get(trimmedTeacher)!.push(cls);
@@ -218,7 +232,6 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                 });
             }
 
-            // Mark Break Clashes (Teacher has class in both 4th and 5th period on the same day)
             teachersAt4th.forEach((classesBefore, teacher) => {
                 if (teachersAt5th.has(teacher)) {
                     const classesAfter = teachersAt5th.get(teacher)!;
@@ -250,7 +263,6 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 classStats[cls][subjectInfo.name] += 1;
                             }
 
-                            // Subject Repetition check
                             if (!subjectCountInDay.has(s)) {
                                 subjectCountInDay.set(s, []);
                             }
@@ -264,7 +276,7 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 
                                 teacherStats[trimmedTeacher].total++;
                                 teacherStats[trimmedTeacher].daily[day].classes.push(`${subject} (${cls} শ্রেণি)`);
-                                if (periodIdx === 6) { // Last period
+                                if (periodIdx === 6) { 
                                     teacherStats[trimmedTeacher].sixthPeriods[day].push(`${subject} (${cls} শ্রেণি)`);
                                 }
                                 if (periodIdx < 4) {
@@ -309,7 +321,6 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         }
                     });
 
-                    // 4+3 split validation (Consecutive in SAME class)
                     const consecutivePairs = [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6]];
                     consecutivePairs.forEach(([p1, p2]) => {
                         const teacher1 = parseSubjectTeacher(dayRoutine[p1]).teacher;
@@ -339,6 +350,10 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
     const teachers = Object.keys(teacherStats).sort();
     const classes = Object.keys(classStats).sort((a,b) => parseInt(a) - parseInt(b));
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+    const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
+    const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ", "৭ম"];
+
+    const [selectedTeacher, setSelectedTeacher] = useState<string>('');
 
     return (
         <Accordion type="multiple" className="w-full space-y-4">
@@ -386,6 +401,65 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                     </div>
                 </AccordionContent>
             </AccordionItem>
+
+            <AccordionItem value="teacher-schedule-view">
+                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শিক্ষকের ব্যক্তিগত রুটিন (পিরিয়ড অনুযায়ী)</AccordionTrigger>
+                <AccordionContent className="p-4 border rounded-b-lg space-y-6">
+                    <div className="max-w-md space-y-2">
+                        <Label className="font-bold text-primary">শিক্ষক নির্বাচন করুন</Label>
+                        <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+                            <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="শিক্ষকের নাম" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {selectedTeacher ? (
+                        <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-primary/5">
+                                        <TableHead className="font-bold border-r text-center w-24">বার</TableHead>
+                                        {periodLabels.map((p, i) => (
+                                            <React.Fragment key={p}>
+                                                <TableHead className="text-center font-bold border-r">{p} পিরিয়ড</TableHead>
+                                                {i === 3 && <TableHead className="text-center font-bold bg-amber-50 text-amber-900 w-16">টিফিন</TableHead>}
+                                            </React.Fragment>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {days.map(day => (
+                                        <TableRow key={day} className="hover:bg-muted/30">
+                                            <TableCell className="font-bold border-r text-center bg-gray-50">{day}</TableCell>
+                                            {teacherStats[selectedTeacher].fullSchedule[day].map((cls, idx) => (
+                                                <React.Fragment key={`${day}-${idx}`}>
+                                                    <TableCell className={cn(
+                                                        "text-center border-r font-black py-4",
+                                                        cls ? "text-primary bg-primary/5" : "text-muted-foreground/30 font-normal"
+                                                    )}>
+                                                        {cls ? `${classNamesMap[cls] || cls} শ্রেণি` : '-'}
+                                                    </TableCell>
+                                                    {idx === 3 && <TableCell className="bg-amber-50/20 border-r" />}
+                                                </React.Fragment>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-muted/10 rounded-lg border-2 border-dashed">
+                            <User className="h-12 w-12 mb-2 opacity-20" />
+                            <p>কোনো শিক্ষকের ব্যক্তিগত রুটিন দেখতে ড্রপডাউন থেকে তাঁর নাম সিলেক্ট করুন।</p>
+                        </div>
+                    )}
+                </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="class-stats">
                 <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শ্রেণিভিত্তিক বিষয় পরিসংখ্যান</AccordionTrigger>
                 <AccordionContent className="p-0 border rounded-b-lg">
@@ -504,7 +578,7 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
     ];
     const postBreakPeriods = [ 
         { name: "৫ম", time: "০২:১০ - ০২:৫০" }, 
-        { name: "৬ষ্ঠ", time: "০২:৫০ - ০৩:৩০" }, 
+        { name: "৬ষ্ঠ", time: "০২:৫০ - ৩:৩০" }, 
         { name: "৭ম", time: "০৩:৩০ - ০৪:১০" } 
     ];
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
