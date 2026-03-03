@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -16,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getFullRoutine, saveRoutinesBatch, ClassRoutine } from '@/lib/routine-data';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Printer, FilePen, FilePlus, Users } from 'lucide-react';
+import { Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -598,6 +599,58 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
                     isMounted={isMounted}
                 />
             )}
+
+            {/* Logic Legend Section */}
+            <div className="no-print mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
+                <h4 className="text-lg font-black text-blue-800 flex items-center gap-2 mb-4">
+                    <Info className="h-5 w-5" /> রুটিন তৈরির নিয়ম ও শর্তাবলী (Validation Logic):
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                        <div className="flex gap-3">
+                            <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-blue-900">শিক্ষক সংঘর্ষ (Teacher Clash)</p>
+                                <p className="text-xs text-blue-700 leading-relaxed">একজন শিক্ষক একই সময়ে একাধিক ক্লাসে উপস্থিত থাকতে পারবেন না। এমন হলে ঘরটি লাল হবে।</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-blue-900">টানা ক্লাস (Consecutive Classes)</p>
+                                <p className="text-xs text-blue-700 leading-relaxed">একই শিক্ষকের একই ক্লাসে পরপর দুটি পিরিয়ড থাকা উচিত নয়। সিস্টেম এটি স্বয়ংক্রিয়ভাবে চেক করে।</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-blue-900">বিরতির আগে-পরে একই শিক্ষক</p>
+                                <p className="text-xs text-blue-700 leading-relaxed">টিফিনের ঠিক আগে (৩য় পিরিয়ড) এবং ঠিক পরে (৪র্থ পিরিয়ড) একই শিক্ষক ক্লাস নিতে পারবেন না।</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <div className="flex gap-3">
+                            <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-blue-900">বিষয়ের পুনরাবৃত্তি (Subject Repetition)</p>
+                                <p className="text-xs text-blue-700 leading-relaxed">একই দিনে একই বিষয় একাধিকবার নেওয়া যাবে না (বাংলা ও ইংরেজি ১ম/২য় পত্র বাদে)।</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-blue-900">শিক্ষক বরাদ্দ (Teacher Allocation)</p>
+                                <p className="text-xs text-blue-700 leading-relaxed">শিক্ষককে অবশ্যই তার জন্য নির্ধারিত বিষয় এবং শ্রেণিতে বরাদ্দ করতে হবে। অন্যথায় এরর দেখাবে।</p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-blue-100 flex items-center gap-3">
+                            <div className="h-4 w-4 bg-red-100 border border-red-300 rounded"></div>
+                            <p className="text-xs font-medium text-blue-800">রুটিনের যেকোনো ঘর <strong>লাল</strong> হওয়ার অর্থ সেখানে উপরের কোনো একটি শর্ত ভঙ্গ হয়েছে।</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
