@@ -506,7 +506,7 @@ export default function MessagingPage() {
                                     </TabsContent>
                                 </div>
                             </Tabs>
-                        </CardHeader>
+                        </CardContent>
                     </Card>
 
                     <Card className="md:col-span-1 lg:col-span-1 border-primary/20 shadow-lg">
