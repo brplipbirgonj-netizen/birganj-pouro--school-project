@@ -377,7 +377,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                 <TableHead>বিবরণ</TableHead>
                                 <TableHead className="text-right">আয়</TableHead>
                                 <TableHead className="text-right">ব্যয়</TableHead>
-                                <TableHead className="text-right">ব্যালেন্স</TableHead>
+                                <TableHead className="text-right">ব্য্যালেন্স</TableHead>
                                 {canManageTransactions && <TableHead className="text-right">কার্যক্রম</TableHead>}
                             </TableRow>
                         </TableHeader>
@@ -510,7 +510,9 @@ export default function AccountsPage() {
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+  
   const canCollectFees = hasPermission('collect:fees');
+  const canViewReports = hasPermission('view:collection-report');
   const canManageTransactions = hasPermission('manage:transactions');
 
   const fetchTransactions = useCallback(async () => {
@@ -555,6 +557,8 @@ export default function AccountsPage() {
   const tabs = [];
   if (canCollectFees) {
       tabs.push({ value: "fee-collection", label: "বেতন আদায়" });
+  }
+  if (canViewReports) {
       tabs.push({ value: "collection-report", label: "আদায়ের রিপোর্ট" });
   }
   tabs.push({ value: "cashbook", label: "ক্যাশবুক" });
@@ -577,16 +581,19 @@ export default function AccountsPage() {
                   <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                     {tabs.map(tab => <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>)}
                   </TabsList>
+                  
                   {canCollectFees && (
-                    <>
-                        <TabsContent value="fee-collection" className="mt-4">
-                            <FeeCollectionTab studentsForYear={studentsForYear} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />
-                        </TabsContent>
-                        <TabsContent value="collection-report" className="mt-4">
-                            <CollectionReportTab allStudents={allStudents} />
-                        </TabsContent>
-                    </>
+                    <TabsContent value="fee-collection" className="mt-4">
+                        <FeeCollectionTab studentsForYear={studentsForYear} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />
+                    </TabsContent>
                   )}
+                  
+                  {canViewReports && (
+                    <TabsContent value="collection-report" className="mt-4">
+                        <CollectionReportTab allStudents={allStudents} />
+                    </TabsContent>
+                  )}
+
                    <TabsContent value="cashbook" className="mt-4">
                     <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />
                   </TabsContent>
