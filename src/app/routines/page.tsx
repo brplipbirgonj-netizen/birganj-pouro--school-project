@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -31,7 +32,10 @@ const subjectNameNormalization: { [key: string]: string } = {
     'ধর্ম': 'ধর্ম ও নৈতিক শিক্ষা',
     'বাও বি': 'বাংলাদেশ ও বিশ্ব পরিচয়',
     'বা ও বি': 'বাংলাদেশ ও বিশ্ব পরিচয়',
+    'বা ও বি পরিচয়': 'বাংলাদেশ ও বিশ্ব পরিচয়',
+    'বিজিএস': 'বাংলাদেশ ও বিশ্ব পরিচয়',
     'বিজ্ঞান': 'সাধারণ বিজ্ঞান',
+    'সাধারণ বিজ্ঞান': 'সাধারণ বিজ্ঞান',
     'ইতিহাস': 'বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা',
     'ভূগোল': 'ভূগোল ও পরিবেশ',
     'পৌরনীতি': 'পৌরনীতি ও নাগরিকতা',
@@ -39,7 +43,13 @@ const subjectNameNormalization: { [key: string]: string } = {
     'উচ্চতর গণিত': 'উচ্চতর গণিত',
     'উচ্চতর': 'উচ্চতর গণিত',
     'জীব': 'জীব বিজ্ঞান',
+    'জীববিজ্ঞান': 'জীব বিজ্ঞান',
     'কৃষি': 'কৃষি শিক্ষা',
+    'বাংলা ১': 'বাংলা প্রথম',
+    'বাংলা ২': 'বাংলা দ্বিতীয়',
+    'ইংরেজি ১': 'ইংরেজি প্রথম',
+    'ইংরেজি ২': 'ইংরেজি দ্বিতীয়',
+    'আইসিটি': 'তথ্য ও যোগাযোগ প্রযুক্তি',
 };
 
 const teacherAllocations: Record<string, Record<string, string[]>> = {
@@ -203,7 +213,8 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
 
                     dayRoutine.forEach((cell, periodIdx) => {
                         const { subject, teacher } = parseSubjectTeacher(cell);
-                        
+                        if (!subject && !teacher) return;
+
                         const subjectsInCell = subject.split('/').map(s => s.trim()).filter(Boolean);
                         
                         subjectsInCell.forEach(s => {
@@ -213,17 +224,14 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 if (!classStats[cls][subjectInfo.name]) classStats[cls][subjectInfo.name] = 0;
                                 classStats[cls][subjectInfo.name] += 1;
                             }
+
+                            // Subject Repetition check
+                            if (!subjectCountInDay.has(s)) {
+                                subjectCountInDay.set(s, []);
+                            }
+                            subjectCountInDay.get(s)!.push(periodIdx);
                         });
 
-
-                        if(subject) {
-                             subjectsInCell.forEach(s => {
-                                if (!subjectCountInDay.has(s)) {
-                                   subjectCountInDay.set(s, []);
-                                }
-                                subjectCountInDay.get(s)!.push(periodIdx);
-                             });
-                        }
                         if (teacher) {
                             teacher.split('/').forEach(t => {
                                 const trimmedTeacher = t.trim();
@@ -231,7 +239,7 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 
                                 teacherStats[trimmedTeacher].total++;
                                 teacherStats[trimmedTeacher].daily[day].classes.push(`${subject} (${cls} শ্রেণি)`);
-                                 if (periodIdx === 6) { // Last period
+                                if (periodIdx === 6) { // Last period
                                     teacherStats[trimmedTeacher].sixthPeriods[day].push(`${subject} (${cls} শ্রেণি)`);
                                 }
                                 if (periodIdx < 4) {
@@ -244,7 +252,7 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         
                         if (subject && teacher) {
                             const teachersInCell = teacher.split('/').map(t => t.trim()).filter(Boolean);
-                            const subjectsInCellNormalized = subject.split('/').map(s => subjectNameNormalization[s.trim()] || s.trim()).filter(Boolean);
+                            const subjectsInCellNormalized = subjectsInCell.map(s => subjectNameNormalization[s] || s);
                             const classNumber = cls.split('-')[0];
 
                             teachersInCell.forEach(t => {
@@ -266,9 +274,11 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                     });
 
                     subjectCountInDay.forEach((indices, subjectName) => {
+                        const normalizedSub = subjectNameNormalization[subjectName] || subjectName;
                         if (indices.length > 1) {
-                           const subjectInfo = subjectsInClass.find(s => s.name === subjectName);
-                           if (subjectInfo && subjectInfo.name !== 'বাংলা প্রথম' && subjectInfo.name !== 'বাংলা দ্বিতীয়' && subjectInfo.name !== 'ইংরেজি প্রথম' && subjectInfo.name !== 'ইংরেজি দ্বিতীয়') {
+                           const subjectInfo = subjectsInClass.find(s => s.name === normalizedSub);
+                           const isLanguage = normalizedSub.includes('বাংলা') || normalizedSub.includes('ইংরেজি');
+                           if (subjectInfo && !isLanguage) {
                                 indices.forEach(idx => subjectRepetitionClashes.add(`${cls}-${day}-${idx}`));
                            }
                         }
@@ -290,7 +300,7 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         }
                     });
 
-                    // Break is after 4th period (index 3) and before 5th period (index 4)
+                    // Break is between 4th (idx 3) and 5th (idx 4)
                     const teacherBeforeBreak = parseSubjectTeacher(dayRoutine[3]).teacher;
                     const teacherAfterBreak = parseSubjectTeacher(dayRoutine[4]).teacher;
                     if (teacherBeforeBreak && teacherAfterBreak) {
@@ -321,46 +331,41 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
     return (
         <Accordion type="multiple" className="w-full space-y-4">
             <AccordionItem value="teacher-stats">
-                <AccordionTrigger className="text-lg font-semibold">শিক্ষকভিত্তিক পরিসংখ্যান</AccordionTrigger>
-                <AccordionContent>
-                    <div className="overflow-x-auto border rounded-lg">
-                        <Table className="border-collapse border">
+                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শিক্ষকভিত্তিক পরিসংখ্যান (সাপ্তাহিক লোড)</AccordionTrigger>
+                <AccordionContent className="p-0 border rounded-b-lg">
+                    <div className="overflow-x-auto">
+                        <Table className="border-collapse">
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead className="border">ক্রমিক</TableHead>
-                                    <TableHead className="border">শিক্ষকের নাম</TableHead>
-                                    <TableHead className="border">মোট ক্লাস</TableHead>
-                                    <TableHead className="border">শেষ পিরিয়ডে</TableHead>
-                                    <TableHead className="border">দিনভিত্তিক ক্লাস (বিরতির আগে, পরে)</TableHead>
+                                <TableRow className="bg-muted/50">
+                                    <TableHead className="w-12 text-center">ক্রমিক</TableHead>
+                                    <TableHead>শিক্ষকের নাম</TableHead>
+                                    <TableHead className="text-center">মোট ক্লাস</TableHead>
+                                    <TableHead className="text-center">শেষ পিরিয়ড</TableHead>
+                                    <TableHead>দিনভিত্তিক বণ্টন (বিরতির আগে, পরে)</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {teachers.map((teacher, index) => (
-                                    <TableRow key={teacher} className="border">
-                                        <TableCell className="border text-center">{(index + 1).toLocaleString('bn-BD')}</TableCell>
-                                        <TableCell className="font-medium border">{teacher}</TableCell>
-                                        <TableCell className="border text-center">{teacherStats[teacher].total.toLocaleString('bn-BD')}</TableCell>
-                                        <TableCell className="border">
-                                            <ul className="list-none p-0 m-0 text-xs">
-                                                {Object.entries(teacherStats[teacher].sixthPeriods)
-                                                    .filter(([, classes]) => (classes as string[]).length > 0)
-                                                    .map(([day]) => (
-                                                        <li key={day}>{day}</li>
-                                                ))}
-                                            </ul>
+                                    <TableRow key={teacher}>
+                                        <TableCell className="text-center text-xs">{(index + 1).toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="font-bold text-sm text-primary">{teacher}</TableCell>
+                                        <TableCell className="text-center font-bold">{teacherStats[teacher].total.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="text-center text-xs">
+                                            {Object.entries(teacherStats[teacher].sixthPeriods)
+                                                .filter(([, classes]) => (classes as string[]).length > 0)
+                                                .map(([day]) => day.substring(0, 3)).join(', ') || '-'}
                                         </TableCell>
-                                        <TableCell className="border">
-                                            <ul className="list-disc list-inside text-xs space-y-1">
+                                        <TableCell className="text-[11px] leading-relaxed">
+                                            <div className="flex flex-wrap gap-x-3 gap-y-1">
                                                 {Object.entries(teacherStats[teacher].daily).map(([day, dayStats]) => {
-                                                    return (dayStats as any).classes.length > 0 && (
-                                                        <li key={day}>
-                                                            <strong>{day}:</strong> {(dayStats as any).classes.length.toLocaleString('bn-BD')}টি 
-                                                            ({`আগে: ${(dayStats as any).before.toLocaleString('bn-BD')}, `}
-                                                            {`পরে: ${(dayStats as any).after.toLocaleString('bn-BD')}`})
-                                                        </li>
+                                                    const ds = dayStats as any;
+                                                    return ds.classes.length > 0 && (
+                                                        <div key={day} className="bg-muted/30 px-1.5 py-0.5 rounded border border-muted-foreground/10">
+                                                            <span className="font-semibold">{day.substring(0, 3)}:</span> {ds.classes.length.toLocaleString('bn-BD')}টি ({ds.before.toLocaleString('bn-BD')},{ds.after.toLocaleString('bn-BD')})
+                                                        </div>
                                                     )
                                                 })}
-                                            </ul>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -370,35 +375,41 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                 </AccordionContent>
             </AccordionItem>
             <AccordionItem value="class-stats">
-                <AccordionTrigger className="text-lg font-semibold">শ্রেণিভিত্তিক পরিসংখ্যান</AccordionTrigger>
-                <AccordionContent>
-                     <div className="overflow-x-auto border rounded-lg">
-                        <Table className="border-collapse border">
+                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শ্রেণিভিত্তিক বিষয় পরিসংখ্যান</AccordionTrigger>
+                <AccordionContent className="p-0 border rounded-b-lg">
+                     <div className="overflow-x-auto">
+                        <Table className="border-collapse">
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead className="border">শ্রেণি</TableHead>
-                                    <TableHead className="border">ক্রমিক</TableHead>
-                                    <TableHead className="border">বিষয়</TableHead>
-                                    <TableHead className="border">সাপ্তাহিক ক্লাস সংখ্যা</TableHead>
+                                <TableRow className="bg-muted/50">
+                                    <TableHead className="text-center">শ্রেণি</TableHead>
+                                    <TableHead>বিষয়</TableHead>
+                                    <TableHead className="text-center">সাপ্তাহিক পিরিয়ড</TableHead>
+                                    <TableHead>অবস্থা</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {classes.map(cls => {
-                                    const subjectsToExcludeForCommerce = ['ব্যবসায় উদ্যোগ', 'হিসাব বিজ্ঞান', 'ফিন্যান্স ও ব্যাংকিং'];
                                     const subjectsForClass = getSubjects(cls, undefined)
-                                        .filter(subject => !subjectsToExcludeForCommerce.includes(subject.name))
                                         .sort((a,b) => parseInt(a.code) - parseInt(b.code));
                                     
                                     if(subjectsForClass.length === 0) return null;
                                     
                                     const rows = subjectsForClass.map((subject, subjectIndex) => {
                                         const count = classStats[cls]?.[subject.name] || 0;
+                                        const expectedCount = subject.name.includes('বাংলা') || subject.name.includes('ইংরেজি') || subject.name === 'গণিত' ? 5 : 3;
+                                        
                                         return (
-                                            <TableRow key={`${cls}-${subject.name}`} className="border">
-                                                {subjectIndex === 0 && <TableCell rowSpan={subjectsForClass.length} className="font-medium align-top border text-center">{classNamesMap[cls]}</TableCell>}
-                                                <TableCell className="border text-center">{(subjectIndex + 1).toLocaleString('bn-BD')}</TableCell>
-                                                <TableCell className="border">{subject.name}</TableCell>
-                                                <TableCell className="border text-center">{count.toLocaleString('bn-BD')}</TableCell>
+                                            <TableRow key={`${cls}-${subject.name}`} className="h-8">
+                                                {subjectIndex === 0 && <TableCell rowSpan={subjectsForClass.length} className="font-black align-top text-center border-r bg-muted/10">{classNamesMap[cls]}</TableCell>}
+                                                <TableCell className="text-xs">{subject.name}</TableCell>
+                                                <TableCell className="text-center font-bold">{count.toLocaleString('bn-BD')}</TableCell>
+                                                <TableCell>
+                                                    {count > 0 ? (
+                                                        <Badge variant="outline" className="text-[10px] h-5 bg-emerald-50 text-emerald-700 border-emerald-200">সক্রিয়</Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[10px] h-5 bg-red-50 text-red-700 border-red-200 opacity-50">শূন্য</Badge>
+                                                    )}
+                                                </TableCell>
                                             </TableRow>
                                         );
                                     });
@@ -652,7 +663,6 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
                 />
             )}
 
-            {/* Logic Legend Section */}
             <div className="no-print mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
                 <h4 className="text-lg font-black text-blue-800 flex items-center gap-2 mb-4">
                     <Info className="h-5 w-5" /> রুটিন তৈরির নিয়ম ও শর্তাবলী (Validation Logic):
