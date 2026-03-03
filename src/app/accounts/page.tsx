@@ -563,7 +563,7 @@ export default function AccountsPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-teal-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
         <Card>
           <CardHeader>
              <CardTitle>হিসাব শাখা</CardTitle>

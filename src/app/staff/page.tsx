@@ -92,7 +92,7 @@ export default function StaffListPage() {
     <>
     <div className="flex min-h-screen w-full flex-col bg-orange-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

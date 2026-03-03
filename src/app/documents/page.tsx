@@ -10,7 +10,7 @@ export default function DocumentsPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
         <Card>
             <CardHeader>
                 <CardTitle>ডকুমেন্ট</CardTitle>
@@ -19,12 +19,12 @@ export default function DocumentsPage() {
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <Card>
                         <CardHeader>
-                            <CardTitle>প্রত্যয়ন পত্র</CardTitle>
+                            <CardTitle>प्रत्यয়ন পত্র</CardTitle>
                             <CardDescription>শিক্ষার্থীদের জন্য প্রশংসাপত্র বা প্রত্যয়ন পত্র জেনারেট করুন।</CardDescription>
                         </CardHeader>
                         <CardContent>
                            <p className="text-sm text-muted-foreground">
-                               প্রত্যয়ন পত্র তৈরি করতে, শিক্ষার্থী তালিকা থেকে নির্দিষ্ট শিক্ষার্থীকে বেছে নিন এবং তার প্রোফাইল থেকে "প্রত্যয়ন পত্র" অপশনটি নির্বাচন করুন।
+                               प्रत्यয়ন পত্র তৈরি করতে, শিক্ষার্থী তালিকা থেকে নির্দিষ্ট শিক্ষার্থীকে বেছে নিন এবং তার প্রোফাইল থেকে "प्रत्यয়ন পত্র" অপশনটি নির্বাচন করুন।
                            </p>
                         </CardContent>
                          <CardFooter>

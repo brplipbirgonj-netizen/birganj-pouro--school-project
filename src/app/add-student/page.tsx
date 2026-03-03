@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -453,7 +452,7 @@ export default function AddStudentPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-emerald-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
@@ -790,9 +789,9 @@ export default function AddStudentPage() {
                         <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
                         <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
                         <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
+                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10" /></div>
+                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10" /></div>
+                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10" /></div>
                         </div>
                     </div>
                 </div>
