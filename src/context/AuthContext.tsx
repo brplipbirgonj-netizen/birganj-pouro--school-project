@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth } from '@/firebase';
 import { useFirestore } from '@/firebase';
 import { User, userFromDoc } from '@/lib/user';
@@ -47,12 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(userData);
             setLoading(false);
           } else {
-            // Document doesn't exist yet (signup in progress)
-            // We wait for it to be created by the signUp function
             setUser(null);
-            // Don't set loading to false yet if we just authenticated but document isn't there
           }
         }, (error) => {
+            if (error.code === 'permission-denied') return;
             console.error("Auth snapshot error:", error);
             setLoading(false);
         });

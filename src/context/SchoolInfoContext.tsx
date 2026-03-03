@@ -33,7 +33,6 @@ export function SchoolInfoProvider({ children }: { children: ReactNode }) {
         if (docSnap.exists()) {
             setSchoolInfo({ ...defaultSchoolInfo, ...docSnap.data() } as SchoolInfo);
         } else {
-            // Only admins should attempt to create the missing document to avoid permission errors
             if (user?.role === 'admin') {
                 saveSchoolInfo(db, defaultSchoolInfo).catch(console.error);
             }
@@ -41,6 +40,7 @@ export function SchoolInfoProvider({ children }: { children: ReactNode }) {
         }
         setIsLoading(false);
     }, async (error: FirestoreError) => {
+        if (error.code === 'permission-denied') return;
         const permissionError = new FirestorePermissionError({
           path: 'school/info',
           operation: 'get',

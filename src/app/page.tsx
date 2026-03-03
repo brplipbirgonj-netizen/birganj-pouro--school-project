@@ -353,7 +353,7 @@ const LiveRoutineCard = () => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>সময়</TableHead>
-                                <TableHead>শিক্ষকর</TableHead>
+                                <TableHead>শিক্ষক</TableHead>
                                 <TableHead>শ্রেণি</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -406,7 +406,6 @@ export default function Home() {
       const studentsQuery = query(collection(db, 'students'), where('academicYear', '==', selectedYear));
       
       const unsubscribeStudents = onSnapshot(studentsQuery, async (studentsSnapshot) => {
-        if (!user) return;
         const studentsForYear = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
         setTotalStudents(studentsForYear.length);
         
@@ -466,29 +465,24 @@ export default function Home() {
       },
       (error: FirestoreError) => {
         if (error.code === 'permission-denied') return;
-        if (user) {
-            const permissionError = new FirestorePermissionError({
-                path: 'students',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        }
+        const permissionError = new FirestorePermissionError({
+            path: 'students',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
 
       const staffQuery = query(collection(db, 'staff'), where('isActive', '==', true), where('staffType', '==', 'teacher'));
       const unsubscribeStaff = onSnapshot(staffQuery, (querySnapshot) => {
-        if (!user) return;
         setTotalTeachers(querySnapshot.size);
       },
       (error: FirestoreError) => {
         if (error.code === 'permission-denied') return;
-        if (user) {
-            const permissionError = new FirestorePermissionError({
-                path: 'staff',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        }
+        const permissionError = new FirestorePermissionError({
+            path: 'staff',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
 
       return () => {

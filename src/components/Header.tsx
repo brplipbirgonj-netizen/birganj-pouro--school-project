@@ -70,14 +70,12 @@ export function Header() {
   const [displayPhoto, setDisplayPhoto] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
 
-  // Global Search State
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [lastFetchedYear, setLastFetchedYear] = useState('');
 
-  // Action Popup State
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
   const [feeDialogOpen, setFeeDialogOpen] = useState(false);
@@ -126,7 +124,6 @@ export function Header() {
     router.push('/login');
   };
 
-  // Search Logic
   const handleSearchOpen = async (open: boolean) => {
     setSearchOpen(open);
     if (open && db && user && (allStudents.length === 0 || lastFetchedYear !== selectedYear)) {
@@ -172,13 +169,12 @@ export function Header() {
     setActionsDialogOpen(true);
   };
 
-  // Bottom Navigation configuration
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
     { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
     { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
-    { label: '', icon: Search, type: 'search', permission: 'view:students' }, // Center item
+    { label: '', icon: Search, type: 'search', permission: 'view:students' },
     { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: 'manage:results' },
     { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
     { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: 'manage:messaging' },
@@ -363,7 +359,6 @@ export function Header() {
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Action Popup for Search Result */}
           <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
               <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -445,7 +440,6 @@ export function Header() {
               </DialogContent>
           </Dialog>
 
-          {/* Global Fee Dialog */}
           {selectedStudent && (
               <StudentFeeDialog 
                   student={selectedStudent} 
@@ -490,14 +484,12 @@ export function Header() {
         </div>
       </header>
 
-      {/* Fixed Bottom Navigation Bar */}
       {user && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary flex items-center justify-between px-4 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
           {bottomNavItems.map((item, index) => {
             const isActive = item.href ? pathname === item.href : false;
             if (!hasPermission(item.permission)) return <div key={index} className="flex-1" />;
             
-            // Special rendering for center search button
             if (item.type === 'search') {
                 return (
                     <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
