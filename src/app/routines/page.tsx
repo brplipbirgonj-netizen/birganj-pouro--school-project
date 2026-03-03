@@ -24,6 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
+import { Badge } from '@/components/ui/badge';
 
 const subjectNameNormalization: { [key: string]: string } = {
     ...baseSubjectNameNormalization,
