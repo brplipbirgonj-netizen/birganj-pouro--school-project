@@ -93,10 +93,10 @@ export default function MessagingPage() {
         const numbers = Array.isArray(mobiles) ? mobiles : [mobiles];
         const cleanNumbers = numbers
             .map(num => num.replace(/[^\d+]/g, ''))
-            .filter(Boolean);
+            .filter(num => num.length >= 10);
 
         if (cleanNumbers.length === 0) {
-            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            toast({ variant: 'destructive', title: 'মোবাইল নম্বর সঠিক নয়' });
             return;
         }
         if (!content.trim()) {
@@ -104,13 +104,16 @@ export default function MessagingPage() {
             return;
         }
 
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const separator = isIOS ? '&' : '?';
-        const recipientSeparator = isIOS ? ',' : ';';
+        const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
         
-        const recipients = cleanNumbers.join(recipientSeparator);
+        // Android standard is comma, iOS standard is also comma for many apps
+        const recipients = cleanNumbers.join(',');
         const encodedContent = encodeURIComponent(content);
-        const smsUrl = `sms:${recipients}${separator}body=${encodedContent}`;
+        
+        // SMS URL scheme varies slightly between Android and iOS for pre-filling body
+        const smsUrl = isIOS 
+            ? `sms:${recipients}&body=${encodedContent}`
+            : `sms:${recipients}?body=${encodedContent}`;
 
         try {
             window.location.href = smsUrl;
@@ -156,6 +159,7 @@ export default function MessagingPage() {
 
         setIsLoading(true);
         try {
+            // Log to Firestore first
             await logMessage(db, {
                 recipientsCount,
                 type,
@@ -167,6 +171,7 @@ export default function MessagingPage() {
 
             toast({ title: 'মেসেজ রেকর্ড করা হয়েছে', description: `মোট ${recipientsCount.toLocaleString('bn-BD')} জন শিক্ষার্থীর জন্য লগ তৈরি করা হয়েছে।` });
             
+            // If it's targeted, fire the SMS intent
             if ((type === 'individual' || type === 'absent') && selectedStudentIds.size > 0) {
                 const mobiles = Array.from(selectedStudentIds).map(id => {
                     const student = allStudents.find(s => s.id === id);
@@ -176,14 +181,19 @@ export default function MessagingPage() {
                 if (mobiles.length > 0) {
                     handleSendDirectSMS(mobiles, messageContent);
                 }
+            } else if (type === 'class' && selectedClass) {
+                const mobiles = studentsInClass.map(s => s.guardianMobile || s.studentMobile || '').filter(Boolean);
+                if (mobiles.length > 0) {
+                    handleSendDirectSMS(mobiles, messageContent);
+                }
             }
 
-            setMessageContent(type === 'absent' ? 'সম্মানিত অভিভাবক, আপনার সন্তান আজ বিদ্যালয়ে অনুপস্থিত আছে। বিপৌউবি' : '');
+            if (type !== 'absent') setMessageContent('');
             setSelectedStudentIds(new Set());
             fetchLogs();
         } catch (e: any) {
             console.error(e);
-            toast({ variant: 'destructive', title: 'মেসেজ সেভ করা যায়নি', description: e.message });
+            // Error is handled by global listener or shown here
         } finally {
             setIsLoading(false);
         }
@@ -305,7 +315,7 @@ export default function MessagingPage() {
                                             disabled={isLoading || allStudents.length === 0}
                                             onClick={() => handleLogAndSimulateMessage('all', allStudents.length)}
                                         >
-                                            <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন ও পাঠান (Simulation)
+                                            <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন
                                         </Button>
                                     </TabsContent>
 
@@ -335,7 +345,7 @@ export default function MessagingPage() {
                                             disabled={isLoading || !selectedClass || studentsInClass.length === 0}
                                             onClick={() => handleLogAndSimulateMessage('class', studentsInClass.length)}
                                         >
-                                            <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন ও পাঠান
+                                            <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন ও মোবাইল থেকে পাঠান
                                         </Button>
                                     </TabsContent>
 
@@ -421,7 +431,7 @@ export default function MessagingPage() {
                                             disabled={isLoading || selectedStudentIds.size === 0}
                                             onClick={() => handleLogAndSimulateMessage('individual', selectedStudentIds.size)}
                                         >
-                                            <Send className="mr-2 h-5 w-5" /> সিম থেকে পাঠান {selectedStudentIds.size > 0 && `(${selectedStudentIds.size.toLocaleString('bn-BD')} জন)`}
+                                            <Send className="mr-2 h-5 w-5" /> মোবাইল থেকে পাঠান {selectedStudentIds.size > 0 && `(${selectedStudentIds.size.toLocaleString('bn-BD')} জন)`}
                                         </Button>
                                     </TabsContent>
 
@@ -477,7 +487,7 @@ export default function MessagingPage() {
                                                                             onClick={() => handleSendDirectSMS(s.guardianMobile || s.studentMobile || '', messageContent)}
                                                                             disabled={!messageContent.trim() || (!s.guardianMobile && !s.studentMobile)}
                                                                         >
-                                                                            <Smartphone className="h-3 w-3 mr-1" /> সিম থেকে পাঠান
+                                                                            <Smartphone className="h-3 w-3 mr-1" /> এসএমএস
                                                                         </Button>
                                                                     </div>
                                                                 </TableCell>
@@ -501,7 +511,7 @@ export default function MessagingPage() {
                                             disabled={isLoading || selectedStudentIds.size === 0}
                                             onClick={() => handleLogAndSimulateMessage('absent', selectedStudentIds.size)}
                                         >
-                                            <Send className="mr-2 h-5 w-5" /> সিম থেকে পাঠান (অনুপস্থিত {selectedStudentIds.size.toLocaleString('bn-BD')} জন)
+                                            <Send className="mr-2 h-5 w-5" /> মোবাইল থেকে পাঠান (অনুপস্থিত {selectedStudentIds.size.toLocaleString('bn-BD')} জন)
                                         </Button>
                                     </TabsContent>
                                 </div>

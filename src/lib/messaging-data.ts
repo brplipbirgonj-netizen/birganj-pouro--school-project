@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -35,10 +34,17 @@ const MESSAGES_COLLECTION = 'messageLogs';
 export const logMessage = async (db: Firestore, logData: NewMessageLog) => {
   // Use doc(collection) without ID to let Firestore generate a unique ID
   const docRef = doc(collection(db, MESSAGES_COLLECTION));
-  const dataToSave = {
+  const dataToSave: any = {
     ...logData,
     sentAt: serverTimestamp(),
   };
+
+  // Remove undefined fields to prevent Firestore errors
+  Object.keys(dataToSave).forEach(key => {
+    if (dataToSave[key] === undefined) {
+      delete dataToSave[key];
+    }
+  });
 
   try {
     return await setDoc(docRef, dataToSave);
