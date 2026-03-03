@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -93,7 +92,7 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
 
         const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
         const classes = Object.keys(routine);
-        const periodsCount = 6;
+        const periodsCount = 7;
 
         classes.forEach(cls => {
             days.forEach(day => {
@@ -199,10 +198,10 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 
                                 teacherStats[trimmedTeacher].total++;
                                 teacherStats[trimmedTeacher].daily[day].classes.push(`${subject} (${cls} শ্রেণি)`);
-                                 if (periodIdx === 5) {
+                                 if (periodIdx === 6) { // Last period
                                     teacherStats[trimmedTeacher].sixthPeriods[day].push(`${subject} (${cls} শ্রেণি)`);
                                 }
-                                if (periodIdx < 3) {
+                                if (periodIdx < 4) {
                                     teacherStats[trimmedTeacher].daily[day].before++;
                                 } else {
                                     teacherStats[trimmedTeacher].daily[day].after++;
@@ -242,7 +241,8 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         }
                     });
 
-                    const consecutivePairs = [[0, 1], [1, 2], [3, 4], [4, 5]];
+                    // 4+3 split validation
+                    const consecutivePairs = [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6]];
                     consecutivePairs.forEach(([p1, p2]) => {
                         const teacher1 = parseSubjectTeacher(dayRoutine[p1]).teacher;
                         const teacher2 = parseSubjectTeacher(dayRoutine[p2]).teacher;
@@ -257,15 +257,16 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         }
                     });
 
-                    const teacherBeforeBreak = parseSubjectTeacher(dayRoutine[2]).teacher;
-                    const teacherAfterBreak = parseSubjectTeacher(dayRoutine[3]).teacher;
+                    // Break is after 4th period (index 3) and before 5th period (index 4)
+                    const teacherBeforeBreak = parseSubjectTeacher(dayRoutine[3]).teacher;
+                    const teacherAfterBreak = parseSubjectTeacher(dayRoutine[4]).teacher;
                     if (teacherBeforeBreak && teacherAfterBreak) {
                         const teachersBefore = teacherBeforeBreak.split('/').map(t => t.trim()).filter(Boolean);
                         const teachersAfter = teacherAfterBreak.split('/').map(t => t.trim()).filter(Boolean);
                         const hasOverlap = teachersBefore.some(t => teachersAfter.includes(t));
                          if (hasOverlap) {
-                            breakClashes.add(`${cls}-${day}-2`);
                             breakClashes.add(`${cls}-${day}-3`);
+                            breakClashes.add(`${cls}-${day}-4`);
                         }
                     }
                 }
@@ -296,7 +297,7 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                                     <TableHead className="border">ক্রমিক</TableHead>
                                     <TableHead className="border">শিক্ষকের নাম</TableHead>
                                     <TableHead className="border">মোট ক্লাস</TableHead>
-                                    <TableHead className="border">৬ষ্ঠ পিরিয়ডে</TableHead>
+                                    <TableHead className="border">শেষ পিরিয়ডে</TableHead>
                                     <TableHead className="border">দিনভিত্তিক ক্লাস (বিরতির আগে, পরে)</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -382,8 +383,17 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
 
 const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellChange, teacherColorMap, isMounted }: { className: string, routineData: any, conflicts: any, isEditMode: boolean, onCellChange: (cls: string, day: string, periodIdx: number, value: string) => void, teacherColorMap: Map<string, string>, isMounted: boolean }) => {
     const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
-    const periods = [ { name: "১ম", time: "১০:৩০ - ১১:২০" }, { name: "২য়", time: "১১:২০ - ১২:১০" }, { name: "৩য়", time: "১২:১০ - ০১:০০" } ];
-    const postBreakPeriods = [ { name: "৪র্থ", time: "০১:৪০ - ০২:৩০" }, { name: "৫ম", time: "০২:৩০ - ০৩:২০" }, { name: "৬ষ্ঠ", time: "০৩:২০ - ০৪:১০" } ];
+    const periods = [ 
+        { name: "১ম", time: "১০:৩০ - ১১:১৫" }, 
+        { name: "২য়", time: "১১:১৫ - ১২:০০" }, 
+        { name: "৩য়", time: "১২:০০ - ১২:৪০" },
+        { name: "৪র্থ", time: "১২:৪০ - ০১:২০" }
+    ];
+    const postBreakPeriods = [ 
+        { name: "৫ম", time: "০২:১০ - ০২:৫০" }, 
+        { name: "৬ষ্ঠ", time: "০২:৫০ - ০৩:৩০" }, 
+        { name: "৭ম", time: "০৩:৩০ - ০৪:১০" } 
+    ];
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     const routineForClass = routineData[className] || {};
@@ -400,7 +410,7 @@ const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellCha
                             <TableRow className="bg-muted/50">
                                 <TableHead className="border-r font-bold align-middle text-center w-[100px]">বার</TableHead>
                                 {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-[10px] text-muted-foreground">{p.time}</span></TableHead>)}
-                                <TableHead className="border-r text-center font-semibold bg-amber-50 text-amber-900 w-[80px]">বিরতি<br/><span className="font-normal text-[10px]">০১:০০-০১:৪০</span></TableHead>
+                                <TableHead className="border-r text-center font-semibold bg-amber-50 text-amber-900 w-[80px]">বিরতি<br/><span className="font-normal text-[10px]">০১:২০-০২:১০</span></TableHead>
                                 {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-[10px] text-muted-foreground">{p.time}</span></TableHead>)}
                             </TableRow>
                         </TableHeader>
@@ -408,13 +418,13 @@ const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellCha
                             {days.map(day => (
                                 <TableRow key={day}>
                                     <TableCell className="font-bold border-r text-center bg-gray-50">{day}</TableCell>
-                                    {[...Array(3)].map((_, periodIdx) => {
+                                    {[...Array(4)].map((_, periodIdx) => {
                                         const cellContent = (routineForClass[day] || [])[periodIdx] || '';
                                         return <EditableCell key={`${day}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(className, day, periodIdx, value)} conflictKey={`${className}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                     })}
                                     <TableCell className="border-r text-center bg-amber-50/50 font-bold text-amber-800 text-xs">টিফিন</TableCell>
                                     {[...Array(3)].map((_, i) => {
-                                        const periodIdx = i + 3;
+                                        const periodIdx = i + 4;
                                         const cellContent = (routineForClass[day] || [])[periodIdx] || '';
                                         return <EditableCell key={`${day}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(className, day, periodIdx, value)} conflictKey={`${className}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                     })}
@@ -431,8 +441,17 @@ const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellCha
 const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange, teacherColorMap, isMounted }: { routineData: Record<string, Record<string, string[]>>, conflicts: any, isEditMode: boolean, onCellChange: (cls: string, day: string, periodIdx: number, value: string) => void, teacherColorMap: Map<string, string>, isMounted: boolean }) => {
     const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
     const classes = ['6', '7', '8', '9', '10'];
-    const periods = [ { name: "১ম", time: "১০:৩০ - ১১:২০" }, { name: "২য়", time: "১১:২০ - ১২:১০" }, { name: "৩য়", time: "১২:১০ - ০১:০০" } ];
-    const postBreakPeriods = [ { name: "৪র্থ", time: "০১:৪০ - ০২:৩০" }, { name: "৫ম", time: "০২:৩০ - ০৩:২০" }, { name: "৬ষ্ঠ", time: "০৩:২০ - ০৪:১০" } ];
+    const periods = [ 
+        { name: "১ম", time: "১০:৩০ - ১১:১৫" }, 
+        { name: "২য়", time: "১১:১৫ - ১২:০০" }, 
+        { name: "৩য়", time: "১২:০০ - ১২:৪০" },
+        { name: "৪র্থ", time: "১২:৪০ - ০১:২০" }
+    ];
+    const postBreakPeriods = [ 
+        { name: "৫ম", time: "০২:১০ - ০২:৫০" }, 
+        { name: "৬ষ্ঠ", time: "০২:৫০ - ০৩:৩০" }, 
+        { name: "৭ম", time: "০৩:৩০ - ০৪:১০" } 
+    ];
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     return (
@@ -467,7 +486,7 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
                                     </TableCell>
                                )}
                                <TableCell className="font-bold border-r text-center bg-gray-50/50 print:bg-white text-xs print:text-[8px]">{classNamesMap[cls]}</TableCell>
-                               {[...Array(3)].map((_, periodIdx) => {
+                               {[...Array(4)].map((_, periodIdx) => {
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
                                    return <EditableCell key={`${day}-${cls}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(cls, day, periodIdx, value)} conflictKey={`${cls}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                })}
@@ -477,7 +496,7 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
                                     </TableCell>
                                )}
                                {[...Array(3)].map((_, i) => {
-                                   const periodIdx = i + 3;
+                                   const periodIdx = i + 4;
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
                                    return <EditableCell key={`${day}-${cls}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(cls, day, periodIdx, value)} conflictKey={`${cls}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                })}
@@ -625,7 +644,7 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
                             <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                             <div>
                                 <p className="font-bold text-blue-900">বিরতির আগে-পরে একই শিক্ষক</p>
-                                <p className="text-xs text-blue-700 leading-relaxed">টিফিনের ঠিক আগে (৩য় পিরিয়ড) এবং ঠিক পরে (৪র্থ পিরিয়ড) একই শিক্ষক ক্লাস নিতে পারবেন না।</p>
+                                <p className="text-xs text-blue-700 leading-relaxed">টিফিনের ঠিক আগে (৪র্থ পিরিয়ড) এবং ঠিক পরে (৫ম পিরিয়ড) একই শিক্ষক ক্লাস নিতে পারবেন না।</p>
                             </div>
                         </div>
                     </div>
@@ -720,10 +739,10 @@ export default function RoutinesPage() {
                 transformedData[r.className] = {};
             }
             const periods = r.periods || [];
-            while (periods.length < 6) {
+            while (periods.length < 7) {
                 periods.push('');
             }
-            transformedData[r.className][r.day] = periods.slice(0, 6);
+            transformedData[r.className][r.day] = periods.slice(0, 7);
         });
         setRoutineData(transformedData);
         setOriginalRoutineData(transformedData);
@@ -747,7 +766,7 @@ export default function RoutinesPage() {
         setRoutineData(prevData => {
             const newData = JSON.parse(JSON.stringify(prevData));
             if (!newData[className]) newData[className] = {};
-            if (!newData[className][day]) newData[className][day] = Array(6).fill('');
+            if (!newData[className][day]) newData[className][day] = Array(7).fill('');
             newData[className][day][periodIndex] = value;
             return newData;
         });
@@ -790,7 +809,7 @@ export default function RoutinesPage() {
         classes.forEach(cls => {
             blankRoutine[cls] = {};
             days.forEach(day => {
-                blankRoutine[cls][day] = Array(6).fill('');
+                blankRoutine[cls][day] = Array(7).fill('');
             });
         });
 

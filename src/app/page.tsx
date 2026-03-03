@@ -48,13 +48,14 @@ const parseTeacherName = (cell: string): string => {
 };
 
 const periodTimes = [
-  { name: "১ম", start: { h: 10, m: 30 }, end: { h: 11, m: 20 } },
-  { name: "২য়", start: { h: 11, m: 20 }, end: { h: 12, m: 10 } },
-  { name: "৩য়", start: { h: 12, m: 10 }, end: { h: 13, m: 0 } },
-  { name: "বিরতি", start: { h: 13, m: 0 }, end: { h: 13, m: 40 } },
-  { name: "৪র্থ", start: { h: 13, m: 40 }, end: { h: 14, m: 30 } },
-  { name: "৫ম", start: { h: 14, m: 30 }, end: { h: 15, m: 20 } },
-  { name: "৬ষ্ঠ", start: { h: 15, m: 20 }, end: { h: 16, m: 10 } },
+  { name: "১ম", start: { h: 10, m: 30 }, end: { h: 11, m: 15 } },
+  { name: "২য়", start: { h: 11, m: 15 }, end: { h: 12, m: 0 } },
+  { name: "৩য়", start: { h: 12, m: 0 }, end: { h: 12, m: 40 } },
+  { name: "৪র্থ", start: { h: 12, m: 40 }, end: { h: 13, m: 20 } },
+  { name: "বিরতি", start: { h: 13, m: 20 }, end: { h: 14, m: 10 } },
+  { name: "৫ম", start: { h: 14, m: 10 }, end: { h: 14, m: 50 } },
+  { name: "৬ষ্ঠ", start: { h: 14, m: 50 }, end: { h: 15, m: 30 } },
+  { name: "৭ম", start: { h: 15, m: 30 }, end: { h: 16, m: 10 } },
 ];
 
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
@@ -288,8 +289,9 @@ const LiveRoutineCard = () => {
                 if (period.name === 'বিরতি') {
                     return { status: 'এখন টিফিনের বিরতি চলছে।', runningClasses: [], isSpecialStatus };
                 }
-                if (i < 3) periodIndex = i;
-                if (i > 3) periodIndex = i - 1;
+                // Based on 4+3 split (4 periods, then break, then 3 periods)
+                if (i < 4) periodIndex = i; // 0, 1, 2, 3
+                if (i > 4) periodIndex = i - 1; // Break is at index 4, so subtract 1 for subsequent periods
                 break;
             }
         }
@@ -303,7 +305,7 @@ const LiveRoutineCard = () => {
             .map(r => {
                 const periodContent = r.periods[periodIndex];
                 if (periodContent) {
-                    const adjustedPeriodIndex = periodIndex + (periodIndex >= 3 ? 1 : 0);
+                    const adjustedPeriodIndex = periodIndex + (periodIndex >= 4 ? 1 : 0);
                     const periodInfo = periodTimes[adjustedPeriodIndex];
                     return {
                         className: r.className,
