@@ -627,7 +627,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         const resultsBySubject = (await Promise.all(resultsBySubjectPromises)).filter((result): result is ClassResult => result !== undefined);
 
 
-        const finalResults = processStudentResults(studentsInClass, resultsBySubject, allSubjectsForGroup);
+        const finalResults = processStudentResults(allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (className < '9' || !group || s.group === group)), resultsBySubject, allSubjectsForGroup);
         setProcessedResults(finalResults);
 
         setIsLoading(false);
@@ -1439,7 +1439,8 @@ export default function ResultsPage() {
             })) as Student[];
             setAllStudents(studentsData);
             setIsLoading(false);
-        }, async (error: FirestoreError) => {
+        }, (error: FirestoreError) => {
+            if (error.code === 'permission-denied') return;
             const permissionError = new FirestorePermissionError({ path: 'students', operation: 'list' });
             errorEmitter.emit('permission-error', permissionError);
             setIsLoading(false);

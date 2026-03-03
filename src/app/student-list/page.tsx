@@ -80,7 +80,8 @@ function StudentListContent() {
       const studentsData = querySnapshot.docs.map(studentFromDoc);
       setAllStudents(studentsData);
       setIsLoading(false);
-    }, async (error: FirestoreError) => {
+    }, (error: FirestoreError) => {
+      if (error.code === 'permission-denied') return;
       const permissionError = new FirestorePermissionError({
         path: 'students',
         operation: 'list',

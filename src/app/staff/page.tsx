@@ -63,7 +63,8 @@ export default function StaffListPage() {
       const staffData = querySnapshot.docs.map(staffFromDoc);
       setAllStaff(staffData);
       setIsLoading(false);
-    }, async (error: FirestoreError) => {
+    }, (error: FirestoreError) => {
+      if (error.code === 'permission-denied') return;
       const permissionError = new FirestorePermissionError({
         path: 'staff',
         operation: 'list',
@@ -212,7 +213,7 @@ export default function StaffListPage() {
                           <TableHead>নাম</TableHead>
                           <TableHead>পদবি</TableHead>
                           <TableHead>বিষয়</TableHead>
-                          <TableHead>মোবাইল</TableHead>
+                          <TableHead>মোাইল</TableHead>
                            <TableHead>ধরণ</TableHead>
                           <TableHead className="text-right">কার্যক্রম</TableHead>
                         </TableRow>

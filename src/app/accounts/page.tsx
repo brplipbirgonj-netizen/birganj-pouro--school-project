@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -134,7 +134,8 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
             
             setCollections(data);
             setIsLoading(false);
-        }, (error) => {
+        }, (error: FirestoreError) => {
+            if (error.code === 'permission-denied') return;
             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' }));
             setIsLoading(false);
         });
@@ -532,7 +533,8 @@ export default function AccountsPage() {
         })) as Student[];
         setAllStudents(studentsData);
         setIsLoadingStudents(false);
-    }, (error) => {
+    }, (error: FirestoreError) => {
+        if (error.code === 'permission-denied') return;
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
         setIsLoadingStudents(false);
     });

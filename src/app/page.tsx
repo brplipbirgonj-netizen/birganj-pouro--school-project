@@ -464,7 +464,7 @@ export default function Home() {
         
         setClassAttendance(classMap);
       },
-      async (error: FirestoreError) => {
+      (error: FirestoreError) => {
         if (error.code === 'permission-denied') return;
         if (user) {
             const permissionError = new FirestorePermissionError({
@@ -480,7 +480,7 @@ export default function Home() {
         if (!user) return;
         setTotalTeachers(querySnapshot.size);
       },
-      async (error: FirestoreError) => {
+      (error: FirestoreError) => {
         if (error.code === 'permission-denied') return;
         if (user) {
             const permissionError = new FirestorePermissionError({

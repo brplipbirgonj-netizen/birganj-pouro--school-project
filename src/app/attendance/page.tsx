@@ -454,7 +454,8 @@ export default function AttendancePage() {
             const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), dob: doc.data().dob?.toDate(), })) as Student[];
             setAllStudents(studentsData);
             setIsLoading(false);
-        }, async (error: FirestoreError) => {
+        }, (error: FirestoreError) => {
+            if (error.code === 'permission-denied') return;
             const permissionError = new FirestorePermissionError({ path: 'students', operation: 'list' });
             errorEmitter.emit('permission-error', permissionError);
             setIsLoading(false);
