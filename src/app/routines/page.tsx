@@ -46,9 +46,9 @@ const subjectNameNormalization: { [key: string]: string } = {
     'জীববিজ্ঞান': 'জীব বিজ্ঞান',
     'কৃষি': 'কৃষি শিক্ষা',
     'বাংলা ১': 'বাংলা প্রথম',
-    'বাংলা ২': 'বাংলা দ্বিতীয়',
+    'বাংলা ২য়': 'বাংলা দ্বিতীয়',
     'ইংরেজি ১': 'ইংরেজি প্রথম',
-    'ইংরেজি ২': 'ইংরেজি দ্বিতীয়',
+    'ইংরেজি ২য়': 'ইংরেজি দ্বিতীয়',
     'আইসিটি': 'তথ্য ও যোগাযোগ প্রযুক্তি',
 };
 
@@ -58,7 +58,6 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
         'ধর্ম ও নৈতিক শিক্ষা': ['6', '7'] 
     },
     'নীলা': { 
-        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'],
         'হিন্দু ধর্ম': ['6', '7', '8', '9', '10']
     },
     'জান্নাতুন': { 
@@ -83,7 +82,7 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
     'ওবায়দা': { 
         'বাংলা প্রথম': ['6', '7', '8', '9', '10'] 
     },
-    'শারমিন': { 
+    'সারমিন': { 
         'তথ্য ও যোগাযোগ প্রযুক্তি': ['6', '7', '8', '9', '10'], 
         'ভূগোল ও পরিবেশ': ['9', '10'] 
     },
@@ -354,53 +353,25 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
 
     const [selectedTeacher, setSelectedTeacher] = useState<string>('');
 
+    const teacherSummary = useMemo(() => {
+        if (!selectedTeacher || !teacherStats[selectedTeacher]) return null;
+        const stats = teacherStats[selectedTeacher];
+        let totalBefore = 0;
+        let totalAfter = 0;
+        Object.values(stats.daily).forEach((d: any) => {
+            totalBefore += d.before;
+            totalAfter += d.after;
+        });
+        return {
+            name: selectedTeacher,
+            total: stats.total,
+            before: totalBefore,
+            after: totalAfter
+        };
+    }, [selectedTeacher, teacherStats]);
+
     return (
         <Accordion type="multiple" className="w-full space-y-4">
-            <AccordionItem value="teacher-stats">
-                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শিক্ষকভিত্তিক পরিসংখ্যান (সাপ্তাহিক লোড)</AccordionTrigger>
-                <AccordionContent className="p-0 border rounded-b-lg">
-                    <div className="overflow-x-auto">
-                        <Table className="border-collapse">
-                            <TableHeader>
-                                <TableRow className="bg-muted/50">
-                                    <TableHead className="w-12 text-center">ক্রমিক</TableHead>
-                                    <TableHead>শিক্ষকের নাম</TableHead>
-                                    <TableHead className="text-center">মোট ক্লাস</TableHead>
-                                    <TableHead className="text-center">শেষ পিরিয়ড</TableHead>
-                                    <TableHead>দিনভিত্তিক বণ্টন (বিরতির আগে, পরে)</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {teachers.map((teacher, index) => (
-                                    <TableRow key={teacher}>
-                                        <TableCell className="text-center text-xs">{(index + 1).toLocaleString('bn-BD')}</TableCell>
-                                        <TableCell className="font-bold text-sm text-primary">{teacher}</TableCell>
-                                        <TableCell className="text-center font-bold">{teacherStats[teacher].total.toLocaleString('bn-BD')}</TableCell>
-                                        <TableCell className="text-center text-xs">
-                                            {Object.entries(teacherStats[teacher].sixthPeriods)
-                                                .filter(([, classes]) => (classes as string[]).length > 0)
-                                                .map(([day]) => day.substring(0, 3)).join(', ') || '-'}
-                                        </TableCell>
-                                        <TableCell className="text-[11px] leading-relaxed">
-                                            <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                                {Object.entries(teacherStats[teacher].daily).map(([day, dayStats]) => {
-                                                    const ds = dayStats as any;
-                                                    return ds.classes.length > 0 && (
-                                                        <div key={day} className="bg-muted/30 px-1.5 py-0.5 rounded border border-muted-foreground/10">
-                                                            <span className="font-semibold">{day.substring(0, 3)}:</span> {ds.classes.length.toLocaleString('bn-BD')}টি ({ds.before.toLocaleString('bn-BD')},{ds.after.toLocaleString('bn-BD')})
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </AccordionContent>
-            </AccordionItem>
-
             <AccordionItem value="teacher-schedule-view">
                 <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শিক্ষকের ব্যক্তিগত রুটিন (পিরিয়ড অনুযায়ী)</AccordionTrigger>
                 <AccordionContent className="p-4 border rounded-b-lg space-y-6">
@@ -420,6 +391,14 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                         <div className="border-2 border-green-600 rounded-lg overflow-x-auto bg-white shadow-sm">
                             <Table className="min-w-[800px]">
                                 <TableHeader>
+                                    <TableRow className="bg-primary text-primary-foreground border-b-2 border-primary-foreground/20">
+                                        <TableCell colSpan={9} className="font-bold py-3 text-center text-base">
+                                            শিক্ষকের নাম: {teacherSummary?.name} | 
+                                            সাপ্তাহিক মোট ক্লাস: {teacherSummary?.total.toLocaleString('bn-BD')} টি | 
+                                            বিরতির আগে: {teacherSummary?.before.toLocaleString('bn-BD')} টি | 
+                                            বিরতির পরে: {teacherSummary?.after.toLocaleString('bn-BD')} টি
+                                        </TableCell>
+                                    </TableRow>
                                     <TableRow className="bg-primary/5">
                                         <TableHead className="font-bold border-r text-center w-24">বার</TableHead>
                                         {periodLabels.map((p, i) => (
@@ -463,7 +442,7 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                 <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শ্রেণিভিত্তিক বিষয় পরিসংখ্যান</AccordionTrigger>
                 <AccordionContent className="p-0 border rounded-b-lg">
                      <div className="overflow-x-auto">
-                        <Table className="border-collapse">
+                        <Table className="border-collapse border-green-600">
                             <TableHeader>
                                 <TableRow className="bg-muted/50">
                                     <TableHead className="text-center">শ্রেণি</TableHead>
@@ -1001,7 +980,7 @@ export default function RoutinesPage() {
             <div className="flex min-h-screen w-full flex-col bg-fuchsia-100 no-print">
                 <Header />
                 <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
-                    <Card className="shadow-xl border-primary/10">
+                    <Card className="shadow-xl border-2 border-green-600">
                         <CardHeader className="bg-white/50">
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                                 <div>
