@@ -1123,7 +1123,7 @@ export default function RoutinesPage() {
                 </main>
             </div>
             {isClient && (
-                 <div className="printable-area routine-print-container text-black bg-white">
+                 <div className="printable-area routine-print-container text-black bg-white hidden print:flex">
                     <style jsx global>{`
                         @media print {
                             .routine-print-container {
