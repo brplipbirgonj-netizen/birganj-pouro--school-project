@@ -58,7 +58,8 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
         'ধর্ম ও নৈতিক শিক্ষা': ['6', '7'] 
     },
     'নীলা': { 
-        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'] 
+        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'],
+        'হিন্দু ধর্ম': ['6', '7', '8', '9', '10']
     },
     'জান্নাতুন': { 
         'কৃষি শিক্ষা': ['6', '7'], 
@@ -416,7 +417,7 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                     </div>
 
                     {selectedTeacher ? (
-                        <div className="border rounded-lg overflow-x-auto bg-white shadow-sm">
+                        <div className="border-2 border-green-600 rounded-lg overflow-x-auto bg-white shadow-sm">
                             <Table className="min-w-[800px]">
                                 <TableHeader>
                                     <TableRow className="bg-primary/5">
@@ -526,13 +527,13 @@ const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellCha
     const routineForClass = routineData[className] || {};
 
     return (
-        <Card>
+        <Card className="border-2 border-green-600">
             <CardHeader>
                 <CardTitle>ক্লাস রুটিন (শ্রেণি - {classNamesMap[className] || className})</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
-                    <Table className="border min-w-[800px]">
+                    <Table className="border-collapse border-green-600 border min-w-[800px]">
                         <TableHeader>
                             <TableRow className="bg-muted/50">
                                 <TableHead className="border-r font-bold align-middle text-center w-[100px]">বার</TableHead>
@@ -582,7 +583,7 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     return (
-        <div className="overflow-x-auto w-full border rounded-lg shadow-inner bg-white">
+        <div className="overflow-x-auto w-full border-2 border-green-600 rounded-lg shadow-inner bg-white">
            <Table className="border-collapse w-full min-w-[900px] print:min-w-full print:text-[8px]">
                 <TableHeader>
                    <TableRow className="bg-muted/50 h-14 print:h-8">
@@ -1145,11 +1146,12 @@ export default function RoutinesPage() {
                                 width: 100% !important;
                                 border-collapse: collapse !important;
                                 table-layout: auto !important;
+                                border: 2px solid #16a34a !important;
                             }
                             .routine-print-container td, .routine-print-container th {
                                 font-size: 8px !important;
                                 padding: 1.5px 2px !important;
-                                border: 1px solid black !important;
+                                border: 1px solid #16a34a !important;
                                 vertical-align: middle !important;
                                 line-height: 1 !important;
                             }
