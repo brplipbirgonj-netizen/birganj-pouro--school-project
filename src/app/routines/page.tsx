@@ -584,7 +584,7 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
 
     return (
         <div className="overflow-x-auto w-full border rounded-lg shadow-inner bg-white">
-           <Table className="border w-full min-w-[900px] print:min-w-full print:text-[8px]">
+           <Table className="border-collapse w-full min-w-[900px] print:min-w-full print:text-[8px]">
                 <TableHeader>
                    <TableRow className="bg-muted/50 h-14 print:h-8">
                        <TableHead className="border-r font-bold align-middle text-center w-[100px] print:w-[60px]">বার</TableHead>
@@ -607,9 +607,16 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
                <TableBody>
                    {days.map((day) => (
                        classes.map((cls, classIndex) => (
-                           <TableRow key={`${day}-${cls}`} className="h-12 print:h-7 hover:bg-muted/20 transition-colors">
+                           <TableRow 
+                             key={`${day}-${cls}`} 
+                             className={cn(
+                                "h-12 print:h-7 hover:bg-muted/20 transition-colors",
+                                classIndex === 0 && "border-t-[3px] border-t-green-600",
+                                classIndex === classes.length - 1 && "border-b-[3px] border-b-green-600"
+                             )}
+                           >
                                {classIndex === 0 && (
-                                    <TableCell className="font-black border-r align-middle text-center bg-gray-50 print:bg-white text-sm print:text-[10px]" rowSpan={classes.length}>
+                                    <TableCell className="font-black border-r align-middle text-center bg-gray-50 print:bg-white text-sm print:text-[10px] border-l-[4px] border-l-green-600/20" rowSpan={classes.length}>
                                         {day}
                                     </TableCell>
                                )}
