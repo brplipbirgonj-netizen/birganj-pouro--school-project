@@ -25,6 +25,8 @@ import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 
+const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
 const subjectNameNormalization: { [key: string]: string } = {
     ...baseSubjectNameNormalization,
     'শারীরিক': 'শারীরিক শিক্ষা',
@@ -55,7 +57,7 @@ const subjectNameNormalization: { [key: string]: string } = {
 const teacherAllocations: Record<string, Record<string, string[]>> = {
     'আনিছুর': { 
         'বাংলাদেশ ও বিশ্ব পরিচয়': ['6', '7', '8', '9', '10'], 
-        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7'],
+        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'],
         'ইসলাম ধর্ম': ['6', '7']
     },
     'নীলা': { 
@@ -207,7 +209,8 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 if (!trimmedTeacher) return;
 
                                 if (teacherStats[trimmedTeacher]) {
-                                    teacherStats[trimmedTeacher].fullSchedule[day][periodIdx] = cls;
+                                    // Store subject and class ID separated by pipe
+                                    teacherStats[trimmedTeacher].fullSchedule[day][periodIdx] = `${subject}|${cls}`;
                                 }
 
                                 if (periodTeachers.has(trimmedTeacher)) {
@@ -349,7 +352,6 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
     const { teacherStats, classStats } = stats;
     const teachers = Object.keys(teacherStats).sort();
     const classes = Object.keys(classStats).sort((a,b) => parseInt(a) - parseInt(b));
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
     const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
     const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ"];
 
@@ -397,8 +399,8 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                                         <TableCell colSpan={8} className="font-bold py-3 text-center text-base">
                                             শিক্ষকের নাম: {teacherSummary?.name} | 
                                             সাপ্তাহিক মোট ক্লাস: {teacherSummary?.total.toLocaleString('bn-BD')} টি | 
-                                            বিরতির আগে: {teacherSummary?.before.toLocaleString('bn-BD')} টি | 
-                                            বিরতির পরে: {teacherSummary?.after.toLocaleString('bn-BD')} টি
+                                            টিফিনের আগে: {teacherSummary?.before.toLocaleString('bn-BD')} টি | 
+                                            টিফিনের পরে: {teacherSummary?.after.toLocaleString('bn-BD')} টি
                                         </TableCell>
                                     </TableRow>
                                     <TableRow className="bg-primary/5">
@@ -415,17 +417,25 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                                     {days.map(day => (
                                         <TableRow key={day} className="hover:bg-muted/30">
                                             <TableCell className="font-bold border-r text-center bg-gray-50">{day}</TableCell>
-                                            {teacherStats[selectedTeacher].fullSchedule[day].map((cls, idx) => (
-                                                <React.Fragment key={`${day}-${idx}`}>
-                                                    <TableCell className={cn(
-                                                        "text-center border-r font-black py-4",
-                                                        cls ? "text-primary bg-primary/5" : "text-muted-foreground/30 font-normal"
-                                                    )}>
-                                                        {cls ? `${classNamesMap[cls] || cls} শ্রেণি` : '-'}
-                                                    </TableCell>
-                                                    {idx === 2 && <TableCell className="bg-amber-50/20 border-r" />}
-                                                </React.Fragment>
-                                            ))}
+                                            {teacherStats[selectedTeacher].fullSchedule[day].map((entry: string, idx: number) => {
+                                                const [subj, clsId] = entry ? entry.split('|') : ['', ''];
+                                                return (
+                                                    <React.Fragment key={`${day}-${idx}`}>
+                                                        <TableCell className={cn(
+                                                            "text-center border-r font-medium py-3 px-1",
+                                                            entry ? "text-primary bg-primary/5" : "text-muted-foreground/30 font-normal"
+                                                        )}>
+                                                            {entry ? (
+                                                                <div className="flex flex-col items-center">
+                                                                    <span className="font-bold text-xs text-blue-900 leading-tight">{subj}</span>
+                                                                    <span className="text-[10px] text-muted-foreground">{classNamesMap[clsId] || clsId} শ্রেণি</span>
+                                                                </div>
+                                                            ) : '-'}
+                                                        </TableCell>
+                                                        {idx === 2 && <TableCell className="bg-amber-50/20 border-r" />}
+                                                    </React.Fragment>
+                                                );
+                                            })}
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -502,7 +512,6 @@ const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellCha
         { name: "৫ম", time: "০২:৪০ - ০৩:২০" }, 
         { name: "৬ষ্ঠ", time: "০৩:২০ - ০৪:০০" } 
     ];
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     const routineForClass = routineData[className] || {};
 
@@ -559,7 +568,6 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
         { name: "৫ম", time: "০২:৪০ - ০৩:২০" }, 
         { name: "৬ষ্ঠ", time: "০৩:২০ - ০৪:০০" } 
     ];
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     return (
         <div className="overflow-x-auto w-full border-2 border-green-600 rounded-lg shadow-inner bg-white">
