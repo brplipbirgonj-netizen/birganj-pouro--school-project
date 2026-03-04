@@ -55,9 +55,12 @@ const subjectNameNormalization: { [key: string]: string } = {
 const teacherAllocations: Record<string, Record<string, string[]>> = {
     'আনিছুর': { 
         'বাংলাদেশ ও বিশ্ব পরিচয়': ['6', '7', '8', '9', '10'], 
-        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7'] 
+        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7'],
+        'ইসলাম ধর্ম': ['6', '7']
     },
     'নীলা': { 
+        'কৃষি শিক্ষা': ['6'],
+        'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'],
         'হিন্দু ধর্ম': ['6', '7', '8', '9', '10']
     },
     'জান্নাতুন': { 
@@ -92,7 +95,8 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
     },
     'মাহাবুর': { 
         'কৃষি শিক্ষা': ['8', '9', '10'], 
-        'ধর্ম ও নৈতিক শিক্ষা': ['8', '9', '10'] 
+        'ধর্ম ও নৈতিক শিক্ষা': ['8', '9', '10'],
+        'ইসলাম ধর্ম': ['8', '9', '10']
     }
 };
 
@@ -204,7 +208,6 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 const trimmedTeacher = t.trim();
                                 if (!trimmedTeacher) return;
 
-                                // Populate Teacher Schedule
                                 if (teacherStats[trimmedTeacher]) {
                                     teacherStats[trimmedTeacher].fullSchedule[day][periodIdx] = cls;
                                 }
@@ -321,8 +324,12 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
 
                     const consecutivePairs = [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6]];
                     consecutivePairs.forEach(([p1, p2]) => {
-                        const teacher1 = parseSubjectTeacher(dayRoutine[p1]).teacher;
-                        const teacher2 = parseSubjectTeacher(dayRoutine[p2]).teacher;
+                        const cell1 = dayRoutine[p1];
+                        const cell2 = dayRoutine[p2];
+                        if (!cell1 || !cell2) return;
+
+                        const teacher1 = parseSubjectTeacher(cell1).teacher;
+                        const teacher2 = parseSubjectTeacher(cell2).teacher;
                         if (teacher1 && teacher2) {
                             const teachers1 = teacher1.split('/').map(t => t.trim()).filter(Boolean);
                             const teachers2 = teacher2.split('/').map(t => t.trim()).filter(Boolean);
@@ -563,20 +570,20 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
 
     return (
         <div className="overflow-x-auto w-full border-2 border-green-600 rounded-lg shadow-inner bg-white">
-           <Table className="border-collapse w-full min-w-[900px] print:min-w-full print:text-[8px]">
+           <Table className="border-collapse w-full min-w-[900px] print:min-w-full print:text-[8px] border-green-600">
                 <TableHeader>
                    <TableRow className="bg-muted/50 h-14 print:h-8">
-                       <TableHead className="border-r font-bold align-middle text-center w-[100px] print:w-[60px]">বার</TableHead>
-                       <TableHead className="border-r font-bold align-middle text-center w-[80px] print:w-[40px]">শ্রেণি</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[100px] print:w-[60px] border-green-600">বার</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[80px] print:w-[40px] border-green-600">শ্রেণি</TableHead>
                        {periods.map(p => (
-                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px]">
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px] border-green-600">
                                {p.name}<br/>
                                <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
                            </TableHead>
                        ))}
-                       <TableHead className="border-r text-center font-bold bg-amber-50 text-amber-900 w-[50px] print:w-[30px] print:text-[7px]">বিরতি</TableHead>
+                       <TableHead className="border-r text-center font-bold bg-amber-50 text-amber-900 w-[50px] print:w-[30px] print:text-[7px] border-green-600">বিরতি</TableHead>
                        {postBreakPeriods.map(p => (
-                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px]">
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px] border-green-600">
                                {p.name}<br/>
                                <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
                            </TableHead>
@@ -595,17 +602,17 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
                              )}
                            >
                                {classIndex === 0 && (
-                                    <TableCell className="font-black border-r align-middle text-center bg-gray-50 print:bg-white text-sm print:text-[10px] border-l-[4px] border-l-green-600/20" rowSpan={classes.length}>
+                                    <TableCell className="font-black border-r align-middle text-center bg-gray-50 print:bg-white text-sm print:text-[10px] border-l-[4px] border-l-green-600/20 border-green-600" rowSpan={classes.length}>
                                         {day}
                                     </TableCell>
                                )}
-                               <TableCell className="font-bold border-r text-center bg-gray-50/50 print:bg-white text-xs print:text-[8px]">{classNamesMap[cls]}</TableCell>
+                               <TableCell className="font-bold border-r text-center bg-gray-50/50 print:bg-white text-xs print:text-[8px] border-green-600">{classNamesMap[cls]}</TableCell>
                                {[...Array(4)].map((_, periodIdx) => {
                                    const cellContent = (routineData[cls]?.[day] || [])[periodIdx] || '';
                                    return <EditableCell key={`${day}-${cls}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(cls, day, periodIdx, value)} conflictKey={`${cls}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
                                })}
                                {classIndex === 0 && (
-                                    <TableCell className="border-r text-center bg-amber-50/30 font-black text-[11px] print:text-[8px] align-middle text-amber-800" rowSpan={classes.length}>
+                                    <TableCell className="border-r text-center bg-amber-50/30 font-black text-[11px] print:text-[8px] align-middle text-amber-800 border-green-600" rowSpan={classes.length}>
                                         <div className="[writing-mode:vertical-lr] rotate-180 py-4 print:py-1 tracking-widest uppercase">টিফিন</div>
                                     </TableCell>
                                )}
@@ -658,7 +665,7 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
     if (!isMounted || !isConflict) {
         return (
             <TableCell 
-                className={cn("border-r p-0 h-auto align-middle", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
+                className={cn("border-r p-0 h-auto align-middle border-green-600", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
                 style={!isEditMode && !isConflict && color ? { backgroundColor: color } : {}}
             >
                 {cellContent}
@@ -667,7 +674,7 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
     }
     
     return (
-        <TableCell className="border-r p-0 h-auto align-middle">
+        <TableCell className="border-r p-0 h-auto align-middle border-green-600">
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -710,7 +717,7 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
             </div>
             
             {className === 'all' ? (
-                 <Card className="border-primary/10 overflow-hidden">
+                 <Card className="border-green-600 overflow-hidden border-2">
                     <CardHeader className="no-print bg-primary/5">
                         <CardTitle className="text-xl flex items-center gap-2">
                             <Users className="h-5 w-5 text-primary" /> সকল শ্রেণির সম্মিলিত ক্লাস রুটিন
