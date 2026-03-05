@@ -102,6 +102,11 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
     }
 };
 
+const toBengaliNumber = (str: string | number) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
 
 const parseSubjectTeacher = (cell: string): { subject: string, teacher: string | null } => {
     if (!cell) return { subject: '', teacher: null };
@@ -209,7 +214,6 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                 if (!trimmedTeacher) return;
 
                                 if (teacherStats[trimmedTeacher]) {
-                                    // Store subject and class ID separated by pipe
                                     teacherStats[trimmedTeacher].fullSchedule[day][periodIdx] = `${subject}|${cls}`;
                                 }
 
@@ -221,10 +225,10 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                                     periodTeachers.set(trimmedTeacher, cls);
                                 }
 
-                                if (periodIdx === 2) { // 3rd period
+                                if (periodIdx === 2) { 
                                     if (!teachersAt3rd.has(trimmedTeacher)) teachersAt3rd.set(trimmedTeacher, []);
                                     teachersAt3rd.get(trimmedTeacher)!.push(cls);
-                                } else if (periodIdx === 3) { // 4th period
+                                } else if (periodIdx === 3) { 
                                     if (!teachersAt4th.has(trimmedTeacher)) teachersAt4th.set(trimmedTeacher, []);
                                     teachersAt4th.get(trimmedTeacher)!.push(cls);
                                 }
@@ -260,10 +264,10 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         subjectsInCell.forEach(s => {
                             const normalizedSubject = subjectNameNormalization[s] || s;
                             const subjectInfo = subjectsInClass.find(sub => sub.name === normalizedSubject || sub.name === s);
-                            if (subjectInfo) {
-                                if (!classStats[cls][subjectInfo.name]) classStats[cls][subjectInfo.name] = 0;
-                                classStats[cls][subjectInfo.name] += 1;
-                            }
+                            
+                            const statKey = subjectInfo ? subjectInfo.name : normalizedSubject;
+                            if (!classStats[cls][statKey]) classStats[cls][statKey] = 0;
+                            classStats[cls][statKey] += 1;
 
                             if (!subjectCountInDay.has(s)) {
                                 subjectCountInDay.set(s, []);
@@ -312,9 +316,8 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                     subjectCountInDay.forEach((indices, subjectName) => {
                         const normalizedSub = subjectNameNormalization[subjectName] || subjectName;
                         if (indices.length > 1) {
-                           const subjectInfo = subjectsInClass.find(s => s.name === normalizedSub);
                            const isLanguage = normalizedSub.includes('বাংলা') || normalizedSub.includes('ইংরেজি');
-                           if (subjectInfo && !isLanguage) {
+                           if (!isLanguage) {
                                 indices.forEach(idx => subjectRepetitionClashes.add(`${cls}-${day}-${idx}`));
                            }
                         }
@@ -351,9 +354,9 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
 const RoutineStatistics = ({ stats }: { stats: any }) => {
     const { teacherStats, classStats } = stats;
     const teachers = Object.keys(teacherStats).sort();
-    const classes = Object.keys(classStats).sort((a,b) => parseInt(a) - parseInt(b));
     const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
     const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ"];
+    const classes = ['6', '7', '8', '9', '10'];
 
     const [selectedTeacher, setSelectedTeacher] = useState<string>('');
 
@@ -373,6 +376,37 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
             after: totalAfter
         };
     }, [selectedTeacher, teacherStats]);
+
+    const subjectRows = [
+        { key: 'বাংলা প্রথম', display: 'বাংলা ১ম' },
+        { key: 'বাংলা দ্বিতীয়', display: 'বাংলা ২য়' },
+        { key: 'ইংরেজি প্রথম', display: 'ইংরেজি ১ম' },
+        { key: 'ইংরেজি দ্বিতীয়', display: 'ইংরেজি ২য়' },
+        { key: 'গণিত', display: 'গণিত' },
+        { key: 'ধর্ম ও নৈতিক শিক্ষা', display: 'ধর্ম ও নৈতিক শিক্ষা' },
+        { key: 'সাধারণ বিজ্ঞান', display: 'সাধারণ বিজ্ঞান' },
+        { key: 'বাংলাদেশ ও বিশ্ব পরিচয়', display: 'বাংলাদেশ ও বিশ্ব পরিচয়' },
+        { key: 'কৃষি শিক্ষা', display: 'কৃষি শিক্ষা' },
+        { key: 'তথ্য ও যোগাযোগ প্রযুক্তি', display: 'তথ্য ও যোগাযোগ প্রযুক্তি' },
+        { key: 'পদার্থ', display: 'পদার্থ' },
+        { key: 'রসায়ন', display: 'রসায়ন' },
+        { key: 'জীব বিজ্ঞান', display: 'জীব বিজ্ঞান' },
+        { key: 'বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা', display: 'বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা' },
+        { key: 'ভূগোল ও পরিবেশ', display: 'ভূগোল ও পরিবেশ' },
+        { key: 'পৌরনীতি ও নাগরিকতা', display: 'পৌরনীতি ও নাগরিকতা' },
+        { key: 'উচ্চতর গণিত', display: 'উচ্চতর গণিত' },
+    ];
+
+    const columnTotals = useMemo(() => {
+        const totals: Record<string, number> = {};
+        classes.forEach(cls => {
+            totals[cls] = 0;
+            subjectRows.forEach(row => {
+                totals[cls] += (classStats[cls]?.[row.key] || 0);
+            });
+        });
+        return totals;
+    }, [classStats, subjectRows, classes]);
 
     return (
         <Accordion type="multiple" className="w-full space-y-4">
@@ -451,47 +485,51 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
             </AccordionItem>
 
             <AccordionItem value="class-stats">
-                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শ্রেণিভিত্তিক বিষয় পরিসংখ্যান</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শ্রেণি ভিত্তিক বিষয় পরিসংখ্যান</AccordionTrigger>
                 <AccordionContent className="p-0 border rounded-b-lg">
                      <div className="overflow-x-auto">
-                        <Table className="border-collapse border-green-600">
+                        <Table className="border-collapse border-green-600 border">
                             <TableHeader>
                                 <TableRow className="bg-muted/50">
-                                    <TableHead className="text-center">শ্রেণি</TableHead>
-                                    <TableHead>বিষয়</TableHead>
-                                    <TableHead className="text-center">সাপ্তাহিক পিরিয়ড</TableHead>
-                                    <TableHead>অবস্থা</TableHead>
+                                    <TableHead className="text-center font-bold border-r border-green-600 w-20">ক্রমিক নং</TableHead>
+                                    <TableHead className="font-bold border-r border-green-600 text-center">বিষয়ের নাম</TableHead>
+                                    {classes.map(cls => (
+                                        <TableHead key={cls} className="text-center font-bold border-r border-green-600 w-24">
+                                            {classNamesMap[cls]}
+                                        </TableHead>
+                                    ))}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {classes.map(cls => {
-                                    const subjectsForClass = getSubjects(cls, undefined)
-                                        .sort((a,b) => parseInt(a.code) - parseInt(b.code));
-                                    
-                                    if(subjectsForClass.length === 0) return null;
-                                    
-                                    const rows = subjectsForClass.map((subject, subjectIndex) => {
-                                        const count = classStats[cls]?.[subject.name] || 0;
-                                        
-                                        return (
-                                            <TableRow key={`${cls}-${subject.name}`} className="h-8">
-                                                {subjectIndex === 0 && <TableCell rowSpan={subjectsForClass.length} className="font-black align-top text-center border-r bg-muted/10">{classNamesMap[cls]}</TableCell>}
-                                                <TableCell className="text-xs">{subject.name}</TableCell>
-                                                <TableCell className="text-center font-bold">{count.toLocaleString('bn-BD')}</TableCell>
-                                                <TableCell>
-                                                    {count > 0 ? (
-                                                        <Badge variant="outline" className="text-[10px] h-5 bg-emerald-50 text-emerald-700 border-emerald-200">সক্রিয়</Badge>
-                                                    ) : (
-                                                        <Badge variant="outline" className="text-[10px] h-5 bg-red-50 text-red-700 border-red-200 opacity-50">শূন্য</Badge>
-                                                    )}
+                                {subjectRows.map((row, index) => (
+                                    <TableRow key={row.key} className="hover:bg-muted/20 h-10">
+                                        <TableCell className="text-center border-r border-green-600">
+                                            {toBengaliNumber(index + 1).padStart(2, '০')}
+                                        </TableCell>
+                                        <TableCell className="border-r border-green-600 pl-4">{row.display}</TableCell>
+                                        {classes.map(cls => {
+                                            const count = classStats[cls]?.[row.key] || 0;
+                                            return (
+                                                <TableCell key={cls} className="text-center border-r border-green-600 font-medium">
+                                                    {count > 0 ? toBengaliNumber(count) : ''}
                                                 </TableCell>
-                                            </TableRow>
-                                        );
-                                    });
-                                    return rows;
-                                })}
+                                            );
+                                        })}
+                                    </TableRow>
+                                ))}
+                                <TableRow className="bg-muted/30 font-bold h-12">
+                                    <TableCell colSpan={2} className="text-left pl-4 border-r border-green-600">মোট</TableCell>
+                                    {classes.map(cls => (
+                                        <TableCell key={cls} className="text-center border-r border-green-600">
+                                            {toBengaliNumber(columnTotals[cls])}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
                             </TableBody>
                         </Table>
+                    </div>
+                    <div className="p-4 bg-muted/10 border-t">
+                        <p className="text-xs font-bold text-muted-foreground">***নবম ও দশম শ্রেণির ক্ষেত্রে যৌথ বিষয় সমূহের যেকোন একটি বিষয় গণনা হবে।</p>
                     </div>
                 </AccordionContent>
             </AccordionItem>
