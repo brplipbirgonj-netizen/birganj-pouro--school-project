@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -61,7 +62,7 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
         'ইসলাম ধর্ম': ['6', '7']
     },
     'নীলা': { 
-        'কৃষি শিক্ষা': ['6'],
+        'কৃষি শিক্ষা': ['6', '7', '8', '9', '10'],
         'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'],
         'হিন্দু ধর্ম': ['6', '7', '8', '9', '10']
     },
@@ -261,14 +262,22 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
 
                         const subjectsInCell = subject.split('/').map(s => s.trim()).filter(Boolean);
                         
-                        subjectsInCell.forEach(s => {
+                        // User requirement: For Grade 9 and 10 joint subjects (e.g., পদার্থ/ইতিহাস), only count the first one for stats
+                        const subjectsForStatsCount = (cls === '9' || cls === '10') && subjectsInCell.length > 1
+                            ? [subjectsInCell[0]]
+                            : subjectsInCell;
+
+                        subjectsForStatsCount.forEach(s => {
                             const normalizedSubject = subjectNameNormalization[s] || s;
                             const subjectInfo = subjectsInClass.find(sub => sub.name === normalizedSubject || sub.name === s);
                             
                             const statKey = subjectInfo ? subjectInfo.name : normalizedSubject;
                             if (!classStats[cls][statKey]) classStats[cls][statKey] = 0;
                             classStats[cls][statKey] += 1;
+                        });
 
+                        // Keep tracking all subjects for repetition clash detection
+                        subjectsInCell.forEach(s => {
                             if (!subjectCountInDay.has(s)) {
                                 subjectCountInDay.set(s, []);
                             }
@@ -529,7 +538,7 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                         </Table>
                     </div>
                     <div className="p-4 bg-muted/10 border-t">
-                        <p className="text-xs font-bold text-muted-foreground">***নবম ও দশম শ্রেণির ক্ষেত্রে যৌথ বিষয় সমূহের যেকোন একটি বিষয় গণনা হবে।</p>
+                        <p className="text-xs font-bold text-muted-foreground">***নবম ও দশম শ্রেণির যৌথ বিষয় যেমন পদার্থ/ইতিহাস এর ক্ষেত্রে পিরিয়ড গণনার সময় শুধুমাত্র প্রথম বিষয়টি বিবেচনা করা হয়েছে।</p>
                     </div>
                 </AccordionContent>
             </AccordionItem>
