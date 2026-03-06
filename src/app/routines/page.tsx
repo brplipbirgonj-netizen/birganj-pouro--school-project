@@ -1214,7 +1214,7 @@ export default function RoutinesPage() {
                         <CardContent className="pt-6">
                             {isClient && !isLoading ? (
                                 <Tabs defaultValue="class-routine">
-                                    <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg h-12">
+                                    <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
                                         <TabsTrigger value="class-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">ক্লাস রুটিন</TabsTrigger>
                                         <TabsTrigger value="exam-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরীক্ষার রুটিন</TabsTrigger>
                                         <TabsTrigger value="statistics" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরিসংখ্যান</TabsTrigger>
