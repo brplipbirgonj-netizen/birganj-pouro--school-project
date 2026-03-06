@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getFullRoutine, saveRoutinesBatch, ClassRoutine } from '@/lib/routine-data';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle, User } from 'lucide-react';
+import { Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle, User, FileUp, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -25,6 +25,7 @@ import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import * as XLSX from 'xlsx';
 
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
@@ -62,7 +63,7 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
         'ইসলাম ধর্ম': ['6', '7']
     },
     'নীলা': { 
-        'কৃষি শিক্ষা': ['6', '7', '8', '9', '10'],
+        'কৃষি শিক্ষা': ['7', '8', '9', '10'],
         'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'],
         'হিন্দু ধর্ম': ['6', '7', '8', '9', '10']
     },
@@ -791,6 +792,133 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
     );
 };
 
+const BulkRoutineUploadTab = ({ onRoutineParsed }: { onRoutineParsed: (data: Record<string, Record<string, string[]>>) => void }) => {
+    const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleDownloadSample = () => {
+        const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
+        const classes = ['6', '7', '8', '9', '10'];
+        
+        const headers = ["বার", "শ্রেণি", "১ম পিরিয়ড", "২য় পিরিয়ড", "৩য় পিরিয়ড", "৪র্থ পিরিয়ড", "৫ম পিরিয়ড", "৬ষ্ঠ পিরিয়ড"];
+        const rows: any[] = [];
+        
+        days.forEach(day => {
+            classes.forEach(cls => {
+                rows.push({
+                    "বার": day,
+                    "শ্রেণি": cls,
+                    "১ম পিরিয়ড": "বিষয় - শিক্ষক",
+                    "২য় পিরিয়ড": "",
+                    "৩য় পিরিয়ড": "",
+                    "৪র্থ পিরিয়ড": "",
+                    "৫ম পিরিয়ড": "",
+                    "৬ষ্ঠ পিরিয়ড": ""
+                });
+            });
+        });
+
+        const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Class Routine");
+        XLSX.writeFile(wb, "routine_sample.xlsx");
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                if (json.length === 0) {
+                    toast({ variant: "destructive", title: "ফাইলটি খালি।" });
+                    return;
+                }
+
+                const newRoutineData: Record<string, Record<string, string[]>> = {};
+                const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
+                const classes = ['6', '7', '8', '9', '10'];
+
+                json.forEach((row: any) => {
+                    const day = row["বার"];
+                    const cls = String(row["শ্রেণি"]);
+                    
+                    if (days.includes(day) && classes.includes(cls)) {
+                        if (!newRoutineData[cls]) newRoutineData[cls] = {};
+                        newRoutineData[cls][day] = [
+                            String(row["১ম পিরিয়ড"] || ''),
+                            String(row["২য় পিরিয়ড"] || ''),
+                            String(row["৩য় পিরিয়ড"] || ''),
+                            String(row["৪র্থ পিরিয়ড"] || ''),
+                            String(row["৫ম পিরিয়ড"] || ''),
+                            String(row["৬ষ্ঠ পিরিয়ড"] || '')
+                        ];
+                    }
+                });
+
+                if (Object.keys(newRoutineData).length === 0) {
+                    toast({ variant: "destructive", title: "সঠিক ফরম্যাটে কোনো তথ্য পাওয়া যায়নি।" });
+                    return;
+                }
+
+                onRoutineParsed(newRoutineData);
+                toast({ 
+                    title: "এক্সেল ফাইল থেকে তথ্য লোড হয়েছে।", 
+                    description: "অনুগ্রহ করে 'ক্লাস রুটিন' ট্যাবে গিয়ে তথ্যগুলো পরীক্ষা করুন এবং 'পরিবর্তন সেভ করুন' বাটনে ক্লিক করুন।" 
+                });
+            } catch (error) {
+                toast({ variant: "destructive", title: "ফাইল পড়তে সমস্যা হয়েছে।" });
+            } finally {
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    return (
+        <Card className="border-2 border-dashed border-green-600 bg-green-50/30">
+            <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <FileUp className="h-5 w-5 text-primary" /> এক্সেল আপলোড
+                </CardTitle>
+                <CardDescription>Excel ফাইলের মাধ্যমে দ্রুত রুটিন ইনপুট দিন।</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center p-10 space-y-6">
+                <div className="text-center space-y-2">
+                    <p className="text-sm font-medium">ধাপ ১: নমুনা ফাইলটি ডাউনলোড করুন</p>
+                    <Button variant="outline" onClick={handleDownloadSample} className="bg-white">
+                        <Download className="mr-2 h-4 w-4" /> নমুনা ফাইল ডাউনলোড
+                    </Button>
+                </div>
+                
+                <div className="w-full border-t border-green-200" />
+
+                <div className="text-center space-y-4">
+                    <p className="text-sm font-medium">ধাপ ২: পূরণকৃত ফাইলটি আপলোড করুন</p>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange} 
+                        className="hidden" 
+                        accept=".xlsx, .xls" 
+                    />
+                    <Button size="lg" onClick={() => fileInputRef.current?.click()} className="shadow-lg">
+                        <FileUp className="mr-2 h-5 w-5" /> এক্সেল ফাইল আপলোড করুন
+                    </Button>
+                    <p className="text-xs text-muted-foreground">সতর্কতা: আপলোড করলে বর্তমান রুটিনের অসংরক্ষিত তথ্য পরিবর্তন হয়ে যাবে।</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
 const ExamRoutineTab = () => {
     const [examName, setExamName] = useState('');
 
@@ -979,6 +1107,11 @@ export default function RoutinesPage() {
         }
     };
 
+    const handleRoutineParsedFromExcel = (newData: Record<string, Record<string, string[]>>) => {
+        setRoutineData(newData);
+        setIsEditMode(true);
+    };
+
     return (
         <>
             <div className="flex min-h-screen w-full flex-col bg-fuchsia-100 no-print">
@@ -1081,10 +1214,11 @@ export default function RoutinesPage() {
                         <CardContent className="pt-6">
                             {isClient && !isLoading ? (
                                 <Tabs defaultValue="class-routine">
-                                    <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-lg h-12">
+                                    <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg h-12">
                                         <TabsTrigger value="class-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">ক্লাস রুটিন</TabsTrigger>
                                         <TabsTrigger value="exam-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরীক্ষার রুটিন</TabsTrigger>
                                         <TabsTrigger value="statistics" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরিসংখ্যান</TabsTrigger>
+                                        <TabsTrigger value="upload" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">এক্সেল আপলোড</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="class-routine" className="mt-6">
                                         <ClassRoutineTab routineData={routineData} conflicts={conflicts} isEditMode={isEditMode && canManageRoutines} onCellChange={handleCellChange} teacherColorMap={teacherColorMap!} isMounted={isMounted} />
@@ -1095,11 +1229,15 @@ export default function RoutinesPage() {
                                     <TabsContent value="statistics" className="mt-6">
                                         <RoutineStatistics stats={stats} />
                                     </TabsContent>
+                                    <TabsContent value="upload" className="mt-6">
+                                        <BulkRoutineUploadTab onRoutineParsed={handleRoutineParsedFromExcel} />
+                                    </TabsContent>
                                 </Tabs>
                             ) : (
                             <div className="space-y-4">
-                                <div className="grid w-full grid-cols-3 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                <div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                                         <div className="inline-flex items-center justify-center rounded-sm bg-background shadow-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
+                                        <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
                                         <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
                                         <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
                                     </div>
