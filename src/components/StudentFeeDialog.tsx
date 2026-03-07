@@ -87,15 +87,15 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
 
         const fetchCollectorName = async () => {
             if (user.role === 'teacher' && user.email) {
-                const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email), limit(1));
+                const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase()), limit(1));
                 const staffSnap = await getDocs(staffQuery);
                 if (!staffSnap.empty) {
                     setCollectorName(staffSnap.docs[0].data().nameBn);
                 } else {
-                    setCollectorName(user.email || 'Admin');
+                    setCollectorName(user.displayName || user.email || 'Admin');
                 }
             } else {
-                setCollectorName('Admin');
+                setCollectorName(user.displayName || 'Admin');
             }
         };
 
@@ -205,12 +205,10 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
             await batch.commit();
             toast({ title: "ফি আদায় সফল হয়েছে", description: `শিক্ষার্থীর ফি এবং ক্যাশবুক সফলভাবে আপডেট করা হয়েছে।` });
             
-            // Direct SMS Logic
             if (shouldSendSMS) {
                 const mobile = student.guardianMobile || student.studentMobile || '';
                 if (mobile) {
                     const cleanNumber = mobile.replace(/[^\d+]/g, '');
-                    // Format: সম্মানিত অভিভাবক, [নাম] এর [মাসের নাম] বাবদ মোট [টাকা] টাকা আদায় করা হয়েছে। বীপৌউবি
                     const msg = `সম্মানিত অভিভাবক, ${student.studentNameBn} এর ${description} বাবদ মোট ${totalAmount.toLocaleString('bn-BD')} টাকা আদায় করা হয়েছে। বীপৌউবি`;
                     const encodedMsg = encodeURIComponent(msg);
                     
@@ -390,7 +388,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <div className="flex flex-col md:flex-row items-center gap-4">
                         {isLoading || !student ? (
@@ -437,7 +435,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                             <TableRow key={collection.id}>
                                                 <TableCell className="whitespace-nowrap">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
                                                 <TableCell>{collection.description || 'N/A'}</TableCell>
-                                                <TableCell className="text-right font-medium whitespace-nowrap">{collection.totalAmount.toLocaleString('bn-BD')} ৳</TableCell>
+                                                <TableCell className="text-right font-medium whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
                                                 <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{collection.collectorName || '-'}</TableCell>
                                                 {canManageTransactions && (
                                                     <TableCell className="text-right">
@@ -468,9 +466,9 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                             </Table>
                         </div>
                     </div>
-                    <DialogFooter>
+                    <div className="flex justify-end">
                         <Button onClick={handleAddNew}>নতুন ফি আদায় করুন</Button>
-                    </DialogFooter>
+                    </div>
 
                     {student && (
                         <FeeCollectionForm 

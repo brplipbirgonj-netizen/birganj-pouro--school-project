@@ -215,7 +215,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             <TableCell>{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
                                             <TableCell>{student?.studentNameBn || '-'}</TableCell>
                                             <TableCell>{student ? (classNamesMap[student.className] || student.className) : '-'}</TableCell>
-                                            <TableCell className="text-right font-semibold">{c.totalAmount.toLocaleString('bn-BD')} ৳</TableCell>
+                                            <TableCell className="text-right font-semibold">{(c.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
                                             <TableCell>{c.collectorName || '-'}</TableCell>
                                         </TableRow>
                                     );
@@ -399,21 +399,23 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                         <TableCell className="text-right font-semibold">{tx.balance.toLocaleString('bn-BD')}</TableCell>
                                         {canManageTransactions && (
                                             <TableCell className="text-right">
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="destructive" size="icon" disabled={!!tx.feeCollectionId}><Trash2 className="h-4 w-4" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                            <AlertDialogDescription>এই লেনদেনটি স্থায়ীভাবে মুছে যাবে।</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDelete(tx.id)}>মুছে ফেলুন</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                <div className="flex justify-end">
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="destructive" size="icon" disabled={!!tx.feeCollectionId}><Trash2 className="h-4 w-4" /></Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                <AlertDialogDescription>এই লেনদেনটি স্থায়ীভাবে মুছে যাবে।</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(tx.id)}>মুছে ফেলুন</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
                                             </TableCell>
                                         )}
                                     </TableRow>
