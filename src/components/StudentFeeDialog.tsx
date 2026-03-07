@@ -414,8 +414,8 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                  ) : (
                 <>
                     <div className="py-4">
-                        <div className="border rounded-md max-h-[40vh] overflow-y-auto">
-                            <Table>
+                        <div className="border rounded-md max-h-[40vh] overflow-auto">
+                            <Table className="min-w-[650px]">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>আদায়ের তারিখ</TableHead>
@@ -431,10 +431,10 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                     ) : (
                                         feeCollections.map(collection => (
                                             <TableRow key={collection.id}>
-                                                <TableCell>{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
                                                 <TableCell>{collection.description || 'N/A'}</TableCell>
-                                                <TableCell className="text-right font-medium">{collection.totalAmount.toLocaleString('bn-BD')} ৳</TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">{collection.collectorName || '-'}</TableCell>
+                                                <TableCell className="text-right font-medium whitespace-nowrap">{collection.totalAmount.toLocaleString('bn-BD')} ৳</TableCell>
+                                                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{collection.collectorName || '-'}</TableCell>
                                                 {canManageTransactions && (
                                                     <TableCell className="text-right">
                                                         <div className="flex gap-2 justify-end">
