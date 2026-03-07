@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -569,32 +568,31 @@ function UserManagementSettings() {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
 
-    const fetchData = useCallback(async () => {
-        if (!db || !currentUser || currentUser.role !== 'admin') return;
-        setIsLoading(true);
-        try {
-            const usersRef = collection(db, 'users');
-            const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
-                const usersData = snapshot.docs.map(doc => userFromDoc(doc));
-                setUsers(usersData.sort((a, b) => (a.email || '').localeCompare(b.email || '')));
-            });
-
-            const staffQuery = query(collection(db, 'staff'));
-            const staffSnap = await getDocs(staffQuery);
-            const staffData = staffSnap.docs.map(staffFromDoc);
-            setAllStaff(staffData);
-
-            return () => unsubscribeUsers();
-        } catch (error) {
-            // Permission errors are handled by the global listener
-        } finally {
-            setIsLoading(false);
-        }
-    }, [db, currentUser]);
-    
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (!db || !currentUser || currentUser.role !== 'admin') return;
+        
+        setIsLoading(true);
+        const usersRef = collection(db, 'users');
+        const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
+            const usersData = snapshot.docs.map(doc => userFromDoc(doc));
+            setUsers(usersData.sort((a, b) => (a.email || '').localeCompare(b.email || '')));
+            setIsLoading(false);
+        }, (error) => {
+            setIsLoading(false);
+        });
+
+        const fetchStaff = async () => {
+            try {
+                const staffQuery = query(collection(db, 'staff'));
+                const staffSnap = await getDocs(staffQuery);
+                const staffData = staffSnap.docs.map(staffFromDoc);
+                setAllStaff(staffData);
+            } catch (e) {}
+        };
+        fetchStaff();
+
+        return () => unsubscribeUsers();
+    }, [db, currentUser]);
 
     const staffNameMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -622,7 +620,6 @@ function UserManagementSettings() {
         try {
             await deleteUserRecord(db, userToDelete.uid);
             toast({ title: 'ব্যবহারকারী মুছে ফেলা হয়েছে'});
-            fetchData();
         } catch (error) {}
     }
     
@@ -724,11 +721,12 @@ function UserManagementSettings() {
                                                                     <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
                                                                     <AlertDialogDescription>
                                                                         এই ব্যবহারকারীকে স্থায়ীভাবে মুছে ফেলা হবে। এই কাজটি ফিরিয়ে আনা যাবে না।
+                                                                        {isCurrentUser && " আপনি বর্তমানে এই একাউন্ট দিয়ে লগইন আছেন, তাই এটি ডিলিট করা সম্ভব নয়।"}
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDeleteUser(u)}>
+                                                                    <AlertDialogAction onClick={() => handleDeleteUser(u)} disabled={isCurrentUser}>
                                                                         ডিলিট করুন
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
@@ -750,7 +748,7 @@ function UserManagementSettings() {
                     user={selectedUser}
                     open={isPermissionDialogOpen}
                     onOpenChange={setIsPermissionDialogOpen}
-                    onPermissionsUpdate={fetchData}
+                    onPermissionsUpdate={() => {}}
                 />
             )}
         </>
@@ -862,26 +860,35 @@ function ProfileSettings() {
                     <CardTitle>প্রোফাইল তথ্য</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                     {(!isAdmin && photoPreview) && (
+                     {photoPreview && (
                         <div className="flex justify-center mb-4">
-                            <Avatar className="h-24 w-24 border">
+                            <Avatar className="h-24 w-24 border-2 border-primary/10">
                                 <AvatarImage src={photoPreview} alt={displayName || 'User'} />
                                 <AvatarFallback>{user?.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                             </Avatar>
                         </div>
                      )}
                      <div>
-                        <Label>নাম</Label>
-                        <p className="text-sm text-muted-foreground">{displayName || '-'}</p>
+                        <Label className="text-muted-foreground">নাম</Label>
+                        <p className="text-md font-bold">{displayName || '-'}</p>
                     </div>
                      <div>
-                        <Label>ইমেইল</Label>
-                        <p className="text-sm text-muted-foreground">{user?.email}</p>
+                        <Label className="text-muted-foreground">ইমেইল</Label>
+                        <p className="text-sm">{user?.email}</p>
                     </div>
                      <div>
-                        <Label>ভূমিকা (Role)</Label>
-                        <p className="text-sm text-muted-foreground">{user?.role === 'admin' ? 'এডমিন' : 'শিক্ষক'}</p>
+                        <Label className="text-muted-foreground">ভূমিকা (Role)</Label>
+                        <p className="text-sm font-medium">{user?.role === 'admin' ? 'এডমিন' : 'শিক্ষক'}</p>
                     </div>
+                    {user?.lastLoginAt && (
+                        <div>
+                            <Label className="text-muted-foreground">সর্বশেষ লগইন</Label>
+                            <p className="text-sm flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {format(user.lastLoginAt, 'PPp', { locale: bn })}
+                            </p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -891,21 +898,21 @@ function ProfileSettings() {
                         <CardTitle>প্রোফাইল ছবি</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-24 w-24 border">
+                        <div className="flex flex-col items-center gap-4">
+                            <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
                                 <AvatarImage src={photoPreview || ''} alt={user?.email || 'User'} />
                                 <AvatarFallback>{user?.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                             </Avatar>
                             <Input id="photo" name="photo" type="file" className="hidden" onChange={handlePhotoChange} accept="image/*" />
-                            <Button type="button" variant="outline" onClick={() => document.getElementById('photo')?.click()}>
-                                <Upload className="mr-2" />
-                                ছবি পরিবর্তন
+                            <Button type="button" variant="outline" onClick={() => document.getElementById('photo')?.click()} className="w-full">
+                                <Upload className="mr-2 h-4 w-4" />
+                                ছবি নির্বাচন করুন
                             </Button>
                         </div>
                     </CardContent>
-                    <CardFooter>
-                        <Button onClick={handleSavePhoto} disabled={isPhotoSaving || !photoPreview}>
-                            {isPhotoSaving ? 'সেভ হচ্ছে...' : 'ছবি সেভ করুন'}
+                    <CardFooter className="border-t pt-6">
+                        <Button onClick={handleSavePhoto} disabled={isPhotoSaving || !photoPreview} className="w-full shadow-md">
+                            {isPhotoSaving ? 'সেভ হচ্ছে...' : 'ছবি আপডেট করুন'}
                         </Button>
                     </CardFooter>
                 </Card>
@@ -914,7 +921,7 @@ function ProfileSettings() {
              <Card>
                 <form onSubmit={handleSubmit}>
                     <CardHeader>
-                        <CardTitle>পাসওয়ার্ড পরিবর্তন করুন</CardTitle>
+                        <CardTitle>পাসওয়ার্ড পরিবর্তন</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
@@ -926,12 +933,14 @@ function ProfileSettings() {
                             <Input id="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">নতুন পাসওয়ার্ড নিশ্চিত করুন</Label>
+                            <Label htmlFor="confirmPassword">পুনরায় লিখুন</Label>
                             <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                         </div>
                     </CardContent>
                     <CardFooter className="border-t pt-6">
-                        <Button type="submit" disabled={isSaving}>{isSaving ? 'সেভ হচ্ছে...' : 'পাসওয়ার্ড সেভ করুন'}</Button>
+                        <Button type="submit" disabled={isSaving} className="w-full">
+                            {isSaving ? 'সেভ হচ্ছে...' : 'পাসওয়ার্ড সেভ করুন'}
+                        </Button>
                     </CardFooter>
                 </form>
             </Card>
@@ -953,35 +962,35 @@ export default function SettingsPage() {
         <div className="flex min-h-screen w-full flex-col bg-indigo-50">
             <Header />
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>সেটিংস</CardTitle>
+                <Card className="border-2 border-primary/10 shadow-xl">
+                    <CardHeader className="bg-white/50">
+                        <CardTitle className="text-3xl font-black">সেটিংস</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         {isClient ? (
                             <Tabs defaultValue="profile">
-                                <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-                                    <TabsTrigger value="profile">প্রোফাইল</TabsTrigger>
-                                    {isAdmin && <TabsTrigger value="school-info">প্রতিষ্ঠানের তথ্য</TabsTrigger>}
-                                    {isAdmin && <TabsTrigger value="holidays">অতিরিক্ত ছুটি</TabsTrigger>}
-                                    {isAdmin && <TabsTrigger value="user-management">ব্যবহারকারী</TabsTrigger>}
-                                    {isAdmin && <TabsTrigger value="system-info">সিস্টেম তথ্য</TabsTrigger>}
+                                <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
+                                    <TabsTrigger value="profile" className="flex-1 min-w-[80px] font-bold">প্রোফাইল</TabsTrigger>
+                                    {isAdmin && <TabsTrigger value="school-info" className="flex-1 min-w-[80px] font-bold">প্রতিষ্ঠানের তথ্য</TabsTrigger>}
+                                    {isAdmin && <TabsTrigger value="holidays" className="flex-1 min-w-[80px] font-bold">অতিরিক্ত ছুটি</TabsTrigger>}
+                                    {isAdmin && <TabsTrigger value="user-management" className="flex-1 min-w-[80px] font-bold">ব্যবহারকারী</TabsTrigger>}
+                                    {isAdmin && <TabsTrigger value="system-info" className="flex-1 min-w-[80px] font-bold">সিস্টেম তথ্য</TabsTrigger>}
                                 </TabsList>
-                                <TabsContent value="profile" className="pt-4">
+                                <TabsContent value="profile" className="pt-2">
                                     <ProfileSettings />
                                 </TabsContent>
                                 {isAdmin && (
                                     <>
-                                        <TabsContent value="school-info" className="pt-4">
+                                        <TabsContent value="school-info" className="pt-2">
                                             <SchoolInfoSettings />
                                         </TabsContent>
-                                        <TabsContent value="holidays" className="pt-4">
+                                        <TabsContent value="holidays" className="pt-2">
                                            <HolidaySettings />
                                         </TabsContent>
-                                        <TabsContent value="user-management" className="pt-4">
+                                        <TabsContent value="user-management" className="pt-2">
                                             <UserManagementSettings />
                                         </TabsContent>
-                                        <TabsContent value="system-info" className="pt-4">
+                                        <TabsContent value="system-info" className="pt-2">
                                             <SystemUsageInfo />
                                         </TabsContent>
                                     </>
@@ -989,8 +998,8 @@ export default function SettingsPage() {
                             </Tabs>
                         ) : (
                             <div className="space-y-4">
-                                <Skeleton className="h-10 w-full" />
-                                <Skeleton className="h-48 w-full" />
+                                <Skeleton className="h-12 w-full rounded-md" />
+                                <Skeleton className="h-64 w-full rounded-md" />
                             </div>
                         )}
                     </CardContent>

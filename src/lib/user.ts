@@ -1,4 +1,3 @@
-
 'use client';
 import { Timestamp, type DocumentData } from 'firebase/firestore';
 
@@ -17,6 +16,24 @@ export interface User {
 
 export const userFromDoc = (doc: any): User => {
     const data = doc.data();
+    
+    // Robust parsing of lastLoginAt field
+    let lastLoginAt: Date | undefined = undefined;
+    if (data.lastLoginAt) {
+        if (typeof data.lastLoginAt.toDate === 'function') {
+            lastLoginAt = data.lastLoginAt.toDate();
+        } else if (data.lastLoginAt instanceof Timestamp) {
+            lastLoginAt = data.lastLoginAt.toDate();
+        } else if (data.lastLoginAt.seconds !== undefined) {
+            lastLoginAt = new Timestamp(data.lastLoginAt.seconds, data.lastLoginAt.nanoseconds || 0).toDate();
+        } else {
+            const parsed = new Date(data.lastLoginAt);
+            if (!isNaN(parsed.getTime())) {
+                lastLoginAt = parsed;
+            }
+        }
+    }
+
     return {
         uid: doc.id,
         email: data.email,
@@ -25,6 +42,6 @@ export const userFromDoc = (doc: any): User => {
         displayName: data.displayName,
         isOnline: data.isOnline || false,
         permissions: data.permissions || [],
-        lastLoginAt: data.lastLoginAt instanceof Timestamp ? data.lastLoginAt.toDate() : (data.lastLoginAt ? new Date(data.lastLoginAt) : undefined),
+        lastLoginAt: lastLoginAt,
     } as User;
 }
