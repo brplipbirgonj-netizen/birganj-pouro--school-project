@@ -973,6 +973,7 @@ export default function RoutinesPage() {
     const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
     const { user, hasPermission } = useAuth();
     const canManageRoutines = hasPermission('manage:routines');
+    const isAdmin = user?.role === 'admin';
 
     const fetchData = useCallback(async () => {
         if (!db || !user) return;
@@ -1007,6 +1008,15 @@ export default function RoutinesPage() {
 
     const { conflicts, stats, teacherColorMap } = useRoutineAnalysis(routineData);
     
+    // Restricted conflicts: Teachers shouldn't see red indicators
+    const displayConflicts = isAdmin ? conflicts : {
+        teacherClashes: new Set<string>(),
+        consecutiveClassClashes: new Set<string>(),
+        breakClashes: new Set<string>(),
+        subjectRepetitionClashes: new Set<string>(),
+        teacherSubjectMismatchClashes: new Set<string>()
+    };
+
     const handleCellChange = (className: string, day: string, periodIndex: number, value: string) => {
         setRoutineData(prevData => {
             const newData = JSON.parse(JSON.stringify(prevData));
@@ -1217,21 +1227,29 @@ export default function RoutinesPage() {
                                     <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
                                         <TabsTrigger value="class-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">ক্লাস রুটিন</TabsTrigger>
                                         <TabsTrigger value="exam-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরীক্ষার রুটিন</TabsTrigger>
-                                        <TabsTrigger value="statistics" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরিসংখ্যান</TabsTrigger>
-                                        <TabsTrigger value="upload" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">এক্সেল আপলোড</TabsTrigger>
+                                        {isAdmin && (
+                                            <>
+                                                <TabsTrigger value="statistics" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরিসংখ্যান</TabsTrigger>
+                                                <TabsTrigger value="upload" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">এক্সেল আপলোড</TabsTrigger>
+                                            </>
+                                        )}
                                     </TabsList>
                                     <TabsContent value="class-routine" className="mt-6">
-                                        <ClassRoutineTab routineData={routineData} conflicts={conflicts} isEditMode={isEditMode && canManageRoutines} onCellChange={handleCellChange} teacherColorMap={teacherColorMap!} isMounted={isMounted} />
+                                        <ClassRoutineTab routineData={routineData} conflicts={displayConflicts} isEditMode={isEditMode && canManageRoutines} onCellChange={handleCellChange} teacherColorMap={teacherColorMap!} isMounted={isMounted} />
                                     </TabsContent>
                                     <TabsContent value="exam-routine" className="mt-6">
                                         <ExamRoutineTab />
                                     </TabsContent>
-                                    <TabsContent value="statistics" className="mt-6">
-                                        <RoutineStatistics stats={stats} />
-                                    </TabsContent>
-                                    <TabsContent value="upload" className="mt-6">
-                                        <BulkRoutineUploadTab onRoutineParsed={handleRoutineParsedFromExcel} />
-                                    </TabsContent>
+                                    {isAdmin && (
+                                        <>
+                                            <TabsContent value="statistics" className="mt-6">
+                                                <RoutineStatistics stats={stats} />
+                                            </TabsContent>
+                                            <TabsContent value="upload" className="mt-6">
+                                                <BulkRoutineUploadTab onRoutineParsed={handleRoutineParsedFromExcel} />
+                                            </TabsContent>
+                                        </>
+                                    )}
                                 </Tabs>
                             ) : (
                             <div className="space-y-4">
@@ -1315,7 +1333,7 @@ export default function RoutinesPage() {
                             <div className="flex-1 w-full overflow-hidden mt-1">
                                 <CombinedRoutineTable 
                                     routineData={routineData}
-                                    conflicts={conflicts}
+                                    conflicts={displayConflicts}
                                     isEditMode={false}
                                     onCellChange={() => {}}
                                     teacherColorMap={teacherColorMap}
