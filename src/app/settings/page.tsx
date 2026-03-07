@@ -895,6 +895,7 @@ function ProfileSettings() {
                             <Avatar className="h-24 w-24 border">
                                 <AvatarImage src={photoPreview || ''} alt={user?.email || 'User'} />
                                 <AvatarFallback>{user?.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                            </Avatar>
                             <Input id="photo" name="photo" type="file" className="hidden" onChange={handlePhotoChange} accept="image/*" />
                             <Button type="button" variant="outline" onClick={() => document.getElementById('photo')?.click()}>
                                 <Upload className="mr-2" />
