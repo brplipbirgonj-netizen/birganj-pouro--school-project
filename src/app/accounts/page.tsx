@@ -49,10 +49,10 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
     return (
         <>
         <Tabs defaultValue="6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap">
             {classes.map((className) => (
-                <TabsTrigger key={className} value={className}>
-                {classNamesMap[className]} শ্রেণি
+                <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm">
+                {classNamesMap[className]}
                 </TabsTrigger>
             ))}
             </TabsList>
@@ -60,9 +60,9 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
             <TabsContent key={className} value={className}>
                 <Card>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
+                    <div className="overflow-x-auto shadow-inner">
+                    <Table className="min-w-[600px]">
+                        <TableHeader className="bg-muted/50">
                         <TableRow>
                             <TableHead>রোল</TableHead>
                             <TableHead>শিক্ষার্থীর নাম</TableHead>
@@ -86,11 +86,11 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
                         ) : (
                             getStudentsByClass(className).map((student) => (
                             <TableRow key={student.id}>
-                                <TableCell>{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                <TableCell className="whitespace-nowrap">{student.studentNameBn}</TableCell>
+                                <TableCell className="font-medium">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                <TableCell className="whitespace-nowrap font-bold">{student.studentNameBn}</TableCell>
                                 <TableCell className="whitespace-nowrap">{student.fatherNameBn}</TableCell>
                                 <TableCell className="text-right">
-                                <Button onClick={() => setFeeStudent(student)}>বেতন আদায় করুন</Button>
+                                <Button onClick={() => setFeeStudent(student)} size="sm">বেতন আদায়</Button>
                                 </TableCell>
                             </TableRow>
                             ))
@@ -171,7 +171,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         <Card>
             <CardHeader>
                 <CardTitle>বেতন আদায়ের রিপোর্ট</CardTitle>
-                <div className="flex flex-col md:flex-row gap-4 mt-4">
+                <div className="flex flex-col md:flex-row gap-4 mt-4 bg-muted/30 p-4 rounded-lg">
                     <div className="space-y-2 flex-1">
                         <Label>তারিখ দিয়ে ফিল্টার</Label>
                         <DatePicker value={dateFilter} onChange={setDateFilter} placeholder="তারিখ নির্বাচন করুন" />
@@ -179,7 +179,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <div className="space-y-2 flex-1">
                         <Label>আদায়কারী</Label>
                         <Select value={collectorFilter} onValueChange={setCollectorFilter}>
-                            <SelectTrigger><SelectValue placeholder="সকল আদায়কারী" /></SelectTrigger>
+                            <SelectTrigger className="bg-white"><SelectValue placeholder="সকল আদায়কারী" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">সকল আদায়কারী</SelectItem>
                                 {uniqueCollectors.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -189,9 +189,9 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
+                <div className="overflow-x-auto border rounded-md">
+                    <Table className="min-w-[850px]">
+                        <TableHeader className="bg-muted/50">
                             <TableRow>
                                 <TableHead>তারিখ</TableHead>
                                 <TableHead>রোল</TableHead>
@@ -203,20 +203,20 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-8">লোড হচ্ছে...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">লোড হচ্ছে...</TableCell></TableRow>
                             ) : filteredCollections.length === 0 ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-8">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                             ) : (
                                 filteredCollections.map(c => {
                                     const student = studentMap.get(c.studentId);
                                     return (
-                                        <TableRow key={c.id}>
-                                            <TableCell>{format(c.collectionDate, 'PP', { locale: bn })}</TableCell>
-                                            <TableCell>{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
-                                            <TableCell>{student?.studentNameBn || '-'}</TableCell>
-                                            <TableCell>{student ? (classNamesMap[student.className] || student.className) : '-'}</TableCell>
-                                            <TableCell className="text-right font-semibold">{(c.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
-                                            <TableCell>{c.collectorName || '-'}</TableCell>
+                                        <TableRow key={c.id} className="hover:bg-accent/5 transition-colors">
+                                            <TableCell className="whitespace-nowrap">{format(c.collectionDate, 'PP', { locale: bn })}</TableCell>
+                                            <TableCell className="font-bold">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
+                                            <TableCell className="whitespace-nowrap font-bold text-primary">{student?.studentNameBn || '-'}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{student ? (classNamesMap[student.className] || student.className) : '-'}</TableCell>
+                                            <TableCell className="text-right font-black text-emerald-700">{(c.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
+                                            <TableCell className="whitespace-nowrap text-xs">{c.collectorName || '-'}</TableCell>
                                         </TableRow>
                                     );
                                 })
@@ -369,40 +369,40 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                 <CardTitle>ক্যাশবুক</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
+                <div className="overflow-x-auto border rounded-md shadow-inner">
+                    <Table className="min-w-[750px]">
+                        <TableHeader className="bg-muted/50">
                             <TableRow>
-                                <TableHead>তারিখ</TableHead>
-                                <TableHead>বিবরণ</TableHead>
-                                <TableHead className="text-right">আয়</TableHead>
-                                <TableHead className="text-right">ব্যয়</TableHead>
-                                <TableHead className="text-right">ব্য্যালেন্স</TableHead>
-                                {canManageTransactions && <TableHead className="text-right">কার্যক্রম</TableHead>}
+                                <TableHead className="font-bold">তারিখ</TableHead>
+                                <TableHead className="font-bold">বিবরণ</TableHead>
+                                <TableHead className="text-right font-bold">আয়</TableHead>
+                                <TableHead className="text-right font-bold">ব্যয়</TableHead>
+                                <TableHead className="text-right font-bold">ব্য্যালেন্স</TableHead>
+                                {canManageTransactions && <TableHead className="text-right font-bold">কার্যক্রম</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-8">লোড হচ্ছে...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-12 text-muted-foreground">লোড হচ্ছে...</TableCell></TableRow>
                             ) : cashbookData.length === 0 ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-8">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
                             ) : (
                                 cashbookData.map(tx => (
-                                    <TableRow key={tx.id}>
-                                        <TableCell>{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
+                                    <TableRow key={tx.id} className="hover:bg-accent/5">
+                                        <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
                                         <TableCell>
-                                            <p className="font-medium">{tx.accountHead}</p>
-                                            {tx.description && <p className="text-sm text-muted-foreground">{tx.description}</p>}
+                                            <p className="font-bold">{tx.accountHead}</p>
+                                            {tx.description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{tx.description}</p>}
                                         </TableCell>
-                                        <TableCell className="text-right text-green-600">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
-                                        <TableCell className="text-right text-red-600">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
-                                        <TableCell className="text-right font-semibold">{tx.balance.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                        <TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                        <TableCell className="text-right font-black text-primary">{tx.balance.toLocaleString('bn-BD')} ৳</TableCell>
                                         {canManageTransactions && (
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end">
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
-                                                            <Button variant="destructive" size="icon" disabled={!!tx.feeCollectionId}><Trash2 className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></Button>
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent>
                                                             <AlertDialogHeader>
@@ -411,7 +411,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
                                                                 <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDelete(tx.id)}>মুছে ফেলুন</AlertDialogAction>
+                                                                <AlertDialogAction onClick={() => handleDelete(tx.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
@@ -455,43 +455,45 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
             </CardHeader>
             <CardContent>
                 {isLoading ? (
-                    <p className="text-center p-8">লোড হচ্ছে...</p>
+                    <p className="text-center p-12 text-muted-foreground">লোড হচ্ছে...</p>
                 ) : Object.keys(ledgerData).length === 0 ? (
-                    <p className="text-center p-8">কোনো লেনদেন পাওয়া যায়নি।</p>
+                    <p className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</p>
                 ) : (
-                    <Accordion type="multiple" className="w-full">
+                    <Accordion type="multiple" className="w-full space-y-2">
                         {Object.entries(ledgerData).map(([head, data]) => (
-                             <AccordionItem value={head} key={head}>
-                                <AccordionTrigger>
-                                    <div className="flex justify-between w-full pr-4">
-                                        <span>{head}</span>
-                                        <div className="flex gap-4">
-                                            <span className="text-green-600">মোট আয়: {data.income.toLocaleString('bn-BD')}</span>
-                                            <span className="text-red-600">মোট ব্যয়: {data.expense.toLocaleString('bn-BD')}</span>
+                             <AccordionItem value={head} key={head} className="border-2 rounded-lg px-2 overflow-hidden">
+                                <AccordionTrigger className="hover:no-underline">
+                                    <div className="flex flex-col sm:flex-row justify-between w-full pr-4 text-left gap-2">
+                                        <span className="font-bold text-primary">{head}</span>
+                                        <div className="flex gap-4 text-xs">
+                                            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">আয়: {data.income.toLocaleString('bn-BD')}</span>
+                                            <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">ব্যয়: {data.expense.toLocaleString('bn-BD')}</span>
                                         </div>
                                     </div>
                                 </AccordionTrigger>
-                                <AccordionContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>তারিখ</TableHead>
-                                                <TableHead>বিবরণ</TableHead>
-                                                <TableHead className="text-right">আয়</TableHead>
-                                                <TableHead className="text-right">ব্যয়</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {data.transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(tx => (
-                                                <TableRow key={tx.id}>
-                                                    <TableCell>{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
-                                                    <TableCell>{tx.description || '-'}</TableCell>
-                                                    <TableCell className="text-right text-green-600">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
-                                                    <TableCell className="text-right text-red-600">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                <AccordionContent className="pt-2">
+                                    <div className="overflow-x-auto border rounded-md">
+                                        <Table className="min-w-[600px]">
+                                            <TableHeader className="bg-muted/30">
+                                                <TableRow>
+                                                    <TableHead>তারিখ</TableHead>
+                                                    <TableHead>বিবরণ</TableHead>
+                                                    <TableHead className="text-right">আয়</TableHead>
+                                                    <TableHead className="text-right">ব্যয়</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {data.transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(tx => (
+                                                    <TableRow key={tx.id}>
+                                                        <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
+                                                        <TableCell className="max-w-[200px] truncate">{tx.description || '-'}</TableCell>
+                                                        <TableCell className="text-right text-emerald-600 font-medium">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                                        <TableCell className="text-right text-rose-600 font-medium">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 </AccordionContent>
                             </AccordionItem>
                         ))}
@@ -558,30 +560,30 @@ export default function AccountsPage() {
 
   const tabs = [];
   if (canCollectFees) {
-      tabs.push({ value: "fee-collection", label: "বেতন আদায়" });
+      tabs.push({ value: "fee-collection", label: "আদায়" });
   }
   if (canViewReports) {
-      tabs.push({ value: "collection-report", label: "আদায়ের রিপোর্ট" });
+      tabs.push({ value: "collection-report", label: "রিপোর্ট" });
   }
   tabs.push({ value: "cashbook", label: "ক্যাশবুক" });
   tabs.push({ value: "ledger", label: "খতিয়ান" });
-  if (canManageTransactions) tabs.push({ value: "new-transaction", label: "নতুন লেনদেন" });
+  if (canManageTransactions) tabs.push({ value: "new-transaction", label: "নতুন" });
 
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-teal-100">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
-        <Card>
+        <Card className="border-2 border-primary/10">
           <CardHeader>
-             <CardTitle>হিসাব শাখা</CardTitle>
-            {isClient && <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
+             <CardTitle className="text-3xl font-black">হিসাব শাখা</CardTitle>
+            {isClient && <p className="text-sm font-medium text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
           </CardHeader>
           <CardContent>
              {isClient ? (
                 <Tabs defaultValue={tabs[0]?.value || 'cashbook'}>
-                  <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-                    {tabs.map(tab => <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>)}
+                  <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
+                    {tabs.map(tab => <TabsTrigger key={tab.value} value={tab.value} className="flex-1 min-w-[80px] font-bold">{tab.label}</TabsTrigger>)}
                   </TabsList>
                   
                   {canCollectFees && (
@@ -610,39 +612,8 @@ export default function AccountsPage() {
                 </Tabs>
              ) : (
                 <div className="space-y-4">
-                  <div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="flex justify-center"><Skeleton className="h-8 w-[80%]" /></div>
-                    ))}
-                  </div>
-                   <div className="border rounded-md p-4">
-                      <Skeleton className="h-8 w-1/4 mb-4" />
-                       <Skeleton className="h-4 w-1/2 mb-6" />
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead><Skeleton className="h-6 w-16" /></TableHead>
-                                    <TableHead><Skeleton className="h-6 w-32" /></TableHead>
-                                    <TableHead><Skeleton className="h-6 w-32" /></TableHead>
-                                    <TableHead className="text-right"><Skeleton className="h-6 w-24 ml-auto" /></TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {[...Array(5)].map((_, i) => (
-                                    <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-6 w-10" /></TableCell>
-                                    <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                                    <TableCell className="text-right">
-                                        <Skeleton className="h-10 w-32 ml-auto" />
-                                    </TableCell>
-                                    </TableRow>
-                                ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                   </div>
+                  <Skeleton className="h-12 w-full rounded-md" />
+                  <Skeleton className="h-64 w-full rounded-md" />
                 </div>
              )}
           </CardContent>

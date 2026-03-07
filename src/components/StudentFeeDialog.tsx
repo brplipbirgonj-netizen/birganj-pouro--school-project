@@ -212,7 +212,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                     const msg = `সম্মানিত অভিভাবক, ${student.studentNameBn} এর ${description} বাবদ মোট ${totalAmount.toLocaleString('bn-BD')} টাকা আদায় করা হয়েছে। বীপৌউবি`;
                     const encodedMsg = encodeURIComponent(msg);
                     
-                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
                     const separator = isIOS ? '&' : '?';
                     const smsUrl = `sms:${cleanNumber}${separator}body=${encodedMsg}`;
                     
@@ -237,7 +237,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[90vh]">
+            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw]">
                 <DialogHeader>
                     <DialogTitle>{existingCollection ? 'ফি আদায় এডিট করুন' : 'নতুন ফি আদায়'}</DialogTitle>
                     <DialogDescription>
@@ -245,7 +245,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-grow overflow-y-auto -mx-6 px-6 space-y-4">
+                <div className="flex-grow overflow-y-auto -mx-2 px-2 sm:-mx-6 sm:px-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                         <div className="space-y-2">
                             <Label htmlFor="date">আদায়ের তারিখ</Label>
@@ -258,8 +258,8 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                                     onValueChange={(month) => month && setDescription(`${month} মাসের বেতন`)}
                                     defaultValue={bengaliMonths[new Date().getMonth()]}
                                 >
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="মাস নির্বাচন" />
+                                    <SelectTrigger className="w-[120px] sm:w-[180px]">
+                                        <SelectValue placeholder="মাস" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {bengaliMonths.map(month => (
@@ -267,7 +267,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} />
+                                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="flex-1" />
                             </div>
                         </div>
                     </div>
@@ -294,23 +294,23 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                                 checked={shouldSendSMS} 
                                 onCheckedChange={(checked) => setShouldSendSMS(!!checked)} 
                             />
-                            <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer">
+                            <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer text-sm">
                                 <Smartphone className="h-4 w-4 text-primary" />
                                 সেভ করার পর ফোনে মেসেজ ড্রাফট করুন
                             </Label>
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground italic">
                             আদায়কারী: {collectorName || 'লোড হচ্ছে...'}
                         </div>
                     </div>
                 </div>
 
                 <DialogFooter className="pt-4 border-t -mx-6 px-6 pb-6 mt-auto">
-                    <div className="flex justify-between w-full items-center">
-                        <p className="font-semibold text-lg">মোট আদায়: {totalAmount.toLocaleString('bn-BD')} টাকা</p>
-                        <div className="flex gap-2">
-                             <DialogClose asChild><Button variant="ghost">বাতিল</Button></DialogClose>
-                            <Button onClick={handleSave} className="min-w-[120px]">
+                    <div className="flex flex-col sm:flex-row justify-between w-full items-center gap-4">
+                        <p className="font-bold text-xl text-primary">মোট: {totalAmount.toLocaleString('bn-BD')} ৳</p>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                             <DialogClose asChild><Button variant="ghost" className="flex-1 sm:flex-none">বাতিল</Button></DialogClose>
+                            <Button onClick={handleSave} className="flex-1 sm:flex-none min-w-[120px]">
                                 {shouldSendSMS ? 'সেভ ও মেসেজ' : 'শুধুমাত্র সেভ'}
                             </Button>
                         </div>
@@ -388,21 +388,21 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw]">
                 <DialogHeader>
                     <div className="flex flex-col md:flex-row items-center gap-4">
                         {isLoading || !student ? (
-                            <Skeleton className="h-24 w-24 rounded-lg" />
+                            <Skeleton className="h-20 w-20 rounded-lg" />
                         ) : (
-                             student.photoUrl && <Image src={student.photoUrl} alt="Student photo" width={96} height={96} className="rounded-lg border object-cover" />
+                             student.photoUrl && <Image src={student.photoUrl} alt="Student photo" width={80} height={80} className="rounded-lg border object-cover shadow-sm" />
                         )}
-                        <div className="flex-1 text-center md:text-left space-y-2">
-                            <DialogTitle className="text-2xl">ছাত্র/ ছাত্রীর বেতন আদায় তথ্য</DialogTitle>
+                        <div className="flex-1 text-center md:text-left space-y-1">
+                            <DialogTitle className="text-xl sm:text-2xl font-bold">বেতন আদায়ের তথ্য</DialogTitle>
                             {isLoading || !student ? (
-                                <Skeleton className="h-4 w-1/2" />
+                                <Skeleton className="h-4 w-1/2 mx-auto md:mx-0" />
                             ) : (
-                                <DialogDescription>
-                                    <span className="font-semibold">{student.studentNameBn}</span> (রোল: {student.roll.toLocaleString('bn-BD')}, শ্রেণি: {classNamesMap[student.className] || student.className})
+                                <DialogDescription className="text-md font-medium text-foreground">
+                                    <span className="text-primary font-bold">{student.studentNameBn}</span> (রোল: {student.roll.toLocaleString('bn-BD')}, শ্রেণি: {classNamesMap[student.className] || student.className})
                                 </DialogDescription>
                             )}
                         </div>
@@ -410,49 +410,49 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                 </DialogHeader>
 
                  {isLoading ? (
-                    <div className="p-8 text-center">
-                        <p>Loading...</p>
+                    <div className="p-12 text-center">
+                        <Skeleton className="h-32 w-full" />
                     </div>
                  ) : (
                 <>
-                    <div className="py-4">
-                        <div className="border rounded-md max-h-[40vh] overflow-auto">
-                            <Table className="min-w-[650px]">
-                                <TableHeader>
+                    <div className="py-4 flex-grow overflow-hidden flex flex-col">
+                        <div className="border rounded-md overflow-x-auto overflow-y-auto max-h-[50vh] shadow-inner bg-white">
+                            <Table className="min-w-[750px]">
+                                <TableHeader className="sticky top-0 bg-muted z-10">
                                     <TableRow>
-                                        <TableHead>আদায়ের তারিখ</TableHead>
-                                        <TableHead>বিবরণ</TableHead>
-                                        <TableHead className="text-right">মোট টাকা</TableHead>
-                                        <TableHead>আদায়কারী</TableHead>
-                                        {canManageTransactions && <TableHead className="text-right">কার্যক্রম</TableHead>}
+                                        <TableHead className="font-bold">আদায়ের তারিখ</TableHead>
+                                        <TableHead className="font-bold">বিবরণ</TableHead>
+                                        <TableHead className="text-right font-bold">মোট টাকা</TableHead>
+                                        <TableHead className="font-bold">আদায়কারী</TableHead>
+                                        {canManageTransactions && <TableHead className="text-right font-bold">কার্যক্রম</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {feeCollections.length === 0 ? (
-                                        <TableRow><TableCell colSpan={5} className="text-center h-24">কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={5} className="text-center h-32 italic text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
                                     ) : (
                                         feeCollections.map(collection => (
-                                            <TableRow key={collection.id}>
-                                                <TableCell className="whitespace-nowrap">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
+                                            <TableRow key={collection.id} className="hover:bg-primary/5 transition-colors">
+                                                <TableCell className="whitespace-nowrap font-medium">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
                                                 <TableCell>{collection.description || 'N/A'}</TableCell>
-                                                <TableCell className="text-right font-medium whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
-                                                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{collection.collectorName || '-'}</TableCell>
+                                                <TableCell className="text-right font-bold text-primary whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
+                                                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{collection.collectorName || '-'}</TableCell>
                                                 {canManageTransactions && (
                                                     <TableCell className="text-right">
                                                         <div className="flex gap-2 justify-end">
-                                                            <Button variant="outline" size="icon" onClick={() => handleEdit(collection)}>
+                                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(collection)}>
                                                                 <FilePen className="h-4 w-4" />
                                                             </Button>
                                                             <AlertDialog>
-                                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                                                 <AlertDialogContent>
                                                                     <AlertDialogHeader>
                                                                         <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>এই লেনদেনটি স্থায়ীভাবে মুছে যাবে। এটি ক্যাশবুক থেকেও মুছে যাবে।</AlertDialogDescription>
+                                                                        <AlertDialogDescription>এই লেনদেনটি স্থায়ীভাবে মুছে যাবে। এটি ক্যাশবুক থেকেও স্বয়ংক্রিয়ভাবে মুছে যাবে।</AlertDialogDescription>
                                                                     </AlertDialogHeader>
                                                                     <AlertDialogFooter>
                                                                         <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => handleDelete(collection)}>মুছে ফেলুন</AlertDialogAction>
+                                                                        <AlertDialogAction onClick={() => handleDelete(collection)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
                                                                     </AlertDialogFooter>
                                                                 </AlertDialogContent>
                                                             </AlertDialog>
@@ -466,8 +466,8 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                             </Table>
                         </div>
                     </div>
-                    <div className="flex justify-end">
-                        <Button onClick={handleAddNew}>নতুন ফি আদায় করুন</Button>
+                    <div className="flex justify-end pt-2 border-t mt-auto">
+                        <Button onClick={handleAddNew} size="lg" className="shadow-lg hover:shadow-xl transition-all">নতুন ফি আদায় করুন</Button>
                     </div>
 
                     {student && (
