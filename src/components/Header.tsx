@@ -59,6 +59,10 @@ import { Student, studentFromDoc } from '@/lib/student-data';
 import { StudentFeeDialog } from './StudentFeeDialog';
 import { cn } from '@/lib/utils';
 
+const classNamesMap: { [key: string]: string } = {
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+};
+
 export function Header() {
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
@@ -377,7 +381,7 @@ export function Header() {
                           <div>
                               <DialogTitle className="text-xl">{selectedStudent?.studentNameBn}</DialogTitle>
                               <DialogDescription>
-                                  রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | শ্রেণি: {selectedStudent?.className} | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
+                                  রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | শ্রেণি: {classNamesMap[selectedStudent?.className || ''] || selectedStudent?.className} | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
                               </DialogDescription>
                           </div>
                       </div>
@@ -537,7 +541,7 @@ export function Header() {
                                                         </Avatar>
                                                         <div>
                                                             <p className="text-sm font-bold">{s.studentNameBn}</p>
-                                                            <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | শ্রেণি: {s.className}</p>
+                                                            <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | শ্রেণি: {classNamesMap[s.className] || s.className}</p>
                                                         </div>
                                                     </div>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>

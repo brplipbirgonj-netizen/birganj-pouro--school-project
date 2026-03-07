@@ -25,6 +25,10 @@ import { DatePicker } from './ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { Checkbox } from '@/components/ui/checkbox';
 
+const classNamesMap: { [key: string]: string } = {
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+};
+
 const feeFields: { key: keyof FeeBreakdown; label: string }[] = [
     { key: 'tuitionCurrent', label: 'চলতি' },
     { key: 'tuitionAdvance', label: 'অগ্রিম' },
@@ -400,7 +404,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                 <Skeleton className="h-4 w-1/2" />
                             ) : (
                                 <DialogDescription>
-                                    <span className="font-semibold">{student.studentNameBn}</span> (রোল: {student.roll.toLocaleString('bn-BD')}, শ্রেণি: {student.className}-য়)
+                                    <span className="font-semibold">{student.studentNameBn}</span> (রোল: {student.roll.toLocaleString('bn-BD')}, শ্রেণি: {classNamesMap[student.className] || student.className})
                                 </DialogDescription>
                             )}
                         </div>
