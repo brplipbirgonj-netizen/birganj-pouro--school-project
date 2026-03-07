@@ -127,9 +127,13 @@ export async function signOut() {
   if (user) {
     const userDocRef = doc(db, 'users', user.uid);
     try {
-      // Use standard updateDoc and don't await strictly to avoid logout delay
-      updateDoc(userDocRef, { isOnline: false }).catch(() => {});
-    } catch (e) {}
+      // IMPORTANT: Wait for online status update before actual sign-out
+      // This prevents permission denied errors because we are still authed
+      await updateDoc(userDocRef, { isOnline: false });
+    } catch (e) {
+      // Silent catch to ensure signout proceeds even if firestore write fails
+      console.log("Logout: Online status update skipped.");
+    }
   }
   
   return firebaseSignOut(auth);

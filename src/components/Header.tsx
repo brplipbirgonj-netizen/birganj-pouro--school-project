@@ -120,8 +120,15 @@ export function Header() {
   }, [user, db]);
 
   const handleLogout = async () => {
-    await signOut();
-    router.push('/login');
+    try {
+      await signOut();
+      // Use window.location instead of router.push to force a clean state
+      // and clear all persistent Firebase listeners/cache
+      window.location.href = '/login';
+    } catch (error) {
+      console.error("Logout error:", error);
+      window.location.href = '/login';
+    }
   };
 
   const handleSearchOpen = async (open: boolean) => {
