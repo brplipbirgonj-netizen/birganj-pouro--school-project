@@ -16,7 +16,8 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "A list of permission strings."
-        }
+        },
+        "lastLoginAt": { "type": "string", "format": "date-time", "description": "The last time the user logged in." }
       },
       "required": ["uid", "email", "role"]
     },

@@ -1,5 +1,6 @@
+
 'use client';
-import type { DocumentData } from 'firebase/firestore';
+import { Timestamp, type DocumentData } from 'firebase/firestore';
 
 export type UserRole = 'admin' | 'teacher';
 
@@ -11,9 +12,10 @@ export interface User {
   displayName?: string;
   isOnline?: boolean;
   permissions?: string[];
+  lastLoginAt?: Date;
 }
 
-export const userFromDoc = (doc: DocumentData): User => {
+export const userFromDoc = (doc: any): User => {
     const data = doc.data();
     return {
         uid: doc.id,
@@ -23,5 +25,6 @@ export const userFromDoc = (doc: DocumentData): User => {
         displayName: data.displayName,
         isOnline: data.isOnline || false,
         permissions: data.permissions || [],
+        lastLoginAt: data.lastLoginAt instanceof Timestamp ? data.lastLoginAt.toDate() : (data.lastLoginAt ? new Date(data.lastLoginAt) : undefined),
     } as User;
 }

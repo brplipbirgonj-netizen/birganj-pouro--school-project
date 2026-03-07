@@ -1,3 +1,4 @@
+
 'use client';
 import {
   getAuth,
@@ -18,7 +19,8 @@ import {
   query,
   where,
   limit,
-  updateDoc
+  updateDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import type { UserRole } from './user';
 import { defaultPermissions } from './permissions';
@@ -68,6 +70,7 @@ export async function signUp(email: string, password: string): Promise<{ success
       displayName: displayName,
       isOnline: true,
       permissions: defaultPermissions[role] || [],
+      lastLoginAt: serverTimestamp(),
     });
 
     return { success: true, role: role };
@@ -98,6 +101,7 @@ export async function signIn(email: string, password: string, role: UserRole): P
             role: role,
             isOnline: true,
             permissions: defaultPermissions[role] || [],
+            lastLoginAt: serverTimestamp(),
         });
         return { success: true };
     }
@@ -107,7 +111,10 @@ export async function signIn(email: string, password: string, role: UserRole): P
       return { success: false, error: 'আপনার ভূমিকা (role) সঠিক নয়।' };
     }
 
-    await setDoc(userDocRef, { isOnline: true }, { merge: true });
+    await setDoc(userDocRef, { 
+      isOnline: true,
+      lastLoginAt: serverTimestamp() 
+    }, { merge: true });
 
     return { success: true };
   } catch (error: any) {

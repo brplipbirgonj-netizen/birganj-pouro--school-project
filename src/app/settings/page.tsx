@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, Calculator } from 'lucide-react';
+import { Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, Calculator, Clock } from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +26,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { User } from '@/lib/user';
+import { User, userFromDoc } from '@/lib/user';
 import { updateUserPermissions, deleteUserRecord } from '@/lib/user-management';
 import { changePassword } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
@@ -574,7 +575,7 @@ function UserManagementSettings() {
         try {
             const usersRef = collection(db, 'users');
             const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
-                const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
+                const usersData = snapshot.docs.map(doc => userFromDoc(doc));
                 setUsers(usersData.sort((a, b) => (a.email || '').localeCompare(b.email || '')));
             });
 
@@ -648,17 +649,18 @@ function UserManagementSettings() {
                                     <TableHead>ইমেইল</TableHead>
                                     <TableHead>ভূমিকা (Role)</TableHead>
                                     <TableHead>অবস্থা (Status)</TableHead>
+                                    <TableHead>সর্বশেষ লগইন</TableHead>
                                     <TableHead className="text-right">কার্যক্রম</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                  {isLoading && users.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">লোড হচ্ছে...</TableCell>
+                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">লোড হচ্ছে...</TableCell>
                                     </TableRow>
                                 ) : users.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                                             কোনো ব্যবহারকারী পাওয়া যায়নি।
                                         </TableCell>
                                     </TableRow>
@@ -697,6 +699,14 @@ function UserManagementSettings() {
                                                     ) : (
                                                         <span className="text-xs text-muted-foreground">অফলাইন</span>
                                                     )}
+                                                </TableCell>
+                                                <TableCell className="text-xs whitespace-nowrap">
+                                                    {u.lastLoginAt ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <Clock className="h-3 w-3 text-muted-foreground" />
+                                                            {format(u.lastLoginAt, 'PPp', { locale: bn })}
+                                                        </div>
+                                                    ) : 'কখনো নয়'}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
@@ -885,7 +895,6 @@ function ProfileSettings() {
                             <Avatar className="h-24 w-24 border">
                                 <AvatarImage src={photoPreview || ''} alt={user?.email || 'User'} />
                                 <AvatarFallback>{user?.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-                            </Avatar>
                             <Input id="photo" name="photo" type="file" className="hidden" onChange={handlePhotoChange} accept="image/*" />
                             <Button type="button" variant="outline" onClick={() => document.getElementById('photo')?.click()}>
                                 <Upload className="mr-2" />
