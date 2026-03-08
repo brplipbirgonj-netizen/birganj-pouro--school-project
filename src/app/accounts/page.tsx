@@ -60,9 +60,9 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
             <TabsContent key={className} value={className}>
                 <Card>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto shadow-inner">
+                    <div className="table-container">
                     <Table className="min-w-[600px]">
-                        <TableHeader className="bg-muted/50">
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
                         <TableRow>
                             <TableHead>রোল</TableHead>
                             <TableHead>শিক্ষার্থীর নাম</TableHead>
@@ -189,9 +189,9 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto border rounded-md">
+                <div className="table-container">
                     <Table className="min-w-[850px]">
-                        <TableHeader className="bg-muted/50">
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
                             <TableRow>
                                 <TableHead>তারিখ</TableHead>
                                 <TableHead>রোল</TableHead>
@@ -369,9 +369,9 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                 <CardTitle>ক্যাশবুক</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto border rounded-md shadow-inner">
+                <div className="table-container">
                     <Table className="min-w-[750px]">
-                        <TableHeader className="bg-muted/50">
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
                             <TableRow>
                                 <TableHead className="font-bold">তারিখ</TableHead>
                                 <TableHead className="font-bold">বিবরণ</TableHead>
@@ -472,9 +472,9 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="pt-2">
-                                    <div className="overflow-x-auto border rounded-md">
+                                    <div className="table-container">
                                         <Table className="min-w-[600px]">
-                                            <TableHeader className="bg-muted/30">
+                                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
                                                 <TableRow>
                                                     <TableHead>তারিখ</TableHead>
                                                     <TableHead>বিবরণ</TableHead>
@@ -573,7 +573,7 @@ export default function AccountsPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-teal-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-40">
         <Card className="border-2 border-primary/10">
           <CardHeader>
              <CardTitle className="text-3xl font-black">হিসাব শাখা</CardTitle>

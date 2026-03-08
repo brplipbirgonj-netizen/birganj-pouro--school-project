@@ -14,7 +14,7 @@ import { Student, NewStudentData, addStudent, studentFromDoc } from '@/lib/stude
 import { getSubjects, Subject as SubjectType } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
-import Link from 'next/link';
+import Link from 'link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2, FileUp, Download, FilePen, BookOpen } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -1463,7 +1463,7 @@ export default function ResultsPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50">
             <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
+            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-40">
                 <Card>
                     <CardHeader>
                         <CardTitle>ফলাফল</CardTitle>
@@ -1472,7 +1472,7 @@ export default function ResultsPage() {
                     <CardContent>
                         {isClient ? (
                             <Tabs defaultValue="management">
-                                <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
                                     <TabsTrigger value="management">নম্বর ব্যবস্থাপনা</TabsTrigger>
                                     <TabsTrigger value="sheet">ফলাফল শিট</TabsTrigger>
                                     {canPromote && <TabsTrigger value="special-promotion">বিশেষ বিবেচনায় পাশ</TabsTrigger>}

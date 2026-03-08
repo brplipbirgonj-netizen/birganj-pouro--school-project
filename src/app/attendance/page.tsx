@@ -22,7 +22,7 @@ import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 
-// Digital Attendance content (from digital-attendance/page.tsx)
+// Digital Attendance sheet
 const AttendanceSheet = ({ classId, students }: { classId: string, students: Student[] }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -171,7 +171,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
     
     return (
         <div>
-            <div className="overflow-x-auto">
+            <div className="table-container">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -259,7 +259,7 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
 };
 
 
-// Attendance Report content (from attendance-report/page.tsx)
+// Attendance Report sheet
 interface StudentReport {
     student: Student;
     presentDays: number;
@@ -346,7 +346,7 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
 
 
     return (
-        <div className="overflow-x-auto">
+        <div className="table-container">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -467,7 +467,7 @@ export default function AttendancePage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-amber-100">
             <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
+            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-40">
                 <Card>
                     <CardHeader>
                         <CardTitle>হাজিরা</CardTitle>

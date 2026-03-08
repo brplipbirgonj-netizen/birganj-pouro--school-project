@@ -53,19 +53,19 @@
     @apply bg-background text-foreground;
   }
 
-  /* Custom Scrollbar for Desktop */
+  /* Custom Scrollbar for Desktop - Made more prominent */
   @media (min-width: 768px) {
     ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
     }
     ::-webkit-scrollbar-track {
       background: #f1f1f1;
-      border-radius: 5px;
+      border-radius: 6px;
     }
     ::-webkit-scrollbar-thumb {
       background: #2463eb;
-      border-radius: 5px;
+      border-radius: 6px;
       border: 2px solid #f1f1f1;
     }
     ::-webkit-scrollbar-thumb:hover {
@@ -129,9 +129,9 @@
   @apply overflow-auto border rounded-md shadow-inner bg-white;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .table-container {
-    max-height: calc(100vh - 350px);
+    max-height: calc(100vh - 380px);
     scrollbar-gutter: stable;
   }
 }
