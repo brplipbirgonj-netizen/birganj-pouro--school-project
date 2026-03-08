@@ -193,7 +193,7 @@ export function Header() {
 
   const permittedBottomNavItems = useMemo(() => 
     bottomNavItems.filter(item => hasPermission(item.permission)), 
-    [user, bottomNavItems, hasPermission]
+    [user, hasPermission]
   );
 
   if (!isClient) return <header className="h-16 bg-primary" />;
@@ -219,8 +219,8 @@ export function Header() {
                       href="/"
                       className="flex items-center gap-2 text-lg font-semibold text-foreground"
                     >
-                      {isSchoolInfoLoading ? <Skeleton className="h-9 w-9 rounded-full" /> : (schoolInfo.logoUrl && (
-                        <div className="relative h-9 w-9">
+                      {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : (schoolInfo.logoUrl && (
+                        <div className="relative h-10 w-10">
                           <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="rounded-full object-contain" />
                         </div>
                       ))}
@@ -366,12 +366,12 @@ export function Header() {
           )}
         </div>
 
-        <Link href="/" className="flex items-center gap-3 md:gap-6">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 md:gap-6 max-w-[70vw]">
             {isSchoolInfoLoading ? (
               <Skeleton className="h-11 w-11 md:h-[75px] md:w-[75px] rounded-full" />
             ) : (
               schoolInfo.logoUrl && (
-                <div className="relative h-11 w-11 md:h-[75px] md:w-[75px]">
+                <div className="relative h-11 w-11 md:h-[75px] md:w-[75px] shrink-0">
                   <Image 
                     src={schoolInfo.logoUrl} 
                     alt="School Logo" 
@@ -381,7 +381,7 @@ export function Header() {
                 </div>
               )
             )}
-            <h1 className="text-[28px] md:text-[50px] font-black whitespace-nowrap tracking-tight [text-shadow:2px_2px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,1px_1px_0px_#000,3px_3px_8px_rgba(0,0,0,0.8)]">
+            <h1 className="text-xl sm:text-2xl md:text-[50px] font-black whitespace-nowrap tracking-tight md:[text-shadow:2px_2px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,1px_1px_0px_#000,3px_3px_8px_rgba(0,0,0,0.8)] [text-shadow:1px_1px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.8)] overflow-hidden text-ellipsis">
               {isSchoolInfoLoading ? <Skeleton className="h-7 w-48 md:h-12 md:w-80" /> : schoolInfo.name}
             </h1>
         </Link>
@@ -514,7 +514,7 @@ export function Header() {
 
       {user && (
         <nav 
-          className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] w-full max-w-full overflow-visible"
+          className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] w-full max-w-full overflow-visible box-border"
           style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${permittedBottomNavItems.length}, 1fr)`,
