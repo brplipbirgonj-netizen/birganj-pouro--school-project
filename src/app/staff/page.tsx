@@ -3,8 +3,8 @@
 import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
 import { Eye, FilePen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -93,7 +93,7 @@ export default function StaffListPage() {
     <>
     <div className="flex min-h-screen w-full flex-col bg-orange-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-40">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -1124,7 +1124,7 @@ export default function RoutinesPage() {
         <>
             <div className="flex min-h-screen w-full flex-col bg-fuchsia-100 no-print">
                 <Header />
-                <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-40">
+                <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
                     <Card className="shadow-xl border-2 border-green-600">
                         <CardHeader className="bg-white/50">
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">

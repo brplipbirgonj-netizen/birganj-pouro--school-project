@@ -226,7 +226,7 @@ function StudentProfileSearchContent() {
         <div className="flex min-h-screen w-full flex-col bg-indigo-50">
             <div className="no-print w-full flex flex-col">
                 <Header />
-                <main className="flex flex-1 flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-40">
+                <main className="flex flex-1 flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-80">
                     <Card className="w-full max-w-lg shadow-xl">
                         <CardHeader className="text-center">
                             <CardTitle className="text-2xl text-primary font-bold">শিক্ষার্থী প্রোফাইল অনুসন্ধান</CardTitle>

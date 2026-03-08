@@ -961,7 +961,7 @@ export default function SettingsPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-indigo-50">
             <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-40">
+            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
                 <Card className="border-2 border-primary/10 shadow-xl">
                     <CardHeader className="bg-white/50">
                         <CardTitle className="text-3xl font-black">সেটিংস</CardTitle>
