@@ -196,7 +196,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-16 md:h-20 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
+      <header className="sticky top-0 z-50 flex h-16 md:h-24 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
         <div className="flex items-center gap-2">
           {user && (
             <>
@@ -360,12 +360,12 @@ export function Header() {
           )}
         </div>
 
-        <Link href="/" className="flex items-center gap-2 md:gap-4">
+        <Link href="/" className="flex items-center gap-3 md:gap-6">
             {isSchoolInfoLoading ? (
-              <Skeleton className="h-10 w-10 md:h-14 md:w-14 rounded-full" />
+              <Skeleton className="h-10 w-10 md:h-16 md:w-16 rounded-full" />
             ) : (
               schoolInfo.logoUrl && (
-                <div className="relative h-10 w-10 md:h-14 md:w-14">
+                <div className="relative h-10 w-10 md:h-[68px] md:w-[68px]">
                   <Image 
                     src={schoolInfo.logoUrl} 
                     alt="School Logo" 
@@ -375,8 +375,8 @@ export function Header() {
                 </div>
               )
             )}
-            <h1 className="text-[23px] md:text-[35px] font-black whitespace-nowrap drop-shadow-md">
-              {isSchoolInfoLoading ? <Skeleton className="h-7 w-48 md:h-10 md:w-72" /> : schoolInfo.name}
+            <h1 className="text-[23px] md:text-[42px] font-black whitespace-nowrap drop-shadow-md tracking-tight">
+              {isSchoolInfoLoading ? <Skeleton className="h-7 w-48 md:h-12 md:w-80" /> : schoolInfo.name}
             </h1>
         </Link>
         
