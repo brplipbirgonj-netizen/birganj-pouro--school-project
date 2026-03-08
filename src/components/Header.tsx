@@ -196,7 +196,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
+      <header className="sticky top-0 z-50 flex h-16 md:h-20 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
         <div className="flex items-center gap-2">
           {user && (
             <>
@@ -360,12 +360,23 @@ export function Header() {
           )}
         </div>
 
-        <Link href="/" className="flex items-center gap-2">
-            {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : (schoolInfo.logoUrl && (
-              <Image src={schoolInfo.logoUrl} alt="School Logo" width={40} height={40} className="rounded-full" />
-            ))}
-            <h1 className="text-[23px] font-black whitespace-nowrap drop-shadow-md">
-              {isSchoolInfoLoading ? <Skeleton className="h-7 w-48" /> : schoolInfo.name}
+        <Link href="/" className="flex items-center gap-2 md:gap-4">
+            {isSchoolInfoLoading ? (
+              <Skeleton className="h-10 w-10 md:h-14 md:w-14 rounded-full" />
+            ) : (
+              schoolInfo.logoUrl && (
+                <div className="relative h-10 w-10 md:h-14 md:w-14">
+                  <Image 
+                    src={schoolInfo.logoUrl} 
+                    alt="School Logo" 
+                    fill
+                    className="rounded-full object-contain" 
+                  />
+                </div>
+              )
+            )}
+            <h1 className="text-[23px] md:text-[35px] font-black whitespace-nowrap drop-shadow-md">
+              {isSchoolInfoLoading ? <Skeleton className="h-7 w-48 md:h-10 md:w-72" /> : schoolInfo.name}
             </h1>
         </Link>
         
@@ -463,7 +474,7 @@ export function Header() {
           {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar className="h-10 w-10 border-2 border-white cursor-pointer">
+                <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white cursor-pointer">
                   <AvatarImage src={displayPhoto || undefined} alt={user.email || 'user'} />
                   <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                 </Avatar>
