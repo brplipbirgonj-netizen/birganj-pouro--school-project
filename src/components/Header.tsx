@@ -507,7 +507,7 @@ export function Header() {
       </header>
 
       {user && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary flex items-center justify-around px-1 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)] w-full overflow-hidden">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary flex items-center justify-around px-1 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)] w-full">
           {bottomNavItems.map((item, index) => {
             const isActive = item.href ? pathname === item.href : false;
             if (!hasPermission(item.permission)) return null;
