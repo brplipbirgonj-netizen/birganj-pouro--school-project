@@ -190,6 +190,11 @@ export function Header() {
     { label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines' },
   ];
 
+  const permittedBottomNavItems = useMemo(() => 
+    bottomNavItems.filter(item => hasPermission(item.permission)), 
+    [user, bottomNavItems, hasPermission]
+  );
+
   if (!isClient) return <header className="h-16 bg-primary" />;
 
   return (
@@ -507,20 +512,28 @@ export function Header() {
       </header>
 
       {user && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary flex items-center justify-around px-1 no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)] w-full">
-          {bottomNavItems.map((item, index) => {
+        <nav 
+          className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.1)] w-full overflow-visible"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${permittedBottomNavItems.length}, minmax(0, 1fr))`,
+            alignItems: 'center'
+          }}
+        >
+          {permittedBottomNavItems.map((item, index) => {
             const isActive = item.href ? pathname === item.href : false;
-            if (!hasPermission(item.permission)) return null;
             
             if (item.type === 'search') {
                 return (
                     <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
                         <DialogTrigger asChild>
-                            <button className="relative -mt-4 mb-auto flex items-center justify-center shrink-0">
-                                <div className="h-14 w-14 sm:h-16 sm:w-16 bg-white rounded-full border-4 border-primary shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
-                                    <Search className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-                                </div>
-                            </button>
+                            <div className="flex justify-center items-center h-full relative">
+                                <button className="absolute -top-6 flex items-center justify-center shrink-0 z-10">
+                                    <div className="h-14 w-14 sm:h-16 sm:w-16 bg-white rounded-full border-4 border-primary shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+                                        <Search className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
+                                    </div>
+                                </button>
+                            </div>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[425px]">
                             <DialogHeader>
@@ -574,22 +587,22 @@ export function Header() {
                     <button 
                         key="back-item" 
                         onClick={() => router.back()} 
-                        className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors text-primary-foreground/70 hover:text-white min-w-0"
+                        className="flex flex-col items-center justify-center gap-0.5 transition-colors text-primary-foreground/70 hover:text-white min-w-0 h-full w-full"
                     >
-                        <item.icon className="h-5 w-5 shrink-0" />
-                        <span className="text-[9px] sm:text-[10px] font-bold uppercase truncate w-full text-center">{item.label}</span>
+                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                        <span className="text-[7px] sm:text-[9px] font-bold uppercase truncate px-0.5">{item.label}</span>
                     </button>
                 )
             }
 
             return (
-              <Link key={item.href || index} href={item.href!} className="flex-1 min-w-0">
+              <Link key={item.href || index} href={item.href!} className="h-full w-full">
                 <div className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-colors py-1",
+                  "flex flex-col items-center justify-center gap-0.5 transition-colors h-full w-full",
                   isActive ? "text-white" : "text-primary-foreground/70 hover:text-white"
                 )}>
-                  <item.icon className={cn("h-5 w-5 shrink-0", isActive && "scale-110")} />
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase truncate w-full text-center">
+                  <item.icon className={cn("h-4 w-4 sm:h-5 sm:w-5 shrink-0", isActive && "scale-110")} />
+                  <span className="text-[7px] sm:text-[9px] font-bold uppercase truncate px-0.5">
                     {item.label}
                   </span>
                 </div>
