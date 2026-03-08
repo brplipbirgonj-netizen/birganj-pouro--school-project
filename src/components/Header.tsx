@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -528,7 +529,7 @@ export function Header() {
                     <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
                         <DialogTrigger asChild>
                             <div className="flex justify-center items-center h-full relative">
-                                <button className="absolute -top-4 flex items-center justify-center shrink-0 z-10">
+                                <button className="absolute -top-3 flex items-center justify-center shrink-0 z-10 outline-none focus:outline-none">
                                     <div className="h-14 w-14 sm:h-16 sm:w-16 bg-white rounded-full border-4 border-primary shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                                         <Search className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                                     </div>
@@ -587,7 +588,7 @@ export function Header() {
                     <button 
                         key="back-item" 
                         onClick={() => router.back()} 
-                        className="flex flex-col items-center justify-center gap-0.5 transition-colors text-primary-foreground/70 hover:text-white min-w-0 h-full w-full px-0"
+                        className="flex flex-col items-center justify-center gap-0.5 transition-colors text-primary-foreground/70 hover:text-white min-w-0 h-full w-full px-0 select-none"
                     >
                         <item.icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
                         <span className="text-[7px] sm:text-[9px] font-bold uppercase truncate w-full text-center px-0.5">{item.label}</span>
@@ -596,7 +597,7 @@ export function Header() {
             }
 
             return (
-              <Link key={item.href || index} href={item.href!} className="h-full w-full px-0">
+              <Link key={item.href || index} href={item.href!} className="h-full w-full px-0 select-none">
                 <div className={cn(
                   "flex flex-col items-center justify-center gap-0.5 transition-colors h-full w-full",
                   isActive ? "text-white" : "text-primary-foreground/70 hover:text-white"
