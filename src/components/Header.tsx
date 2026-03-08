@@ -375,7 +375,7 @@ export function Header() {
                 </div>
               )
             )}
-            <h1 className="text-[28px] md:text-[50px] font-black whitespace-nowrap tracking-tight [text-shadow:2px_2px_4px_rgba(0,0,0,0.8)]">
+            <h1 className="text-[28px] md:text-[50px] font-black whitespace-nowrap tracking-tight [text-shadow:2px_2px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,1px_1px_0px_#000,3px_3px_8px_rgba(0,0,0,0.8)]">
               {isSchoolInfoLoading ? <Skeleton className="h-7 w-48 md:h-12 md:w-80" /> : schoolInfo.name}
             </h1>
         </Link>
