@@ -144,7 +144,7 @@ function StudentListContent() {
     <>
     <div className="flex min-h-screen w-full flex-col bg-rose-100">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-24">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-32">
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -153,7 +153,7 @@ function StudentListContent() {
                 <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
               </div>
               {canManageStudents && (
-                <Link href="/add-student">
+                <Link href="/add-student" className="no-print">
                     <Button>নতুন শিক্ষার্থী যোগ করুন</Button>
                 </Link>
               )}
@@ -161,7 +161,7 @@ function StudentListContent() {
           </CardHeader>
           <CardContent>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-5">
+                  <TabsList className="grid w-full grid-cols-5 no-print">
                     {classes.map((className) => (
                       <TabsTrigger key={className} value={className}>
                         {classNamesMap[className]} শ্রেণি
@@ -170,11 +170,11 @@ function StudentListContent() {
                   </TabsList>
                   {classes.map((className) => (
                     <TabsContent key={className} value={className}>
-                      <Card>
+                      <Card className="border-none shadow-none">
                         <CardContent className="p-0">
-                          <div className="overflow-x-auto">
+                          <div className="table-container">
                             <Table>
-                              <TableHeader>
+                              <TableHeader className="bg-muted/50 sticky top-0 z-20">
                                 <TableRow>
                                   <TableHead>ক্রমিক নং</TableHead>
                                   <TableHead>ছবি</TableHead>
@@ -183,7 +183,7 @@ function StudentListContent() {
                                   <TableHead>শিক্ষার্থীর নাম</TableHead>
                                   <TableHead>পিতার নাম</TableHead>
                                   <TableHead>মোবাইল নম্বর</TableHead>
-                                  <TableHead className="text-right">কার্যক্রম</TableHead>
+                                  <TableHead className="text-right no-print">কার্যক্রম</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -229,7 +229,7 @@ function StudentListContent() {
                                         {student.studentMobile && <span>{student.studentMobile}</span>}
                                       </div>
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right no-print">
                                       <div className="flex justify-end gap-2">
                                         <Button variant="outline" size="icon" onClick={() => setStudentToView(student)}>
                                           <Eye className="h-4 w-4" />

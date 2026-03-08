@@ -53,6 +53,26 @@
     @apply bg-background text-foreground;
   }
 
+  /* Custom Scrollbar for Desktop */
+  @media (min-width: 768px) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2463eb;
+      border-radius: 5px;
+      border: 2px solid #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #1d4ed8;
+    }
+  }
+
   @media print {
     html, body {
       background: white !important;
@@ -101,5 +121,17 @@
       display: flex !important;
       visibility: visible !important;
     }
+  }
+}
+
+/* Custom Table Container for Desktop Scroll visibility */
+.table-container {
+  @apply overflow-auto border rounded-md shadow-inner bg-white;
+}
+
+@media (min-width: 1024px) {
+  .table-container {
+    max-height: calc(100vh - 350px);
+    scrollbar-gutter: stable;
   }
 }
