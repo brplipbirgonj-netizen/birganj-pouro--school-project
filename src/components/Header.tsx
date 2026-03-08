@@ -200,7 +200,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-16 md:h-28 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
+      <header className="sticky top-0 z-50 flex h-16 md:h-32 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
         <div className="flex items-center gap-2">
           {user && (
             <>
@@ -381,7 +381,7 @@ export function Header() {
                 </div>
               )
             )}
-            <h1 className="text-xl sm:text-2xl md:text-[50px] font-black whitespace-nowrap tracking-tight md:[text-shadow:2px_2px_0px_#000,-2px_-2px_0px_#000,2px_-2px_0px_#000,-2px_2px_0px_#000,4px_4px_10px_rgba(0,0,0,0.5)] [text-shadow:1px_1px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] overflow-hidden text-ellipsis md:py-2">
+            <h1 className="text-xl sm:text-2xl md:text-[50px] font-black whitespace-nowrap tracking-tight md:[text-shadow:2px_2px_0px_#000,-2px_-2px_0px_#000,2px_-2px_0px_#000,-2px_2px_0px_#000,4px_4px_10px_rgba(0,0,0,0.5)] [text-shadow:1px_1px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] md:py-4 leading-normal">
               {isSchoolInfoLoading ? <Skeleton className="h-7 w-48 md:h-12 md:w-80" /> : schoolInfo.name}
             </h1>
         </Link>
