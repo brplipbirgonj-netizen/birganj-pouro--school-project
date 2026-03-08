@@ -214,7 +214,9 @@ export function Header() {
                       className="flex items-center gap-2 text-lg font-semibold text-foreground"
                     >
                       {isSchoolInfoLoading ? <Skeleton className="h-9 w-9 rounded-full" /> : (schoolInfo.logoUrl && (
-                        <Image src={schoolInfo.logoUrl} alt="School Logo" width={36} height={36} className="rounded-full" />
+                        <div className="relative h-9 w-9">
+                          <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="rounded-full object-contain" />
+                        </div>
                       ))}
                       <span className="">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
                     </Link>
@@ -373,7 +375,7 @@ export function Header() {
                 </div>
               )
             )}
-            <h1 className="text-[23px] md:text-[42px] font-black whitespace-nowrap drop-shadow-md tracking-tight">
+            <h1 className="text-[28px] md:text-[50px] font-black whitespace-nowrap tracking-tight [text-shadow:2px_2px_4px_rgba(0,0,0,0.8)]">
               {isSchoolInfoLoading ? <Skeleton className="h-7 w-48 md:h-12 md:w-80" /> : schoolInfo.name}
             </h1>
         </Link>
