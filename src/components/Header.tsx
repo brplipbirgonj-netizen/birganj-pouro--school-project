@@ -97,7 +97,7 @@ export function Header() {
 
     let unsubscribe: (() => void) | undefined;
     
-    if (user.role === 'teacher' && user.email) {
+    if (user.role === 'teacher' && user.role === 'teacher' && user.email) {
       const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase()), limit(1));
       unsubscribe = onSnapshot(staffQuery, (snapshot) => {
         if (!snapshot.empty) {
@@ -126,8 +126,6 @@ export function Header() {
   const handleLogout = async () => {
     try {
       await signOut();
-      // Use window.location instead of router.push to force a clean state
-      // and clear all persistent Firebase listeners/cache
       window.location.href = '/login';
     } catch (error) {
       console.error("Logout error:", error);
@@ -215,8 +213,8 @@ export function Header() {
                       href="/"
                       className="flex items-center gap-2 text-lg font-semibold text-foreground"
                     >
-                      {isSchoolInfoLoading ? <Skeleton className="h-8 w-8 rounded-full" /> : (schoolInfo.logoUrl && (
-                        <Image src={schoolInfo.logoUrl} alt="School Logo" width={32} height={32} className="rounded-full" />
+                      {isSchoolInfoLoading ? <Skeleton className="h-9 w-9 rounded-full" /> : (schoolInfo.logoUrl && (
+                        <Image src={schoolInfo.logoUrl} alt="School Logo" width={36} height={36} className="rounded-full" />
                       ))}
                       <span className="">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
                     </Link>
@@ -362,10 +360,10 @@ export function Header() {
 
         <Link href="/" className="flex items-center gap-3 md:gap-6">
             {isSchoolInfoLoading ? (
-              <Skeleton className="h-10 w-10 md:h-16 md:w-16 rounded-full" />
+              <Skeleton className="h-11 w-11 md:h-[75px] md:w-[75px] rounded-full" />
             ) : (
               schoolInfo.logoUrl && (
-                <div className="relative h-10 w-10 md:h-[68px] md:w-[68px]">
+                <div className="relative h-11 w-11 md:h-[75px] md:w-[75px]">
                   <Image 
                     src={schoolInfo.logoUrl} 
                     alt="School Logo" 
@@ -392,7 +390,7 @@ export function Header() {
                           <div>
                               <DialogTitle className="text-xl">{selectedStudent?.studentNameBn}</DialogTitle>
                               <DialogDescription>
-                                  রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | শ্রেণি: {classNamesMap[selectedStudent?.className || ''] || selectedStudent?.className} | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
+                                  রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | {classNamesMap[selectedStudent?.className || ''] || selectedStudent?.className} শ্রেণি | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
                               </DialogDescription>
                           </div>
                       </div>
@@ -552,7 +550,7 @@ export function Header() {
                                                         </Avatar>
                                                         <div>
                                                             <p className="text-sm font-bold">{s.studentNameBn}</p>
-                                                            <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | শ্রেণি: {classNamesMap[s.className] || s.className}</p>
+                                                            <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | {classNamesMap[s.className] || s.className} শ্রেণি</p>
                                                         </div>
                                                     </div>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
