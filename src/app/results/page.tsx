@@ -14,7 +14,7 @@ import { Student, NewStudentData, addStudent, studentFromDoc } from '@/lib/stude
 import { getSubjects, Subject as SubjectType } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
-import Link from 'link';
+import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2, FileUp, Download, FilePen, BookOpen } from 'lucide-react';
 import * as XLSX from 'xlsx';
