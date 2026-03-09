@@ -22,6 +22,17 @@ const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Ei
 const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce' };
 const religionMap: { [key: string]: string } = { 'islam': 'Islam', 'hinduism': 'Hinduism', 'buddhism': 'Buddhism', 'christianity': 'Christianity', 'other': 'Other' };
 
+const examNameEnglishMap: { [key: string]: string } = {
+    'অর্ধ-বার্ষিক পরীক্ষা': 'Half-Yearly Examination',
+    'বার্ষিক পরীক্ষা': 'Annual Examination',
+    'প্রাক-নির্বাচনী পরীক্ষা': 'Pre-Test Examination',
+    'নির্বাচনী পরীক্ষা': 'Test Examination',
+    'Half-Yearly Examination': 'Half-Yearly Examination',
+    'Annual Examination': 'Annual Examination',
+    'Pre-Test Examination': 'Pre-Test Examination',
+    'Test Examination': 'Test Examination'
+};
+
 function MarksheetContent() {
     const params = useParams();
     const searchParams = useSearchParams();
@@ -37,7 +48,8 @@ function MarksheetContent() {
     const [isLoading, setIsLoading] = useState(true);
 
     const academicYear = searchParams.get('academicYear') || new Date().getFullYear().toString();
-    const examName = searchParams.get('examName') || 'বার্ষিক পরীক্ষা';
+    const rawExamName = searchParams.get('examName') || 'বার্ষিক পরীক্ষা';
+    const displayExamName = examNameEnglishMap[rawExamName] || rawExamName;
 
     useEffect(() => {
       if (!db || !user) return;
@@ -88,7 +100,7 @@ function MarksheetContent() {
             const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
             
             const resultsPromises = allSubjectsForGroup
-                .map(subject => getResultsForClass(db, academicYear, examName, studentData.className, subject.name, studentData.group || undefined));
+                .map(subject => getResultsForClass(db, academicYear, rawExamName, studentData.className, subject.name, studentData.group || undefined));
             
             const resultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
             
@@ -118,7 +130,7 @@ function MarksheetContent() {
         setIsLoading(true);
         processMarks();
 
-    }, [studentId, academicYear, examName, db, user, allStudents]);
+    }, [studentId, academicYear, rawExamName, db, user, allStudents]);
 
     
     const renderMeritPosition = (position?: number) => {
@@ -130,14 +142,14 @@ function MarksheetContent() {
     }
 
     const getRemarks = (gpa: number, isPass: boolean) => {
-        if (!isPass) return "Failed. Work hard to do well in the next exam";
-        if (gpa >= 5.0) return "Congratulations! Excellent results. Keep it up";
-        if (gpa >= 4.0) return "Satisfactory performance - with a little more effort, you will reach greater heights";
-        if (gpa >= 3.5) return "Satisfactory results, further improvement is possible with more attention";
-        if (gpa >= 3.0) return "The results are satisfactory, but more attention and perseverance are needed";
-        if (gpa >= 2.0) return "Results are less than expected. It is important to increase regular diligence and focus";
-        if (gpa >= 1.0) return "The results are not as expected. Improvement is possible through regular perseverance and study";
-        return "Failed. Work hard to do well in the next exam";
+        if (!isPass) return "Work hard to do well in the next exam";
+        if (gpa >= 5.0) return "Excellent results. Keep it up!";
+        if (gpa >= 4.0) return "Satisfactory performance. Aim higher!";
+        if (gpa >= 3.5) return "Good result. Needs more focus.";
+        if (gpa >= 3.0) return "Average result. Improvement needed.";
+        if (gpa >= 2.0) return "Below average. Study hard.";
+        if (gpa >= 1.0) return "Poor performance. Needs regular study.";
+        return "Work hard to do well in the next exam";
     };
 
     const gradingScale = [
@@ -155,13 +167,17 @@ function MarksheetContent() {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-muted-foreground font-medium">মার্কশিট তৈরি হচ্ছে, দয়া করে অপেক্ষা করুন...</p>
+                <p className="text-muted-foreground font-medium">Generating marksheet, please wait...</p>
             </div>
         );
     }
 
     if (!student || !processedResult) {
-        return <div className="flex items-center justify-center min-h-screen p-4 text-center">মার্কশিটের তথ্য পাওয়া যায়নি। অনুগ্রহ করে সকল বিষয়ের নম্বর ইনপুট করা হয়েছে কি না নিশ্চিত করুন।</div>;
+        return (
+            <div className="flex items-center justify-center min-h-screen p-4 text-center">
+                Marksheet data not found. Please ensure results for all subjects are entered.
+            </div>
+        );
     }
 
     const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
@@ -209,13 +225,13 @@ function MarksheetContent() {
                         <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
                     </Link>
                     <div>
-                        <h1 className="text-xl font-bold text-primary">মার্কশিট প্রিভিউ</h1>
-                        <p className="text-sm text-muted-foreground">{student.studentNameBn}</p>
+                        <h1 className="text-xl font-bold text-primary">Marksheet Preview</h1>
+                        <p className="text-sm text-muted-foreground">{student.studentNameEn || student.studentNameBn}</p>
                     </div>
                 </div>
                 <Button onClick={() => window.print()} size="lg" className="shadow-md hover:shadow-lg transition-all">
                     <Printer className="mr-2 h-5 w-5" />
-                    প্রিন্ট করুন (A4)
+                    Print (A4)
                 </Button>
             </div>
             
@@ -228,7 +244,7 @@ function MarksheetContent() {
                 )}
                 
                 <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col">
-                    {/* Header - Refined to match image */}
+                    {/* Header */}
                     <div className="printable-header mb-4 flex justify-between items-start">
                         <div className="flex items-center gap-4">
                             {schoolInfo.logoUrl && (
@@ -241,7 +257,7 @@ function MarksheetContent() {
                                     {schoolInfo.nameEn || "BIRGANJ POURO HIGH SCHOOL"}
                                 </h1>
                                 <p className="text-sm font-bold text-gray-700">
-                                    {schoolInfo.address || "Upazila: Birganj, Post: Birganj, Zila: Dinajpur"}
+                                    {schoolInfo.address || "Birganj, Dinajpur"}
                                 </p>
                                 <div className="mt-2 inline-block bg-[#eef6ff] px-3 py-1 rounded border border-[#b3d7ff]">
                                     <p className="text-sm text-[#0056b3] font-bold">Academic Session: {academicYear}</p>
@@ -273,7 +289,7 @@ function MarksheetContent() {
 
                     <div className="text-center mb-4">
                         <h2 className="text-xl font-black underline underline-offset-8 uppercase tracking-widest text-black">
-                            {examName} Progress Report
+                            {displayExamName} Progress Report
                         </h2>
                     </div>
 
@@ -372,7 +388,7 @@ function MarksheetContent() {
                         </div>
                         <div className="mt-8 flex justify-between items-center text-[9px] text-muted-foreground italic border-t pt-2">
                             <span>Issue Date: {new Date().toLocaleDateString('en-GB')}</span>
-                            <span>Powered by: Birganj Pouro High School Management System</span>
+                            <span>Powered by: {schoolInfo.nameEn || "Birganj Pouro High School"} Management System</span>
                         </div>
                     </footer>
                 </div>
@@ -383,7 +399,7 @@ function MarksheetContent() {
 
 export default function MarksheetPage() {
     return (
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-slate-50">লোড হচ্ছে...</div>}>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-slate-50">Loading...</div>}>
             <MarksheetContent />
         </Suspense>
     );
