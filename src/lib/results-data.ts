@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -25,6 +24,7 @@ export interface StudentResult {
 export interface ClassResult {
   id?: string;
   academicYear: string;
+  examName: string;
   className: string;
   group?: string;
   subject: string;
@@ -35,9 +35,10 @@ export interface ClassResult {
 const resultsCollection = 'results';
 
 export const getDocumentId = (result: Omit<ClassResult, 'results' | 'fullMarks' | 'id'>): string => {
-    // Sanitize subject name for Firestore document ID. Allow letters and numbers from any language.
+    // Sanitize subject and exam names for Firestore document ID.
     const sanitizedSubject = result.subject.replace(/[^\p{L}\p{N}]+/gu, '-');
-    return `${result.academicYear}_${result.className}_${result.group || 'none'}_${sanitizedSubject}`;
+    const sanitizedExam = result.examName.replace(/[^\p{L}\p{N}]+/gu, '-');
+    return `${result.academicYear}_${sanitizedExam}_${result.className}_${result.group || 'none'}_${sanitizedSubject}`;
 }
 
 export const saveClassResults = async (db: Firestore, newResult: ClassResult) => {
@@ -87,12 +88,13 @@ export const saveClassResults = async (db: Firestore, newResult: ClassResult) =>
 export const getResultsForClass = async (
   db: Firestore,
   academicYear: string,
+  examName: string,
   className: string,
   subject: string,
   group?: string
 ): Promise<ClassResult | undefined> => {
     const normalizedSubject = subjectNameNormalization[subject] || subject;
-    const docId = getDocumentId({ academicYear, className, subject: normalizedSubject, group });
+    const docId = getDocumentId({ academicYear, examName, className, subject: normalizedSubject, group });
     const docRef = doc(db, resultsCollection, docId);
     try {
         const docSnap = await getDoc(docRef);
@@ -106,8 +108,11 @@ export const getResultsForClass = async (
     }
 };
 
-export const getAllResults = async (db: Firestore, academicYear: string): Promise<ClassResult[]> => {
-    const q = query(collection(db, resultsCollection), where("academicYear", "==", academicYear));
+export const getAllResults = async (db: Firestore, academicYear: string, examName?: string): Promise<ClassResult[]> => {
+    let q = query(collection(db, resultsCollection), where("academicYear", "==", academicYear));
+    if (examName) {
+        q = query(q, where("examName", "==", examName));
+    }
     try {
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClassResult));

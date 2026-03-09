@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
+import { getExams, Exam } from '@/lib/exam-data';
 
 
 type Marks = {
@@ -43,6 +44,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { user, hasPermission } = useAuth();
     const canManageResults = hasPermission('manage:results');
     
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
     const [group, setGroup] = useState('');
     const [subject, setSubject] = useState('');
@@ -61,11 +64,16 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
     const groupMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'সাধারণ': 'সাধারণ' };
 
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
     const updateSavedResults = useCallback(async () => {
         if (!db || !user) return;
-        const allResults = await getAllResults(db, selectedYear);
+        const allResults = await getAllResults(db, selectedYear, examName || undefined);
         setSavedResults(allResults);
-    }, [db, selectedYear, user]);
+    }, [db, selectedYear, user, examName]);
     
     useEffect(() => {
         updateSavedResults();
@@ -141,8 +149,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     }, [subject, availableSubjects, studentsForClass.length]);
     
     const handleLoadStudents = async () => {
-        if (!className || !subject || !db || !user) {
-            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' });
+        if (!examName || !className || !subject || !db || !user) {
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'অনুগ্রহ করে পরীক্ষা, শ্রেণি ও বিষয় নির্বাচন করুন।' });
             return;
         }
 
@@ -154,7 +162,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         ).sort((a,b) => a.roll - b.roll);
         setStudentsForClass(filteredStudents);
 
-        const existingResults = await getResultsForClass(db, selectedYear, className, subject, group);
+        const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, group);
         const initialMarks = new Map<string, Marks>();
 
         if (existingResults) {
@@ -204,6 +212,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         saveClassResults(db, {
             academicYear: selectedYear,
+            examName,
             className,
             group: group || undefined,
             subject,
@@ -228,6 +237,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     }
 
     const handleEditClick = (resultToEdit: ClassResult) => {
+        setExamName(resultToEdit.examName);
         setClassName(resultToEdit.className);
         setGroup(resultToEdit.group || '');
         setFullMarks(resultToEdit.fullMarks);
@@ -250,10 +260,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     };
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!db || !user || !className || !subject) {
+        if (!db || !user || !className || !subject || !examName) {
             toast({
                 variant: "destructive",
-                title: "প্রথমে শ্রেণি ও বিষয় নির্বাচন করুন",
+                title: "প্রথমে পরীক্ষা, শ্রেণি ও বিষয় নির্বাচন করুন",
             });
             return;
         }
@@ -362,7 +372,17 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end p-4 border rounded-lg">
+                <div className="space-y-2">
+                    <Label>পরীক্ষা</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                        <SelectContent>
+                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+
                 <div className="space-y-2">
                     <Label htmlFor="class">শ্রেণি</Label>
                     <Select value={className} onValueChange={(value) => { setClassName(value); setGroup(''); setSubject(''); }}>
@@ -391,7 +411,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 )}
                 
-                <div className="space-y-2 lg:col-start-3">
+                <div className="space-y-2">
                     <Label htmlFor="subject">বিষয়</Label>
                     <Select value={subject} onValueChange={setSubject} disabled={!className || (showGroupSelector && !group)}>
                         <SelectTrigger id="subject"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger>
@@ -411,7 +431,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                     />
                 </div>
                 
-                <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject} className="w-full">
+                <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject || !examName} className="w-full">
                     {isLoadingStudents ? 'লোড হচ্ছে...' : 'শিক্ষার্থী লোড করুন'}
                 </Button>
             </div>
@@ -489,89 +509,83 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
             {canManageResults && savedResults.length > 0 && (
                 <div className="space-y-4">
-                    <h3 className="font-semibold text-lg border-b pb-2">সংরক্ষিত ফলাফল (শিক্ষাবর্ষ {selectedYear.toLocaleString('bn-BD')})</h3>
-                    {savedResults.length === 0 ? (
-                        <div className="border rounded-md text-center text-muted-foreground py-8">
-                            এই শিক্ষাবর্ষে কোনো ফলাফল সেভ করা হয়নি।
-                        </div>
-                    ) : (
-                        <Accordion type="multiple" className="w-full">
-                            {sortedClassKeys.map(classNameKey => (
-                                <AccordionItem value={classNameKey} key={classNameKey}>
-                                    <AccordionTrigger>শ্রেণি {classNamesMap[classNameKey] || classNameKey}</AccordionTrigger>
-                                    <AccordionContent>
-                                        {(() => {
-                                            const resultsByGroup: Record<string, ClassResult[]> = (groupedResults[classNameKey] || []).reduce((acc, res) => {
-                                                const groupKey = res.group || 'সাধারণ';
-                                                if (!acc[groupKey]) {
-                                                    acc[groupKey] = [];
-                                                }
-                                                acc[groupKey].push(res);
-                                                return acc;
-                                            }, {} as Record<string, ClassResult[]>);
+                    <h3 className="font-semibold text-lg border-b pb-2">সংরক্ষিত ফলাফল ({examName || 'সকল পরীক্ষা'}, শিক্ষাবর্ষ {selectedYear.toLocaleString('bn-BD')})</h3>
+                    <Accordion type="multiple" className="w-full">
+                        {sortedClassKeys.map(classNameKey => (
+                            <AccordionItem value={classNameKey} key={classNameKey}>
+                                <AccordionTrigger>শ্রেণি {classNamesMap[classNameKey] || classNameKey}</AccordionTrigger>
+                                <AccordionContent>
+                                    {(() => {
+                                        const resultsByGroup: Record<string, ClassResult[]> = (groupedResults[classNameKey] || []).reduce((acc, res) => {
+                                            const groupKey = res.group || 'সাধারণ';
+                                            if (!acc[groupKey]) {
+                                                acc[groupKey] = [];
+                                            }
+                                            acc[groupKey].push(res);
+                                            return acc;
+                                        }, {} as Record<string, ClassResult[]>);
 
-                                            return Object.entries(resultsByGroup).map(([groupKey, results]) => (
-                                                <div key={groupKey} className="mb-6 last:mb-0">
-                                                    {(classNameKey === '9' || classNameKey === '10') && (
-                                                        <h4 className="font-semibold text-md mb-2 pl-1">{groupMap[groupKey] || 'সাধারণ শাখা'}</h4>
-                                                    )}
-                                                    <div className="border rounded-md overflow-x-auto">
-                                                        <Table>
-                                                            <TableHeader>
-                                                                <TableRow>
-                                                                    <TableHead>ক্রমিক নং</TableHead>
-                                                                    <TableHead>বিষয়</TableHead>
-                                                                    <TableHead>পূর্ণমান</TableHead>
-                                                                    <TableHead className="text-right">কার্যক্রম</TableHead>
+                                        return Object.entries(resultsByGroup).map(([groupKey, results]) => (
+                                            <div key={groupKey} className="mb-6 last:mb-0">
+                                                {(classNameKey === '9' || classNameKey === '10') && (
+                                                    <h4 className="font-semibold text-md mb-2 pl-1">{groupMap[groupKey] || 'সাধারণ শাখা'}</h4>
+                                                )}
+                                                <div className="border rounded-md overflow-x-auto">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>ক্রমিক নং</TableHead>
+                                                                <TableHead>বিষয়</TableHead>
+                                                                <TableHead>পূর্ণমান</TableHead>
+                                                                <TableHead className="text-right">কার্যক্রম</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {results.map((res, i) => (
+                                                                <TableRow key={`${res.id}-${i}`}>
+                                                                    <TableCell>{(i + 1).toLocaleString('bn-BD')}</TableCell>
+                                                                    <TableCell>{res.subject}</TableCell>
+                                                                    <TableCell>{res.fullMarks.toLocaleString('bn-BD')}</TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        <div className="flex justify-end gap-2">
+                                                                            <Button variant="outline" size="icon" onClick={() => handleEditClick(res)}>
+                                                                                <FilePen className="h-4 w-4" />
+                                                                            </Button>
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <Button variant="destructive" size="icon">
+                                                                                        <Trash2 className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            এই বিষয়ের ফলাফল স্থায়ীভাবে মুছে যাবে।
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={() => handleDeleteResult(res)}>
+                                                                                            মুছে ফেলুন
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        </div>
+                                                                    </TableCell>
                                                                 </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {results.map((res, i) => (
-                                                                    <TableRow key={`${res.id}-${i}`}>
-                                                                        <TableCell>{(i + 1).toLocaleString('bn-BD')}</TableCell>
-                                                                        <TableCell>{res.subject}</TableCell>
-                                                                        <TableCell>{res.fullMarks.toLocaleString('bn-BD')}</TableCell>
-                                                                        <TableCell className="text-right">
-                                                                            <div className="flex justify-end gap-2">
-                                                                                <Button variant="outline" size="icon" onClick={() => handleEditClick(res)}>
-                                                                                    <FilePen className="h-4 w-4" />
-                                                                                </Button>
-                                                                                <AlertDialog>
-                                                                                    <AlertDialogTrigger asChild>
-                                                                                        <Button variant="destructive" size="icon">
-                                                                                            <Trash2 className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                    </AlertDialogTrigger>
-                                                                                    <AlertDialogContent>
-                                                                                        <AlertDialogHeader>
-                                                                                            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                                            <AlertDialogDescription>
-                                                                                                এই বিষয়ের ফলাফল স্থায়ীভাবে মুছে যাবে।
-                                                                                            </AlertDialogDescription>
-                                                                                        </AlertDialogHeader>
-                                                                                        <AlertDialogFooter>
-                                                                                            <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                                            <AlertDialogAction onClick={() => handleDeleteResult(res)}>
-                                                                                                মুছে ফেলুন
-                                                                                            </AlertDialogAction>
-                                                                                        </AlertDialogFooter>
-                                                                                    </AlertDialogContent>
-                                                                                </AlertDialog>
-                                                                            </div>
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                ))}
-                                                            </TableBody>
-                                                        </Table>
-                                                    </div>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
                                                 </div>
-                                            ));
-                                        })()}
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
-                    )}
+                                            </div>
+                                        ));
+                                    })()}
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
                 </div>
             )}
 
@@ -586,6 +600,8 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { user, hasPermission } = useAuth();
     const canPromote = hasPermission('promote:students');
     
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
     const [group, setGroup] = useState('');
     
@@ -593,11 +609,16 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [subjects, setSubjects] = useState<SubjectType[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
     const handleViewResults = async () => {
-        if (!className || !db || !user) {
+        if (!examName || !className || !db || !user) {
             toast({
                 variant: 'destructive',
-                title: 'শ্রেণি নির্বাচন করুন',
+                title: 'পরীক্ষা ও শ্রেণি নির্বাচন করুন',
             });
             return;
         }
@@ -622,7 +643,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         setSubjects(allSubjectsForGroup);
         
         const resultsBySubjectPromises = allSubjectsForGroup.map(subject => {
-            return getResultsForClass(db, selectedYear, className, subject.name, group);
+            return getResultsForClass(db, selectedYear, examName, className, subject.name, group);
         });
         const resultsBySubject = (await Promise.all(resultsBySubjectPromises)).filter((result): result is ClassResult => result !== undefined);
 
@@ -763,7 +784,17 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     return (
          <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg w-full">
+                    <div className="space-y-2">
+                        <Label>পরীক্ষা</Label>
+                        <Select value={examName} onValueChange={setExamName}>
+                            <SelectTrigger><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                            <SelectContent>
+                                {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="class-sheet">শ্রেণি</Label>
                         <Select value={className} onValueChange={c => { setClassName(c); setGroup(''); }}>
@@ -792,7 +823,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </div>
                     )}
                     
-                    <Button onClick={handleViewResults} disabled={isLoading || (showGroupSelector && !group)} className={cn("w-full", showGroupSelector ? "lg:col-span-2" : "lg:col-span-3")}>
+                    <Button onClick={handleViewResults} disabled={isLoading || !examName || !className || (showGroupSelector && !group)} className={cn("w-full", showGroupSelector ? "lg:col-span-2" : "lg:col-span-3")}>
                         {isLoading ? 'লোড হচ্ছে...' : 'ফলাফল দেখুন'}
                     </Button>
                 </div>
@@ -871,7 +902,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         {res.isPass ? renderMeritPosition(res.meritPosition) : `ফেল (${res.failedSubjectsCount.toLocaleString('bn-BD')})`}
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&className=${className}&group=${group || ''}&optionalSubject=${res.student.optionalSubject || ''}`} target="_blank">
+                                        <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}&className=${className}&group=${group || ''}&optionalSubject=${res.student.optionalSubject || ''}`} target="_blank">
                                             <Button variant="outline" size="icon">
                                                 <BookOpen className="h-4 w-4" />
                                             </Button>
@@ -894,6 +925,8 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { user, hasPermission } = useAuth();
     const canPromote = hasPermission('promote:students');
 
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
     const [group, setGroup] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -902,9 +935,14 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const showGroupSelector = className === '9' || className === '10';
 
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
     const handleViewFailedStudents = useCallback(async () => {
-        if (!className || !db || !user) {
-            toast({ variant: 'destructive', title: 'শ্রেণি নির্বাচন করুন' });
+        if (!examName || !className || !db || !user) {
+            toast({ variant: 'destructive', title: 'পরীক্ষা ও শ্রেণি নির্বাচন করুন' });
             return;
         }
         if (showGroupSelector && !group) {
@@ -929,7 +967,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         const allSubjectsForGroup = getSubjects(className, group).filter(s => s.isExamSubject !== false);
         const resultsBySubjectPromises = allSubjectsForGroup.map(subject =>
-            getResultsForClass(db, selectedYear, className, subject.name, group)
+            getResultsForClass(db, selectedYear, examName, className, subject.name, group)
         );
         const resultsBySubject = (await Promise.all(resultsBySubjectPromises)).filter((result): result is ClassResult => result !== undefined);
 
@@ -938,7 +976,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setFailedStudents(failed);
         setSelectedStudentIds(new Set());
         setIsLoading(false);
-    }, [className, group, db, user, allStudents, selectedYear, toast, showGroupSelector]);
+    }, [examName, className, group, db, user, allStudents, selectedYear, toast, showGroupSelector]);
 
     const handleToggleStudent = (studentId: string) => {
         const newSelection = new Set(selectedStudentIds);
@@ -1051,7 +1089,16 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg w-full">
+                <div className="space-y-2">
+                    <Label>পরীক্ষা</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                        <SelectContent>
+                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="class-special-promo">শ্রেণি</Label>
                     <Select value={className} onValueChange={c => { setClassName(c); setGroup(''); setFailedStudents([]); }}>
@@ -1078,7 +1125,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </Select>
                     </div>
                 )}
-                <Button onClick={handleViewFailedStudents} disabled={isLoading || !className || (showGroupSelector && !group)} className={cn("w-full", showGroupSelector ? "lg:col-span-2" : "lg:col-span-3")}>
+                <Button onClick={handleViewFailedStudents} disabled={isLoading || !examName || !className || (showGroupSelector && !group)} className={cn("w-full", showGroupSelector ? "lg:col-span-2" : "lg:col-span-2")}>
                     {isLoading ? 'লোড হচ্ছে...' : 'ফেল করা শিক্ষার্থী দেখুন'}
                 </Button>
             </div>
@@ -1159,10 +1206,17 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { user } = useAuth();
     
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
     const [group, setGroup] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
 
     const handleDownloadSample = () => {
         if (!className) {
@@ -1213,10 +1267,10 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
     };
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!db || !user || !className) {
+        if (!db || !user || !className || !examName) {
             toast({
                 variant: "destructive",
-                title: "প্রথমে শ্রেণি নির্বাচন করুন",
+                title: "প্রথমে পরীক্ষা ও শ্রেণি নির্বাচন করুন",
             });
             return;
         }
@@ -1286,6 +1340,7 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                         const { getDocumentId } = await import('@/lib/results-data');
                         const docId = getDocumentId({
                             academicYear: selectedYear,
+                            examName,
                             className: student.className,
                             subject: subjectName,
                             group: student.group
@@ -1294,6 +1349,7 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                         if (!resultsToSave.has(docId)) {
                             resultsToSave.set(docId, {
                                 academicYear: selectedYear,
+                                examName,
                                 className: student.className,
                                 group: student.group,
                                 subject: subjectName,
@@ -1333,7 +1389,7 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                 }
 
                 const promises = subjectsToUpdate.map(async (newClassResult) => {
-                    const existingResult = await getResultsForClass(db, newClassResult.academicYear, newClassResult.className, newClassResult.subject, newClassResult.group);
+                    const existingResult = await getResultsForClass(db, newClassResult.academicYear, newClassResult.examName, newClassResult.className, newClassResult.subject, newClassResult.group);
                     
                     if (existingResult) {
                         const studentResultsMap = new Map(existingResult.results.map(r => [r.studentId, r]));
@@ -1372,7 +1428,17 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
     const showGroupSelector = className === '9' || className === '10';
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg">
+            <div className="space-y-2">
+                <Label>পরীক্ষা</Label>
+                <Select value={examName} onValueChange={setExamName}>
+                    <SelectTrigger><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                    <SelectContent>
+                        {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+
             <div className="space-y-2">
                 <Label htmlFor="class-upload">শ্রেণি</Label>
                 <Select value={className} onValueChange={setClassName}>
@@ -1400,14 +1466,12 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </Select>
             </div>
             
-            <div className="hidden lg:block"></div>
-
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:col-span-2">
                 <Button variant="outline" onClick={handleDownloadSample} className="w-full">
                     <Download className="mr-2 h-4 w-4" />
                     নমুনা ফাইল
                 </Button>
-                <Button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="w-full">
+                <Button onClick={() => fileInputRef.current?.click()} disabled={isLoading || !examName} className="w-full">
                     <FileUp className="mr-2 h-4 w-4" />
                     {isLoading ? 'আপলোড হচ্ছে...' : 'ফাইল আপলোড করুন'}
                 </Button>

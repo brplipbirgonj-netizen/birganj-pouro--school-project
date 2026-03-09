@@ -37,6 +37,7 @@ function MarksheetContent() {
     const [isLoading, setIsLoading] = useState(true);
 
     const academicYear = searchParams.get('academicYear') || new Date().getFullYear().toString();
+    const examName = searchParams.get('examName') || 'বার্ষিক পরীক্ষা';
 
     useEffect(() => {
       if (!db || !user) return;
@@ -87,7 +88,7 @@ function MarksheetContent() {
             const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
             
             const resultsPromises = allSubjectsForGroup
-                .map(subject => getResultsForClass(db, academicYear, studentData.className, subject.name, studentData.group || undefined));
+                .map(subject => getResultsForClass(db, academicYear, examName, studentData.className, subject.name, studentData.group || undefined));
             
             const resultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
             
@@ -117,7 +118,7 @@ function MarksheetContent() {
         setIsLoading(true);
         processMarks();
 
-    }, [studentId, academicYear, db, user, allStudents]);
+    }, [studentId, academicYear, examName, db, user, allStudents]);
 
     
     const renderMeritPosition = (position?: number) => {
@@ -272,7 +273,7 @@ function MarksheetContent() {
 
                     <div className="text-center mb-4">
                         <h2 className="text-xl font-black underline underline-offset-8 uppercase tracking-widest text-black">
-                            Annual Exam Progress Report
+                            {examName} Progress Report
                         </h2>
                     </div>
 
