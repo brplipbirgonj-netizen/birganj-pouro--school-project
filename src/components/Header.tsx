@@ -513,7 +513,7 @@ export function Header() {
 
       {user && (
         <nav 
-          className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] w-full max-w-full overflow-visible box-border"
+          className="fixed bottom-0 left-0 right-0 z-50 h-16 md:h-14 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] w-full max-w-full overflow-visible box-border"
           style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${permittedBottomNavItems.length}, 1fr)`,
