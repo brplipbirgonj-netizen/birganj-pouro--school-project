@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "default-student",
+      "description": "Default placeholder for student photos",
+      "imageUrl": "https://picsum.photos/seed/student/200/200",
+      "imageHint": "student profile"
+    },
+    {
+      "id": "default-staff",
+      "description": "Default placeholder for staff photos",
+      "imageUrl": "https://picsum.photos/seed/staff/200/200",
+      "imageHint": "teacher profile"
+    }
+  ]
+}
