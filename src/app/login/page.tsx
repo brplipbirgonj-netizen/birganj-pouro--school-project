@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -62,21 +63,29 @@ export default function LoginPage() {
                 if (result.success) {
                     toast({ title: 'লগইন সফল হয়েছে' });
                 } else {
-                    throw new Error(result.error);
+                    toast({
+                        variant: 'destructive',
+                        title: 'লগইন ব্যর্থ হয়েছে',
+                        description: result.error || 'ইমেইল বা পাসওয়ার্ড ভুল।',
+                    });
                 }
             } else {
                 const result = await signUp(email, password);
                  if (result.success) {
                     toast({ title: 'সাইন আপ সফল হয়েছে', description: `আপনাকে একজন ${result.role} হিসেবে নিবন্ধন করা হয়েছে।` });
                 } else {
-                    throw new Error(result.error);
+                    toast({
+                        variant: 'destructive',
+                        title: 'সাইন আপ ব্যর্থ হয়েছে',
+                        description: result.error || 'অনুগ্রহ করে পুনরায় চেষ্টা করুন।',
+                    });
                 }
             }
         } catch (error: any) {
             toast({
                 variant: 'destructive',
-                title: 'একটি ত্রুটি ঘটেছে',
-                description: error.message,
+                title: 'একটি অপ্রত্যাশিত ত্রুটি ঘটেছে',
+                description: error.message || 'সার্ভারে সংযোগ করা যাচ্ছে না।',
             });
         } finally {
             setIsLoading(false);

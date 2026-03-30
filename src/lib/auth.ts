@@ -80,6 +80,9 @@ export async function signUp(email: string, password: string): Promise<{ success
     if (error.code === 'auth/email-already-in-use') {
         return { success: false, error: 'এই ইমেইল দিয়ে ইতিমধ্যে একটি একাউন্ট তৈরি করা আছে।' };
     }
+    if (error.code === 'auth/weak-password') {
+        return { success: false, error: 'পাসওয়ার্ডটি অন্তত ৬ অক্ষরের হতে হবে।' };
+    }
     return { success: false, error: 'নিবন্ধন করা যায়নি। ' + (error.message || '') };
   }
 }
@@ -108,7 +111,7 @@ export async function signIn(email: string, password: string, role: UserRole): P
 
     if (userDoc.data().role !== role) {
       await firebaseSignOut(auth);
-      return { success: false, error: 'আপনার ভূমিকা (role) সঠিক নয়।' };
+      return { success: false, error: 'আপনার ভূমিকা (role) সঠিক নয়। আপনি এই সেকশন থেকে লগইন করতে পারবেন না।' };
     }
 
     await setDoc(userDocRef, { 
@@ -119,10 +122,11 @@ export async function signIn(email: string, password: string, role: UserRole): P
     return { success: true };
   } catch (error: any) {
      console.error("Signin error:", error);
-     if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+     const authErrorCodes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-email'];
+     if (authErrorCodes.includes(error.code)) {
       return { success: false, error: 'আপনার ইমেইল অথবা পাসওয়ার্ড ভুল।' };
     }
-    return { success: false, error: 'লগইন করা যায়নি।' };
+    return { success: false, error: 'লগইন করা যায়নি। অনুগ্রহ করে পুনরায় চেষ্টা করুন।' };
   }
 }
 
