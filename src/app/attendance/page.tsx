@@ -22,6 +22,8 @@ import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { Edit2, RotateCcw } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // Digital Attendance sheet
 const AttendanceSheet = ({ classId, students }: { classId: string, students: Student[] }) => {
