@@ -23,7 +23,6 @@ export const getUsers = async (db: Firestore): Promise<User[]> => {
     return querySnapshot.docs.map(doc => userFromDoc(doc));
   } catch (e) {
     console.error('Error getting users:', e);
-    // Let the global error handler deal with permission errors.
     return [];
   }
 };
@@ -31,14 +30,17 @@ export const getUsers = async (db: Firestore): Promise<User[]> => {
 
 export const updateUserPermissions = async (db: Firestore, uid: string, permissions: string[]): Promise<void> => {
     const userRef = doc(db, USERS_COLLECTION_PATH, uid);
-    return updateDoc(userRef, { permissions }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: userRef.path,
-            operation: 'update',
-            requestResourceData: { permissions },
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
+    return updateDoc(userRef, { permissions }).catch(async (serverError: any) => {
+        if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'update',
+                requestResourceData: { permissions },
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            throw permissionError;
+        }
+        throw serverError;
     });
 };
 
@@ -46,25 +48,34 @@ export const updateUserRole = async (db: Firestore, uid: string, role: UserRole)
     const userRef = doc(db, USERS_COLLECTION_PATH, uid);
     // When changing role, reset permissions to the new role's defaults
     const permissions = defaultPermissions[role] || [];
-    return updateDoc(userRef, { role, permissions }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: userRef.path,
-            operation: 'update',
-            requestResourceData: { role, permissions },
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
+    return updateDoc(userRef, { role, permissions }).catch(async (serverError: any) => {
+        if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'update',
+                requestResourceData: { role, permissions },
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            throw permissionError;
+        }
+        throw serverError;
     });
 };
 
 export const deleteUserRecord = async (db: Firestore, uid: string): Promise<void> => {
     const userRef = doc(db, USERS_COLLECTION_PATH, uid);
-    return deleteDoc(userRef).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: userRef.path,
-            operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
-    });
+    try {
+        await deleteDoc(userRef);
+    } catch (serverError: any) {
+        console.error("Error deleting user record:", serverError);
+        if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            throw permissionError;
+        }
+        throw serverError;
+    }
 };

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, Calculator, Clock } from 'lucide-react';
+import { Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, Calculator, Clock, Loader2 } from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -401,7 +401,7 @@ function HolidaySettings() {
                                     <TableHead>ক্রমিক নং</TableHead>
                                     <TableHead>তারিখ</TableHead>
                                     <TableHead>বার</TableHead>
-                                    <TableHead>কারণ</TableHead>
+                                    <TableHead>कारण</TableHead>
                                     <TableHead className="text-right">কার্যক্রম</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -565,6 +565,7 @@ function UserManagementSettings() {
     const [users, setUsers] = useState<User[]>([]);
     const [allStaff, setAllStaff] = useState<Staff[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
     
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
@@ -618,10 +619,20 @@ function UserManagementSettings() {
     const handleDeleteUser = async (userToDelete: User) => {
         if (!db || !currentUser || userToDelete.uid === currentUser.uid) return;
         
+        setIsDeleting(userToDelete.uid);
         try {
             await deleteUserRecord(db, userToDelete.uid);
-            toast({ title: 'ব্যবহারকারী মুছে ফেলা হয়েছে'});
-        } catch (error) {}
+            toast({ title: 'ব্যবহারকারী মুছে ফেলা হয়েছে' });
+        } catch (error: any) {
+            console.error("Failed to delete user:", error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'ডিলিট করা যায়নি', 
+                description: error.message || 'আপনার প্রয়োজনীয় পারমিশন নেই বা সার্ভার ত্রুটি।' 
+            });
+        } finally {
+            setIsDeleting(null);
+        }
     }
     
     const handleUpdateRole = async (uid: string, newRole: UserRole) => {
@@ -733,8 +744,8 @@ function UserManagementSettings() {
                                                         </Button>
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
-                                                                <Button variant="destructive" size="sm" disabled={isCurrentUser}>
-                                                                    ডিলিট
+                                                                <Button variant="destructive" size="sm" disabled={isCurrentUser || isDeleting === u.uid}>
+                                                                    {isDeleting === u.uid ? <Loader2 className="h-3 w-3 animate-spin" /> : 'ডিলিট'}
                                                                 </Button>
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent>
@@ -747,7 +758,7 @@ function UserManagementSettings() {
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDeleteUser(u)} disabled={isCurrentUser}>
+                                                                    <AlertDialogAction onClick={() => handleDeleteUser(u)} disabled={isCurrentUser || isDeleting === u.uid}>
                                                                         ডিলিট করুন
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
