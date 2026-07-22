@@ -33,21 +33,25 @@ export async function signUp(email: string, password: string): Promise<{ success
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Check if any admin exists in the system
+    // Default role is teacher
     let role: UserRole = 'teacher';
     let displayName = email.split('@')[0];
 
     try {
         const usersRef = collection(db, 'users');
-        const adminQuery = query(usersRef, where('role', '==', 'admin'), limit(1));
-        const adminSnapshot = await getDocs(adminQuery);
+        // Check if ANY user exists in the system
+        const anyUserQuery = query(usersRef, limit(1));
+        const anyUserSnapshot = await getDocs(anyUserQuery);
         
-        // If no admin exists, first user is admin
-        if (adminSnapshot.empty) {
+        // If NO users exist at all, the first person to sign up is the Admin
+        if (anyUserSnapshot.empty) {
             role = 'admin';
             displayName = 'System Admin';
         } else {
-            // Check if user is in staff/teacher list
+            // Not the first user, strictly make them a teacher
+            role = 'teacher';
+            
+            // Try to link with staff data if email matches
             const staffRef = collection(db, 'staff');
             const teacherQuery = query(staffRef, where('email', '==', email.toLowerCase()), limit(1));
             const teacherSnapshot = await getDocs(teacherQuery);
@@ -58,9 +62,9 @@ export async function signUp(email: string, password: string): Promise<{ success
             }
         }
     } catch (e) {
-        // If collection doesn't exist yet or query fails, assume this is the first user
-        role = 'admin';
-        displayName = 'System Admin';
+        console.error("Error checking system population status:", e);
+        // If we can't determine, safer to default to teacher
+        role = 'teacher';
     }
 
     await setDoc(doc(db, 'users', user.uid), {
