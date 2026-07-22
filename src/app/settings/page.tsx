@@ -25,8 +25,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { User, userFromDoc } from '@/lib/user';
-import { updateUserPermissions, deleteUserRecord } from '@/lib/user-management';
+import { User, userFromDoc, UserRole } from '@/lib/user';
+import { updateUserPermissions, deleteUserRecord, updateUserRole } from '@/lib/user-management';
 import { changePassword } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -35,6 +35,7 @@ import { availablePermissions, defaultPermissions } from '@/lib/permissions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Staff, staffFromDoc } from '@/lib/staff-data';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 function SystemUsageInfo() {
     return (
@@ -623,6 +624,14 @@ function UserManagementSettings() {
         } catch (error) {}
     }
     
+    const handleUpdateRole = async (uid: string, newRole: UserRole) => {
+        if (!db || !currentUser) return;
+        try {
+            await updateUserRole(db, uid, newRole);
+            toast({ title: 'ভূমিকা (Role) আপডেট হয়েছে' });
+        } catch (error) {}
+    };
+
     const openPermissionDialog = (user: User) => {
         setSelectedUser(user);
         setIsPermissionDialogOpen(true);
@@ -683,9 +692,21 @@ function UserManagementSettings() {
                                                 </TableCell>
                                                 <TableCell>{u.email}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={u.role === 'admin' ? 'destructive' : 'secondary'}>
-                                                        {roleMap[u.role] || u.role}
-                                                    </Badge>
+                                                    {isCurrentUser ? (
+                                                        <Badge variant={u.role === 'admin' ? 'destructive' : 'secondary'}>
+                                                            {roleMap[u.role] || u.role}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Select value={u.role} onValueChange={(val) => handleUpdateRole(u.uid, val as UserRole)}>
+                                                            <SelectTrigger className="h-8 w-[110px] text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="admin">এডমিন</SelectItem>
+                                                                <SelectItem value="teacher">শিক্ষক</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {u.isOnline ? (

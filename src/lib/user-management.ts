@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -10,9 +9,10 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { User, userFromDoc } from './user';
+import { User, userFromDoc, UserRole } from './user';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { defaultPermissions } from './permissions';
 
 const USERS_COLLECTION_PATH = 'users';
 
@@ -36,6 +36,21 @@ export const updateUserPermissions = async (db: Firestore, uid: string, permissi
             path: userRef.path,
             operation: 'update',
             requestResourceData: { permissions },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw permissionError;
+    });
+};
+
+export const updateUserRole = async (db: Firestore, uid: string, role: UserRole): Promise<void> => {
+    const userRef = doc(db, USERS_COLLECTION_PATH, uid);
+    // When changing role, reset permissions to the new role's defaults
+    const permissions = defaultPermissions[role] || [];
+    return updateDoc(userRef, { role, permissions }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'update',
+            requestResourceData: { role, permissions },
         });
         errorEmitter.emit('permission-error', permissionError);
         throw permissionError;
