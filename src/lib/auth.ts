@@ -7,7 +7,8 @@ import {
   signOut as firebaseSignOut,
   updatePassword,
   EmailAuthProvider,
-  reauthenticateWithCredential
+  reauthenticateWithCredential,
+  deleteUser
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -29,47 +30,49 @@ import { defaultPermissions } from './permissions';
 export async function signUp(email: string, password: string): Promise<{ success: boolean; role?: UserRole; error?: string }> {
   const auth = getAuth();
   const db = getFirestore();
+  const normalizedEmail = email.toLowerCase().trim();
+
   try {
+    // 1. First, check if the system already has an admin
+    const usersRef = collection(db, 'users');
+    const anyUserQuery = query(usersRef, limit(1));
+    const anyUserSnapshot = await getDocs(anyUserQuery);
+    const isSystemEmpty = anyUserSnapshot.empty;
+
+    // 2. Check if this email is in the staff list
+    const staffRef = collection(db, 'staff');
+    const staffQuery = query(staffRef, where('email', '==', normalizedEmail), limit(1));
+    const staffSnapshot = await getDocs(staffQuery);
+    const isStaff = !staffSnapshot.empty;
+
+    // Security Gate: Reject if not staff AND not the very first user
+    if (!isSystemEmpty && !isStaff) {
+      return { 
+        success: false, 
+        error: 'আপনার ইমেইলটি অনুমোদিত শিক্ষক তালিকায় পাওয়া যায়নি। দয়া করে এডমিনের সাথে যোগাযোগ করুন।' 
+      };
+    }
+
+    // 3. Proceed with Firebase Auth Signup
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Default role is teacher
     let role: UserRole = 'teacher';
     let displayName = email.split('@')[0];
 
-    try {
-        const usersRef = collection(db, 'users');
-        // Check if ANY user exists in the system
-        const anyUserQuery = query(usersRef, limit(1));
-        const anyUserSnapshot = await getDocs(anyUserQuery);
-        
-        // If NO users exist at all, the first person to sign up is the Admin
-        if (anyUserSnapshot.empty) {
-            role = 'admin';
-            displayName = 'System Admin';
-        } else {
-            // Not the first user, strictly make them a teacher
-            role = 'teacher';
-            
-            // Try to link with staff data if email matches
-            const staffRef = collection(db, 'staff');
-            const teacherQuery = query(staffRef, where('email', '==', email.toLowerCase()), limit(1));
-            const teacherSnapshot = await getDocs(teacherQuery);
-
-            if (!teacherSnapshot.empty) {
-                const staffData = teacherSnapshot.docs[0].data();
-                displayName = staffData.nameBn || displayName;
-            }
-        }
-    } catch (e) {
-        console.error("Error checking system population status:", e);
-        // If we can't determine, safer to default to teacher
-        role = 'teacher';
+    // If first user, make admin. Otherwise teacher.
+    if (isSystemEmpty) {
+        role = 'admin';
+        displayName = 'System Admin';
+    } else if (isStaff) {
+        const staffData = staffSnapshot.docs[0].data();
+        displayName = staffData.nameBn || displayName;
     }
 
+    // 4. Create the user document in Firestore
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
-      email: user.email,
+      email: normalizedEmail,
       role: role,
       displayName: displayName,
       isOnline: true,
@@ -87,7 +90,7 @@ export async function signUp(email: string, password: string): Promise<{ success
     if (error.code === 'auth/weak-password') {
         return { success: false, error: 'পাসওয়ার্ডটি অন্তত ৬ অক্ষরের হতে হবে।' };
     }
-    return { success: false, error: 'নিবন্ধন করা যায়নি। ' + (error.message || '') };
+    return { success: false, error: 'নিবন্ধন করা যায়নি। ' + (error.message || 'সার্ভার ত্রুটি।') };
   }
 }
 
@@ -102,18 +105,14 @@ export async function signIn(email: string, password: string, role: UserRole): P
     const userDoc = await getDoc(userDocRef);
 
     if (!userDoc.exists()) {
-        await setDoc(userDocRef, {
-            uid: user.uid,
-            email: user.email,
-            role: role,
-            isOnline: true,
-            permissions: defaultPermissions[role] || [],
-            lastLoginAt: serverTimestamp(),
-        });
-        return { success: true };
+        // If auth user exists but no record in Firestore (e.g. signup failed halfway)
+        // We sign out to maintain security
+        await firebaseSignOut(auth);
+        return { success: false, error: 'আপনার কোনো প্রোফাইল পাওয়া যায়নি। দয়া করে পুনরায় সাইন আপ করুন।' };
     }
 
-    if (userDoc.data().role !== role) {
+    const userData = userDoc.data();
+    if (userData.role !== role) {
       await firebaseSignOut(auth);
       return { success: false, error: 'আপনার ভূমিকা (role) সঠিক নয়। আপনি এই সেকশন থেকে লগইন করতে পারবেন না।' };
     }
@@ -126,7 +125,7 @@ export async function signIn(email: string, password: string, role: UserRole): P
     return { success: true };
   } catch (error: any) {
      console.error("Signin error:", error);
-     const authErrorCodes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-email'];
+     const authErrorCodes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-email', 'auth/user-disabled'];
      if (authErrorCodes.includes(error.code)) {
       return { success: false, error: 'আপনার ইমেইল অথবা পাসওয়ার্ড ভুল।' };
     }
@@ -142,11 +141,8 @@ export async function signOut() {
   if (user) {
     const userDocRef = doc(db, 'users', user.uid);
     try {
-      // IMPORTANT: Wait for online status update before actual sign-out
-      // This prevents permission denied errors because we are still authed
       await updateDoc(userDocRef, { isOnline: false });
     } catch (e) {
-      // Silent catch to ensure signout proceeds even if firestore write fails
       console.log("Logout: Online status update skipped.");
     }
   }
