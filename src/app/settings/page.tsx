@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -401,7 +402,7 @@ function HolidaySettings() {
                                     <TableHead>ক্রমিক নং</TableHead>
                                     <TableHead>তারিখ</TableHead>
                                     <TableHead>বার</TableHead>
-                                    <TableHead>कारण</TableHead>
+                                    <TableHead>কারণ</TableHead>
                                     <TableHead className="text-right">কার্যক্রম</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -580,6 +581,7 @@ function UserManagementSettings() {
             setUsers(usersData.sort((a, b) => (a.email || '').localeCompare(b.email || '')));
             setIsLoading(false);
         }, (error) => {
+            console.error("User Snapshot Error:", error);
             setIsLoading(false);
         });
 

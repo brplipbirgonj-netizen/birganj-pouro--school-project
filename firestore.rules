@@ -8,19 +8,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Ensures user exists in our Firestore users collection
-    function hasAccount() {
-      return isAuthed() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
+    // Ensures user exists and checks their role directly
     function isAdmin() {
-      return hasAccount() && 
+      return isAuthed() && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     function isTeacher() {
-      return hasAccount() && 
+      return isAuthed() && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    function hasAccount() {
+      return isAuthed() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     // Rules
@@ -30,8 +30,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // First person needs to check if system is empty
+      // Allow list for signup check and admin management
       allow list: if isAuthed(); 
+      // User can read/update their own profile, admin can do anything
       allow get: if isAuthed() && (request.auth.uid == userId || isAdmin());
       allow create: if isAuthed() && request.auth.uid == userId;
       allow update: if isAuthed() && (request.auth.uid == userId || isAdmin());
@@ -45,7 +46,7 @@ service cloud.firestore {
 
     match /notices/{id} {
       allow read: if hasAccount();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isTeacher();
     }
 
     match /holidays/{id} {

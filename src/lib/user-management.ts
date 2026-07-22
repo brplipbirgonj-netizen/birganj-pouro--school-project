@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -68,7 +69,7 @@ export const deleteUserRecord = async (db: Firestore, uid: string): Promise<void
         await deleteDoc(userRef);
     } catch (serverError: any) {
         console.error("Error deleting user record:", serverError);
-        if (serverError.code === 'permission-denied') {
+        if (serverError.code === 'permission-denied' || serverError.message?.includes('permissions')) {
             const permissionError = new FirestorePermissionError({
                 path: userRef.path,
                 operation: 'delete',
