@@ -81,15 +81,11 @@ export const updateUserRole = async (db: Firestore, uid: string, role: UserRole)
 export const deleteUserRecord = async (db: Firestore, uid: string): Promise<void> => {
     const userRef = doc(db, USERS_COLLECTION_PATH, uid);
     try {
-        // Double check existence before deletion
-        const snap = await getDoc(userRef);
-        if (!snap.exists()) {
-            throw new Error("ব্যবহারকারী পাওয়া যায়নি।");
-        }
+        // Direct deletion is more robust for admins and avoids redundant read permission checks
         await deleteDoc(userRef);
     } catch (serverError: any) {
         console.error("Error deleting user record:", serverError);
-        if (serverError.code === 'permission-denied' || serverError.message?.includes('permissions')) {
+        if (serverError.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
                 path: userRef.path,
                 operation: 'delete',
