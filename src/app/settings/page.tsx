@@ -627,10 +627,11 @@ function UserManagementSettings() {
             toast({ title: 'ব্যবহারকারী মুছে ফেলা হয়েছে' });
         } catch (error: any) {
             console.error("Failed to delete user:", error);
+            // Error is handled by data function, but showing extra feedback here
             toast({ 
                 variant: 'destructive', 
                 title: 'ডিলিট করা যায়নি', 
-                description: error.message || 'আপনার প্রয়োজনীয় পারমিশন নেই বা সার্ভার ত্রুটি।' 
+                description: 'আপনার এই কাজটি করার অনুমতি নেই বা সার্ভার ত্রুটি।' 
             });
         } finally {
             setIsDeleting(null);

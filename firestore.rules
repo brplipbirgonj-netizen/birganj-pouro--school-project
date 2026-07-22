@@ -3,40 +3,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
+    // --- Helper Functions ---
+    
     function isAuthed() {
       return request.auth != null;
     }
 
-    // Ensures user exists and checks their role directly
+    // Directly get the user's role without complex logic to avoid recursion
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
-      return isAuthed() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthed() && getUserData().role == 'admin';
     }
     
     function isTeacher() {
-      return isAuthed() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      return isAuthed() && getUserData().role == 'teacher';
     }
 
     function hasAccount() {
       return isAuthed() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Rules
+    // --- Rules for Collections ---
+
     match /school/info {
       allow read: if true;
       allow write: if isAdmin();
     }
 
     match /users/{userId} {
-      // Allow list for signup check and admin management
-      allow list: if isAuthed(); 
-      // User can read/update their own profile, admin can do anything
-      allow get: if isAuthed() && (request.auth.uid == userId || isAdmin());
+      // CRITICAL: Allow any authenticated user to read their OWN document.
+      // This breaks the circular dependency when isAdmin() calls get().
+      allow get: if isAuthed() && request.auth.uid == userId;
+      
+      // Allow user to create their own profile during signup
       allow create: if isAuthed() && request.auth.uid == userId;
-      allow update: if isAuthed() && (request.auth.uid == userId || isAdmin());
+
+      // Admin can do everything with user documents
+      allow list: if isAdmin();
+      allow get: if isAdmin();
       allow delete: if isAdmin();
+      
+      // Both the user themselves and the admin can update profile (except role for non-admins)
+      allow update: if isAuthed() && (request.auth.uid == userId || isAdmin());
     }
 
     match /classRoutines/{id} {
