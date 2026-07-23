@@ -15,7 +15,8 @@ export const availablePermissions = [
 
   { id: 'manage:attendance', label: 'হাজিরা ম্যানেজ করুন' },
 
-  { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ করুন' },
+  { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
+  { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
   { id: 'promote:students', label: 'শিক্ষার্থী প্রমোশন ও বিশেষ পাশ' },
   
   { id: 'view:accounts', label: 'হিসাব শাখা দেখুন' },
@@ -40,7 +41,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:student-profile',
     'view:staff',
     'manage:attendance',
-    'manage:results', 
+    'input:results', 
     'view:accounts',
     'collect:fees',
     'view:collection-report',

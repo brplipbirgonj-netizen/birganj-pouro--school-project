@@ -78,8 +78,15 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const updateSavedResults = useCallback(async () => {
         if (!db || !user) return;
         const allResults = await getAllResults(db, selectedYear, examName || undefined);
-        setSavedResults(allResults);
-    }, [db, selectedYear, user, examName]);
+        
+        // Filter based on "Input Results" permission logic: 
+        // If not admin and doesn't have 'manage:results', filter subjects by 'marksPermissions'
+        if (user?.role !== 'admin' && !hasPermission('manage:results')) {
+             setSavedResults(allResults.filter(res => isSubjectPermitted(res.className, res.subject)));
+        } else {
+             setSavedResults(allResults);
+        }
+    }, [db, selectedYear, user, examName, hasPermission, isSubjectPermitted]);
     
     useEffect(() => {
         updateSavedResults();
@@ -139,13 +146,20 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const showGroupSelector = useMemo(() => className === '9' || className === '10', [className]);
 
     useEffect(() => {
-        const newSubjects = getSubjects(className, group).filter(s => s.isExamSubject !== false);
+        let newSubjects = getSubjects(className, group).filter(s => s.isExamSubject !== false);
+        
+        // VISIBILITY FILTER: If user has 'input:results' but not 'manage:results', 
+        // hide subjects they don't have permission for.
+        if (user?.role !== 'admin' && !hasPermission('manage:results') && hasPermission('input:results') && className) {
+            newSubjects = newSubjects.filter(s => isSubjectPermitted(className, s.name));
+        }
+
         setAvailableSubjects(newSubjects);
         if (subject && !newSubjects.some(s => s.name === subject)) {
             setSubject('');
             setSelectedSubjectInfo(null);
         }
-    }, [className, group, subject]);
+    }, [className, group, subject, user, hasPermission, isSubjectPermitted]);
 
     useEffect(() => {
         if (subject) {
@@ -1159,10 +1173,13 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
         const headers: string[] = ['রোল', 'নাম'];
     
         const addHeader = (header: string, hasPractical: boolean) => {
-            headers.push(`${header} (লিখিত)`);
-            headers.push(`${header} (বহুনির্বাচনী)`);
-            if (hasPractical) {
-                headers.push(`${header} (ব্যবহারিক)`);
+            // Visibility Check for Template: Only add subjects the user can input
+            if (isSubjectPermitted(className, header)) {
+                headers.push(`${header} (লিখিত)`);
+                headers.push(`${header} (বহুনির্বাচনী)`);
+                if (hasPractical) {
+                    headers.push(`${header} (ব্যবহারিক)`);
+                }
             }
         };
     
@@ -1175,11 +1192,19 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                 addHeader('গণিত', false);
                 addHeader('ধর্ম ও নৈতিক শিক্ষা', false);
                 addHeader('তথ্য ও যোগাযোগ প্রযুক্তি', false);
-                addHeader('সাধারণ বিজ্ঞান/বাংলাদেশ ও বিশ্ব পরিচয়', false);
-                addHeader('বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা/পদার্থ', true);
-                addHeader('ভূগোল ও পরিবেশ/রসায়ন', true);
-                addHeader('পৌরনীতি ও নাগরিকতা/জীব বিজ্ঞান', true);
-                addHeader('কৃষি শিক্ষা/উচ্চতর গণিত', true);
+                addHeader('সাধারণ বিজ্ঞান', false);
+                addHeader('বাংলাদেশ ও বিশ্ব পরিচয়', false);
+                addHeader('পদার্থ', true);
+                addHeader('রসায়ন', true);
+                addHeader('জীব বিজ্ঞান', true);
+                addHeader('কৃষি শিক্ষা', true);
+                addHeader('উচ্চতর গণিত', true);
+                addHeader('বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা', false);
+                addHeader('ভূগোল ও পরিবেশ', false);
+                addHeader('পৌরনীতি ও নাগরিকতা', false);
+                addHeader('ব্যবসায় উদ্যোগ', false);
+                addHeader('হিসাব বিজ্ঞান', false);
+                addHeader('ফিন্যান্স ও ব্যাংকিং', false);
     
             } else {
                 const groupSubjects = getSubjects(className, group).filter(s => s.isExamSubject !== false);
@@ -1190,6 +1215,11 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
             subjectsForTemplate.forEach(subject => {
                 addHeader(subject.name, subject.practical);
             });
+        }
+
+        if (headers.length <= 2) {
+             toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'আপনার এই শ্রেণির কোনো বিষয়ের নম্বর দেওয়ার অনুমতি নেই।' });
+             return;
         }
     
         const ws = XLSX.utils.aoa_to_sheet([headers]);
@@ -1346,7 +1376,7 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
 
                 let toastDesc = `${promises.length} টি বিষয়ের ফলাফল সফলভাবে সেভ হয়েছে।`;
                 if (skippedSubjects.size > 0) {
-                    toastDesc += ` আপনার পারমিশন না থাকায় ${skippedSubjects.size}টি বিষয় বাদ দেওয়া হয়েছে।`;
+                    toastDesc += ` আপনার পারমিশন না থাকায় কিছু বিষয় বাদ দেওয়া হয়েছে।`;
                 }
 
                 toast({
@@ -1435,6 +1465,7 @@ export default function ResultsPage() {
     const { selectedYear } = useAcademicYear();
     const { user, hasPermission } = useAuth();
     const canPromote = hasPermission('promote:students');
+    const canViewResults = hasPermission('manage:results') || hasPermission('input:results');
 
     const fetchAllStudents = useCallback(() => {
         if (!db || !user) return;
@@ -1468,6 +1499,21 @@ export default function ResultsPage() {
             }
         };
     }, [fetchAllStudents]);
+
+    if (isClient && !canViewResults && user?.role !== 'admin') {
+        return (
+            <div className="flex min-h-screen w-full flex-col bg-violet-50">
+                <Header />
+                <main className="flex flex-1 items-center justify-center p-4">
+                    <Card className="max-w-md w-full text-center p-8">
+                        <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                        <h2 className="text-xl font-bold mb-2">প্রবেশাধিকার সংরক্ষিত</h2>
+                        <p className="text-muted-foreground">আপনার ফলাফল মডিউলটি দেখার অনুমতি নেই। অনুগ্রহ করে এডমিনের সাথে যোগাযোগ করুন।</p>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50">
