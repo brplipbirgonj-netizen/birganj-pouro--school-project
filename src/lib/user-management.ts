@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -38,17 +37,20 @@ export const getUsers = async (db: Firestore): Promise<User[]> => {
 };
 
 
-export const updateUserPermissions = async (db: Firestore, uid: string, permissions: string[]): Promise<void> => {
+export const updateUserPermissions = async (db: Firestore, uid: string, permissions: string[], marksPermissions?: Record<string, string[]>): Promise<void> => {
     const userRef = doc(db, USERS_COLLECTION_PATH, uid);
     try {
-        await updateDoc(userRef, { permissions });
+        await updateDoc(userRef, { 
+            permissions,
+            marksPermissions: marksPermissions || {}
+        });
     } catch (serverError: any) {
         console.error("Update permissions error:", serverError);
         if (serverError.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
                 path: userRef.path,
                 operation: 'update',
-                requestResourceData: { permissions },
+                requestResourceData: { permissions, marksPermissions },
             });
             errorEmitter.emit('permission-error', permissionError);
             throw permissionError;
@@ -62,7 +64,7 @@ export const updateUserRole = async (db: Firestore, uid: string, role: UserRole)
     // When changing role, reset permissions to the new role's defaults
     const permissions = defaultPermissions[role] || [];
     try {
-        await updateDoc(userRef, { role, permissions });
+        await updateDoc(userRef, { role, permissions, marksPermissions: {} });
     } catch (serverError: any) {
         console.error("Update role error:", serverError);
         if (serverError.code === 'permission-denied') {

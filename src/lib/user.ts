@@ -11,6 +11,7 @@ export interface User {
   displayName?: string;
   isOnline?: boolean;
   permissions?: string[];
+  marksPermissions?: Record<string, string[]>; // { "6": ["বাংলা প্রথম", "গণিত"], "9": ["পদার্থ"] }
   lastLoginAt?: Date;
 }
 
@@ -42,6 +43,7 @@ export const userFromDoc = (doc: any): User => {
         displayName: data.displayName,
         isOnline: data.isOnline || false,
         permissions: data.permissions || [],
+        marksPermissions: data.marksPermissions || {},
         lastLoginAt: lastLoginAt,
     } as User;
 }

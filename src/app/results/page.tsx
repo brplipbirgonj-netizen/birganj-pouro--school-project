@@ -16,7 +16,7 @@ import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult,
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
@@ -42,8 +42,14 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { user, hasPermission } = useAuth();
-    const canManageResults = hasPermission('manage:results');
     
+    // Permission helper
+    const isSubjectPermitted = useCallback((cls: string, sub: string) => {
+        if (user?.role === 'admin') return true;
+        if (hasPermission('manage:results')) return true;
+        return user?.marksPermissions?.[cls]?.includes(sub) ?? false;
+    }, [user, hasPermission]);
+
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
@@ -78,6 +84,11 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     useEffect(() => {
         updateSavedResults();
     }, [updateSavedResults]);
+
+    const canEditCurrent = useMemo(() => {
+        if (!className || !subject) return false;
+        return isSubjectPermitted(className, subject);
+    }, [className, subject, isSubjectPermitted]);
 
     const groupedResults = useMemo(() => {
         if (savedResults.length === 0) return {};
@@ -200,6 +211,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const handleSaveResults = () => {
         if (!db || !user) return;
+        if (!canEditCurrent) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'আপনার এই বিষয়টিতে নম্বর সেভ করার অনুমতি নেই।' });
+            return;
+        }
         if (studentsForClass.length === 0) {
             toast({ variant: 'destructive', title: 'কোনো শিক্ষার্থী নেই' });
             return;
@@ -228,6 +243,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const handleDeleteResult = (result: ClassResult) => {
         if (!db || !result.id || !user) return;
+        if (!isSubjectPermitted(result.className, result.subject)) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'আপনার এই বিষয়টি মোছার অনুমতি নেই।' });
+            return;
+        }
         deleteClassResult(db, result.id).then(() => {
             updateSavedResults();
             toast({ title: 'ফলাফল মোছা হয়েছে' });
@@ -265,6 +284,11 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                 variant: "destructive",
                 title: "প্রথমে পরীক্ষা, শ্রেণি ও বিষয় নির্বাচন করুন",
             });
+            return;
+        }
+
+        if (!canEditCurrent) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'আপনার এই বিষয়টিতে নম্বর আপলোড করার অনুমতি নেই।' });
             return;
         }
 
@@ -438,19 +462,26 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             
             {studentsForClass.length > 0 && (
                 <div className="overflow-x-auto border rounded-md">
-                    {canManageResults && (
-                        <div className="flex justify-end p-2 gap-2">
+                    <div className="bg-muted/30 p-2 flex justify-between items-center border-b">
+                         <div className="flex items-center gap-2">
+                            {!canEditCurrent && (
+                                <Badge variant="destructive" className="flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" /> আপনার এই বিষয়ে পারমিশন নেই
+                                </Badge>
+                            )}
+                         </div>
+                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={handleDownloadSample}>
                                 <Download className="mr-2 h-4 w-4" />
                                 নমুনা
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!canEditCurrent}>
                                 <FileUp className="mr-2 h-4 w-4" />
                                 আপলোড
                             </Button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
-                        </div>
-                    )}
+                         </div>
+                    </div>
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -472,7 +503,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             value={marks.get(student.id)?.written || ''}
                                             onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)}
                                             className="w-24"
-                                            disabled={!canManageResults}
+                                            disabled={!canEditCurrent}
                                         />
                                     </TableCell>
                                      <TableCell>
@@ -481,7 +512,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             value={marks.get(student.id)?.mcq || ''}
                                             onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)}
                                             className="w-24"
-                                            disabled={!canManageResults}
+                                            disabled={!canEditCurrent}
                                         />
                                     </TableCell>
                                     {selectedSubjectInfo?.practical && (
@@ -491,7 +522,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 value={marks.get(student.id)?.practical || ''}
                                                 onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)}
                                                 className="w-24"
-                                                disabled={!canManageResults}
+                                                disabled={!canEditCurrent}
                                             />
                                         </TableCell>
                                     )}
@@ -499,15 +530,13 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                             ))}
                         </TableBody>
                     </Table>
-                    {canManageResults && (
-                        <div className="flex justify-end p-4 mt-4 border-t">
-                            <Button onClick={handleSaveResults}>ফলাফল সেভ করুন</Button>
-                        </div>
-                    )}
+                    <div className="flex justify-end p-4 mt-4 border-t">
+                        <Button onClick={handleSaveResults} disabled={!canEditCurrent}>ফলাফল সেভ করুন</Button>
+                    </div>
                 </div>
             )}
 
-            {canManageResults && savedResults.length > 0 && (
+            {savedResults.length > 0 && (
                 <div className="space-y-4">
                     <h3 className="font-semibold text-lg border-b pb-2">সংরক্ষিত ফলাফল ({examName || 'সকল পরীক্ষা'}, শিক্ষাবর্ষ {selectedYear.toLocaleString('bn-BD')})</h3>
                     <Accordion type="multiple" className="w-full">
@@ -541,41 +570,44 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {results.map((res, i) => (
-                                                                <TableRow key={`${res.id}-${i}`}>
-                                                                    <TableCell>{(i + 1).toLocaleString('bn-BD')}</TableCell>
-                                                                    <TableCell>{res.subject}</TableCell>
-                                                                    <TableCell>{res.fullMarks.toLocaleString('bn-BD')}</TableCell>
-                                                                    <TableCell className="text-right">
-                                                                        <div className="flex justify-end gap-2">
-                                                                            <Button variant="outline" size="icon" onClick={() => handleEditClick(res)}>
-                                                                                <FilePen className="h-4 w-4" />
-                                                                            </Button>
-                                                                            <AlertDialog>
-                                                                                <AlertDialogTrigger asChild>
-                                                                                    <Button variant="destructive" size="icon">
-                                                                                        <Trash2 className="h-4 w-4" />
-                                                                                    </Button>
-                                                                                </AlertDialogTrigger>
-                                                                                <AlertDialogContent>
-                                                                                    <AlertDialogHeader>
-                                                                                        <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                                        <AlertDialogDescription>
-                                                                                            এই বিষয়ের ফলাফল স্থায়ীভাবে মুছে যাবে।
-                                                                                        </AlertDialogDescription>
-                                                                                    </AlertDialogHeader>
-                                                                                    <AlertDialogFooter>
-                                                                                        <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                                        <AlertDialogAction onClick={() => handleDeleteResult(res)}>
-                                                                                            মুছে ফেলুন
-                                                                                        </AlertDialogAction>
-                                                                                    </AlertDialogFooter>
-                                                                                </AlertDialogContent>
-                                                                            </AlertDialog>
-                                                                        </div>
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))}
+                                                            {results.map((res, i) => {
+                                                                const permitted = isSubjectPermitted(res.className, res.subject);
+                                                                return (
+                                                                    <TableRow key={`${res.id}-${i}`} className={cn(!permitted && "opacity-60 bg-muted/20")}>
+                                                                        <TableCell>{(i + 1).toLocaleString('bn-BD')}</TableCell>
+                                                                        <TableCell>{res.subject}</TableCell>
+                                                                        <TableCell>{res.fullMarks.toLocaleString('bn-BD')}</TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            <div className="flex justify-end gap-2">
+                                                                                <Button variant="outline" size="icon" onClick={() => handleEditClick(res)} disabled={!permitted}>
+                                                                                    <FilePen className="h-4 w-4" />
+                                                                                </Button>
+                                                                                <AlertDialog>
+                                                                                    <AlertDialogTrigger asChild>
+                                                                                        <Button variant="destructive" size="icon" disabled={!permitted}>
+                                                                                            <Trash2 className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </AlertDialogTrigger>
+                                                                                    <AlertDialogContent>
+                                                                                        <AlertDialogHeader>
+                                                                                            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                                            <AlertDialogDescription>
+                                                                                                এই বিষয়ের ফলাফল স্থায়ীভাবে মুছে যাবে।
+                                                                                            </AlertDialogDescription>
+                                                                                        </AlertDialogHeader>
+                                                                                        <AlertDialogFooter>
+                                                                                            <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                                                            <AlertDialogAction onClick={() => handleDeleteResult(res)}>
+                                                                                                মুছে ফেলুন
+                                                                                            </AlertDialogAction>
+                                                                                        </AlertDialogFooter>
+                                                                                    </AlertDialogContent>
+                                                                                </AlertDialog>
+                                                                            </div>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                );
+                                                            })}
                                                         </TableBody>
                                                     </Table>
                                                 </div>
@@ -1097,8 +1129,15 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     
+    // Permission helper
+    const isSubjectPermitted = useCallback((cls: string, sub: string) => {
+        if (user?.role === 'admin') return true;
+        if (hasPermission('manage:results')) return true;
+        return user?.marksPermissions?.[cls]?.includes(sub) ?? false;
+    }, [user, hasPermission]);
+
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
@@ -1196,6 +1235,7 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                 const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
                 const resultsToSave = new Map<string, ClassResult>();
+                const skippedSubjects = new Set<string>();
 
                 for (const row of json) {
                     const bengaliToEnglishDigit: { [key: string]: string } = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
@@ -1225,6 +1265,12 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                             } else {
                                 continue;
                             }
+                        }
+
+                        // Granular Permission Check
+                        if (!isSubjectPermitted(student.className, subjectName)) {
+                            skippedSubjects.add(`${classNamesMap[student.className]}: ${subjectName}`);
+                            continue;
                         }
 
                         const subjectInfo = studentSubjects.find(s => s.name === subjectName);
@@ -1274,7 +1320,8 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
                 if (subjectsToUpdate.length === 0) {
                      toast({
                         variant: 'destructive',
-                        title: "কোনো শিক্ষার্থীর নম্বর পাওয়া যায়নি",
+                        title: "কোনো বৈধ তথ্য পাওয়া যায়নি",
+                        description: skippedSubjects.size > 0 ? "আপনার নির্ধারিত বিষয়গুলোর তথ্য এই ফাইলে নেই।" : "দয়া করে ফাইলের তথ্য পরীক্ষা করুন।"
                     });
                     setIsLoading(false);
                     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -1297,9 +1344,14 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
 
                 await Promise.all(promises);
 
+                let toastDesc = `${promises.length} টি বিষয়ের ফলাফল সফলভাবে সেভ হয়েছে।`;
+                if (skippedSubjects.size > 0) {
+                    toastDesc += ` আপনার পারমিশন না থাকায় ${skippedSubjects.size}টি বিষয় বাদ দেওয়া হয়েছে।`;
+                }
+
                 toast({
                     title: "ফলাফল আপলোড সম্পন্ন",
-                    description: `${promises.length} টি বিষয়ের ফলাফল সফলভাবে সেভ/আপডেট হয়েছে।`,
+                    description: toastDesc,
                 });
 
             } catch (error: any) {

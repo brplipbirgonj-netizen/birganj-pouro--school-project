@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, Calculator, Clock, Loader2 } from 'lucide-react';
+import { Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, Calculator, Clock, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +36,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Staff, staffFromDoc } from '@/lib/staff-data';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getSubjects } from '@/lib/subjects';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 function SystemUsageInfo() {
     return (
@@ -487,11 +488,13 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
     const db = useFirestore();
     const { toast } = useToast();
     const [permissions, setPermissions] = useState<Set<string>>(new Set());
+    const [marksPermissions, setMarksPermissions] = useState<Record<string, string[]>>({});
 
     useEffect(() => {
         if (user) {
             const initialPermissions = user.permissions && user.permissions.length > 0 ? user.permissions : (defaultPermissions[user.role] || []);
             setPermissions(new Set(initialPermissions));
+            setMarksPermissions(user.marksPermissions || {});
         }
     }, [user]);
 
@@ -507,10 +510,25 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
         });
     };
 
+    const handleMarksPermissionChange = (cls: string, sub: string, checked: boolean | string) => {
+        setMarksPermissions(prev => {
+            const next = { ...prev };
+            const classSubs = [...(next[cls] || [])];
+            if (checked) {
+                if (!classSubs.includes(sub)) classSubs.push(sub);
+            } else {
+                const idx = classSubs.indexOf(sub);
+                if (idx > -1) classSubs.splice(idx, 1);
+            }
+            next[cls] = classSubs;
+            return next;
+        });
+    };
+
     const handleSave = async () => {
         if (!db || !user) return;
         try {
-            await updateUserPermissions(db, user.uid, Array.from(permissions));
+            await updateUserPermissions(db, user.uid, Array.from(permissions), marksPermissions);
             toast({ title: 'পারমিশন আপডেট হয়েছে' });
             onPermissionsUpdate();
             onOpenChange(false);
@@ -521,38 +539,78 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
 
     if (!user) return null;
 
+    const classes = ['6', '7', '8', '9', '10'];
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>পারমিশন সম্পাদনা করুন</DialogTitle>
                     <DialogDescription>
-                        {user.email} এর জন্য পারমিশন নির্ধারণ করুন।
+                        {user.email} এর জন্য এক্সেস লেভেল নির্ধারণ করুন।
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 max-h-[60vh] overflow-y-auto">
-                    <div className="space-y-4">
-                        {availablePermissions.map(permission => (
-                            <div key={permission.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`perm-${permission.id}`}
-                                    checked={permissions.has(permission.id)}
-                                    onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
-                                    disabled={user.role === 'admin'}
-                                />
-                                <label
-                                    htmlFor={`perm-${permission.id}`}
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                    {permission.label}
-                                </label>
-                            </div>
-                        ))}
-                    </div>
+                <div className="flex-1 overflow-y-auto py-4 space-y-8 pr-2">
+                    <section>
+                        <h3 className="text-sm font-black mb-4 uppercase tracking-wider text-primary flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4" /> সাধারণ মডিউল পারমিশন
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {availablePermissions.map(permission => (
+                                <div key={permission.id} className="flex items-center space-x-2 bg-muted/30 p-2 rounded-md border border-transparent hover:border-primary/20 transition-colors">
+                                    <Checkbox
+                                        id={`perm-${permission.id}`}
+                                        checked={permissions.has(permission.id)}
+                                        onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
+                                        disabled={user.role === 'admin'}
+                                    />
+                                    <label
+                                        htmlFor={`perm-${permission.id}`}
+                                        className="text-xs font-bold leading-none cursor-pointer"
+                                    >
+                                        {permission.label}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="border-t pt-6">
+                        <h3 className="text-sm font-black mb-4 uppercase tracking-wider text-orange-700 flex items-center gap-2">
+                            <Info className="h-4 w-4" /> শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground mb-4 italic">এই পারমিশনগুলো শুধুমাত্র তখনই কার্যকর হবে যখন 'ফলাফল ও নম্বর ম্যানেজ' করার সাধারণ পারমিশনটি বন্ধ থাকবে।</p>
+                        
+                        <Accordion type="multiple" className="w-full space-y-2">
+                            {classes.map(cls => (
+                                <AccordionItem key={cls} value={cls} className="border rounded-md overflow-hidden bg-white">
+                                    <AccordionTrigger className="px-4 py-2 hover:no-underline bg-muted/20">
+                                        <span className="font-bold text-sm">{cn(cls === '10' ? 'দশম' : cls === '9' ? 'নবম' : cls === '8' ? 'অষ্টম' : cls === '7' ? 'সপ্তম' : 'ষষ্ঠ')} শ্রেণি</span>
+                                        <Badge variant="outline" className="ml-2 text-[10px]">{(marksPermissions[cls] || []).length.toLocaleString('bn-BD')} বিষয়</Badge>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 py-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {getSubjects(cls).filter(s => s.isExamSubject).map(sub => (
+                                                <div key={sub.name} className="flex items-center space-x-2">
+                                                    <Checkbox 
+                                                        id={`sub-${cls}-${sub.name}`}
+                                                        checked={(marksPermissions[cls] || []).includes(sub.name)}
+                                                        onCheckedChange={(checked) => handleMarksPermissionChange(cls, sub.name, checked)}
+                                                        disabled={user.role === 'admin'}
+                                                    />
+                                                    <label htmlFor={`sub-${cls}-${sub.name}`} className="text-xs cursor-pointer truncate" title={sub.name}>{sub.name}</label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    </section>
                 </div>
-                 <DialogFooter>
+                <DialogFooter className="border-t pt-4">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>বাতিল</Button>
-                    <Button onClick={handleSave} disabled={user.role === 'admin'}>সেভ করুন</Button>
+                    <Button onClick={handleSave} disabled={user.role === 'admin'}>পরিবর্তন সেভ করুন</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
