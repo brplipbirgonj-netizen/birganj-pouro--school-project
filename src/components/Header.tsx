@@ -184,14 +184,19 @@ export function Header() {
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
     { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
     { label: '', icon: Search, type: 'search', permission: 'view:students' },
-    { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: 'manage:results' },
+    { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: ['manage:results', 'input:results'] },
     { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
     { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: 'manage:messaging' },
     { label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines' },
   ];
 
   const permittedBottomNavItems = useMemo(() => 
-    bottomNavItems.filter(item => hasPermission(item.permission)), 
+    bottomNavItems.filter(item => {
+        if (Array.isArray(item.permission)) {
+            return item.permission.some(p => hasPermission(p));
+        }
+        return hasPermission(item.permission);
+    }), 
     [user, hasPermission]
   );
 
@@ -290,7 +295,7 @@ export function Header() {
                           হাজিরা
                         </Link>
                       )}
-                      {hasPermission('manage:results') && (
+                      {(hasPermission('manage:results') || hasPermission('input:results')) && (
                         <Link
                           href="/results"
                           className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-violet-100 text-violet-800 hover:bg-violet-200"
