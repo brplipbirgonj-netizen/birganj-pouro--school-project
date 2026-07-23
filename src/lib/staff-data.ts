@@ -96,6 +96,7 @@ export const addStaff = async (db: Firestore, staffData: NewStaffData) => {
   
   const dataToSave: WithFieldValue<DocumentData> = {
     ...staffData,
+    email: staffData.email ? staffData.email.toLowerCase().trim() : '',
     employeeId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -133,6 +134,10 @@ export const updateStaff = async (db: Firestore, id: string, staffData: UpdateSt
     ...staffData,
     updatedAt: serverTimestamp(),
   };
+
+  if (staffData.email) {
+      dataToUpdate.email = staffData.email.toLowerCase().trim();
+  }
 
   const existingDoc = await getDoc(docRef);
   if (existingDoc.exists()) {
@@ -202,5 +207,3 @@ export const deleteStaff = async (db: Firestore, id: string) => {
         throw permissionError;
     });
 };
-
-    

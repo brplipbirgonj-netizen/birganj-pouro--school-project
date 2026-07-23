@@ -1,4 +1,3 @@
-
 'use client';
 import {
   getAuth,
@@ -33,13 +32,17 @@ export async function signUp(email: string, password: string): Promise<{ success
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
-    // 1. First, check if the system already has an admin
+    // 1. Create the Auth user first so we are "isAuthed()" for Firestore rules
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // 2. Now check if the system already has any users (to allow first admin)
     const usersRef = collection(db, 'users');
     const anyUserQuery = query(usersRef, limit(1));
-    const anyUserSnapshot = await getDocs(anyUserQuery);
+    const anyUserSnapshot = await getDocs(anyUserQuery).catch(() => ({ empty: false })); // If permission denied, assume not empty
     const isSystemEmpty = anyUserSnapshot.empty;
 
-    // 2. Check if this email is in the staff list
+    // 3. Check if this email is in the staff list
     const staffRef = collection(db, 'staff');
     const staffQuery = query(staffRef, where('email', '==', normalizedEmail), limit(1));
     const staffSnapshot = await getDocs(staffQuery);
@@ -47,15 +50,13 @@ export async function signUp(email: string, password: string): Promise<{ success
 
     // Security Gate: Reject if not staff AND not the very first user
     if (!isSystemEmpty && !isStaff) {
+      // Clean up: Delete the newly created auth user because they aren't authorized
+      await deleteUser(user);
       return { 
         success: false, 
         error: 'আপনার ইমেইলটি অনুমোদিত শিক্ষক তালিকায় পাওয়া যায়নি। দয়া করে এডমিনের সাথে যোগাযোগ করুন।' 
       };
     }
-
-    // 3. Proceed with Firebase Auth Signup
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
 
     let role: UserRole = 'teacher';
     let displayName = email.split('@')[0];
@@ -105,8 +106,6 @@ export async function signIn(email: string, password: string, role: UserRole): P
     const userDoc = await getDoc(userDocRef);
 
     if (!userDoc.exists()) {
-        // If auth user exists but no record in Firestore (e.g. signup failed halfway)
-        // We sign out to maintain security
         await firebaseSignOut(auth);
         return { success: false, error: 'আপনার কোনো প্রোফাইল পাওয়া যায়নি। দয়া করে পুনরায় সাইন আপ করুন।' };
     }
@@ -129,7 +128,7 @@ export async function signIn(email: string, password: string, role: UserRole): P
      if (authErrorCodes.includes(error.code)) {
       return { success: false, error: 'আপনার ইমেইল অথবা পাসওয়ার্ড ভুল।' };
     }
-    return { success: false, error: 'লগইন করা যায়নি। অনুগ্রহ করে পুনরায় চেষ্টা করুন।' };
+    return { success: false, error: 'লগইন করা যায়নি। অনুগ্রহ করে পুনরায় চেষ্টা করুন। ' + error.message };
   }
 }
 
