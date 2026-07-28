@@ -492,7 +492,7 @@ export default function MessagingPage() {
                                         onCheckedChange={() => handleToggleStudent(s.id)}
                                       />
                                     </TableCell>
-                                    <TableCell className="font-bold">{toBengaliNumber(s.roll)}</TableCell>
+                                    <TableCell className="font-bold">{s.roll.toLocaleString('bn-BD')}</TableCell>
                                     <TableCell className="font-bold">{s.studentNameBn}</TableCell>
                                     <TableCell className="text-xs text-muted-foreground">{s.guardianMobile || '-'}</TableCell>
                                     <TableCell className="text-right" onClick={e => e.stopPropagation()}>
