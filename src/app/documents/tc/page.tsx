@@ -128,7 +128,7 @@ export default function TCSelectionPage() {
                     <SelectTrigger id="studentSelect">
                       <SelectValue placeholder={students.length === 0 ? "কোনো শিক্ষার্থী পাওয়া যায়নি" : "শিক্ষার্থী সিলেক্ট করুন"} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="item-aligned" className="max-h-[300px]">
                       {students.map((st) => (
                         <SelectItem key={st.id} value={st.id}>
                           রোল {st.roll} - {st.studentNameBn} ({st.fatherNameBn})
