@@ -19,12 +19,12 @@ export default function DocumentsPage() {
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <Card>
                         <CardHeader>
-                            <CardTitle>प्रत्यয়ন পত্র</CardTitle>
+                            <CardTitle>প্রত্যয়ন পত্র</CardTitle>
                             <CardDescription>শিক্ষার্থীদের জন্য প্রশংসাপত্র বা প্রত্যয়ন পত্র জেনারেট করুন।</CardDescription>
                         </CardHeader>
                         <CardContent>
                            <p className="text-sm text-muted-foreground">
-                               प्रत्यয়ন পত্র তৈরি করতে, শিক্ষার্থী তালিকা থেকে নির্দিষ্ট শিক্ষার্থীকে বেছে নিন এবং তার প্রোফাইল থেকে "प्रत्यয়ন পত্র" অপশনটি নির্বাচন করুন।
+                                প্রত্যয়ন পত্র তৈরি করতে, শিক্ষার্থী তালিকা থেকে নির্দিষ্ট শিক্ষার্থীকে বেছে নিন এবং তার প্রোফাইল থেকে "প্রত্যয়ন পত্র" অপশনটি নির্বাচন করুন।
                            </p>
                         </CardContent>
                          <CardFooter>
