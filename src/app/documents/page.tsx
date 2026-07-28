@@ -62,13 +62,32 @@ export default function DocumentsPage() {
                         </CardHeader>
                         <CardContent>
                            <p className="text-sm text-muted-foreground">
-                               পরীক্ষা এবং শ্রেণি নির্বাচন করে সকল শিক্ষার্থীর জন্য একসাথে প্রবেশপত্র তৈরি ও প্রিন্ট করুন।
+                                পরীক্ষা এবং শ্রেণি নির্বাচন করে সকল শিক্ষার্থীর জন্য একসাথে প্রবেশপত্র তৈরি ও প্রিন্ট করুন।
                            </p>
                         </CardContent>
                          <CardFooter>
                             <Link href="/documents/admit-card" className="w-full">
                                 <Button className="w-full">
                                     প্রবেশ পত্র তৈরি করুন
+                                    <FilePlus className="ml-2 h-4 w-4" />
+                                </Button>
+                            </Link>
+                        </CardFooter>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>ছাড়পত্র (TC)</CardTitle>
+                            <CardDescription>শিক্ষার্থীদের জন্য স্থানান্তর বা ছাড়পত্র (Transfer Certificate) জেনারেট করুন।</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <p className="text-sm text-muted-foreground">
+                                শিক্ষার্থী নির্বাচন করে প্রয়োজনীয় তথ্য সহ প্রাতিষ্ঠানিক ছাড়পত্র (TC) তৈরি ও প্রিন্ট করুন।
+                           </p>
+                        </CardContent>
+                         <CardFooter>
+                            <Link href="/documents/tc" className="w-full">
+                                <Button className="w-full" variant="default">
+                                    ছাড়পত্র তৈরি করুন
                                     <FilePlus className="ml-2 h-4 w-4" />
                                 </Button>
                             </Link>
