@@ -623,7 +623,7 @@ export default function MessagingPage() {
                         </Badge>
                         <div className="flex items-center gap-1 text-muted-foreground text-[10px]">
                           <Clock className="h-3 w-3" />
-                          {format(log.createdAt, 'dd MMM, hh:mm a', { locale: bn })}
+                          {format(log.sentAt, 'dd MMM, hh:mm a', { locale: bn })}
                         </div>
                       </div>
 
