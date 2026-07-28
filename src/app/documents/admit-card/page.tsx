@@ -269,7 +269,7 @@ const AdmitCardGeneratorPage = () => {
                                                 <SelectTrigger id="student-single">
                                                     <SelectValue placeholder={availableStudents.length === 0 ? "শিক্ষার্থী নেই" : "শিক্ষার্থী সিলেক্ট করুন"} />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent position="item-aligned" className="max-h-[300px]">
                                                     {availableStudents.map(st => (
                                                         <SelectItem key={st.id} value={st.id}>
                                                             রোল {st.roll} - {st.studentNameBn}
