@@ -243,7 +243,7 @@ function StudentProfileSearchContent() {
                                         <Label htmlFor="class">শ্রেণি</Label>
                                         <Select value={className} onValueChange={setClassName} required>
                                             <SelectTrigger id="class"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent position="item-aligned" className="max-h-[300px]">
                                                 <SelectItem value="6">৬ষ্ঠ</SelectItem>
                                                 <SelectItem value="7">৭ম</SelectItem>
                                                 <SelectItem value="8">৮ম</SelectItem>
