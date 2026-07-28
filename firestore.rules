@@ -9,7 +9,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Standard isAdmin check that avoids recursion by checking own document role
+    // isAdmin: checks the caller's role from their user document
     function isAdmin() {
       return isAuthed() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
@@ -29,11 +29,17 @@ service cloud.firestore {
     match /users/{userId} {
       // Rule 1: A user can always read and update their OWN document
       allow get, update: if isAuthed() && request.auth.uid == userId;
-      
-      // Rule 2: Admin can perform ANY operation on ANY user document
-      allow read, write: if isAdmin();
-      
-      // Rule 3: Allow profile creation during signup
+
+      // Rule 2: Admin can read any user document
+      allow list, get: if isAdmin();
+
+      // Rule 3: Admin can create/update any user document
+      allow create, update: if isAdmin();
+
+      // Rule 4: Admin can DELETE any user document (explicit delete rule)
+      allow delete: if isAdmin();
+
+      // Rule 5: Allow profile creation during signup (own document only)
       allow create: if isAuthed() && request.auth.uid == userId;
     }
 
