@@ -175,7 +175,7 @@ export default function TransferCertificatePage() {
           </p>
 
           <p>
-            আমার জানা মতে এই বিদ্যালয়ে অধ্যয়নকালে তিনি রাজদ্রোহমূলক বা আইন পরিপন্থী কোনো কর্মকাণ্ডে লিপ্ত ছিলেন না। তাহার চরিত্র এবং নৈতিক আচরণ <span className="font-bold border-b border-dotted border-black px-2">{conduct}</span>।
+            আমার জানা মতে এই বিদ্যালয়ে অধ্যয়নকালে তিনি আইন শৃঙ্খলা পরিপন্থী বা অসামাজিক কোনো কর্মকাণ্ডে লিপ্ত ছিলেন না। তাহার চরিত্র এবং নৈতিক আচরণ <span className="font-bold border-b border-dotted border-black px-2">{conduct}</span>।
           </p>
 
           <p>
@@ -199,12 +199,7 @@ export default function TransferCertificatePage() {
         <div className="relative z-10 pt-12 flex justify-between items-end border-t mt-6">
           <div className="text-center">
             <div className="h-12"></div>
-            <p className="border-t border-black font-bold text-sm px-6 pt-1">শ্রেণি শিক্ষকের স্বাক্ষর</p>
-          </div>
-
-          <div className="text-center">
-            <div className="h-12"></div>
-            <p className="border-t border-black font-bold text-sm px-6 pt-1">কেরানী / অফিস সহকারী</p>
+            <p className="border-t border-black font-bold text-sm px-8 pt-1">শ্রেণি শিক্ষকের স্বাক্ষর</p>
           </div>
 
           <div className="text-center">
@@ -215,7 +210,7 @@ export default function TransferCertificatePage() {
             ) : (
               <div className="h-12"></div>
             )}
-            <p className="border-t border-black font-bold text-sm px-6 pt-1">
+            <p className="border-t border-black font-bold text-sm px-8 pt-1">
               প্রধান শিক্ষকের স্বাক্ষর ও সিল
             </p>
             <p className="text-xs text-muted-foreground font-semibold">
