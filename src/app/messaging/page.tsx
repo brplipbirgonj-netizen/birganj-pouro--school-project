@@ -15,23 +15,47 @@ import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Send, Users, Smartphone, History, Clock, Trash2, Phone, FileText, Check, UserCheck, UserMinus } from 'lucide-react';
+import { 
+    MessageSquare, Send, Users, History, Clock, Trash2, Phone, 
+    FileText, Check, Search, Sparkles, MessageCircle, AlertCircle
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logMessage, getMessageLogs, MessageLog, deleteMessageLog, updateMessageNote } from '@/lib/messaging-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+
+const QUICK_TEMPLATES = [
+    {
+        title: '❌ অনুপস্থিতি বার্তা',
+        text: 'সম্মানিত অভিভাবক, আপনার সন্তান আজ বিদ্যালয়ে অনুপস্থিত রয়েছে। অনুপস্থিতির কারণ জানান। - প্রধান শিক্ষক, বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'
+    },
+    {
+        title: '💰 বকেয়া ফি তাগাদা',
+        text: 'সম্মানিত অভিভাবক, আপনার সন্তানের চলতি মাসের বেতন/ফি বকেয়া রয়েছে। অনুগ্রহ করে দ্রুত পরিশোধের অনুরোধ করা হলো। - বীপৌউবি'
+    },
+    {
+        title: '📅 পরীক্ষার নোটিশ',
+        text: 'সম্মানিত অভিভাবক, আগামী রবিবার হতে সাময়িক পরীক্ষা শুরু হবে। সন্তানকে নিয়মিত ক্লাসে ও পরীক্ষার প্রস্তুতিতে সহযোগিতা করুন। - বীপৌউবি'
+    },
+    {
+        title: '🏫 অভিভাবক সভা',
+        text: 'সম্মানিত অভিভাবক, আগামী শনিবার সকাল ১০:০০ টায় বিদ্যালয়ে জরুরি অভিভাবক সভার আয়োজন করা হয়েছে। আপনার উপস্থিতি একান্ত কাম্য।'
+    },
+    {
+        title: '📢 জরুরি বন্ধের নোটিশ',
+        text: 'সম্মানিত অভিভাবক, সরকারি নির্দেশনা অনুযায়ী আগামী কাল বিদ্যালয় বন্ধ থাকবে। - প্রধান শিক্ষক, বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'
+    }
+];
 
 export default function MessagingPage() {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
-    const { user, hasPermission } = useAuth();
-    
+    const { user } = useAuth();
+
     const [isClient, setIsClient] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -41,7 +65,8 @@ export default function MessagingPage() {
     const [messageContent, setMessageContent] = useState('');
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
-    
+
+    const [logSearchQuery, setLogSearchQuery] = useState('');
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [tempNote, setTempNote] = useState('');
 
@@ -71,7 +96,7 @@ export default function MessagingPage() {
     }, [db, user, fetchLogs, fetchStudents]);
 
     const studentsInClass = useMemo(() => {
-        return allStudents.filter(s => s.className === selectedClass).sort((a,b) => a.roll - b.roll);
+        return allStudents.filter(s => s.className === selectedClass).sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
     }, [allStudents, selectedClass]);
 
     const handleToggleStudent = (id: string) => {
@@ -89,6 +114,21 @@ export default function MessagingPage() {
         }
     };
 
+    // Calculate SMS character & part stats
+    const smsStats = useMemo(() => {
+        const len = messageContent.length;
+        if (len === 0) return { chars: 0, parts: 0 };
+        const isUnicode = /[^\x00-\x7F]/.test(messageContent);
+        if (isUnicode) {
+            if (len <= 70) return { chars: len, parts: 1 };
+            return { chars: len, parts: Math.ceil(len / 67) };
+        } else {
+            if (len <= 160) return { chars: len, parts: 1 };
+            return { chars: len, parts: Math.ceil(len / 153) };
+        }
+    }, [messageContent]);
+
+    // Send direct mobile SMS via device protocol
     const handleSendDirectSMS = (mobiles: string | string[], content: string) => {
         const numbers = Array.isArray(mobiles) ? mobiles : [mobiles];
         const cleanNumbers = numbers
@@ -105,21 +145,30 @@ export default function MessagingPage() {
         }
 
         const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-        
-        // Android standard is comma, iOS standard is also comma for many apps
         const recipients = cleanNumbers.join(',');
         const encodedContent = encodeURIComponent(content);
-        
-        // SMS URL scheme varies slightly between Android and iOS for pre-filling body
-        const smsUrl = isIOS 
-            ? `sms:${recipients}&body=${encodedContent}`
-            : `sms:${recipients}?body=${encodedContent}`;
+        const smsUrl = isIOS ? `sms:${recipients}&body=${encodedContent}` : `sms:${recipients}?body=${encodedContent}`;
 
         try {
             window.location.href = smsUrl;
         } catch (e) {
             window.open(smsUrl, '_blank');
         }
+    };
+
+    // Send WhatsApp Direct Message
+    const handleSendWhatsApp = (mobile: string, content: string) => {
+        if (!mobile) {
+            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            return;
+        }
+        let cleanNum = mobile.replace(/[^\d]/g, '');
+        if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
+        if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
+
+        const encodedContent = encodeURIComponent(content || messageContent || 'সম্মানিত অভিভাবক, বীরগঞ্জ পৌর উচ্চ বিদ্যালয় হতে জরুরি বার্তা।');
+        const url = `https://wa.me/${cleanNum}?text=${encodedContent}`;
+        window.open(url, '_blank');
     };
 
     const handleMakeCall = async (student: Student) => {
@@ -130,10 +179,8 @@ export default function MessagingPage() {
             return;
         }
 
-        // Open dialer
         window.location.href = `tel:${cleanNumber}`;
 
-        // Then log the call record in history
         if (db && user) {
             try {
                 await logMessage(db, {
@@ -159,7 +206,6 @@ export default function MessagingPage() {
 
         setIsLoading(true);
         try {
-            // Log to Firestore first
             await logMessage(db, {
                 recipientsCount,
                 type,
@@ -170,8 +216,7 @@ export default function MessagingPage() {
             });
 
             toast({ title: 'মেসেজ রেকর্ড করা হয়েছে', description: `মোট ${recipientsCount.toLocaleString('bn-BD')} জন শিক্ষার্থীর জন্য লগ তৈরি করা হয়েছে।` });
-            
-            // If it's targeted, fire the SMS intent
+
             if ((type === 'individual' || type === 'absent') && selectedStudentIds.size > 0) {
                 const mobiles = Array.from(selectedStudentIds).map(id => {
                     const student = allStudents.find(s => s.id === id);
@@ -193,7 +238,6 @@ export default function MessagingPage() {
             fetchLogs();
         } catch (e: any) {
             console.error(e);
-            // Error is handled by global listener or shown here
         } finally {
             setIsLoading(false);
         }
@@ -222,7 +266,7 @@ export default function MessagingPage() {
             const attData = snap.docs[0].data();
             const absentIds = attData.attendance.filter((a: any) => a.status === 'absent').map((a: any) => a.studentId);
             setSelectedStudentIds(new Set(absentIds));
-            
+
             if (absentIds.length === 0) {
                 toast({ title: 'সবাই উপস্থিত আছে!' });
             } else {
@@ -241,9 +285,7 @@ export default function MessagingPage() {
             await deleteMessageLog(db, id);
             toast({ title: 'লগ মুছে ফেলা হয়েছে' });
             fetchLogs();
-        } catch (e) {
-            // Error handled by FirebaseErrorListener
-        }
+        } catch (e) {}
     };
 
     const handleSaveNote = async (id: string, customNote?: string) => {
@@ -269,377 +311,351 @@ export default function MessagingPage() {
         }
     };
 
+    const filteredLogs = useMemo(() => {
+        if (!logSearchQuery.trim()) return messageLogs;
+        const q = logSearchQuery.toLowerCase();
+        return messageLogs.filter(log =>
+            (log.content || '').toLowerCase().includes(q) ||
+            (log.senderName || '').toLowerCase().includes(q) ||
+            (log.note || '').toLowerCase().includes(q)
+        );
+    }, [messageLogs, logSearchQuery]);
+
     if (!isClient) return null;
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-lime-50">
-            <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
-                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-                    <Card className="md:col-span-2 lg:col-span-3">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-                                <MessageSquare className="h-6 w-6 text-primary" /> মেসেজ সেন্টার
-                            </CardTitle>
-                            <CardDescription>শিক্ষার্থী ও অভিভাবকদের কাছে সরাসরি মেসেজ পাঠান বা কল করুন</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Tabs defaultValue="bulk" onValueChange={handleTabChange}>
-                                <TabsList className="grid w-full grid-cols-4">
-                                    <TabsTrigger value="bulk">সকলকে</TabsTrigger>
-                                    <TabsTrigger value="class">শ্রেণিভিত্তিক</TabsTrigger>
-                                    <TabsTrigger value="individual">একক</TabsTrigger>
-                                    <TabsTrigger value="absent">অনুপস্থিত</TabsTrigger>
-                                </TabsList>
+      <div className="flex min-h-screen w-full flex-col bg-lime-50 font-kalpurush">
+        <Header />
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <Card className="md:col-span-2 lg:col-span-3 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+                  <MessageSquare className="h-6 w-6 text-primary" /> মেসেজ সেন্টার
+                </CardTitle>
+                <CardDescription>শিক্ষার্থী ও অভিভাবকদের কাছে সরাসরি মেসেজ পাঠান, WhatsApp করুন বা কল দিন</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="bulk" onValueChange={handleTabChange}>
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="bulk" className="font-bold">সকলকে</TabsTrigger>
+                    <TabsTrigger value="class" className="font-bold">শ্রেণিভিত্তিক</TabsTrigger>
+                    <TabsTrigger value="individual" className="font-bold">একক</TabsTrigger>
+                    <TabsTrigger value="absent" className="font-bold text-red-700">অনুপস্থিত</TabsTrigger>
+                  </TabsList>
 
-                                <div className="mt-6 space-y-6">
-                                    <TabsContent value="bulk" className="space-y-4">
-                                        <div className="p-4 bg-lime-100 border border-lime-200 rounded-lg flex items-center gap-4">
-                                            <Users className="h-10 w-10 text-lime-700" />
-                                            <div>
-                                                <p className="font-bold text-lime-900">সকল শিক্ষার্থী</p>
-                                                <p className="text-sm text-lime-700">পুরো স্কুলের {allStudents.length.toLocaleString('bn-BD')} জন শিক্ষার্থীর জন্য লগ তৈরি হবে।</p>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>বার্তার বিষয়বস্তু</Label>
-                                            <Textarea 
-                                                placeholder="আপনার বার্তা এখানে লিখুন..." 
-                                                className="min-h-[150px]"
-                                                value={messageContent}
-                                                onChange={e => setMessageContent(e.target.value)}
-                                            />
-                                        </div>
-                                        <Button 
-                                            className="w-full h-12 text-lg" 
-                                            disabled={isLoading || allStudents.length === 0}
-                                            onClick={() => handleLogAndSimulateMessage('all', allStudents.length)}
-                                        >
-                                            <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন
-                                        </Button>
-                                    </TabsContent>
+                  {/* Pre-defined SMS Templates Bar */}
+                  <div className="mt-4 p-3 bg-white border rounded-lg shadow-sm">
+                    <Label className="text-xs font-bold text-muted-foreground mb-2 flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" /> দ্রুত মেসেজ টেমপ্লেট (এক ক্লিকে লিখুন):
+                    </Label>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {QUICK_TEMPLATES.map((tmpl, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs bg-slate-50 hover:bg-primary/10 border-slate-200"
+                          onClick={() => setMessageContent(tmpl.text)}
+                        >
+                          {tmpl.title}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
 
-                                    <TabsContent value="class" className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label>শ্রেণি নির্বাচন করুন</Label>
-                                            <Select value={selectedClass} onValueChange={setSelectedClass}>
-                                                <SelectTrigger><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {['6', '7', '8', '9', '10'].map(c => (
-                                                        <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>বার্তার বিষয়বস্তু</Label>
-                                            <Textarea 
-                                                placeholder="শ্রেণির জন্য বার্তা লিখুন..." 
-                                                className="min-h-[150px]"
-                                                value={messageContent}
-                                                onChange={e => setMessageContent(e.target.value)}
-                                            />
-                                        </div>
-                                        <Button 
-                                            className="w-full h-12 text-lg" 
-                                            disabled={isLoading || !selectedClass || studentsInClass.length === 0}
-                                            onClick={() => handleLogAndSimulateMessage('class', studentsInClass.length)}
-                                        >
-                                            <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন ও মোবাইল থেকে পাঠান
-                                        </Button>
-                                    </TabsContent>
+                  <div className="mt-6 space-y-6">
+                    {/* Bulk Tab */}
+                    <TabsContent value="bulk" className="space-y-4">
+                      <div className="p-4 bg-lime-100 border border-lime-200 rounded-lg flex items-center gap-4">
+                        <Users className="h-10 w-10 text-lime-700" />
+                        <div>
+                          <p className="font-bold text-lime-900">সকল শিক্ষার্থী</p>
+                          <p className="text-sm text-lime-700">পুরো স্কুলের {allStudents.length.toLocaleString('bn-BD')} জন শিক্ষার্থীর জন্য লগ তৈরি হবে।</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <Label className="font-bold">বার্তার বিষয়বস্তু</Label>
+                          <div className="text-xs text-muted-foreground font-semibold">
+                            অক্ষর: <span className="font-bold text-primary">{smsStats.chars.toLocaleString('bn-BD')}</span> | 
+                            SMS: <span className="font-bold text-primary">{smsStats.parts.toLocaleString('bn-BD')}</span> টি
+                          </div>
+                        </div>
+                        <Textarea 
+                          placeholder="আপনার বার্তা এখানে লিখুন..." 
+                          className="min-h-[150px]"
+                          value={messageContent}
+                          onChange={e => setMessageContent(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        className="w-full h-12 text-lg font-bold" 
+                        disabled={isLoading || allStudents.length === 0}
+                        onClick={() => handleLogAndSimulateMessage('all', allStudents.length)}
+                      >
+                        <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন
+                      </Button>
+                    </TabsContent>
 
-                                    <TabsContent value="individual" className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label>শ্রেণি নির্বাচন করুন</Label>
-                                            <Select value={selectedClass} onValueChange={c => { setSelectedClass(c); setSelectedStudentIds(new Set()); }}>
-                                                <SelectTrigger><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {['6', '7', '8', '9', '10'].map(c => (
-                                                        <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        {selectedClass && (
-                                            <div className="border rounded-md max-h-[300px] overflow-y-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead className="w-12">
-                                                                <Checkbox 
-                                                                    checked={selectedStudentIds.size === studentsInClass.length && studentsInClass.length > 0}
-                                                                    onCheckedChange={handleSelectAll}
-                                                                />
-                                                            </TableHead>
-                                                            <TableHead>রোল</TableHead>
-                                                            <TableHead>নাম</TableHead>
-                                                            <TableHead>মোবাইল</TableHead>
-                                                            <TableHead className="text-right">একশন</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {studentsInClass.map(s => (
-                                                            <TableRow key={s.id} className="cursor-pointer" onClick={() => handleToggleStudent(s.id)}>
-                                                                <TableCell onClick={e => e.stopPropagation()}>
-                                                                    <Checkbox 
-                                                                        checked={selectedStudentIds.has(s.id)}
-                                                                        onCheckedChange={() => handleToggleStudent(s.id)}
-                                                                    />
-                                                                </TableCell>
-                                                                <TableCell>{s.roll.toLocaleString('bn-BD')}</TableCell>
-                                                                <TableCell>{s.studentNameBn}</TableCell>
-                                                                <TableCell className="text-xs text-muted-foreground">{s.guardianMobile || '-'}</TableCell>
-                                                                <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                                                                    <div className="flex justify-end gap-2">
-                                                                        <Button 
-                                                                            variant="ghost" 
-                                                                            size="icon" 
-                                                                            onClick={() => handleMakeCall(s)}
-                                                                            disabled={!s.guardianMobile && !s.studentMobile}
-                                                                            title="কল করুন"
-                                                                        >
-                                                                            <Phone className="h-4 w-4 text-green-600" />
-                                                                        </Button>
-                                                                        <Button 
-                                                                            variant="ghost" 
-                                                                            size="icon" 
-                                                                            onClick={() => handleSendDirectSMS(s.guardianMobile || s.studentMobile || '', messageContent)}
-                                                                            disabled={!messageContent.trim() || (!s.guardianMobile && !s.studentMobile)}
-                                                                            title="মেসেজ পাঠান"
-                                                                        >
-                                                                            <Smartphone className="h-4 w-4 text-blue-600" />
-                                                                        </Button>
-                                                                    </div>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        )}
-                                        <div className="space-y-2">
-                                            <Label>বার্তার বিষয়বস্তু</Label>
-                                            <Textarea 
-                                                placeholder="ব্যক্তিগত বার্তা লিখুন..." 
-                                                value={messageContent}
-                                                onChange={e => setMessageContent(e.target.value)}
-                                            />
-                                        </div>
-                                        <Button 
-                                            className="w-full h-12 text-lg" 
-                                            disabled={isLoading || selectedStudentIds.size === 0}
-                                            onClick={() => handleLogAndSimulateMessage('individual', selectedStudentIds.size)}
-                                        >
-                                            <Send className="mr-2 h-5 w-5" /> মোবাইল থেকে পাঠান {selectedStudentIds.size > 0 && `(${selectedStudentIds.size.toLocaleString('bn-BD')} জন)`}
-                                        </Button>
-                                    </TabsContent>
+                    {/* Class-wise Tab */}
+                    <TabsContent value="class" className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-bold">শ্রেণি নির্বাচন করুন</Label>
+                        <Select value={selectedClass} onValueChange={setSelectedClass}>
+                          <SelectTrigger><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
+                          <SelectContent>
+                            {['6', '7', '8', '9', '10'].map(c => (
+                              <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <Label className="font-bold">বার্তার বিষয়বস্তু</Label>
+                          <div className="text-xs text-muted-foreground font-semibold">
+                            অক্ষর: <span className="font-bold text-primary">{smsStats.chars.toLocaleString('bn-BD')}</span> | 
+                            SMS: <span className="font-bold text-primary">{smsStats.parts.toLocaleString('bn-BD')}</span> টি
+                          </div>
+                        </div>
+                        <Textarea 
+                          placeholder="শ্রেণির জন্য বার্তা লিখুন..." 
+                          className="min-h-[150px]"
+                          value={messageContent}
+                          onChange={e => setMessageContent(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        className="w-full h-12 text-lg font-bold" 
+                        disabled={isLoading || !selectedClass || studentsInClass.length === 0}
+                        onClick={() => handleLogAndSimulateMessage('class', studentsInClass.length)}
+                      >
+                        <Send className="mr-2 h-5 w-5" /> রেকর্ড করুন ও মোবাইল থেকে পাঠান
+                      </Button>
+                    </TabsContent>
 
-                                    <TabsContent value="absent" className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                                            <div className="space-y-2">
-                                                <Label>শ্রেণি</Label>
-                                                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                                                    <SelectTrigger><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
-                                                    <SelectContent>
-                                                        {['6', '7', '8', '9', '10'].map(c => (
-                                                            <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <Button variant="outline" onClick={fetchAbsentStudents} disabled={!selectedClass || isLoading} className="h-10">
-                                                আজকের অনুপস্থিত শিক্ষার্থী খুঁজুন
-                                            </Button>
-                                        </div>
-                                        {selectedStudentIds.size > 0 && (
-                                            <div className="border rounded-md max-h-[250px] overflow-y-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>রোল</TableHead>
-                                                            <TableHead>নাম</TableHead>
-                                                            <TableHead>মোবাইল</TableHead>
-                                                            <TableHead className="text-right">একশন</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {studentsInClass.filter(s => selectedStudentIds.has(s.id)).map(s => (
-                                                            <TableRow key={s.id}>
-                                                                <TableCell>{s.roll.toLocaleString('bn-BD')}</TableCell>
-                                                                <TableCell>{s.studentNameBn}</TableCell>
-                                                                <TableCell className="text-xs">{s.guardianMobile || '-'}</TableCell>
-                                                                <TableCell className="text-right">
-                                                                    <div className="flex justify-end gap-2">
-                                                                        <Button 
-                                                                            variant="outline" 
-                                                                            size="sm" 
-                                                                            className="h-7 px-2 text-[10px]"
-                                                                            onClick={() => handleMakeCall(s)}
-                                                                            disabled={!s.guardianMobile && !s.studentMobile}
-                                                                        >
-                                                                            <Phone className="h-3 w-3 mr-1" /> কল করুন
-                                                                        </Button>
-                                                                        <Button 
-                                                                            variant="outline" 
-                                                                            size="sm" 
-                                                                            className="h-7 px-2 text-[10px]"
-                                                                            onClick={() => handleSendDirectSMS(s.guardianMobile || s.studentMobile || '', messageContent)}
-                                                                            disabled={!messageContent.trim() || (!s.guardianMobile && !s.studentMobile)}
-                                                                        >
-                                                                            <Smartphone className="h-3 w-3 mr-1" /> এসএমএস
-                                                                        </Button>
-                                                                    </div>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        )}
-                                        <div className="space-y-2">
-                                            <Label>সতর্কবার্তা</Label>
-                                            <Textarea 
-                                                placeholder="সম্মানিত অভিভাবক, আপনার সন্তান আজ বিদ্যালয়ে অনুপস্থিত আছে। বিপৌউবি" 
-                                                value={messageContent}
-                                                onChange={e => setMessageContent(e.target.value)}
-                                            />
-                                        </div>
-                                        <Button 
-                                            className="w-full h-12 text-lg" 
-                                            variant="destructive"
-                                            disabled={isLoading || selectedStudentIds.size === 0}
-                                            onClick={() => handleLogAndSimulateMessage('absent', selectedStudentIds.size)}
-                                        >
-                                            <Send className="mr-2 h-5 w-5" /> মোবাইল থেকে পাঠান (অনুপস্থিত {selectedStudentIds.size.toLocaleString('bn-BD')} জন)
-                                        </Button>
-                                    </TabsContent>
-                                </div>
-                            </Tabs>
-                        </CardContent>
-                    </Card>
+                    {/* Individual Student Tab */}
+                    <TabsContent value="individual" className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-bold">শ্রেণি নির্বাচন করুন</Label>
+                        <Select value={selectedClass} onValueChange={c => { setSelectedClass(c); setSelectedStudentIds(new Set()); }}>
+                          <SelectTrigger><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
+                          <SelectContent>
+                            {['6', '7', '8', '9', '10'].map(c => (
+                              <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <Card className="md:col-span-1 lg:col-span-1 border-primary/20 shadow-lg">
-                        <CardHeader className="bg-primary/5 rounded-t-lg">
-                            <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                                <History className="h-5 w-5 text-primary" /> মেসেজ ও কল হিস্ট্রি
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="max-h-[650px] overflow-y-auto">
-                                {isLoadingLogs ? (
-                                    <div className="p-4 space-y-4">
-                                        <Skeleton className="h-20 w-full" />
-                                        <Skeleton className="h-20 w-full" />
-                                        <Skeleton className="h-20 w-full" />
-                                    </div>
-                                ) : messageLogs.length === 0 ? (
-                                    <p className="p-8 text-center text-sm text-muted-foreground italic">এখনও কোনো রেকর্ড নেই।</p>
-                                ) : (
-                                    <div className="divide-y">
-                                        {messageLogs.map(log => (
-                                            <div key={log.id} className="p-4 hover:bg-primary/5 transition-colors relative group">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <Badge 
-                                                        variant={log.type === 'call' ? 'outline' : 'secondary'} 
-                                                        className={cn(
-                                                            "text-[10px] py-0 px-2 h-5",
-                                                            log.type === 'call' && "border-green-500 text-green-700 bg-green-50"
-                                                        )}
-                                                    >
-                                                        {log.type === 'all' ? 'সকল' : log.type === 'class' ? 'শ্রেণি' : log.type === 'individual' ? 'একক' : log.type === 'absent' ? 'অনুপস্থিত' : 'কল'}
-                                                    </Badge>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] text-muted-foreground flex items-center bg-muted px-1.5 py-0.5 rounded">
-                                                            <Clock className="h-3 w-3 mr-1" />
-                                                            {format(log.sentAt, 'PPp', { locale: bn })}
-                                                        </span>
-                                                        {user?.role === 'admin' && (
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            এই রেকর্ডটি স্থায়ীভাবে মুছে ফেলা হবে।
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => handleDeleteLog(log.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <p className="text-sm font-medium line-clamp-3 mb-2 text-foreground">{log.content}</p>
-                                                
-                                                {/* Display and Edit Notes (For Manual Duration/Outcome) */}
-                                                <div className="bg-muted/50 rounded-md p-2 mb-2 text-[11px] border border-dashed">
-                                                    {editingNoteId === log.id ? (
-                                                        <div className="space-y-2">
-                                                            <div className="flex gap-1">
-                                                                <Input 
-                                                                    value={tempNote} 
-                                                                    onChange={e => setTempNote(e.target.value)} 
-                                                                    className="h-7 text-[11px] py-0"
-                                                                    placeholder="কথোপকথনের তথ্য (উদা: ২ মিনিট)"
-                                                                    autoFocus
-                                                                />
-                                                                <Button size="icon" className="h-7 w-7" onClick={() => handleSaveNote(log.id)}><Check className="h-3 w-3" /></Button>
-                                                            </div>
-                                                            {log.type === 'call' && (
-                                                                <div className="flex gap-2">
-                                                                    <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 bg-green-50 hover:bg-green-100 border-green-200" onClick={() => handleSaveNote(log.id, 'কথা হয়েছে')}>
-                                                                        <UserCheck className="h-3 w-3 mr-1 text-green-600" /> কথা হয়েছে
-                                                                    </Button>
-                                                                    <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 bg-red-50 hover:bg-red-100 border-red-200" onClick={() => handleSaveNote(log.id, 'কথা হয় নাই')}>
-                                                                        <UserMinus className="h-3 w-3 mr-1 text-red-600" /> কথা হয় নাই
-                                                                    </Button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex justify-between items-center group/note">
-                                                            <div className="flex items-center gap-2">
-                                                                {log.notes === 'কথা হয়েছে' ? (
-                                                                    <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 py-0 h-5 text-[10px]"><UserCheck className="h-2.5 w-2.5 mr-1" /> কথা হয়েছে</Badge>
-                                                                ) : log.notes === 'কথা হয় নাই' ? (
-                                                                    <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200 py-0 h-5 text-[10px]"><UserMinus className="h-2.5 w-2.5 mr-1" /> কথা হয় নাই</Badge>
-                                                                ) : (
-                                                                    <span className="italic">{log.notes || 'কোনো নোট নেই'}</span>
-                                                                )}
-                                                            </div>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-5 w-5 opacity-0 group-hover/note:opacity-100" 
-                                                                onClick={() => { setEditingNoteId(log.id); setTempNote(log.notes || ''); }}
-                                                            >
-                                                                <FileText className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex justify-between text-[10px] font-semibold text-muted-foreground pt-2 border-t border-dashed">
-                                                    <span>{log.type === 'call' ? 'কল রেকর্ড' : `প্রাপক: ${log.recipientsCount.toLocaleString('bn-BD')} জন`}</span>
-                                                    <span>প্রেরক: {log.senderName}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                      {selectedClass && (
+                        <>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <Label className="font-bold">বার্তার বিষয়বস্তু</Label>
+                              <div className="text-xs text-muted-foreground font-semibold">
+                                অক্ষর: <span className="font-bold text-primary">{smsStats.chars.toLocaleString('bn-BD')}</span> | 
+                                SMS: <span className="font-bold text-primary">{smsStats.parts.toLocaleString('bn-BD')}</span> টি
+                              </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <Textarea 
+                              placeholder="নির্বাচিত শিক্ষার্থীদের বার্তা লিখুন..." 
+                              className="min-h-[100px]"
+                              value={messageContent}
+                              onChange={e => setMessageContent(e.target.value)}
+                            />
+                          </div>
+
+                          <div className="border rounded-md max-h-[350px] overflow-y-auto bg-white">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-12">
+                                    <Checkbox 
+                                      checked={selectedStudentIds.size === studentsInClass.length && studentsInClass.length > 0}
+                                      onCheckedChange={handleSelectAll}
+                                    />
+                                  </TableHead>
+                                  <TableHead>রোল</TableHead>
+                                  <TableHead>নাম</TableHead>
+                                  <TableHead>মোবাইল</TableHead>
+                                  <TableHead className="text-right">সরাসরি যোগাযোগ</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {studentsInClass.map(s => (
+                                  <TableRow key={s.id} className="cursor-pointer hover:bg-slate-50" onClick={() => handleToggleStudent(s.id)}>
+                                    <TableCell onClick={e => e.stopPropagation()}>
+                                      <Checkbox 
+                                        checked={selectedStudentIds.has(s.id)}
+                                        onCheckedChange={() => handleToggleStudent(s.id)}
+                                      />
+                                    </TableCell>
+                                    <TableCell className="font-bold">{toBengaliNumber(s.roll)}</TableCell>
+                                    <TableCell className="font-bold">{s.studentNameBn}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{s.guardianMobile || '-'}</TableCell>
+                                    <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                                      <div className="flex justify-end gap-1">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon"
+                                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          onClick={() => handleSendWhatsApp(s.guardianMobile || s.studentMobile || '', messageContent)}
+                                          disabled={!s.guardianMobile && !s.studentMobile}
+                                          title="WhatsApp-এ পাঠান"
+                                        >
+                                          <MessageCircle className="h-4 w-4" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          onClick={() => handleMakeCall(s)}
+                                          disabled={!s.guardianMobile && !s.studentMobile}
+                                          title="কল করুন"
+                                        >
+                                          <Phone className="h-4 w-4 text-blue-600" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+
+                          <Button 
+                            className="w-full h-12 text-lg font-bold" 
+                            disabled={isLoading || selectedStudentIds.size === 0}
+                            onClick={() => handleLogAndSimulateMessage('individual', selectedStudentIds.size)}
+                          >
+                            <Send className="mr-2 h-5 w-5" /> ({selectedStudentIds.size.toLocaleString('bn-BD')}) জনকে মেসেজ পাঠান
+                          </Button>
+                        </>
+                      )}
+                    </TabsContent>
+
+                    {/* Absent Tab */}
+                    <TabsContent value="absent" className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-bold">শ্রেণি নির্বাচন করুন</Label>
+                        <div className="flex gap-2">
+                          <Select value={selectedClass} onValueChange={setSelectedClass}>
+                            <SelectTrigger className="flex-1"><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
+                            <SelectContent>
+                              {['6', '7', '8', '9', '10'].map(c => (
+                                <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button onClick={fetchAbsentStudents} disabled={!selectedClass || isLoading} className="font-bold">
+                            আজকের অনুপস্থিত খোজুন
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <Label className="font-bold">বার্তার বিষয়বস্তু</Label>
+                          <div className="text-xs text-muted-foreground font-semibold">
+                            অক্ষর: <span className="font-bold text-primary">{smsStats.chars.toLocaleString('bn-BD')}</span> | 
+                            SMS: <span className="font-bold text-primary">{smsStats.parts.toLocaleString('bn-BD')}</span> টি
+                          </div>
+                        </div>
+                        <Textarea 
+                          placeholder="অনুপস্থিতির বার্তা লিখুন..." 
+                          className="min-h-[100px]"
+                          value={messageContent}
+                          onChange={e => setMessageContent(e.target.value)}
+                        />
+                      </div>
+
+                      {selectedStudentIds.size > 0 && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-red-900 font-bold">
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                            {selectedStudentIds.size.toLocaleString('bn-BD')} জন অনুপস্থিত শিক্ষার্থী পাওয়া গেছে।
+                          </div>
+                          <Button 
+                            variant="destructive"
+                            onClick={() => handleLogAndSimulateMessage('absent', selectedStudentIds.size)}
+                          >
+                            অভিভাবকদের SMS পাঠান
+                          </Button>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            {/* Message Log History Column */}
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                  <History className="h-5 w-5 text-primary" /> সাম্প্রতিক মেসেজ লগ
+                </CardTitle>
+                <CardDescription>প্রেরিত সকল বার্তা ও কলের ইতিহাস</CardDescription>
+                
+                {/* Search Bar for History */}
+                <div className="relative pt-2">
+                  <Search className="absolute left-2.5 top-5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="ইতিহাস খুঁজুন..." 
+                    className="pl-8 text-xs h-9"
+                    value={logSearchQuery}
+                    onChange={e => setLogSearchQuery(e.target.value)}
+                  />
                 </div>
-            </main>
-        </div>
+              </CardHeader>
+              <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
+                {isLoadingLogs ? (
+                  <p className="text-center text-sm text-muted-foreground py-8">লোড হচ্ছে...</p>
+                ) : filteredLogs.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-8">কোনো মেসেজ লগ পাওয়া যায়নি।</p>
+                ) : (
+                  filteredLogs.map(log => (
+                    <div key={log.id} className="p-3 border rounded-lg bg-white space-y-2 text-xs shadow-sm">
+                      <div className="flex justify-between items-start">
+                        <Badge variant={log.type === 'call' ? 'outline' : 'secondary'} className="text-[10px]">
+                          {log.type === 'call' ? '📞 ফোন কল' : log.type === 'all' ? '📢 সকলকে' : log.type === 'class' ? `🏫 ${classNamesMap[log.className || ''] || ''} শ্রেণি` : '✉️ নির্দিষ্ট'}
+                        </Badge>
+                        <div className="flex items-center gap-1 text-muted-foreground text-[10px]">
+                          <Clock className="h-3 w-3" />
+                          {format(log.createdAt, 'dd MMM, hh:mm a', { locale: bn })}
+                        </div>
+                      </div>
+
+                      <p className="text-slate-800 font-semibold leading-relaxed line-clamp-3">{log.content}</p>
+
+                      <div className="flex justify-between items-center border-t pt-2 text-[10px] text-muted-foreground">
+                        <span>প্রেরক: {log.senderName || 'Admin'}</span>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-700">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>লগ মুছে ফেলতে চান?</AlertDialogTitle>
+                              <AlertDialogDescription>এই রেকর্ডটি মুছে ফেলা হবে।</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteLog(log.id)}>মুছে ফেলুন</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
     );
 }
