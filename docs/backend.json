@@ -297,6 +297,23 @@
       },
       "required": ["academicYear", "className", "day", "periods"]
     },
+    "proxyClass": {
+      "title": "Proxy Class",
+      "description": "A temporary teacher assignment for a specific class and period.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "academicYear": { "type": "string" },
+        "className": { "type": "string" },
+        "periodIndex": { "type": "number" },
+        "originalTeacher": { "type": "string" },
+        "proxyTeacher": { "type": "string" },
+        "subject": { "type": "string" },
+        "assignedBy": { "type": "string" },
+        "assignedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "academicYear", "className", "periodIndex", "originalTeacher", "proxyTeacher"]
+    },
     "examRoutine": {
       "title": "Exam Routine",
       "description": "Schedule for a specific examination.",
@@ -395,6 +412,10 @@
     "/classRoutines/{routineId}": {
       "schema": { "$ref": "#/entities/classRoutine" },
       "description": "Stores weekly class routines."
+    },
+    "/proxyClasses/{proxyId}": {
+      "schema": { "$ref": "#/entities/proxyClass" },
+      "description": "Stores temporary proxy teacher assignments."
     },
     "/examRoutines/{routineId}": {
       "schema": { "$ref": "#/entities/examRoutine" },

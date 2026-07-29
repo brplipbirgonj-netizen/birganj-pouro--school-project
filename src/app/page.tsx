@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -9,6 +10,7 @@ import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
+import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
 import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
@@ -231,6 +233,7 @@ const LiveRoutineCard = () => {
     const { user } = useAuth();
     const { selectedYear } = useAcademicYear();
     const [fullRoutine, setFullRoutine] = useState<ClassRoutine[]>([]);
+    const [proxies, setProxies] = useState<ProxyClass[]>([]);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isLoading, setIsLoading] = useState(true);
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
@@ -241,12 +244,14 @@ const LiveRoutineCard = () => {
         const fetchData = async () => {
             try {
                 const todayStr = format(new Date(), 'yyyy-MM-dd');
-                const [routineData, holidayInfo] = await Promise.all([
+                const [routineData, holidayInfo, proxyData] = await Promise.all([
                     getFullRoutine(db, selectedYear),
                     isHoliday(db, todayStr),
+                    getProxyClasses(db, todayStr, selectedYear)
                 ]);
                 setFullRoutine(routineData);
                 setActiveHoliday(holidayInfo);
+                setProxies(proxyData);
             } catch (e) {
                 console.error(e);
             }
@@ -308,10 +313,15 @@ const LiveRoutineCard = () => {
                 if (periodContent) {
                     const adjustedPeriodIndex = periodIndex + (periodIndex >= 3 ? 1 : 0);
                     const periodInfo = periodTimes[adjustedPeriodIndex];
+                    
+                    // Check for proxy
+                    const proxy = proxies.find(p => p.className === r.className && p.periodIndex === periodIndex);
+                    
                     return {
                         className: r.className,
                         displayClassName: classNamesMap[r.className] || r.className,
-                        teacher: parseTeacherName(periodContent),
+                        teacher: proxy ? proxy.proxyTeacher : parseTeacherName(periodContent),
+                        isProxy: !!proxy,
                         period: periodInfo.name,
                         time: `${periodInfo.start.h.toString().padStart(2, '0')}:${periodInfo.start.m.toString().padStart(2, '0')} - ${periodInfo.end.h.toString().padStart(2, '0')}:${periodInfo.end.m.toString().padStart(2, '0')}`
                     };
@@ -352,10 +362,12 @@ const LiveRoutineCard = () => {
                     .map(r => {
                         const periodContent = r.periods[nextPeriodIndex];
                         if (periodContent) {
+                            const proxy = proxies.find(p => p.className === r.className && p.periodIndex === nextPeriodIndex);
                             return {
                                 className: r.className,
                                 displayClassName: classNamesMap[r.className] || r.className,
-                                teacher: parseTeacherName(periodContent),
+                                teacher: proxy ? proxy.proxyTeacher : parseTeacherName(periodContent),
+                                isProxy: !!proxy,
                                 period: nextPeriodInfo.name,
                                 time: `${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} - ${nextPeriodInfo.end.h > 12 ? nextPeriodInfo.end.h - 12 : nextPeriodInfo.end.h}:${nextPeriodInfo.end.m.toString().padStart(2, '0')}`
                             };
@@ -422,7 +434,10 @@ const LiveRoutineCard = () => {
                                             {runningClasses.map((rc, index) => (
                                                 <TableRow key={index}>
                                                     <TableCell className="text-xs font-medium">{rc.time}</TableCell>
-                                                    <TableCell className="font-semibold text-primary">{rc.teacher}</TableCell>
+                                                    <TableCell className="font-semibold text-primary">
+                                                        {rc.teacher} 
+                                                        {rc.isProxy && <span className="ml-1 text-[10px] text-red-600 font-black animate-pulse">(বদলি)</span>}
+                                                    </TableCell>
                                                     <TableCell>{rc.displayClassName}</TableCell>
                                                 </TableRow>
                                             ))}
@@ -461,7 +476,10 @@ const LiveRoutineCard = () => {
                                                 {nextClasses.map((nc, index) => (
                                                     <TableRow key={index}>
                                                         <TableCell className="text-xs text-muted-foreground">{nc.time}</TableCell>
-                                                        <TableCell className="font-medium text-indigo-900">{nc.teacher}</TableCell>
+                                                        <TableCell className="font-medium text-indigo-900">
+                                                            {nc.teacher}
+                                                            {nc.isProxy && <span className="ml-1 text-[10px] text-red-600 font-black">(বদলি)</span>}
+                                                        </TableCell>
                                                         <TableCell className="text-muted-foreground">{nc.displayClassName}</TableCell>
                                                     </TableRow>
                                                 ))}
