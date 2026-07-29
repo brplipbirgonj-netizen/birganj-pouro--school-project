@@ -269,9 +269,14 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
     const checkAlerts = useCallback(async () => {
         if (!db) return;
         setIsLoading(true);
-        const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
-        setAlerts(data);
-        setIsLoading(false);
+        try {
+            const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
+            setAlerts(data);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+        }
     }, [db, selectedClass, selectedYear]);
 
     useEffect(() => {
