@@ -37,6 +37,8 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
+const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
 // Defaulters Tab Component
 const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], selectedYear: string }) => {
     const db = useFirestore();
@@ -44,6 +46,8 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
     const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [collections, setCollections] = useState<FeeCollection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const classes = ['6', '7', '8', '9', '10'];
 
     useEffect(() => {
         if (!db) return;
@@ -58,16 +62,16 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
         return () => unsubscribe();
     }, [db, selectedYear]);
 
-    const defaulters = useMemo(() => {
-        const studentsInYear = allStudents.filter(s => s.academicYear === selectedYear);
-        return studentsInYear.filter(student => {
+    const getDefaultersForClass = (cls: string) => {
+        const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === cls);
+        return studentsInClass.filter(student => {
             const hasPaid = collections.some(c => 
                 c.studentId === student.id && 
-                (c.description?.includes(selectedMonth) || c.breakdown?.tuitionCurrent !== undefined)
+                (c.description?.includes(selectedMonth))
             );
             return !hasPaid;
         }).sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
-    }, [allStudents, collections, selectedMonth, selectedYear]);
+    };
 
     const handleSendReminder = (student: Student) => {
         const mobile = student.guardianMobile || student.studentMobile;
@@ -77,73 +81,90 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
         }
         const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} এর ${selectedMonth} মাসের বিদ্যালয় ফি বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করুন। বীপৌউবি`;
         const encodedMsg = encodeURIComponent(msg);
-        window.location.href = `sms:${mobile}?body=${encodedMsg}`;
+        
+        const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const separator = isIOS ? '&' : '?';
+        window.location.href = `sms:${mobile}${separator}body=${encodedMsg}`;
     };
 
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
-
     return (
-        <Card className="border-red-200">
-            <CardHeader className="bg-red-50/50">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <CardTitle className="text-red-900 flex items-center gap-2">
-                            <AlertCircle className="h-5 w-5" /> বকেয়া তালিকা
-                        </CardTitle>
-                        <CardDescription>বেতন পরিশোধ করেনি এমন শিক্ষার্থীদের তালিকা</CardDescription>
+        <div className="space-y-6">
+            <Card className="border-red-200">
+                <CardHeader className="bg-red-50/50">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <CardTitle className="text-red-900 flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5" /> বকেয়া তালিকা (শ্রেণিভিত্তিক)
+                            </CardTitle>
+                            <CardDescription>বেতন পরিশোধ করেনি এমন শিক্ষার্থীদের তালিকা দেখুন</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Label className="font-bold whitespace-nowrap">মাস নির্বাচন:</Label>
+                            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                                <SelectTrigger className="w-44 bg-white shadow-sm font-bold text-primary"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Label className="font-bold whitespace-nowrap">মাস:</Label>
-                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                            <SelectTrigger className="w-40 bg-white"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent className="p-0">
-                <div className="table-container">
-                    <Table>
-                        <TableHeader className="bg-muted/50">
-                            <TableRow>
-                                <TableHead className="w-20 text-center">রোল</TableHead>
-                                <TableHead>নাম</TableHead>
-                                <TableHead>শ্রেণি</TableHead>
-                                <TableHead>মোবাইল</TableHead>
-                                <TableHead className="text-right">কার্যক্রম</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow><TableCell colSpan={5} className="text-center py-12">লোড হচ্ছে...</TableCell></TableRow>
-                            ) : defaulters.length === 0 ? (
-                                <TableRow><TableCell colSpan={5} className="text-center py-12 text-emerald-600 font-bold">অভিনন্দন! এই মাসে কারো বেতন বকেয়া নেই।</TableCell></TableRow>
-                            ) : (
-                                defaulters.map(student => (
-                                    <TableRow key={student.id}>
-                                        <TableCell className="text-center font-bold">{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                        <TableCell className="font-bold">{student.studentNameBn}</TableCell>
-                                        <TableCell>{classNamesMap[student.className] || student.className}</TableCell>
-                                        <TableCell className="text-xs">{student.guardianMobile || student.studentMobile || '-'}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleSendReminder(student)}>
-                                                <Smartphone className="h-4 w-4 mr-2" /> SMS পাঠান
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-                <div className="p-4 bg-muted/20 text-xs font-bold text-muted-foreground flex justify-between">
-                    <span>মোট বকেয়া: {defaulters.length.toLocaleString('bn-BD')} জন</span>
-                    <span>শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</span>
-                </div>
-            </CardContent>
-        </Card>
+                </CardHeader>
+                <CardContent className="p-0 sm:p-6">
+                    <Tabs defaultValue="6">
+                        <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap mb-6">
+                            {classes.map(cls => (
+                                <TabsTrigger key={cls} value={cls} className="py-2 font-bold">
+                                    {classNamesMap[cls]}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                        {classes.map(cls => {
+                            const defaulters = getDefaultersForClass(cls);
+                            return (
+                                <TabsContent key={cls} value={cls} className="mt-0">
+                                    <div className="table-container">
+                                        <Table>
+                                            <TableHeader className="bg-muted/50">
+                                                <TableRow>
+                                                    <TableHead className="w-20 text-center">রোল</TableHead>
+                                                    <TableHead>নাম</TableHead>
+                                                    <TableHead>মোবাইল</TableHead>
+                                                    <TableHead className="text-right">কার্যক্রম</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {isLoading ? (
+                                                    <TableRow><TableCell colSpan={4} className="text-center py-12">লোড হচ্ছে...</TableCell></TableRow>
+                                                ) : defaulters.length === 0 ? (
+                                                    <TableRow><TableCell colSpan={4} className="text-center py-12 text-emerald-600 font-bold">অভিনন্দন! এই শ্রেণিতে কারো বেতন বকেয়া নেই।</TableCell></TableRow>
+                                                ) : (
+                                                    defaulters.map(student => (
+                                                        <TableRow key={student.id}>
+                                                            <TableCell className="text-center font-bold">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                                            <TableCell className="font-bold">{student.studentNameBn}</TableCell>
+                                                            <TableCell className="text-xs">{student.guardianMobile || student.studentMobile || '-'}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleSendReminder(student)}>
+                                                                    <Smartphone className="h-4 w-4 mr-2" /> SMS পাঠান
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                    <div className="mt-4 p-3 bg-muted/20 text-xs font-bold text-muted-foreground flex justify-between rounded-lg">
+                                        <span>মোট বকেয়া ({classNamesMap[cls]} শ্রেণি): {defaulters.length.toLocaleString('bn-BD')} জন</span>
+                                        <span className="text-primary">{selectedMonth} মাস</span>
+                                    </div>
+                                </TabsContent>
+                            )
+                        })}
+                    </Tabs>
+                </CardContent>
+            </Card>
+        </div>
     );
 };
 
@@ -152,9 +173,6 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
     const [feeStudent, setFeeStudent] = useState<Student | null>(null);
 
     const classes = ['6', '7', '8', '9', '10'];
-    const classNamesMap: { [key: string]: string } = {
-        '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম',
-    };
 
     const getStudentsByClass = (className: string): Student[] => {
         return studentsForYear.filter((student) => student.className === className);
@@ -165,7 +183,7 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
         <Tabs defaultValue="6">
             <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap">
             {classes.map((className) => (
-                <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm">
+                <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm font-bold">
                 {classNamesMap[className]}
                 </TabsTrigger>
             ))}
@@ -278,8 +296,6 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
             return matchesCollector && matchesDate;
         });
     }, [collections, collectorFilter, dateFilter]);
-
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     return (
         <Card>
