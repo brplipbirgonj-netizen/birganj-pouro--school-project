@@ -79,6 +79,22 @@ function StudentListContent() {
       return gl === 'female' || gl === 'মহিলা' || gl === 'ছাত্রী' || gl === 'girl' || gl === 'f';
   };
 
+  // Calculate religion counts for the dropdown
+  const religionCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: 0, islam: 0, hinduism: 0, buddhism: 0, christianity: 0, other: 0 };
+    const studentsForYear = allStudents.filter(s => s.academicYear === selectedYear);
+    counts.all = studentsForYear.length;
+    studentsForYear.forEach(s => {
+      const r = (s.religion || '').toLowerCase();
+      if (r === 'islam') counts.islam++;
+      else if (r === 'hinduism') counts.hinduism++;
+      else if (r === 'buddhism') counts.buddhism++;
+      else if (r === 'christianity') counts.christianity++;
+      else if (r) counts.other++;
+    });
+    return counts;
+  }, [allStudents, selectedYear]);
+
   const filteredStudents = useMemo(() => {
     // Always filter by selected academic year first
     let filtered = allStudents.filter(s => s.academicYear === selectedYear);
@@ -101,7 +117,7 @@ function StudentListContent() {
       filtered = filtered.filter(s => filterStipend === 'yes' ? s.isStipendReceiver === true : s.isStipendReceiver !== true);
     }
     if (filterReligion !== 'all') {
-      filtered = filtered.filter(s => s.religion === filterReligion);
+      filtered = filtered.filter(s => (s.religion || '').toLowerCase() === filterReligion);
     }
 
     return filtered;
@@ -161,8 +177,6 @@ function StudentListContent() {
         return () => clearTimeout(timer);
     }
   }, [targetStudentId, isLoading, isMounted]);
-
-  // studentsForYear replaced by filteredStudents which already filters by year
 
   const handleDeleteStudent = (studentId: string) => {
     if (!db) return;
@@ -225,15 +239,18 @@ function StudentListContent() {
                     />
                 </div>
 
-                {/* Filter selects */}
+                {/* Religion Filter select (Replaced All Gender) */}
                 <select
-                  value={filterGender}
-                  onChange={(e) => setFilterGender(e.target.value)}
-                  className="h-10 px-3 rounded-md border border-input bg-white text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={filterReligion}
+                  onChange={(e) => setFilterReligion(e.target.value)}
+                  className="h-10 px-3 rounded-md border border-input bg-white text-sm font-bold focus:outline-none focus:ring-1 focus:ring-ring text-primary"
                 >
-                  <option value="all">সকল লিঙ্গ</option>
-                  <option value="male">ছাত্র (Male)</option>
-                  <option value="female">ছাত্রী (Female)</option>
+                  <option value="all">সকল ধর্ম ({religionCounts.all.toLocaleString('bn-BD')})</option>
+                  <option value="islam">ইসলাম ({religionCounts.islam.toLocaleString('bn-BD')})</option>
+                  <option value="hinduism">হিন্দু ({religionCounts.hinduism.toLocaleString('bn-BD')})</option>
+                  <option value="buddhism">বৌদ্ধ ({religionCounts.buddhism.toLocaleString('bn-BD')})</option>
+                  <option value="christianity">খ্রিস্টান ({religionCounts.christianity.toLocaleString('bn-BD')})</option>
+                  <option value="other">অন্যান্য ({religionCounts.other.toLocaleString('bn-BD')})</option>
                 </select>
 
                 <select
@@ -340,8 +357,8 @@ function StudentListContent() {
                                                 )}
                                                 {student.religion && (
                                                     <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full">{
-                                                        student.religion === 'Islam' ? 'ইসলাম' :
-                                                        student.religion === 'Hinduism' ? 'হিন্দু' : student.religion
+                                                        student.religion === 'Islam' || student.religion === 'islam' ? 'ইসলাম' :
+                                                        student.religion === 'Hinduism' || student.religion === 'hinduism' ? 'হিন্দু' : student.religion
                                                     }</span>
                                                 )}
                                             </div>
@@ -556,4 +573,3 @@ export default function StudentListPage() {
     </Suspense>
   );
 }
-// Trigger Vercel Build
