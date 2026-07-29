@@ -329,7 +329,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                     {isLoading ? (
                         <p className="text-center py-12">লোড হচ্ছে...</p>
                     ) : alerts.length === 0 ? (
-                        <p className="text-center py-12 text-muted-foreground italic">এই শ্রেণিতে বর্তমানে কোনো ঝুঁকিপূর্ণ শিক্ষার্থী নেই।</p>
+                        <p className="text-center py-12 text-muted-foreground italic">এই শ্রেণিতে বর্তমানে কোনো তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।</p>
                     ) : (
                         <div className="table-container">
                             <Table>
@@ -664,4 +664,3 @@ export default function AttendancePage() {
         </div>
     );
 }
-

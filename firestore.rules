@@ -49,8 +49,7 @@ service cloud.firestore {
 
     match /proxyClasses/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:routines');
-      allow delete: if isAdmin() || hasPermission('manage:routines');
+      allow write: if isAdmin() || hasPermission('manage:routines');
     }
 
     match /notices/{id} {

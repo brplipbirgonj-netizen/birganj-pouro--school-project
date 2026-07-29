@@ -34,6 +34,7 @@ import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { getProxyClasses, saveProxyClass, deleteProxyClass, ProxyClass, NewProxyData } from '@/lib/proxy-data';
 import { getStaff, Staff } from '@/lib/staff-data';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
@@ -414,19 +415,26 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
         return busy;
     }, [dayName, routineData]);
 
-    const fetchProxies = useCallback(async () => {
+    useEffect(() => {
         if (!db || !selectedDate) return;
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
-        const data = await getProxyClasses(db, dateStr, academicYear);
-        setProxies(data);
-    }, [db, selectedDate, academicYear]);
+        const q = query(
+            collection(db, 'proxyClasses'),
+            where("date", "==", dateStr),
+            where("academicYear", "==", academicYear)
+        );
 
-    useEffect(() => {
-        if (db) {
-            getStaff(db).then(setAllStaff);
-            fetchProxies();
-        }
-    }, [db, fetchProxies]);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setProxies(snapshot.docs.map(doc => {
+                const data = doc.data();
+                return { id: doc.id, ...data } as ProxyClass;
+            }));
+        });
+
+        getStaff(db).then(setAllStaff);
+
+        return () => unsubscribe();
+    }, [db, selectedDate, academicYear]);
 
     const classesToProxy = useMemo(() => {
         if (!absentTeacher || !dayName) return [];
@@ -467,22 +475,15 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
             subject: item.subject
         };
 
-        // Mutation call without direct await in the UI interaction
         saveProxyClass(db, newProxy);
-        
-        // Optimistic UX feedback
         toast({ title: 'বদলি শিক্ষক নিয়োগ সম্পন্ন' });
-        setTimeout(() => {
-            fetchProxies();
-            setIsSaving(null);
-        }, 1000);
+        setTimeout(() => setIsSaving(null), 500);
     };
 
     const handleDeleteProxy = (id: string) => {
         if (!db) return;
         deleteProxyClass(db, id);
         toast({ title: 'বদলি নিয়োগ বাতিল করা হয়েছে' });
-        setTimeout(() => fetchProxies(), 1000);
     };
 
     const boardData = useMemo(() => {
@@ -530,7 +531,6 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                 
                                 const freeTeachers = allStaff.filter(s => {
                                     if (s.staffType !== 'teacher') return false;
-                                    // Robust name matching
                                     const isTheAbsentTeacher = s.nameBn.includes(absentTeacher) || absentTeacher.includes(s.nameBn);
                                     if (isTheAbsentTeacher) return false;
                                     
