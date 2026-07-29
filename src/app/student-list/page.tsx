@@ -192,7 +192,7 @@ function StudentListContent() {
                 </div>
                 <div>
                     <CardTitle className="text-xl">শিক্ষার্থীদের তালিকা</CardTitle>
-                    <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+                    <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear ? selectedYear.toLocaleString('bn-BD') : ''}</p>
                 </div>
               </div>
               
@@ -398,7 +398,7 @@ function StudentListContent() {
                                         className="rounded-full object-cover"
                                       />
                                     </TableCell>
-                                    <TableCell>{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell>{student.roll != null ? student.roll.toLocaleString('bn-BD') : '-'}</TableCell>
                                     <TableCell>{student.generatedId || '-'}</TableCell>
                                     <TableCell className="whitespace-nowrap font-bold">{student.studentNameBn}</TableCell>
                                     <TableCell className="whitespace-nowrap">{student.fatherNameBn}</TableCell>
@@ -471,7 +471,7 @@ function StudentListContent() {
                         <div>
                             <DialogTitle className="text-2xl mb-1">{studentToView.studentNameBn}</DialogTitle>
                             <DialogDescription>
-                                রোল: {studentToView.roll.toLocaleString('bn-BD')} | শ্রেণি: {classNamesMap[studentToView.className] || studentToView.className} | শিক্ষাবর্ষ: {studentToView.academicYear.toLocaleString('bn-BD')}
+                                রোল: {studentToView.roll != null ? studentToView.roll.toLocaleString('bn-BD') : '-'} | শ্রেণি: {classNamesMap[studentToView.className] || studentToView.className} | শিক্ষাবর্ষ: {studentToView.academicYear ? studentToView.academicYear.toLocaleString('bn-BD') : '-'}
                             </DialogDescription>
                         </div>
                     </DialogHeader>
