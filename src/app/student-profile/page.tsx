@@ -44,6 +44,14 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
+const religionMapBn: Record<string, string> = {
+    'islam': 'ইসলাম', 'hinduism': 'হিন্দু', 'buddhism': 'বৌদ্ধ', 'christianity': 'খ্রিস্টান', 'other': 'অন্যান্য'
+};
+
+const groupMapBn: Record<string, string> = {
+    'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'general': 'সাধারণ'
+};
+
 // Heatmap Component
 const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendance[], year: string, holidays: string[] }) => {
     const start = startOfYear(new Date(parseInt(year), 0, 1));
@@ -76,7 +84,7 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
         <div className="w-full overflow-x-auto pb-4">
             <div className="flex flex-col gap-1 min-w-[800px]">
                 <div className="flex gap-1">
-                    <div className="w-8 shrink-0" /> {/* Spacer for day labels */}
+                    <div className="w-8 shrink-0" />
                     <div className="flex flex-1 gap-1">
                         {BENGALI_MONTHS.map(m => (
                             <div key={m} className="flex-1 text-[10px] text-muted-foreground font-bold text-center">{m}</div>
@@ -108,7 +116,7 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                     }
 
                                     if (record) {
-                                        const att = record.attendance.find(a => !!a); // This is student-specific record
+                                        const att = record.attendance.find(a => !!a);
                                         if (att?.status === 'present') {
                                             colorClass = "bg-emerald-500 shadow-sm";
                                             statusText = "উপস্থিত";
@@ -246,7 +254,7 @@ function StudentProfileSearchContent() {
                 const studentAtt = data.attendance?.find((a: any) => a.studentId === foundStudent.id);
                 return {
                     ...data,
-                    attendance: studentAtt ? [studentAtt] : [] // Keep only this student's info
+                    attendance: studentAtt ? [studentAtt] : [] 
                 } as DailyAttendance;
             });
             setAttendanceRecords(records);
@@ -342,10 +350,10 @@ function StudentProfileSearchContent() {
                     
                     {studentData && (
                         <div className="flex flex-col">
-                            {/* Facebook style Cover & Profile Photo */}
+                            {/* Modern Header: Facebook-style */}
                             <div className="relative h-48 sm:h-64 bg-gradient-to-r from-indigo-600 to-purple-600">
-                                <div className="absolute -bottom-16 left-6 flex items-end gap-4">
-                                    <div className="relative h-32 w-32 sm:h-40 sm:w-40 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl">
+                                <div className="absolute -bottom-4 left-6 flex items-end gap-6">
+                                    <div className="relative h-32 w-32 sm:h-44 sm:w-44 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl">
                                         {studentData.photoUrl ? (
                                             <Image src={studentData.photoUrl} alt={studentData.studentNameBn} fill className="object-cover" />
                                         ) : (
@@ -354,11 +362,11 @@ function StudentProfileSearchContent() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="pb-4 hidden sm:block">
-                                        <h1 className="text-3xl font-black text-black leading-none drop-shadow-md">
+                                    <div className="pb-8 hidden sm:block">
+                                        <h1 className="text-4xl font-black text-white leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                                             {studentData.studentNameBn}
                                         </h1>
-                                        <p className="text-lg font-bold text-muted-foreground mt-1">
+                                        <p className="text-xl font-bold text-white/90 mt-2 drop-shadow-md">
                                             রোল: {toBengaliNumber(studentData.roll)} | {classNamesMap[studentData.className]} শ্রেণি
                                         </p>
                                     </div>
@@ -370,9 +378,9 @@ function StudentProfileSearchContent() {
                                 </div>
                             </div>
 
-                            <div className="mt-20 px-6 space-y-6 pb-8">
+                            <div className="mt-8 px-6 space-y-6 pb-8">
                                 {/* Mobile Name Display */}
-                                <div className="sm:hidden text-center mb-6">
+                                <div className="sm:hidden text-center mb-6 pt-10">
                                     <h1 className="text-3xl font-black text-black">{studentData.studentNameBn}</h1>
                                     <p className="text-md font-bold text-muted-foreground">
                                         রোল: {toBengaliNumber(studentData.roll)} | {classNamesMap[studentData.className]} শ্রেণি
@@ -389,17 +397,17 @@ function StudentProfileSearchContent() {
                                     <TabsContent value="info" className="space-y-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <Card className="border-none shadow-sm bg-indigo-50/50">
-                                                <CardHeader className="pb-2"><CardTitle className="text-lg font-bold">ব্যক্তিগত তথ্য</CardTitle></CardHeader>
+                                                <CardHeader className="pb-2"><CardTitle className="text-lg font-bold text-indigo-900">ব্যক্তিগত তথ্য</CardTitle></CardHeader>
                                                 <CardContent className="space-y-2 text-sm">
                                                     <div className="flex justify-between border-b py-1"><span>শিক্ষার্থী আইডি:</span> <span className="font-bold">{studentData.generatedId}</span></div>
                                                     <div className="flex justify-between border-b py-1"><span>জন্ম তারিখ:</span> <span className="font-bold">{studentData.dob ? format(new Date(studentData.dob), 'dd MMMM yyyy', { locale: bn }) : '-'}</span></div>
                                                     <div className="flex justify-between border-b py-1"><span>লিঙ্গ:</span> <span className="font-bold">{studentData.gender === 'male' ? 'ছাত্র' : 'ছাত্রী'}</span></div>
-                                                    <div className="flex justify-between border-b py-1"><span>ধর্ম:</span> <span className="font-bold">{studentData.religion === 'islam' ? 'ইসলাম' : studentData.religion === 'hinduism' ? 'হিন্দু' : 'অন্যান্য'}</span></div>
-                                                    <div className="flex justify-between py-1"><span>বিভাগ:</span> <span className="font-bold">{studentData.group === 'science' ? 'বিজ্ঞান' : studentData.group === 'arts' ? 'মানবিক' : 'সাধারণ'}</span></div>
+                                                    <div className="flex justify-between border-b py-1"><span>ধর্ম:</span> <span className="font-bold">{religionMapBn[studentData.religion?.toLowerCase() || ''] || studentData.religion || 'অন্যান্য'}</span></div>
+                                                    <div className="flex justify-between py-1"><span>বিভাগ:</span> <span className="font-bold">{groupMapBn[studentData.group?.toLowerCase() || ''] || studentData.group || 'সাধারণ'}</span></div>
                                                 </CardContent>
                                             </Card>
                                             <Card className="border-none shadow-sm bg-indigo-50/50">
-                                                <CardHeader className="pb-2"><CardTitle className="text-lg font-bold">অভিভাবক ও যোগাযোগ</CardTitle></CardHeader>
+                                                <CardHeader className="pb-2"><CardTitle className="text-lg font-bold text-indigo-900">অভিভাবক ও যোগাযোগ</CardTitle></CardHeader>
                                                 <CardContent className="space-y-2 text-sm">
                                                     <div className="flex justify-between border-b py-1"><span>পিতার নাম:</span> <span className="font-bold">{studentData.fatherNameBn}</span></div>
                                                     <div className="flex justify-between border-b py-1"><span>মাতার নাম:</span> <span className="font-bold">{studentData.motherNameBn}</span></div>
@@ -414,7 +422,7 @@ function StudentProfileSearchContent() {
                                         <Card className="border-none shadow-sm bg-white">
                                             <CardHeader>
                                                 <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                                    <CalendarCheck className="h-5 w-5 text-emerald-600" /> হাজিরা স্ট্যাটিসটিকস ({selectedYear.toLocaleString('bn-BD')})
+                                                    <CalendarCheck className="h-5 w-5 text-emerald-600" /> হাজিরা পরিসংখ্যান ({selectedYear.toLocaleString('bn-BD')})
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className="space-y-8">

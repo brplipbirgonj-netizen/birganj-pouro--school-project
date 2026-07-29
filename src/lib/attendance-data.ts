@@ -127,7 +127,7 @@ export const getConsecutiveAbsences = async (db: Firestore, className: string, a
         where("className", "==", className),
         where("academicYear", "==", academicYear),
         orderBy("date", "desc"),
-        limit(10) // Check last 10 days
+        limit(15) // Check last 15 records to find streaks
     );
 
     try {
@@ -137,20 +137,21 @@ export const getConsecutiveAbsences = async (db: Firestore, className: string, a
 
         const studentAbsenceMap = new Map<string, number>();
         const studentLastDateMap = new Map<string, string>();
-        const activeStudents = new Set<string>();
+        
+        // Get all unique students in this class from the records
+        const allStudentIds = new Set<string>();
+        records.forEach(r => r.attendance.forEach(a => allStudentIds.add(a.studentId)));
 
-        // Get all unique students from the latest record
-        records[0].attendance.forEach(a => activeStudents.add(a.studentId));
-
-        activeStudents.forEach(studentId => {
+        allStudentIds.forEach(studentId => {
             let consecutive = 0;
             for (const record of records) {
                 const att = record.attendance.find(a => a.studentId === studentId);
                 if (att?.status === 'absent') {
                     consecutive++;
-                } else {
-                    break; // Streak broken by presence or missing record
+                } else if (att?.status === 'present') {
+                    break; // Streak broken
                 }
+                // If not found (e.g. holiday or data gap), we don't break but we don't increment
             }
             if (consecutive >= 3) {
                 studentAbsenceMap.set(studentId, consecutive);
