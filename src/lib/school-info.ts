@@ -1,5 +1,4 @@
 
-'use client';
 import { doc, getDoc, setDoc, Firestore } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
