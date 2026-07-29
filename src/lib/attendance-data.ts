@@ -123,12 +123,13 @@ export interface StudentConsecutiveAbsence {
 }
 
 export const getConsecutiveAbsences = async (db: Firestore, className: string, academicYear: string): Promise<StudentConsecutiveAbsence[]> => {
+    // Corrected Query Order for Indexing
     const q = query(
         collection(db, ATTENDANCE_COLLECTION),
         where("academicYear", "==", academicYear),
         where("className", "==", className),
         orderBy("date", "desc"),
-        limit(15) // Check last 15 records to find streaks
+        limit(15)
     );
 
     try {
@@ -139,7 +140,6 @@ export const getConsecutiveAbsences = async (db: Firestore, className: string, a
         const studentAbsenceMap = new Map<string, number>();
         const studentLastDateMap = new Map<string, string>();
         
-        // Get all unique students in this class from the records
         const allStudentIds = new Set<string>();
         records.forEach(r => r.attendance.forEach(a => allStudentIds.add(a.studentId)));
 
@@ -150,9 +150,8 @@ export const getConsecutiveAbsences = async (db: Firestore, className: string, a
                 if (att?.status === 'absent') {
                     consecutive++;
                 } else if (att?.status === 'present') {
-                    break; // Streak broken
+                    break;
                 }
-                // If not found (e.g. holiday or data gap), we don't break but we don't increment
             }
             if (consecutive >= 3) {
                 studentAbsenceMap.set(studentId, consecutive);
@@ -165,8 +164,11 @@ export const getConsecutiveAbsences = async (db: Firestore, className: string, a
             absentDays: count,
             lastAbsentDate: studentLastDateMap.get(studentId) || '',
         }));
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error checking consecutive absences:", e);
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ATTENDANCE_COLLECTION, operation: 'list' }));
+        }
         return [];
     }
 }
