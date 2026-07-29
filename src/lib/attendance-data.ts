@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -124,8 +125,8 @@ export interface StudentConsecutiveAbsence {
 export const getConsecutiveAbsences = async (db: Firestore, className: string, academicYear: string): Promise<StudentConsecutiveAbsence[]> => {
     const q = query(
         collection(db, ATTENDANCE_COLLECTION),
-        where("className", "==", className),
         where("academicYear", "==", academicYear),
+        where("className", "==", className),
         orderBy("date", "desc"),
         limit(15) // Check last 15 records to find streaks
     );
