@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -40,6 +40,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { getTransactions, Transaction } from '@/lib/transactions-data';
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
@@ -480,6 +482,70 @@ const LiveRoutineCard = () => {
     );
 };
 
+const IncomeExpenseChart = () => {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!db) return;
+        setLoading(true);
+        getTransactions(db, selectedYear).then(data => {
+            setTransactions(data);
+            setLoading(false);
+        });
+    }, [db, selectedYear]);
+
+    const chartData = useMemo(() => {
+        let income = 0;
+        let expense = 0;
+        transactions.forEach(t => {
+            if (t.type === 'income') income += t.amount;
+            else expense += t.amount;
+        });
+        return [
+            { name: 'আয়', value: income, color: '#10b981' },
+            { name: 'ব্যয়', value: expense, color: '#ef4444' }
+        ];
+    }, [transactions]);
+
+    if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
+
+    return (
+        <Card className="shadow-md border-primary/10">
+            <CardHeader className="bg-primary/5 rounded-t-lg">
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <PieChartIcon className="h-5 w-5 text-primary" /> আয়-ব্যয় চিত্র
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="h-64 pt-6">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                        >
+                            {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <RechartsTooltip 
+                            formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, 'পরিমাণ']}
+                        />
+                        <Legend verticalAlign="bottom" align="center" />
+                    </PieChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
+    );
+};
+
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -721,6 +787,7 @@ export default function Home() {
             </CardContent>
           </Card>
           <LiveRoutineCard />
+          <IncomeExpenseChart />
           <NoticeBoard />
         </div>
       </main>

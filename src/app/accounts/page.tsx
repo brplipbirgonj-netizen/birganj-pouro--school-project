@@ -7,17 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student } from '@/lib/student-data';
-import Link from 'next/link';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, Timestamp, orderBy, FirestoreError } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Calendar as CalendarIcon, Trash2, FileText } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -31,7 +30,122 @@ import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
+import { Badge } from '@/components/ui/badge';
 
+const BENGALI_MONTHS = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+];
+
+// Defaulters Tab Component
+const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], selectedYear: string }) => {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
+    const [collections, setCollections] = useState<FeeCollection[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!db) return;
+        setIsLoading(true);
+        const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null));
+            setIsLoading(false);
+        }, (error) => {
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [db, selectedYear]);
+
+    const defaulters = useMemo(() => {
+        const studentsInYear = allStudents.filter(s => s.academicYear === selectedYear);
+        return studentsInYear.filter(student => {
+            const hasPaid = collections.some(c => 
+                c.studentId === student.id && 
+                (c.description?.includes(selectedMonth) || c.breakdown?.tuitionCurrent !== undefined)
+            );
+            return !hasPaid;
+        }).sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+    }, [allStudents, collections, selectedMonth, selectedYear]);
+
+    const handleSendReminder = (student: Student) => {
+        const mobile = student.guardianMobile || student.studentMobile;
+        if (!mobile) {
+            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            return;
+        }
+        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} এর ${selectedMonth} মাসের বিদ্যালয় ফি বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করুন। বীপৌউবি`;
+        const encodedMsg = encodeURIComponent(msg);
+        window.location.href = `sms:${mobile}?body=${encodedMsg}`;
+    };
+
+    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
+    return (
+        <Card className="border-red-200">
+            <CardHeader className="bg-red-50/50">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <CardTitle className="text-red-900 flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5" /> বকেয়া তালিকা
+                        </CardTitle>
+                        <CardDescription>বেতন পরিশোধ করেনি এমন শিক্ষার্থীদের তালিকা</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Label className="font-bold whitespace-nowrap">মাস:</Label>
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-40 bg-white"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+                <div className="table-container">
+                    <Table>
+                        <TableHeader className="bg-muted/50">
+                            <TableRow>
+                                <TableHead className="w-20 text-center">রোল</TableHead>
+                                <TableHead>নাম</TableHead>
+                                <TableHead>শ্রেণি</TableHead>
+                                <TableHead>মোবাইল</TableHead>
+                                <TableHead className="text-right">কার্যক্রম</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow><TableCell colSpan={5} className="text-center py-12">লোড হচ্ছে...</TableCell></TableRow>
+                            ) : defaulters.length === 0 ? (
+                                <TableRow><TableCell colSpan={5} className="text-center py-12 text-emerald-600 font-bold">অভিনন্দন! এই মাসে কারো বেতন বকেয়া নেই।</TableCell></TableRow>
+                            ) : (
+                                defaulters.map(student => (
+                                    <TableRow key={student.id}>
+                                        <TableCell className="text-center font-bold">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="font-bold">{student.studentNameBn}</TableCell>
+                                        <TableCell>{classNamesMap[student.className] || student.className}</TableCell>
+                                        <TableCell className="text-xs">{student.guardianMobile || student.studentMobile || '-'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleSendReminder(student)}>
+                                                <Smartphone className="h-4 w-4 mr-2" /> SMS পাঠান
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+                <div className="p-4 bg-muted/20 text-xs font-bold text-muted-foreground flex justify-between">
+                    <span>মোট বকেয়া: {defaulters.length.toLocaleString('bn-BD')} জন</span>
+                    <span>শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</span>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
 
 // Fee Collection Component
 const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { studentsForYear: Student[], isLoading: boolean, onFeeCollected: () => void }) => {
@@ -561,6 +675,7 @@ export default function AccountsPage() {
   const tabs = [];
   if (canCollectFees) {
       tabs.push({ value: "fee-collection", label: "আদায়" });
+      tabs.push({ value: "defaulters", label: "বকেয়া" });
   }
   if (canViewReports) {
       tabs.push({ value: "collection-report", label: "রিপোর্ট" });
@@ -587,9 +702,14 @@ export default function AccountsPage() {
                   </TabsList>
                   
                   {canCollectFees && (
+                    <>
                     <TabsContent value="fee-collection" className="mt-4">
                         <FeeCollectionTab studentsForYear={studentsForYear} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />
                     </TabsContent>
+                    <TabsContent value="defaulters" className="mt-4">
+                        <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />
+                    </TabsContent>
+                    </>
                   )}
                   
                   {canViewReports && (
