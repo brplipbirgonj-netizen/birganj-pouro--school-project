@@ -24,6 +24,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Edit2, RotateCcw, AlertCircle, Smartphone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 // Digital Attendance sheet
 const AttendanceSheet = ({ classId, students }: { classId: string, students: Student[] }) => {
