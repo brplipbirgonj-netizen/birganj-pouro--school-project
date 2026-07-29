@@ -79,21 +79,33 @@ function StudentListContent() {
       return gl === 'female' || gl === 'মহিলা' || gl === 'ছাত্রী' || gl === 'girl' || gl === 'f';
   };
 
-  // Calculate religion counts for the dropdown
-  const religionCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: 0, islam: 0, hinduism: 0, buddhism: 0, christianity: 0, other: 0 };
-    const studentsForYear = allStudents.filter(s => s.academicYear === selectedYear);
-    counts.all = studentsForYear.length;
-    studentsForYear.forEach(s => {
+  // Calculate religion and gender counts for the current selected class
+  const classStats = useMemo(() => {
+    const relCounts: Record<string, number> = { all: 0, islam: 0, hinduism: 0, buddhism: 0, christianity: 0, other: 0 };
+    const genCounts: Record<string, number> = { all: 0, male: 0, female: 0, other: 0 };
+    
+    const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === activeTab);
+    
+    relCounts.all = studentsInClass.length;
+    genCounts.all = studentsInClass.length;
+
+    studentsInClass.forEach(s => {
+      // Religion
       const r = (s.religion || '').toLowerCase();
-      if (r === 'islam') counts.islam++;
-      else if (r === 'hinduism') counts.hinduism++;
-      else if (r === 'buddhism') counts.buddhism++;
-      else if (r === 'christianity') counts.christianity++;
-      else if (r) counts.other++;
+      if (r === 'islam') relCounts.islam++;
+      else if (r === 'hinduism') relCounts.hinduism++;
+      else if (r === 'buddhism') relCounts.buddhism++;
+      else if (r === 'christianity') relCounts.christianity++;
+      else if (r) relCounts.other++;
+
+      // Gender
+      if (isMale(s.gender)) genCounts.male++;
+      else if (isFemale(s.gender)) genCounts.female++;
+      else if (s.gender) genCounts.other++;
     });
-    return counts;
-  }, [allStudents, selectedYear]);
+
+    return { religion: relCounts, gender: genCounts };
+  }, [allStudents, selectedYear, activeTab]);
 
   const filteredStudents = useMemo(() => {
     // Always filter by selected academic year first
@@ -239,18 +251,29 @@ function StudentListContent() {
                     />
                 </div>
 
-                {/* Religion Filter select (Replaced All Gender) */}
+                {/* Class-based Gender Filter */}
+                <select
+                  value={filterGender}
+                  onChange={(e) => setFilterGender(e.target.value)}
+                  className="h-10 px-3 rounded-md border border-input bg-white text-sm font-bold focus:outline-none focus:ring-1 focus:ring-ring text-blue-700"
+                >
+                  <option value="all">ছাত্র-ছাত্রী ({classStats.gender.all.toLocaleString('bn-BD')})</option>
+                  <option value="male">ছাত্র ({classStats.gender.male.toLocaleString('bn-BD')})</option>
+                  <option value="female">ছাত্রী ({classStats.gender.female.toLocaleString('bn-BD')})</option>
+                </select>
+
+                {/* Class-based Religion Filter */}
                 <select
                   value={filterReligion}
                   onChange={(e) => setFilterReligion(e.target.value)}
                   className="h-10 px-3 rounded-md border border-input bg-white text-sm font-bold focus:outline-none focus:ring-1 focus:ring-ring text-primary"
                 >
-                  <option value="all">সকল ধর্ম ({religionCounts.all.toLocaleString('bn-BD')})</option>
-                  <option value="islam">ইসলাম ({religionCounts.islam.toLocaleString('bn-BD')})</option>
-                  <option value="hinduism">হিন্দু ({religionCounts.hinduism.toLocaleString('bn-BD')})</option>
-                  <option value="buddhism">বৌদ্ধ ({religionCounts.buddhism.toLocaleString('bn-BD')})</option>
-                  <option value="christianity">খ্রিস্টান ({religionCounts.christianity.toLocaleString('bn-BD')})</option>
-                  <option value="other">অন্যান্য ({religionCounts.other.toLocaleString('bn-BD')})</option>
+                  <option value="all">সকল ধর্ম ({classStats.religion.all.toLocaleString('bn-BD')})</option>
+                  <option value="islam">ইসলাম ({classStats.religion.islam.toLocaleString('bn-BD')})</option>
+                  <option value="hinduism">হিন্দু ({classStats.religion.hinduism.toLocaleString('bn-BD')})</option>
+                  <option value="buddhism">বৌদ্ধ ({classStats.religion.buddhism.toLocaleString('bn-BD')})</option>
+                  <option value="christianity">খ্রিস্টান ({classStats.religion.christianity.toLocaleString('bn-BD')})</option>
+                  <option value="other">অন্যান্য ({classStats.religion.other.toLocaleString('bn-BD')})</option>
                 </select>
 
                 <select
