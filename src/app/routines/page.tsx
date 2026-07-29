@@ -17,7 +17,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { getFullRoutine, saveRoutinesBatch, ClassRoutine } from '@/lib/routine-data';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle, User, FileUp, Download, CalendarClock, UserMinus, Plus } from 'lucide-react';
+import { 
+    Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle, User, 
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2 
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
