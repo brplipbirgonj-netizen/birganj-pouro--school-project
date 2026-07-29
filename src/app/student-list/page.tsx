@@ -70,7 +70,8 @@ function StudentListContent() {
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
 
   const filteredStudents = useMemo(() => {
-    let filtered = allStudents;
+    // Always filter by selected academic year first
+    let filtered = allStudents.filter(s => s.academicYear === selectedYear);
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -94,7 +95,7 @@ function StudentListContent() {
     }
 
     return filtered;
-  }, [allStudents, searchQuery, filterGender, filterStipend, filterReligion]);
+  }, [allStudents, selectedYear, searchQuery, filterGender, filterStipend, filterReligion]);
 
   const getStudentsByClass = useCallback((className: string) => {
     return filteredStudents.filter(student => student.className === className);
@@ -151,9 +152,7 @@ function StudentListContent() {
     }
   }, [targetStudentId, isLoading, isMounted]);
 
-  const studentsForYear = useMemo(() => {
-    return allStudents.filter(student => student.academicYear === selectedYear);
-  }, [allStudents, selectedYear]);
+  // studentsForYear replaced by filteredStudents which already filters by year
 
   const handleDeleteStudent = (studentId: string) => {
     if (!db) return;
@@ -468,7 +467,7 @@ function StudentListContent() {
              {studentToView && (
                 <>
                     <DialogHeader className="flex-row items-center gap-4">
-                        <Image src={studentToView.photoUrl} alt={studentToView.studentNameBn} width={80} height={80} className="rounded-lg object-cover" />
+                        <Image src={studentToView.photoUrl || '/placeholder.png'} alt={studentToView.studentNameBn} width={80} height={80} className="rounded-lg object-cover" />
                         <div>
                             <DialogTitle className="text-2xl mb-1">{studentToView.studentNameBn}</DialogTitle>
                             <DialogDescription>
