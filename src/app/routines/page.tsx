@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -378,6 +379,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     const [proxies, setProxies] = useState<ProxyClass[]>([]);
 
     const dayName = selectedDate ? dayMap[selectedDate.getDay()] : '';
+    const isWeekend = dayName === 'শুক্রবার' || dayName === 'শনিবার';
     
     const availableTeachers = useMemo(() => {
         const teachers = new Set<string>();
@@ -394,14 +396,17 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
 
     // Function to get busy teachers for a specific period
     const getBusyTeachersForPeriod = useCallback((periodIdx: number) => {
-        if (!dayName || !routineData) return new Set<string>();
+        if (!dayName || !routineData || !routineData['6']) return new Set<string>();
         const busy = new Set<string>();
         Object.keys(routineData).forEach(cls => {
             const cell = routineData[cls][dayName]?.[periodIdx];
             if (cell) {
                 const { teacher } = parseSubjectTeacher(cell);
                 if (teacher) {
-                    teacher.split('/').forEach(t => busy.add(t.trim()));
+                    teacher.split('/').forEach(t => {
+                        const trimmed = t.trim();
+                        if (trimmed) busy.add(trimmed);
+                    });
                 }
             }
         });
@@ -482,10 +487,11 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                 <div className="space-y-2">
                     <Label className="font-bold text-primary flex items-center gap-2"><CalendarClock className="h-4 w-4" /> তারিখ নির্বাচন</Label>
                     <DatePicker value={selectedDate} onChange={setSelectedDate} />
+                    {isWeekend && <p className="text-[10px] text-red-600 font-bold">আজ সাপ্তাহিক ছুটি!</p>}
                 </div>
                 <div className="space-y-2">
                     <Label className="font-bold text-red-600 flex items-center gap-2"><UserMinus className="h-4 w-4" /> অনুপস্থিত শিক্ষক</Label>
-                    <Select value={absentTeacher} onValueChange={setAbsentTeacher}>
+                    <Select value={absentTeacher} onValueChange={setAbsentTeacher} disabled={isWeekend}>
                         <SelectTrigger><SelectValue placeholder="শিক্ষকের নাম" /></SelectTrigger>
                         <SelectContent>
                             {availableTeachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -506,13 +512,25 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {classesToProxy.map((item, idx) => {
                                 const isAssigned = proxies.some(p => p.className === item.className && p.periodIndex === item.periodIndex);
-                                // Filter free teachers for THIS specific period
-                                const busyTeachers = getBusyTeachersForPeriod(item.periodIndex);
-                                const freeTeachers = allStaff.filter(s => 
-                                    s.staffType === 'teacher' && 
-                                    s.nameBn !== absentTeacher &&
-                                    !busyTeachers.has(s.nameBn)
-                                );
+                                
+                                // SMART FILTER: Logic to find teachers who are REALLY free
+                                const busyTeachersShortNames = getBusyTeachersForPeriod(item.periodIndex);
+                                
+                                const freeTeachers = allStaff.filter(s => {
+                                    if (s.staffType !== 'teacher') return false;
+                                    
+                                    // Check if this staff member is the one reported as absent
+                                    const isTheAbsentTeacher = s.nameBn.includes(absentTeacher) || absentTeacher.includes(s.nameBn);
+                                    if (isTheAbsentTeacher) return false;
+
+                                    // Check if this teacher is busy in any class during this period
+                                    // busyTeachersShortNames set contains names from the routine (short names)
+                                    const isBusy = Array.from(busyTeachersShortNames).some(busyName => 
+                                        s.nameBn.includes(busyName) || busyName.includes(s.nameBn)
+                                    );
+                                    
+                                    return !isBusy;
+                                });
 
                                 return (
                                     <div key={idx} className="p-4 border rounded-lg bg-white space-y-3 shadow-sm transition-all hover:ring-2 hover:ring-primary/20">
@@ -532,7 +550,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {freeTeachers.length === 0 ? (
-                                                        <SelectItem value="none" disabled>কোনো শিক্ষক ফ্রি নেই</SelectItem>
+                                                        <SelectItem value="none" disabled>এই পিরিয়ডে কেউ ফ্রি নেই</SelectItem>
                                                     ) : (
                                                         freeTeachers.map(s => (
                                                             <SelectItem key={s.id} value={s.nameBn}>{s.nameBn}</SelectItem>
