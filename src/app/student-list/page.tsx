@@ -85,7 +85,7 @@ function StudentListContent() {
     }
 
     if (filterGender !== 'all') {
-      filtered = filtered.filter(s => s.gender === filterGender);
+      filtered = filtered.filter(s => s.gender && s.gender.toLowerCase() === filterGender);
     }
     if (filterStipend !== 'all') {
       filtered = filtered.filter(s => filterStipend === 'yes' ? s.isStipendReceiver === true : s.isStipendReceiver !== true);
@@ -222,8 +222,8 @@ function StudentListContent() {
                   className="h-10 px-3 rounded-md border border-input bg-white text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   <option value="all">সকল লিঙ্গ</option>
-                  <option value="Male">ছাত্র (Male)</option>
-                  <option value="Female">ছাত্রী (Female)</option>
+                  <option value="male">ছাত্র (Male)</option>
+                  <option value="female">ছাত্রী (Female)</option>
                 </select>
 
                 <select
@@ -320,7 +320,10 @@ function StudentListContent() {
                                             
                                             <div className="flex flex-wrap justify-center gap-1 mt-1">
                                                 {student.gender && (
-                                                    <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">{student.gender === 'Male' ? 'ছাত্র' : 'ছাত্রী'}</span>
+                                                    <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">{
+                                                        student.gender.toLowerCase() === 'male' ? 'ছাত্র' :
+                                                        student.gender.toLowerCase() === 'female' ? 'ছাত্রী' : 'অন্যান্য'
+                                                    }</span>
                                                 )}
                                                 {student.isStipendReceiver && (
                                                     <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">উপবৃত্তি</span>
