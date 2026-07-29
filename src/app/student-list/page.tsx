@@ -68,6 +68,16 @@ function StudentListContent() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+  const isMale = (g: string | undefined | null) => {
+      if (!g) return false;
+      const gl = g.trim().toLowerCase();
+      return gl === 'male' || gl === 'পুরুষ' || gl === 'ছাত্র' || gl === 'boy' || gl === 'm';
+  };
+  const isFemale = (g: string | undefined | null) => {
+      if (!g) return false;
+      const gl = g.trim().toLowerCase();
+      return gl === 'female' || gl === 'মহিলা' || gl === 'ছাত্রী' || gl === 'girl' || gl === 'f';
+  };
 
   const filteredStudents = useMemo(() => {
     // Always filter by selected academic year first
@@ -85,7 +95,7 @@ function StudentListContent() {
     }
 
     if (filterGender !== 'all') {
-      filtered = filtered.filter(s => s.gender && s.gender.toLowerCase() === filterGender);
+      filtered = filtered.filter(s => filterGender === 'male' ? isMale(s.gender) : isFemale(s.gender));
     }
     if (filterStipend !== 'all') {
       filtered = filtered.filter(s => filterStipend === 'yes' ? s.isStipendReceiver === true : s.isStipendReceiver !== true);
@@ -321,8 +331,8 @@ function StudentListContent() {
                                             <div className="flex flex-wrap justify-center gap-1 mt-1">
                                                 {student.gender && (
                                                     <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">{
-                                                        student.gender.toLowerCase() === 'male' ? 'ছাত্র' :
-                                                        student.gender.toLowerCase() === 'female' ? 'ছাত্রী' : 'অন্যান্য'
+                                                        isMale(student.gender) ? 'ছাত্র' :
+                                                        isFemale(student.gender) ? 'ছাত্রী' : 'অন্যান্য'
                                                     }</span>
                                                 )}
                                                 {student.isStipendReceiver && (
