@@ -444,7 +444,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
         return items;
     }, [absentTeacher, dayName, routineData]);
 
-    const handleAssignProxy = async (item: any) => {
+    const handleAssignProxy = (item: any) => {
         if (!db || !selectedDate) return;
         
         const selectionKey = `${item.className}-${item.periodIndex}`;
@@ -467,24 +467,22 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
             subject: item.subject
         };
 
-        try {
-            await saveProxyClass(db, newProxy);
-            toast({ title: 'বদলি শিক্ষক নিয়োগ সম্পন্ন' });
+        // Mutation call without direct await in the UI interaction
+        saveProxyClass(db, newProxy);
+        
+        // Optimistic UX feedback
+        toast({ title: 'বদলি শিক্ষক নিয়োগ সম্পন্ন' });
+        setTimeout(() => {
             fetchProxies();
-        } catch (e) {
-            // Error is handled by global emitter
-        } finally {
             setIsSaving(null);
-        }
+        }, 1000);
     };
 
-    const handleDeleteProxy = async (id: string) => {
+    const handleDeleteProxy = (id: string) => {
         if (!db) return;
-        try {
-            await deleteProxyClass(db, id);
-            toast({ title: 'বদলি নিয়োগ বাতিল করা হয়েছে' });
-            fetchProxies();
-        } catch (e) {}
+        deleteProxyClass(db, id);
+        toast({ title: 'বদলি নিয়োগ বাতিল করা হয়েছে' });
+        setTimeout(() => fetchProxies(), 1000);
     };
 
     const boardData = useMemo(() => {
@@ -532,8 +530,10 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                 
                                 const freeTeachers = allStaff.filter(s => {
                                     if (s.staffType !== 'teacher') return false;
+                                    // Robust name matching
                                     const isTheAbsentTeacher = s.nameBn.includes(absentTeacher) || absentTeacher.includes(s.nameBn);
                                     if (isTheAbsentTeacher) return false;
+                                    
                                     const isBusy = Array.from(busyTeachersShortNames).some(busyName => 
                                         s.nameBn.includes(busyName) || busyName.includes(s.nameBn)
                                     );
@@ -1412,10 +1412,16 @@ export default function RoutinesPage() {
                     <Card className="shadow-xl border-2 border-green-600">
                         <CardHeader className="bg-white/50">
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                                {isClient && (
+                                    <div className="flex items-center gap-2 text-[10px] sm:hidden no-print">
+                                        <Badge variant="outline" className="bg-white">{format(new Date(), 'PP', { locale: bn })}</Badge>
+                                        <Badge variant="secondary" className="bg-white">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</Badge>
+                                    </div>
+                                )}
                                 <div>
                                     <CardTitle className="text-2xl font-black text-primary">রুটিন ব্যবস্থাপনা</CardTitle>
                                     {isClient ? (
-                                        <p className="text-sm text-muted-foreground font-medium">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+                                        <p className="text-sm text-muted-foreground font-medium hidden sm:block">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
                                     ) : (
                                         <Skeleton className="h-5 w-32 mt-1" />
                                     )}

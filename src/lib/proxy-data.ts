@@ -54,10 +54,11 @@ export const getProxyClasses = async (db: Firestore, date: string, academicYear:
   }
 };
 
-export const saveProxyClass = async (db: Firestore, proxy: NewProxyData) => {
-  // Use a unique but consistent ID for the assignment
+export const saveProxyClass = (db: Firestore, proxy: NewProxyData) => {
+  // Use a unique but consistent ID for the assignment to prevent duplicates
   const docId = `${proxy.academicYear}_${proxy.date}_${proxy.className}_${proxy.periodIndex}`;
   const docRef = doc(db, PROXY_COLLECTION, docId);
+  
   const dataToSave = {
     ...proxy,
     assignedAt: serverTimestamp(),
@@ -66,26 +67,30 @@ export const saveProxyClass = async (db: Firestore, proxy: NewProxyData) => {
   // Remove id if accidentally included
   if ('id' in dataToSave) delete (dataToSave as any).id;
 
-  return setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError) => {
+  // Optimistic save: do not await here. Chain .catch() for error reporting.
+  setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError: any) => {
     console.error("Firestore Save Error:", serverError);
-    const permissionError = new FirestorePermissionError({
-      path: docRef.path,
-      operation: 'write',
-      requestResourceData: dataToSave,
-    });
-    errorEmitter.emit('permission-error', permissionError);
-    throw permissionError;
+    if (serverError.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'write',
+            requestResourceData: dataToSave,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    }
   });
 };
 
-export const deleteProxyClass = async (db: Firestore, id: string) => {
+export const deleteProxyClass = (db: Firestore, id: string) => {
   const docRef = doc(db, PROXY_COLLECTION, id);
-  return deleteDoc(docRef).catch(async (serverError) => {
-    const permissionError = new FirestorePermissionError({
-      path: docRef.path,
-      operation: 'delete',
-    });
-    errorEmitter.emit('permission-error', permissionError);
-    throw permissionError;
+  // Optimistic delete
+  deleteDoc(docRef).catch(async (serverError: any) => {
+    if (serverError.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    }
   });
 };
