@@ -176,7 +176,13 @@ function StudentListContent() {
   const religionMap: { [key: string]: string } = { 'islam': 'ইসলাম', 'hinduism': 'হিন্দু', 'buddhism': 'বৌদ্ধ', 'christianity': 'খ্রিস্টান', 'other': 'অন্যান্য' };
   const groupMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা' };
 
-  if (!isMounted) return <Header />;
+  if (!isMounted) {
+    return (
+      <div className="flex min-h-screen w-full flex-col bg-rose-100 items-center justify-center">
+        <p>লোড হচ্ছে...</p>
+      </div>
+    );
+  }
 
   return (
     <>
