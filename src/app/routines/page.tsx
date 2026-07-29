@@ -19,7 +19,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2 
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -377,11 +377,13 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     const [absentTeacher, setAbsentTeacher] = useState<string>('');
     const [allStaff, setAllStaff] = useState<Staff[]>([]);
     const [proxies, setProxies] = useState<ProxyClass[]>([]);
+    const [selections, setSelections] = useState<Map<string, string>>(new Map());
+    const [isSaving, setIsSaving] = useState<string | null>(null);
 
     const dayName = selectedDate ? dayMap[selectedDate.getDay()] : '';
     const isWeekend = dayName === 'শুক্রবার' || dayName === 'শনিবার';
     
-    const availableTeachers = useMemo(() => {
+    const availableTeachersInRoutine = useMemo(() => {
         const teachers = new Set<string>();
         Object.keys(routineData).forEach(cls => {
             if (dayName && routineData[cls][dayName]) {
@@ -394,7 +396,6 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
         return Array.from(teachers).sort();
     }, [routineData, dayName]);
 
-    // Function to get busy teachers for a specific period
     const getBusyTeachersForPeriod = useCallback((periodIdx: number) => {
         if (!dayName || !routineData || !routineData['6']) return new Set<string>();
         const busy = new Set<string>();
@@ -443,8 +444,18 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
         return items;
     }, [absentTeacher, dayName, routineData]);
 
-    const handleAssignProxy = async (item: any, proxyTeacher: string) => {
+    const handleAssignProxy = async (item: any) => {
         if (!db || !selectedDate) return;
+        
+        const selectionKey = `${item.className}-${item.periodIndex}`;
+        const proxyTeacher = selections.get(selectionKey);
+
+        if (!proxyTeacher) {
+            toast({ variant: 'destructive', title: 'বদলি শিক্ষক নির্বাচন করুন' });
+            return;
+        }
+
+        setIsSaving(selectionKey);
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
         const newProxy: NewProxyData = {
             date: dateStr,
@@ -458,9 +469,13 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
 
         try {
             await saveProxyClass(db, newProxy);
-            toast({ title: 'বদলি শিক্ষক নিয়োগ করা হয়েছে' });
+            toast({ title: 'বদলি শিক্ষক নিয়োগ সম্পন্ন' });
             fetchProxies();
-        } catch (e) {}
+        } catch (e) {
+            // Error is handled by global emitter
+        } finally {
+            setIsSaving(null);
+        }
     };
 
     const handleDeleteProxy = async (id: string) => {
@@ -494,7 +509,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                     <Select value={absentTeacher} onValueChange={setAbsentTeacher} disabled={isWeekend}>
                         <SelectTrigger><SelectValue placeholder="শিক্ষকের নাম" /></SelectTrigger>
                         <SelectContent>
-                            {availableTeachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            {availableTeachersInRoutine.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -511,24 +526,17 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                     <CardContent>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {classesToProxy.map((item, idx) => {
+                                const selectionKey = `${item.className}-${item.periodIndex}`;
                                 const isAssigned = proxies.some(p => p.className === item.className && p.periodIndex === item.periodIndex);
-                                
-                                // SMART FILTER: Logic to find teachers who are REALLY free
                                 const busyTeachersShortNames = getBusyTeachersForPeriod(item.periodIndex);
                                 
                                 const freeTeachers = allStaff.filter(s => {
                                     if (s.staffType !== 'teacher') return false;
-                                    
-                                    // Check if this staff member is the one reported as absent
                                     const isTheAbsentTeacher = s.nameBn.includes(absentTeacher) || absentTeacher.includes(s.nameBn);
                                     if (isTheAbsentTeacher) return false;
-
-                                    // Check if this teacher is busy in any class during this period
-                                    // busyTeachersShortNames set contains names from the routine (short names)
                                     const isBusy = Array.from(busyTeachersShortNames).some(busyName => 
                                         s.nameBn.includes(busyName) || busyName.includes(s.nameBn)
                                     );
-                                    
                                     return !isBusy;
                                 });
 
@@ -540,10 +548,11 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                         </div>
                                         <p className="font-bold text-sm">{item.subject}</p>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black text-muted-foreground">বদলি শিক্ষক (যারা এই পিরিয়ডে ফ্রি)</Label>
+                                            <Label className="text-[10px] uppercase font-black text-muted-foreground">বদলি শিক্ষক (ফ্রি শিক্ষকদের তালিকা)</Label>
                                             <Select 
-                                                onValueChange={(val) => handleAssignProxy(item, val)}
-                                                disabled={isAssigned}
+                                                disabled={isAssigned || isSaving === selectionKey}
+                                                value={selections.get(selectionKey) || ""}
+                                                onValueChange={(val) => setSelections(prev => new Map(prev).set(selectionKey, val))}
                                             >
                                                 <SelectTrigger className="h-8 text-xs">
                                                     <SelectValue placeholder={isAssigned ? "ইতিমধ্যে নিয়োগকৃত" : "ফ্রি শিক্ষক নির্বাচন করুন"} />
@@ -559,7 +568,20 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        {isAssigned && <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> ইতিমধ্যে এসাইন করা হয়েছে</p>}
+                                        
+                                        {!isAssigned ? (
+                                            <Button 
+                                                size="sm" 
+                                                className="w-full h-8 text-xs gap-2"
+                                                onClick={() => handleAssignProxy(item)}
+                                                disabled={isSaving === selectionKey || !selections.get(selectionKey)}
+                                            >
+                                                {isSaving === selectionKey ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                                                নিয়োগ নিশ্চিত করুন
+                                            </Button>
+                                        ) : (
+                                            <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> ইতিমধ্যে এসাইন করা হয়েছে</p>
+                                        )}
                                     </div>
                                 );
                             })}

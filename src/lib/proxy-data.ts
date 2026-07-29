@@ -55,16 +55,21 @@ export const getProxyClasses = async (db: Firestore, date: string, academicYear:
 };
 
 export const saveProxyClass = async (db: Firestore, proxy: NewProxyData) => {
-  const docId = `${proxy.date}_${proxy.className}_${proxy.periodIndex}`;
+  // Use a unique but consistent ID for the assignment
+  const docId = `${proxy.academicYear}_${proxy.date}_${proxy.className}_${proxy.periodIndex}`;
   const docRef = doc(db, PROXY_COLLECTION, docId);
   const dataToSave = {
     ...proxy,
     assignedAt: serverTimestamp(),
   };
 
+  // Remove id if accidentally included
+  if ('id' in dataToSave) delete (dataToSave as any).id;
+
   return setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError) => {
+    console.error("Firestore Save Error:", serverError);
     const permissionError = new FirestorePermissionError({
-      path: PROXY_COLLECTION,
+      path: docRef.path,
       operation: 'write',
       requestResourceData: dataToSave,
     });
