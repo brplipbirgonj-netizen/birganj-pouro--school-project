@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -67,7 +66,6 @@ const subjectNameNormalization: { [key: string]: string } = {
     'আইসিটি': 'তথ্য ও যোগাযোগ প্রযুক্তি',
 };
 
-// Updated as per user provided image
 const teacherAllocations: Record<string, Record<string, string[]>> = {
     'ওবায়দা': {
         'বাংলা প্রথম': ['6', '7', '8', '9', '10']
@@ -378,7 +376,6 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     const [absentTeacher, setAbsentTeacher] = useState<string>('');
     const [allStaff, setAllStaff] = useState<Staff[]>([]);
     const [proxies, setProxies] = useState<ProxyClass[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
 
     const dayName = selectedDate ? dayMap[selectedDate.getDay()] : '';
     
@@ -394,6 +391,22 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
         });
         return Array.from(teachers).sort();
     }, [routineData, dayName]);
+
+    // Function to get busy teachers for a specific period
+    const getBusyTeachersForPeriod = useCallback((periodIdx: number) => {
+        if (!dayName || !routineData) return new Set<string>();
+        const busy = new Set<string>();
+        Object.keys(routineData).forEach(cls => {
+            const cell = routineData[cls][dayName]?.[periodIdx];
+            if (cell) {
+                const { teacher } = parseSubjectTeacher(cell);
+                if (teacher) {
+                    teacher.split('/').forEach(t => busy.add(t.trim()));
+                }
+            }
+        });
+        return busy;
+    }, [dayName, routineData]);
 
     const fetchProxies = useCallback(async () => {
         if (!db || !selectedDate) return;
@@ -493,6 +506,14 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {classesToProxy.map((item, idx) => {
                                 const isAssigned = proxies.some(p => p.className === item.className && p.periodIndex === item.periodIndex);
+                                // Filter free teachers for THIS specific period
+                                const busyTeachers = getBusyTeachersForPeriod(item.periodIndex);
+                                const freeTeachers = allStaff.filter(s => 
+                                    s.staffType === 'teacher' && 
+                                    s.nameBn !== absentTeacher &&
+                                    !busyTeachers.has(s.nameBn)
+                                );
+
                                 return (
                                     <div key={idx} className="p-4 border rounded-lg bg-white space-y-3 shadow-sm transition-all hover:ring-2 hover:ring-primary/20">
                                         <div className="flex justify-between items-start">
@@ -501,18 +522,22 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                         </div>
                                         <p className="font-bold text-sm">{item.subject}</p>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black text-muted-foreground">বদলি শিক্ষক</Label>
+                                            <Label className="text-[10px] uppercase font-black text-muted-foreground">বদলি শিক্ষক (যারা এই পিরিয়ডে ফ্রি)</Label>
                                             <Select 
                                                 onValueChange={(val) => handleAssignProxy(item, val)}
                                                 disabled={isAssigned}
                                             >
                                                 <SelectTrigger className="h-8 text-xs">
-                                                    <SelectValue placeholder="নির্বাচন করুন" />
+                                                    <SelectValue placeholder={isAssigned ? "ইতিমধ্যে নিয়োগকৃত" : "ফ্রি শিক্ষক নির্বাচন করুন"} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {allStaff.filter(s => s.staffType === 'teacher' && s.nameBn !== absentTeacher).map(s => (
-                                                        <SelectItem key={s.id} value={s.nameBn}>{s.nameBn}</SelectItem>
-                                                    ))}
+                                                    {freeTeachers.length === 0 ? (
+                                                        <SelectItem value="none" disabled>কোনো শিক্ষক ফ্রি নেই</SelectItem>
+                                                    ) : (
+                                                        freeTeachers.map(s => (
+                                                            <SelectItem key={s.id} value={s.nameBn}>{s.nameBn}</SelectItem>
+                                                        ))
+                                                    )}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -989,7 +1014,7 @@ const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, tea
                         <CardTitle className="text-xl flex items-center gap-2">
                             <Users className="h-5 w-5 text-primary" /> সকল শ্রেণির সম্মিলিত ক্লাস রুটিন
                         </CardTitle>
-                        <CardDescription>নিচে স্ক্রল করে ডানে-বামে সব তথ্য দেখুন</CardDescription>
+                        <CardDescription>নিছে স্ক্রল করে ডানে-বামে সব তথ্য দেখুন</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 sm:p-6">
                         <CombinedRoutineTable routineData={routineData} conflicts={conflicts} isEditMode={isEditMode} onCellChange={onCellChange} teacherColorMap={teacherColorMap} isMounted={isMounted} />
@@ -1226,7 +1251,6 @@ export default function RoutinesPage() {
 
     const { conflicts, stats, teacherColorMap } = useRoutineAnalysis(routineData);
     
-    // Restricted conflicts: Teachers shouldn't see red indicators
     const displayConflicts = isAdmin ? conflicts : {
         teacherClashes: new Set<string>(),
         consecutiveClassClashes: new Set<string>(),
