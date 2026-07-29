@@ -17,7 +17,7 @@ import { Student, studentFromDoc } from '@/lib/student-data';
 import { useToast } from '@/hooks/use-toast';
 import { 
     MessageSquare, Send, Users, History, Clock, Trash2, Phone, 
-    FileText, Check, Search, Sparkles, MessageCircle, AlertCircle
+    FileText, Check, Search, Sparkles, MessageCircle, AlertCircle, MessageSquareDashed
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logMessage, getMessageLogs, MessageLog, deleteMessageLog, updateMessageNote } from '@/lib/messaging-data';
@@ -497,6 +497,16 @@ export default function MessagingPage() {
                                     <TableCell className="text-xs text-muted-foreground">{s.guardianMobile || '-'}</TableCell>
                                     <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                                       <div className="flex justify-end gap-1">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon"
+                                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                          onClick={() => handleSendDirectSMS(s.guardianMobile || s.studentMobile || '', messageContent)}
+                                          disabled={!s.guardianMobile && !s.studentMobile}
+                                          title="SMS পাঠান"
+                                        >
+                                          <MessageSquareDashed className="h-4 w-4" />
+                                        </Button>
                                         <Button 
                                           variant="ghost" 
                                           size="icon"
