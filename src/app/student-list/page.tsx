@@ -209,55 +209,26 @@ function StudentListContent() {
                     />
                 </div>
 
-                {/* Filters Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-10 gap-2 bg-white">
-                      <Filter className="h-4 w-4" />
-                      ফিল্টার
-                      {(filterGender !== 'all' || filterStipend !== 'all' || filterReligion !== 'all') && (
-                        <span className="flex h-2 w-2 rounded-full bg-primary" />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>লিঙ্গ অনুযায়ী</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={filterGender} onValueChange={setFilterGender}>
-                      <DropdownMenuRadioItem value="all">সবাই</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="Male">ছাত্র (Male)</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="Female">ছাত্রী (Female)</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>উপবৃত্তি</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={filterStipend} onValueChange={setFilterStipend}>
-                      <DropdownMenuRadioItem value="all">সবাই</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="yes">উপবৃত্তি প্রাপ্ত</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="no">উপবৃত্তি বিহীন</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>ধর্ম</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={filterReligion} onValueChange={setFilterReligion}>
-                      <DropdownMenuRadioItem value="all">সবাই</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="Islam">ইসলাম</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="Hinduism">হিন্দু</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="Christianity">খ্রিস্টান</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="Buddhism">বৌদ্ধ</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="Other">অন্যান্য</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                    {(filterGender !== 'all' || filterStipend !== 'all' || filterReligion !== 'all') && (
-                        <>
-                        <DropdownMenuSeparator />
-                        <Button 
-                            variant="ghost" 
-                            className="w-full justify-center text-red-500 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => { setFilterGender('all'); setFilterStipend('all'); setFilterReligion('all'); }}
-                        >
-                            রিসেট ফিল্টার
-                        </Button>
-                        </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Filter selects */}
+                <select
+                  value={filterGender}
+                  onChange={(e) => setFilterGender(e.target.value)}
+                  className="h-10 px-3 rounded-md border border-input bg-white text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="all">সকল লিঙ্গ</option>
+                  <option value="Male">ছাত্র (Male)</option>
+                  <option value="Female">ছাত্রী (Female)</option>
+                </select>
+
+                <select
+                  value={filterStipend}
+                  onChange={(e) => setFilterStipend(e.target.value)}
+                  className="h-10 px-3 rounded-md border border-input bg-white text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="all">সকল (উপবৃত্তি)</option>
+                  <option value="yes">উপবৃত্তি প্রাপ্ত</option>
+                  <option value="no">উপবৃত্তি বিহীন</option>
+                </select>
 
                 {/* View Mode Toggle */}
                 <div className="flex bg-muted p-1 rounded-md">
