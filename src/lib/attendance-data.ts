@@ -8,6 +8,8 @@ import {
   where,
   Firestore,
   setDoc,
+  orderBy,
+  limit,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -30,7 +32,7 @@ export interface DailyAttendance {
 const ATTENDANCE_COLLECTION = 'attendance';
 
 export const getAttendanceFromStorage = async (db: Firestore): Promise<DailyAttendance[]> => {
-  const q = query(collection(db, ATTENDANCE_COLLECTION));
+  const q = query(collection(db, ATTENDANCE_COLLECTION), orderBy('date', 'desc'));
   try {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAttendance));
@@ -112,3 +114,57 @@ export const getAttendanceForClassAndDate = async (db: Firestore, date: string, 
         return undefined;
     }
 };
+
+export interface StudentConsecutiveAbsence {
+    studentId: string;
+    absentDays: number;
+    lastAbsentDate: string;
+}
+
+export const getConsecutiveAbsences = async (db: Firestore, className: string, academicYear: string): Promise<StudentConsecutiveAbsence[]> => {
+    const q = query(
+        collection(db, ATTENDANCE_COLLECTION),
+        where("className", "==", className),
+        where("academicYear", "==", academicYear),
+        orderBy("date", "desc"),
+        limit(10) // Check last 10 days
+    );
+
+    try {
+        const snap = await getDocs(q);
+        const records = snap.docs.map(d => d.data() as DailyAttendance);
+        if (records.length === 0) return [];
+
+        const studentAbsenceMap = new Map<string, number>();
+        const studentLastDateMap = new Map<string, string>();
+        const activeStudents = new Set<string>();
+
+        // Get all unique students from the latest record
+        records[0].attendance.forEach(a => activeStudents.add(a.studentId));
+
+        activeStudents.forEach(studentId => {
+            let consecutive = 0;
+            for (const record of records) {
+                const att = record.attendance.find(a => a.studentId === studentId);
+                if (att?.status === 'absent') {
+                    consecutive++;
+                } else {
+                    break; // Streak broken by presence or missing record
+                }
+            }
+            if (consecutive >= 3) {
+                studentAbsenceMap.set(studentId, consecutive);
+                studentLastDateMap.set(studentId, records[0].date);
+            }
+        });
+
+        return Array.from(studentAbsenceMap.entries()).map(([studentId, count]) => ({
+            studentId,
+            absentDays: count,
+            lastAbsentDate: studentLastDateMap.get(studentId) || '',
+        }));
+    } catch (e) {
+        console.error("Error checking consecutive absences:", e);
+        return [];
+    }
+}

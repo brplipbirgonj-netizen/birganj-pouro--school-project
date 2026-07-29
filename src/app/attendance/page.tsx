@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student } from '@/lib/student-data';
-import { getAttendanceFromStorage, DailyAttendance, saveDailyAttendance, getAttendanceForClassAndDate, StudentAttendance, AttendanceStatus } from '@/lib/attendance-data';
+import { getAttendanceFromStorage, DailyAttendance, saveDailyAttendance, getAttendanceForClassAndDate, StudentAttendance, AttendanceStatus, getConsecutiveAbsences, StudentConsecutiveAbsence } from '@/lib/attendance-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,7 +21,7 @@ import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Smartphone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -88,9 +88,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
         if (!db || !user) return;
         
         const rightNow = new Date();
-        const schoolStartNow = new Date(rightNow.getFullYear(), rightNow.getMonth(), rightNow.getDate(), 10, 30, 0);
-        const schoolEndNow = new Date(rightNow.getFullYear(), rightNow.getMonth(), rightNow.getDate(), 16, 10, 0);
-        const currentIsSchoolHours = rightNow >= schoolStartNow && rightNow <= schoolEndNow;
+        const currentIsSchoolHours = rightNow >= schoolStart && rightNow <= schoolEnd;
 
         // Restriction check for non-admin users
         if (!isAdmin) {
@@ -251,6 +249,116 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
                     {isEditing ? 'পরিবর্তন সেভ করুন' : 'হাজিরা সেভ করুন'}
                 </Button>
             </div>
+        </div>
+    );
+};
+
+// Risks/Alerts Tab
+const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const { toast } = useToast();
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [alerts, setAlerts] = useState<StudentConsecutiveAbsence[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
+    const checkAlerts = useCallback(async () => {
+        if (!db) return;
+        setIsLoading(true);
+        const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
+        setAlerts(data);
+        setIsLoading(false);
+    }, [db, selectedClass, selectedYear]);
+
+    useEffect(() => {
+        checkAlerts();
+    }, [checkAlerts]);
+
+    const handleSendSMS = (student: Student, days: number) => {
+        const mobile = student.guardianMobile || student.studentMobile || '';
+        if (!mobile) {
+            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            return;
+        }
+
+        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} টানা ${days.toLocaleString('bn-BD')} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অনুপস্থিতির কারণ জানান। বীপৌউবি`;
+        const encodedMsg = encodeURIComponent(msg);
+        const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const separator = isIOS ? '&' : '?';
+        window.location.href = `sms:${mobile}${separator}body=${encodedMsg}`;
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-red-50/50 border-red-100">
+                <div className="space-y-2 flex-1">
+                    <Label className="font-bold text-red-900">শ্রেণি নির্বাচন করুন</Label>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(classNamesMap).map(([id, label]) => (
+                                <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex items-end">
+                    <Button variant="destructive" onClick={checkAlerts} disabled={isLoading} className="gap-2">
+                        <AlertCircle className="h-4 w-4" /> রিস্ক তালিকা আপডেট করুন
+                    </Button>
+                </div>
+            </div>
+
+            <Card className="border-red-200">
+                <CardHeader className="bg-red-50">
+                    <CardTitle className="text-red-900 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5" /> টানা ৩+ দিন অনুপস্থিত শিক্ষার্থীর তালিকা
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {isLoading ? (
+                        <p className="text-center py-12">লোড হচ্ছে...</p>
+                    ) : alerts.length === 0 ? (
+                        <p className="text-center py-12 text-muted-foreground italic">এই শ্রেণিতে বর্তমানে কোনো ঝুঁকিপূর্ণ শিক্ষার্থী নেই।</p>
+                    ) : (
+                        <div className="table-container">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>রোল</TableHead>
+                                        <TableHead>নাম</TableHead>
+                                        <TableHead className="text-center">অনুপস্থিতি (টানা)</TableHead>
+                                        <TableHead className="text-right">কার্যক্রম</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {alerts.map(alert => {
+                                        const student = allStudents.find(s => s.id === alert.studentId);
+                                        return (
+                                            <TableRow key={alert.studentId} className="bg-red-50/20">
+                                                <TableCell className="font-bold">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
+                                                <TableCell className="font-medium">{student?.studentNameBn || '-'}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant="destructive" className="font-black text-sm">
+                                                        {alert.absentDays.toLocaleString('bn-BD')} দিন
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => student && handleSendSMS(student, alert.absentDays)}>
+                                                        <Smartphone className="h-4 w-4 mr-2" /> SMS ড্রাফট
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 };
@@ -484,7 +592,6 @@ export default function AttendancePage() {
     const db = useFirestore();
     const { user } = useAuth();
     const { selectedYear } = useAcademicYear();
-    const { toast } = useToast();
      const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
@@ -527,15 +634,19 @@ export default function AttendancePage() {
                             </div>
                         ) : (
                             <Tabs defaultValue="digital-attendance">
-                                <TabsList className="grid w-full grid-cols-2 h-12 mb-6">
+                                <TabsList className="grid w-full grid-cols-3 h-12 mb-6">
                                     <TabsTrigger value="digital-attendance" className="font-bold text-base">ডিজিটাল হাজিরা</TabsTrigger>
                                     <TabsTrigger value="report" className="font-bold text-base">হাজিরা রিপোর্ট</TabsTrigger>
+                                    <TabsTrigger value="alerts" className="font-bold text-base text-red-600">সতর্কবার্তা</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="digital-attendance" className="mt-4">
                                     <DigitalAttendanceTab allStudents={allStudents} />
                                 </TabsContent>
                                 <TabsContent value="report" className="mt-4">
                                     <AttendanceReportTab allStudents={allStudents} />
+                                </TabsContent>
+                                <TabsContent value="alerts" className="mt-4">
+                                    <AbsenceAlertsTab allStudents={allStudents} />
                                 </TabsContent>
                             </Tabs>
                         )}
