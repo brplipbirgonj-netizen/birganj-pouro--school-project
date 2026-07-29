@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2 } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -323,10 +323,56 @@ const LiveRoutineCard = () => {
             status = 'এখন কোনো ক্লাস চলছে না।';
         }
 
-        return { status, runningClasses, isSpecialStatus };
+        let nextPeriodIndex = -1;
+        let nextRawPeriodIndex = -1;
+        let nextStatus = '';
+        let nextClasses: any[] = [];
+
+        for(let i=0; i<periodTimes.length; i++) {
+            const period = periodTimes[i];
+            const startMinutes = period.start.h * 60 + period.start.m;
+            if (startMinutes > currentMinutes) {
+                nextRawPeriodIndex = i;
+                break;
+            }
+        }
+
+        if (nextRawPeriodIndex !== -1) {
+            const nextPeriodInfo = periodTimes[nextRawPeriodIndex];
+            if (nextPeriodInfo.name === 'বিরতি') {
+                nextStatus = `পরবর্তী: টিফিনের বিরতি (${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')})`;
+            } else {
+                if (nextRawPeriodIndex < 3) nextPeriodIndex = nextRawPeriodIndex;
+                if (nextRawPeriodIndex > 3) nextPeriodIndex = nextRawPeriodIndex - 1;
+
+                nextClasses = fullRoutine
+                    .filter(r => r.day === currentDayName)
+                    .map(r => {
+                        const periodContent = r.periods[nextPeriodIndex];
+                        if (periodContent) {
+                            return {
+                                className: r.className,
+                                displayClassName: classNamesMap[r.className] || r.className,
+                                teacher: parseTeacherName(periodContent),
+                                period: nextPeriodInfo.name,
+                                time: `${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} - ${nextPeriodInfo.end.h > 12 ? nextPeriodInfo.end.h - 12 : nextPeriodInfo.end.h}:${nextPeriodInfo.end.m.toString().padStart(2, '0')}`
+                            };
+                        }
+                        return null;
+                    })
+                    .filter((c): c is NonNullable<typeof c> => c !== null)
+                    .sort((a, b) => parseInt(a.className) - parseInt(b.className));
+                
+                nextStatus = `পরবর্তী ক্লাস শুরু হবে ${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} এ`;
+            }
+        } else {
+             nextStatus = 'আজ আর কোনো ক্লাস বাকি নেই।';
+        }
+
+        return { status, runningClasses, isSpecialStatus, nextClasses, nextStatus };
     };
 
-    const { status, runningClasses, isSpecialStatus } = getCurrentPeriodInfo();
+    const { status, runningClasses, isSpecialStatus, nextClasses, nextStatus } = getCurrentPeriodInfo();
 
     return (
         <Card className="lg:col-span-2 shadow-md border-primary/10">
@@ -349,33 +395,84 @@ const LiveRoutineCard = () => {
                         <Skeleton className="h-6 w-full" />
                         <Skeleton className="h-6 w-full" />
                     </div>
-                ) : runningClasses.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>সময়</TableHead>
-                                <TableHead>শিক্ষক</TableHead>
-                                <TableHead>শ্রেণি</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {runningClasses.map((rc, index) => (
-                                <TableRow key={index}>
-                                    <TableCell className="text-xs">{rc.time}</TableCell>
-                                    <TableCell className="font-medium">{rc.teacher}</TableCell>
-                                    <TableCell>{rc.displayClassName}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
                 ) : (
-                    <div className="flex items-center justify-center h-32 text-center">
-                        <p className={cn(
-                            "text-muted-foreground transition-all duration-500",
-                            isSpecialStatus ? "text-red-600 font-black text-3xl drop-shadow-sm" : "text-lg"
-                        )}>
-                            {status}
-                        </p>
+                    <div className="space-y-6">
+                        {/* Current Classes */}
+                        <div>
+                            {runningClasses.length > 0 ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 mb-2 text-emerald-600 font-semibold text-sm">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                        </span>
+                                        এখন ক্লাস চলছে
+                                    </div>
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead>সময়</TableHead>
+                                                <TableHead>শিক্ষক</TableHead>
+                                                <TableHead>শ্রেণি</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {runningClasses.map((rc, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell className="text-xs font-medium">{rc.time}</TableCell>
+                                                    <TableCell className="font-semibold text-primary">{rc.teacher}</TableCell>
+                                                    <TableCell>{rc.displayClassName}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-20 text-center bg-muted/20 rounded-md border border-dashed">
+                                    <p className={cn(
+                                        "text-muted-foreground transition-all duration-500",
+                                        isSpecialStatus ? "text-red-600 font-bold" : "text-sm"
+                                    )}>
+                                        {status}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Next Classes */}
+                        {!isSpecialStatus && (
+                            <div>
+                                {nextClasses.length > 0 ? (
+                                    <div className="space-y-2">
+                                        <div className="text-indigo-600 font-semibold text-sm mb-2 border-t pt-4">
+                                            {nextStatus}
+                                        </div>
+                                        <Table>
+                                            <TableHeader className="bg-indigo-50/50">
+                                                <TableRow>
+                                                    <TableHead>সময়</TableHead>
+                                                    <TableHead>শিক্ষক</TableHead>
+                                                    <TableHead>শ্রেণি</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {nextClasses.map((nc, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell className="text-xs text-muted-foreground">{nc.time}</TableCell>
+                                                        <TableCell className="font-medium text-indigo-900">{nc.teacher}</TableCell>
+                                                        <TableCell className="text-muted-foreground">{nc.displayClassName}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-xs text-muted-foreground border-t pt-4">
+                                        {nextStatus}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </CardContent>
@@ -506,62 +603,86 @@ export default function Home() {
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-          <Card className="bg-sky-100 border-sky-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-sky-800">
+          {/* Total Students Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-indigo-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+            <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+               <Users className="h-28 w-28 text-indigo-900" />
+            </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-bold text-indigo-900">
                 মোট শিক্ষার্থী
               </CardTitle>
-              <Users className="h-4 w-4 text-sky-700" />
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+                <Users className="h-4 w-4 text-indigo-700" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-sky-900">{totalStudents.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-sky-600">
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-black text-indigo-950 mb-1">{totalStudents.toLocaleString('bn-BD')}</div>
+              <p className="text-xs text-indigo-700 font-medium">
                 শিক্ষাবর্ষ {selectedYear.toLocaleString('bn-BD')}
               </p>
             </CardContent>
           </Card>
           
-           <Card className="bg-emerald-100 border-emerald-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-800">
+          {/* Total Present Card */}
+           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 border-teal-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+            <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+               <CheckCircle2 className="h-28 w-28 text-teal-900" />
+            </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-bold text-teal-900">
                 মোট উপস্থিত
               </CardTitle>
-              <Users className="h-4 w-4 text-emerald-700" />
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+                <Users className="h-4 w-4 text-teal-700" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-900">{totalPresent.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-emerald-600">
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-black text-teal-950 mb-1">{totalPresent.toLocaleString('bn-BD')}</div>
+              <p className="text-xs text-teal-700 font-medium">
                 আজকের মোট উপস্থিত শিক্ষার্থী
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-rose-100 border-rose-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-rose-800">
+          {/* Total Absent Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-rose-50 to-red-100 border-red-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+            <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+               <XCircle className="h-28 w-28 text-red-900" />
+            </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-bold text-red-900">
                 মোট অনুপস্থিত
               </CardTitle>
-              <Users className="h-4 w-4 text-rose-700" />
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+                <Users className="h-4 w-4 text-red-700" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-rose-900">{totalAbsent.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-rose-600">
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-black text-red-950 mb-1">{totalAbsent.toLocaleString('bn-BD')}</div>
+              <p className="text-xs text-red-700 font-medium">
                 আজকের মোট অনুপস্থিত শিক্ষার্থী
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-amber-100 border-amber-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-amber-800">
+          {/* Total Teachers Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-100 border-orange-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+               <GraduationCap className="h-28 w-28 text-orange-900" />
+            </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-bold text-orange-900">
                 মোট শিক্ষক
               </CardTitle>
-              <GraduationCap className="h-4 w-4 text-amber-700" />
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+                <GraduationCap className="h-4 w-4 text-orange-700" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-900">{totalTeachers.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-amber-600">
-                &nbsp;
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-black text-orange-950 mb-1">{totalTeachers.toLocaleString('bn-BD')}</div>
+              <p className="text-xs text-orange-700 font-medium">
+                সিস্টেমে নিবন্ধিত সক্রিয় শিক্ষক
               </p>
             </CardContent>
           </Card>
