@@ -65,6 +65,7 @@ function StudentListContent() {
   const [filterGender, setFilterGender] = useState<string>('all');
   const [filterStipend, setFilterStipend] = useState<string>('all');
   const [filterReligion, setFilterReligion] = useState<string>('all');
+  const [filterGroup, setFilterGroup] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
@@ -79,15 +80,17 @@ function StudentListContent() {
       return gl === 'female' || gl === 'মহিলা' || gl === 'ছাত্রী' || gl === 'girl' || gl === 'f';
   };
 
-  // Calculate religion and gender counts for the current selected class
+  // Calculate religion, gender and group counts for the current selected class
   const classStats = useMemo(() => {
     const relCounts: Record<string, number> = { all: 0, islam: 0, hinduism: 0, buddhism: 0, christianity: 0, other: 0 };
     const genCounts: Record<string, number> = { all: 0, male: 0, female: 0, other: 0 };
+    const grpCounts: Record<string, number> = { all: 0, science: 0, arts: 0, commerce: 0, other: 0 };
     
     const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === activeTab);
     
     relCounts.all = studentsInClass.length;
     genCounts.all = studentsInClass.length;
+    grpCounts.all = studentsInClass.length;
 
     studentsInClass.forEach(s => {
       // Religion
@@ -102,9 +105,16 @@ function StudentListContent() {
       if (isMale(s.gender)) genCounts.male++;
       else if (isFemale(s.gender)) genCounts.female++;
       else if (s.gender) genCounts.other++;
+
+      // Group
+      const g = (s.group || '').toLowerCase();
+      if (g === 'science') grpCounts.science++;
+      else if (g === 'arts') grpCounts.arts++;
+      else if (g === 'commerce') grpCounts.commerce++;
+      else if (g) grpCounts.other++;
     });
 
-    return { religion: relCounts, gender: genCounts };
+    return { religion: relCounts, gender: genCounts, group: grpCounts };
   }, [allStudents, selectedYear, activeTab]);
 
   const filteredStudents = useMemo(() => {
@@ -131,9 +141,12 @@ function StudentListContent() {
     if (filterReligion !== 'all') {
       filtered = filtered.filter(s => (s.religion || '').toLowerCase() === filterReligion);
     }
+    if (filterGroup !== 'all') {
+        filtered = filtered.filter(s => (s.group || '').toLowerCase() === filterGroup);
+    }
 
     return filtered;
-  }, [allStudents, selectedYear, searchQuery, filterGender, filterStipend, filterReligion]);
+  }, [allStudents, selectedYear, searchQuery, filterGender, filterStipend, filterReligion, filterGroup]);
 
   const getStudentsByClass = useCallback((className: string) => {
     return filteredStudents.filter(student => student.className === className);
@@ -276,6 +289,18 @@ function StudentListContent() {
                   <option value="other">অন্যান্য ({classStats.religion.other.toLocaleString('bn-BD')})</option>
                 </select>
 
+                {/* Class-based Group Filter */}
+                <select
+                  value={filterGroup}
+                  onChange={(e) => setFilterGroup(e.target.value)}
+                  className="h-10 px-3 rounded-md border border-input bg-white text-sm font-bold focus:outline-none focus:ring-1 focus:ring-ring text-emerald-700"
+                >
+                  <option value="all">সকল বিভাগ ({classStats.group.all.toLocaleString('bn-BD')})</option>
+                  <option value="science">বিজ্ঞান ({classStats.group.science.toLocaleString('bn-BD')})</option>
+                  <option value="arts">মানবিক ({classStats.group.arts.toLocaleString('bn-BD')})</option>
+                  <option value="commerce">ব্যবসায় শিক্ষা ({classStats.group.commerce.toLocaleString('bn-BD')})</option>
+                </select>
+
                 <select
                   value={filterStipend}
                   onChange={(e) => setFilterStipend(e.target.value)}
@@ -382,6 +407,13 @@ function StudentListContent() {
                                                     <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full">{
                                                         student.religion === 'Islam' || student.religion === 'islam' ? 'ইসলাম' :
                                                         student.religion === 'Hinduism' || student.religion === 'hinduism' ? 'হিন্দু' : student.religion
+                                                    }</span>
+                                                )}
+                                                {student.group && (
+                                                    <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">{
+                                                        student.group === 'science' ? 'বিজ্ঞান' :
+                                                        student.group === 'arts' ? 'মানবিক' :
+                                                        student.group === 'commerce' ? 'ব্যবসায় শিক্ষা' : student.group
                                                     }</span>
                                                 )}
                                             </div>
