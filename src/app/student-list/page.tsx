@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { deleteStudent, Student, studentFromDoc } from '@/lib/student-data';
-import { Eye, FilePen, Trash2 } from 'lucide-react';
+import { Eye, FilePen, Trash2, LayoutGrid, List, Filter, UserRound, Droplets, MapPin, Search } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Suspense, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -56,6 +59,48 @@ function StudentListContent() {
   const { user, hasPermission } = useAuth();
   const canManageStudents = hasPermission('manage:students');
   const [isMounted, setIsMounted] = useState(false);
+  
+  // New States for Redesign
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [filterGender, setFilterGender] = useState<string>('all');
+  const [filterStipend, setFilterStipend] = useState<string>('all');
+  const [filterReligion, setFilterReligion] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+
+  const filteredStudents = useMemo(() => {
+    let filtered = allStudents;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => {
+        const nameBn = (s.studentNameBn || '').toLowerCase();
+        const nameEn = (s.studentNameEn || '').toLowerCase();
+        const rollStr = (s.roll || '').toString();
+        const idStr = (s.generatedId || '').toLowerCase();
+        return nameBn.includes(q) || nameEn.includes(q) || rollStr.includes(bnToEn(q)) || idStr.includes(q);
+      });
+    }
+
+    if (filterGender !== 'all') {
+      filtered = filtered.filter(s => s.gender === filterGender);
+    }
+    if (filterStipend !== 'all') {
+      filtered = filtered.filter(s => filterStipend === 'yes' ? s.isStipendReceiver === true : s.isStipendReceiver !== true);
+    }
+    if (filterReligion !== 'all') {
+      filtered = filtered.filter(s => s.religion === filterReligion);
+    }
+
+    return filtered;
+  }, [allStudents, searchQuery, filterGender, filterStipend, filterReligion]);
+
+  const getStudentsByClass = useCallback((className: string) => {
+    return filteredStudents.filter(student => student.className === className);
+  }, [filteredStudents]);
+
+  const classes = ['6', '7', '8', '9', '10'];
 
   useEffect(() => {
     setIsMounted(true);
@@ -121,7 +166,6 @@ function StudentListContent() {
     });
   };
 
-  const classes = ['6', '7', '8', '9', '10'];
   const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ',
     '7': '৭ম',
@@ -133,11 +177,6 @@ function StudentListContent() {
   const religionMap: { [key: string]: string } = { 'islam': 'ইসলাম', 'hinduism': 'হিন্দু', 'buddhism': 'বৌদ্ধ', 'christianity': 'খ্রিস্টান', 'other': 'অন্যান্য' };
   const groupMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা' };
 
-
-  const getStudentsByClass = (className: string): Student[] => {
-    return studentsForYear.filter((student) => student.className === className);
-  };
-
   if (!isMounted) return <Header />;
 
   return (
@@ -145,21 +184,111 @@ function StudentListContent() {
     <div className="flex min-h-screen w-full flex-col bg-rose-100">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex flex-wrap items-baseline gap-x-2">
-                <CardTitle>শিক্ষার্থীদের তালিকা</CardTitle>
-                <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+        <Card className="shadow-lg border-primary/10 overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b pb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                    <UserRound className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                    <CardTitle className="text-xl">শিক্ষার্থীদের তালিকা</CardTitle>
+                    <p className="text-sm text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+                </div>
               </div>
-              {canManageStudents && (
-                <Link href="/add-student" className="no-print">
-                    <Button>নতুন শিক্ষার্থী যোগ করুন</Button>
-                </Link>
-              )}
+              
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Search Bar */}
+                <div className="relative w-full md:w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="নাম, রোল বা আইডি দিয়ে খুঁজুন..."
+                        className="pl-9 h-10 bg-white"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                {/* Filters Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-10 gap-2 bg-white">
+                      <Filter className="h-4 w-4" />
+                      ফিল্টার
+                      {(filterGender !== 'all' || filterStipend !== 'all' || filterReligion !== 'all') && (
+                        <span className="flex h-2 w-2 rounded-full bg-primary" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>লিঙ্গ অনুযায়ী</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={filterGender} onValueChange={setFilterGender}>
+                      <DropdownMenuRadioItem value="all">সবাই</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Male">ছাত্র (Male)</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Female">ছাত্রী (Female)</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>উপবৃত্তি</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={filterStipend} onValueChange={setFilterStipend}>
+                      <DropdownMenuRadioItem value="all">সবাই</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="yes">উপবৃত্তি প্রাপ্ত</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="no">উপবৃত্তি বিহীন</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>ধর্ম</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={filterReligion} onValueChange={setFilterReligion}>
+                      <DropdownMenuRadioItem value="all">সবাই</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Islam">ইসলাম</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Hinduism">হিন্দু</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Christianity">খ্রিস্টান</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Buddhism">বৌদ্ধ</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Other">অন্যান্য</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    {(filterGender !== 'all' || filterStipend !== 'all' || filterReligion !== 'all') && (
+                        <>
+                        <DropdownMenuSeparator />
+                        <Button 
+                            variant="ghost" 
+                            className="w-full justify-center text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => { setFilterGender('all'); setFilterStipend('all'); setFilterReligion('all'); }}
+                        >
+                            রিসেট ফিল্টার
+                        </Button>
+                        </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* View Mode Toggle */}
+                <div className="flex bg-muted p-1 rounded-md">
+                    <Button
+                        variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-2 shadow-none"
+                        onClick={() => setViewMode('table')}
+                    >
+                        <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-2 shadow-none"
+                        onClick={() => setViewMode('grid')}
+                    >
+                        <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                </div>
+
+                {canManageStudents && (
+                  <Link href="/add-student" className="no-print">
+                      <Button className="h-10">নতুন শিক্ষার্থী</Button>
+                  </Link>
+                )}
+              </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 pt-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="grid w-full grid-cols-5 no-print">
                     {classes.map((className) => (
@@ -172,6 +301,70 @@ function StudentListContent() {
                     <TabsContent key={className} value={className}>
                       <Card className="border-none shadow-none">
                         <CardContent className="p-0">
+                          {isLoading ? (
+                            <div className="flex justify-center items-center py-12">
+                                <span className="text-muted-foreground">লোড হচ্ছে...</span>
+                            </div>
+                          ) : getStudentsByClass(className).length === 0 ? (
+                            <div className="flex justify-center items-center py-12">
+                                <span className="text-muted-foreground">এই শ্রেণিতে কোনো শিক্ষার্থী নেই অথবা ফিল্টারের সাথে মিলে না।</span>
+                            </div>
+                          ) : viewMode === 'grid' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-2">
+                                {getStudentsByClass(className).map((student) => (
+                                    <Card key={student.id} className={cn(
+                                        "overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 group relative",
+                                        student.id === targetStudentId && "ring-2 ring-yellow-400"
+                                    )}>
+                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="secondary" size="icon" className="h-7 w-7 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white" onClick={() => setStudentToView(student)}>
+                                                <Eye className="h-3 w-3" />
+                                            </Button>
+                                            {canManageStudents && (
+                                                <Link href={`/edit-student/${student.id}`}>
+                                                    <Button variant="secondary" size="icon" className="h-7 w-7 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white">
+                                                        <FilePen className="h-3 w-3" />
+                                                    </Button>
+                                                </Link>
+                                            )}
+                                        </div>
+                                        <div className="p-4 flex flex-col items-center text-center">
+                                            <div className="relative mb-3">
+                                                <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-sm"></div>
+                                                <Image
+                                                    src={student.photoUrl || '/placeholder.png'}
+                                                    alt={student.studentNameBn}
+                                                    width={80}
+                                                    height={80}
+                                                    className="rounded-full object-cover relative ring-2 ring-background border"
+                                                />
+                                            </div>
+                                            <h3 className="font-bold text-base line-clamp-1">{student.studentNameBn}</h3>
+                                            <p className="text-xs text-muted-foreground mb-2">রোল: {student.roll} • আইডি: {student.generatedId || '-'}</p>
+                                            
+                                            <div className="flex flex-wrap justify-center gap-1 mt-1">
+                                                {student.gender && (
+                                                    <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">{student.gender === 'Male' ? 'ছাত্র' : 'ছাত্রী'}</span>
+                                                )}
+                                                {student.isStipendReceiver && (
+                                                    <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">উপবৃত্তি</span>
+                                                )}
+                                                {student.religion && (
+                                                    <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full">{
+                                                        student.religion === 'Islam' ? 'ইসলাম' :
+                                                        student.religion === 'Hinduism' ? 'হিন্দু' : student.religion
+                                                    }</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="bg-muted/30 px-4 py-2 flex justify-between items-center text-xs text-muted-foreground border-t">
+                                            <span>পিতা: {student.fatherNameBn}</span>
+                                            <span>{student.guardianMobile || student.studentMobile}</span>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                          ) : (
                           <div className="table-container">
                             <Table>
                               <TableHeader className="bg-muted/50 sticky top-0 z-20">
@@ -187,20 +380,7 @@ function StudentListContent() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {isLoading ? (
-                                   <TableRow>
-                                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                                          লোড হচ্ছে...
-                                      </TableCell>
-                                   </TableRow>
-                                ) : getStudentsByClass(className).length === 0 ? (
-                                   <TableRow>
-                                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                                          এই শ্রেণিতে কোনো শিক্ষার্থী নেই।
-                                      </TableCell>
-                                   </TableRow>
-                                ) : (
-                                  getStudentsByClass(className).map((student, index) => (
+                                  {getStudentsByClass(className).map((student, index) => (
                                   <TableRow 
                                     key={student.id} 
                                     id={`student-row-${student.id}`}
@@ -212,7 +392,7 @@ function StudentListContent() {
                                     <TableCell>{(index + 1).toLocaleString('bn-BD')}</TableCell>
                                     <TableCell>
                                       <Image
-                                        src={student.photoUrl}
+                                        src={student.photoUrl || '/placeholder.png'}
                                         alt={student.studentNameBn}
                                         width={40}
                                         height={40}
@@ -269,11 +449,11 @@ function StudentListContent() {
                                       </div>
                                     </TableCell>
                                   </TableRow>
-                                 ))
-                                )}
+                                  ))}
                               </TableBody>
                             </Table>
                           </div>
+                          )}
                         </CardContent>
                       </Card>
                     </TabsContent>
