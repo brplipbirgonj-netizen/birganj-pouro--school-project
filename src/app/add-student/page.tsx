@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileUp, Download } from 'lucide-react';
+import { Upload, FileUp, Download, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { addStudent, updateStudent, NewStudentData } from '@/lib/student-data';
 import { getSubjects, Subject } from '@/lib/subjects';
@@ -20,6 +20,8 @@ import { useFirestore } from '@/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 const initialStudentState: NewStudentData = {
   roll: undefined,
@@ -54,12 +56,15 @@ const initialStudentState: NewStudentData = {
   permanentDistrict: '',
 };
 
+const inputFocusClasses = "transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50";
+
 export default function AddStudentPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { selectedYear, availableYears } = useAcademicYear();
     const db = useFirestore();
     
+    const [currentStep, setCurrentStep] = useState(1);
     const [student, setStudent] = useState<NewStudentData>(initialStudentState);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -168,23 +173,19 @@ export default function AddStudentPage() {
             toast({
                 variant: "destructive",
                 title: "ছবি আবশ্যক",
+                description: "অনুগ্রহ করে ধাপ ২-এ গিয়ে ছবি আপলোড করুন।"
             });
+            setCurrentStep(2);
             return;
         }
 
-        if (!student.academicYear) {
+        if (!student.academicYear || !student.className || !student.roll) {
             toast({
                 variant: "destructive",
-                title: "শিক্ষাবর্ষ আবশ্যক",
+                title: "প্রাতিষ্ঠানিক তথ্য অসম্পূর্ণ",
+                description: "অনুগ্রহ করে ধাপ ১-এর তথ্যগুলো পূরণ করুন।"
             });
-            return;
-        }
-
-        if (!student.className) {
-            toast({
-                variant: "destructive",
-                title: "শ্রেণি আবশ্যক",
-            });
+            setCurrentStep(1);
             return;
         }
         
@@ -446,47 +447,83 @@ export default function AddStudentPage() {
                 if (fileInputRef.current) fileInputRef.current.value = '';
             }
         };
-        reader.readAsArrayBuffer(file);
+        reader.readAsDataURL(file);
     };
+
+    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4));
+    const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+
+    const steps = [
+        { id: 1, title: 'প্রাতিষ্ঠানিক তথ্য', icon: GraduationCap },
+        { id: 2, title: 'শিক্ষার্থীর তথ্য', icon: User },
+        { id: 3, title: 'অভিভাবকের তথ্য', icon: Users },
+        { id: 4, title: 'ঠিকানা ও যোগাযোগ', icon: Home },
+    ];
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-emerald-100">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
-        <Card>
-          <CardHeader>
+        <Card className="max-w-4xl mx-auto w-full shadow-xl">
+          <CardHeader className="bg-white/50 border-b pb-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
                 <div>
-                    <CardTitle>নতুন শিক্ষার্থী যোগ করুন</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-primary">নতুন শিক্ষার্থী ভর্তি</CardTitle>
+                    <CardDescription>ফর্মটি ৪টি ধাপে পূরণ করুন</CardDescription>
                 </div>
-                <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end">
-                    <Button variant="outline" onClick={handleDownloadSample}>
+                <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end no-print">
+                    <Button variant="outline" onClick={handleDownloadSample} className="h-9">
                         <Download className="mr-2 h-4 w-4" />
                         নমুনা ফাইল
                     </Button>
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="h-9">
                         <FileUp className="mr-2 h-4 w-4" />
-                        Excel ফাইল আপলোড
+                        Excel আপলোড
                     </Button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
                 </div>
             </div>
+
+            {/* Progress Wizard */}
+            <div className="mt-8 relative px-4">
+                <Progress value={(currentStep / 4) * 100} className="h-2 mb-8" />
+                <div className="flex justify-between absolute w-full left-0 top-[-10px] px-2">
+                    {steps.map((step) => (
+                        <div key={step.id} className="flex flex-col items-center">
+                            <div className={cn(
+                                "h-8 w-8 rounded-full flex items-center justify-center border-2 transition-all duration-500",
+                                currentStep >= step.id ? "bg-primary border-primary text-white scale-110 shadow-md" : "bg-white border-muted-foreground/30 text-muted-foreground"
+                            )}>
+                                {currentStep > step.id ? <CheckCircle2 className="h-5 w-5" /> : <step.icon className="h-4 w-4" />}
+                            </div>
+                            <span className={cn(
+                                "text-[10px] sm:text-xs mt-2 font-bold transition-colors",
+                                currentStep >= step.id ? "text-primary" : "text-muted-foreground"
+                            )}>{step.title}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-10">
             {isClient ? (
             <form className="space-y-8" onSubmit={handleSubmit}>
               
-              <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">প্রাতিষ্ঠানিক তথ্য</h3>
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+              {/* Step 1: Institutional Information */}
+              {currentStep === 1 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2 text-primary">
+                    <GraduationCap className="h-5 w-5" /> ১. প্রাতিষ্ঠানিক তথ্য
+                  </h3>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                       <div className="space-y-2">
                           <Label htmlFor="roll">রোল</Label>
-                          <Input id="roll" name="roll" type="number" required value={student.roll || ''} onChange={e => handleInputChange('roll', e.target.value === '' ? undefined : parseInt(e.target.value, 10))} />
+                          <Input id="roll" name="roll" type="number" required value={student.roll || ''} onChange={e => handleInputChange('roll', e.target.value === '' ? undefined : parseInt(e.target.value, 10))} className={inputFocusClasses} />
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="academic-year">শিক্ষাবর্ষ</Label>
                           <Select required value={student.academicYear || ''} onValueChange={value => handleInputChange('academicYear', value)}>
-                              <SelectTrigger id="academic-year" name="academic-year">
+                              <SelectTrigger id="academic-year" name="academic-year" className={inputFocusClasses}>
                                   <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -499,7 +536,7 @@ export default function AddStudentPage() {
                       <div className="space-y-2">
                           <Label htmlFor="class">শ্রেণি</Label>
                           <Select required value={student.className} onValueChange={value => handleInputChange('className', value)}>
-                              <SelectTrigger id="class" name="class">
+                              <SelectTrigger id="class" name="class" className={inputFocusClasses}>
                                   <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -516,7 +553,7 @@ export default function AddStudentPage() {
                           <div className="space-y-2">
                               <Label htmlFor="group">গ্রুপ</Label>
                               <Select value={student.group || ''} onValueChange={value => handleInputChange('group', value)}>
-                                  <SelectTrigger id="group" name="group">
+                                  <SelectTrigger id="group" name="group" className={inputFocusClasses}>
                                       <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -529,7 +566,7 @@ export default function AddStudentPage() {
                           <div className="space-y-2">
                               <Label htmlFor="optional-subject">ঐচ্ছিক বিষয়</Label>
                               <Select value={student.optionalSubject || ''} onValueChange={value => handleInputChange('optionalSubject', value)} disabled={optionalSubjects.length === 0}>
-                                  <SelectTrigger id="optional-subject" name="optional-subject">
+                                  <SelectTrigger id="optional-subject" name="optional-subject" className={inputFocusClasses}>
                                       <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -542,18 +579,26 @@ export default function AddStudentPage() {
                         </>
                       )}
                   </div>
+                  <div className="flex justify-end pt-6">
+                    <Button type="button" onClick={nextStep} className="px-8 font-bold">পরবর্তী ধাপ <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  </div>
               </div>
+              )}
 
-              <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">শিক্ষার্থীর তথ্য</h3>
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {/* Step 2: Student Information */}
+              {currentStep === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2 text-primary">
+                    <User className="h-5 w-5" /> ২. শিক্ষার্থীর ব্যক্তিগত তথ্য
+                  </h3>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                       <div className="space-y-2">
                           <Label htmlFor="student-name-bn">নাম (বাংলা)</Label>
-                          <Input id="student-name-bn" name="student-name-bn" required value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} />
+                          <Input id="student-name-bn" name="student-name-bn" required value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} className={inputFocusClasses} />
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="student-name-en">নাম (ইংরেজি)</Label>
-                          <Input id="student-name-en" name="student-name-en" value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} />
+                          <Input id="student-name-en" name="student-name-en" value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} className={inputFocusClasses} />
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="dob">জন্ম তারিখ</Label>
@@ -561,12 +606,12 @@ export default function AddStudentPage() {
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="birth-reg-no">জন্ম নিবন্ধন নম্বর</Label>
-                          <Input id="birth-reg-no" name="birth-reg-no" value={student.birthRegNo} onChange={e => handleInputChange('birthRegNo', e.target.value)} />
+                          <Input id="birth-reg-no" name="birth-reg-no" value={student.birthRegNo} onChange={e => handleInputChange('birthRegNo', e.target.value)} className={inputFocusClasses} />
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="gender">লিঙ্গ</Label>
                           <Select value={student.gender || ''} onValueChange={value => handleInputChange('gender', value)}>
-                              <SelectTrigger id="gender" name="gender"><SelectValue /></SelectTrigger>
+                              <SelectTrigger id="gender" name="gender" className={inputFocusClasses}><SelectValue /></SelectTrigger>
                               <SelectContent>
                                   <SelectItem value="male">পুরুষ</SelectItem>
                                   <SelectItem value="female">মহিলা</SelectItem>
@@ -577,7 +622,7 @@ export default function AddStudentPage() {
                       <div className="space-y-2">
                           <Label htmlFor="religion">ধর্ম</Label>
                           <Select value={student.religion || ''} onValueChange={value => handleInputChange('religion', value)}>
-                              <SelectTrigger id="religion" name="religion"><SelectValue /></SelectTrigger>
+                              <SelectTrigger id="religion" name="religion" className={inputFocusClasses}><SelectValue /></SelectTrigger>
                               <SelectContent>
                                   <SelectItem value="islam">ইসলাম</SelectItem>
                                   <SelectItem value="hinduism">হিন্দু</SelectItem>
@@ -587,108 +632,131 @@ export default function AddStudentPage() {
                               </SelectContent>
                           </Select>
                       </div>
-                       <div className="space-y-2 md:col-span-3">
+                       <div className="space-y-2 md:col-span-2">
                           <Label>ছবি</Label>
-                          <div className="flex items-center gap-4">
-                              <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted overflow-hidden">
+                          <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/20">
+                              <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted overflow-hidden shrink-0">
                                   {photoPreview ? (
                                       <Image src={photoPreview} alt="Student photo" width={96} height={96} className="object-cover w-full h-full" />
                                   ) : (
                                       <div className="flex flex-col items-center gap-1 text-center text-muted-foreground">
                                           <Upload className="h-8 w-8" />
-                                          <span>ছবি</span>
+                                          <span className="text-[10px]">ছবি</span>
                                       </div>
                                   )}
                               </div>
-                              <Input id="photo" name="photo" type="file" className="hidden" onChange={handlePhotoChange} accept="image/*" />
-                              <Button type="button" variant="outline" onClick={() => document.getElementById('photo')?.click()}>
-                                  ছবি আপলোড করুন
-                              </Button>
+                              <div className="space-y-2">
+                                <Input id="photo" name="photo" type="file" className="hidden" onChange={handlePhotoChange} accept="image/*" />
+                                <Button type="button" variant="outline" onClick={() => document.getElementById('photo')?.click()}>
+                                    ছবি আপলোড করুন
+                                </Button>
+                                <p className="text-[10px] text-muted-foreground">JPG/PNG, সর্বোচ্চ ৫ মেগাবাইট</p>
+                              </div>
                           </div>
                       </div>
                   </div>
+                  <div className="flex justify-between pt-6">
+                    <Button type="button" variant="outline" onClick={prevStep}><ArrowLeft className="mr-2 h-4 w-4" /> পূর্ববর্তী ধাপ</Button>
+                    <Button type="button" onClick={nextStep} className="px-8 font-bold">পরবর্তী ধাপ <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  </div>
               </div>
+              )}
               
-              <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">অভিভাবকের তথ্য</h3>
-                   <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {/* Step 3: Guardian Information */}
+              {currentStep === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2 text-primary">
+                    <Users className="h-5 w-5" /> ৩. অভিভাবকের তথ্য
+                  </h3>
+                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="father-name-bn">পিতার নাম (বাংলা)</Label>
-                          <Input id="father-name-bn" name="father-name-bn" required value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} />
+                          <Input id="father-name-bn" name="father-name-bn" required value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} className={inputFocusClasses} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="father-name-en">পিতার নাম (ইংরেজি)</Label>
-                          <Input id="father-name-en" name="father-name-en" value={student.fatherNameEn} onChange={e => handleInputChange('fatherNameEn', e.target.value)} />
+                          <Input id="father-name-en" name="father-name-en" value={student.fatherNameEn} onChange={e => handleInputChange('fatherNameEn', e.target.value)} className={inputFocusClasses} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="father-nid">পিতার NID</Label>
-                            <Input id="father-nid" name="father-nid" value={student.fatherNid} onChange={e => handleInputChange('fatherNid', e.target.value)} />
+                            <Input id="father-nid" name="father-nid" value={student.fatherNid} onChange={e => handleInputChange('fatherNid', e.target.value)} className={inputFocusClasses} />
                         </div>
+                        <Separator className="md:col-span-2 my-2" />
                         <div className="space-y-2">
                           <Label htmlFor="mother-name-bn">মাতার নাম (বাংলা)</Label>
-                          <Input id="mother-name-bn" name="mother-name-bn" required value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} />
+                          <Input id="mother-name-bn" name="mother-name-bn" required value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} className={inputFocusClasses} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="mother-name-en">মাতার নাম (ইংরেজি)</Label>
-                          <Input id="mother-name-en" name="mother-name-en" value={student.motherNameEn} onChange={e => handleInputChange('motherNameEn', e.target.value)} />
+                          <Input id="mother-name-en" name="mother-name-en" value={student.motherNameEn} onChange={e => handleInputChange('motherNameEn', e.target.value)} className={inputFocusClasses} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="mother-nid">মাতার NID</Label>
-                            <Input id="mother-nid" name="mother-nid" value={student.motherNid} onChange={e => handleInputChange('motherNid', e.target.value)} />
+                            <Input id="mother-nid" name="mother-nid" value={student.motherNid} onChange={e => handleInputChange('motherNid', e.target.value)} className={inputFocusClasses} />
                         </div>
                    </div>
+                   <div className="flex justify-between pt-6">
+                    <Button type="button" variant="outline" onClick={prevStep}><ArrowLeft className="mr-2 h-4 w-4" /> পূর্ববর্তী ধাপ</Button>
+                    <Button type="button" onClick={nextStep} className="px-8 font-bold">পরবর্তী ধাপ <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  </div>
               </div>
+              )}
 
-               <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">যোগাযোগের তথ্য</h3>
-                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                      <div className="space-y-2">
-                          <Label htmlFor="guardian-mobile">অভিভাবকের মোবাইল নম্বর</Label>
-                          <Input id="guardian-mobile" name="guardian-mobile" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                          <Label htmlFor="student-mobile">শিক্ষার্থীর মোবাইল নম্বর</Label>
-                          <Input id="student-mobile" name="student-mobile" value={student.studentMobile} onChange={e => handleInputChange('studentMobile', e.target.value)} />
-                      </div>
-                   </div>
-               </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">বর্তমান ঠিকানা</h3>
-                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Step 4: Contact & Address */}
+              {currentStep === 4 && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="space-y-6">
+                    <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2 text-primary">
+                        <Home className="h-5 w-5" /> ৪. যোগাযোগ ও ঠিকানা
+                    </h3>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div className="space-y-2">
-                            <Label htmlFor="present-village">গ্রাম/মহল্লা</Label>
-                            <Input id="present-village" name="present-village" value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
+                            <Label htmlFor="guardian-mobile">অভিভাবকের মোবাইল নম্বর</Label>
+                            <Input id="guardian-mobile" name="guardian-mobile" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} className={inputFocusClasses} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="present-union">ইউনিয়ন/ওয়ার্ড</Label>
-                            <Input id="present-union" name="present-union" value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} />
+                            <Label htmlFor="student-mobile">শিক্ষার্থীর মোবাইল নম্বর</Label>
+                            <Input id="student-mobile" name="student-mobile" value={student.studentMobile} onChange={e => handleInputChange('studentMobile', e.target.value)} className={inputFocusClasses} />
                         </div>
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="present-post-office">ডাকঘর</Label>
-                                <Input id="present-post-office" name="present-post-office" value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="present-upazila">উপজেলা/থানা</Label>
-                                <Input id="present-upazila" name="present-upazila" value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="present-district">জেলা</Label>
-                                <Input id="present-district" name="present-district" value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} />
-                            </div>
-                        </div>
-                   </div>
-               </div>
+                    </div>
+                  </div>
 
-                <div className="space-y-4">
+                  <div className="space-y-6">
+                    <h4 className="font-semibold text-md text-muted-foreground uppercase tracking-wider">বর্তমান ঠিকানা</h4>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="present-village">গ্রাম/মহল্লা</Label>
+                                <Input id="present-village" name="present-village" value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} className={inputFocusClasses} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="present-union">ইউনিয়ন/ওয়ার্ড</Label>
+                                <Input id="present-union" name="present-union" value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} className={inputFocusClasses} />
+                            </div>
+                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="present-post-office">ডাকঘর</Label>
+                                    <Input id="present-post-office" name="present-post-office" value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} className={inputFocusClasses} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="present-upazila">উপজেলা/থানা</Label>
+                                    <Input id="present-upazila" name="present-upazila" value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} className={inputFocusClasses} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="present-district">জেলা</Label>
+                                    <Input id="present-district" name="present-district" value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} className={inputFocusClasses} />
+                                </div>
+                            </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-4">
                     <div className="flex justify-between items-center border-b pb-2">
-                        <h3 className="font-semibold text-lg">স্থায়ী ঠিকানা</h3>
-                        <div className="flex items-center space-x-2">
+                        <h4 className="font-semibold text-md text-muted-foreground uppercase tracking-wider">স্থায়ী ঠিকানা</h4>
+                        <div className="flex items-center space-x-2 bg-primary/5 px-3 py-1.5 rounded-full border border-primary/20">
                             <Checkbox id="same-as-present" onCheckedChange={handleSameAddress} />
                             <label
                                 htmlFor="same-as-present"
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                className="text-xs font-bold leading-none cursor-pointer text-primary"
                             >
                                 বর্তমান ঠিকানার অনুরূপ
                             </label>
@@ -697,32 +765,36 @@ export default function AddStudentPage() {
                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="permanent-village">গ্রাম/মহল্লা</Label>
-                            <Input id="permanent-village" name="permanent-village" value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} />
+                            <Input id="permanent-village" name="permanent-village" value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} className={inputFocusClasses} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="permanent-union">ইউনিয়ন/ওয়ার্ড</Label>
-                            <Input id="permanent-union" name="permanent-union" value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} />
+                            <Input id="permanent-union" name="permanent-union" value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} className={inputFocusClasses} />
                         </div>
                          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="permanent-post-office">ডাকঘর</Label>
-                                <Input id="permanent-post-office" name="permanent-post-office" value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} />
+                                <Input id="permanent-post-office" name="permanent-post-office" value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} className={inputFocusClasses} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="permanent-upazila">উপজেলা/থানা</Label>
-                                <Input id="permanent-upazila" name="permanent-upazila" value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} />
+                                <Input id="permanent-upazila" name="permanent-upazila" value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} className={inputFocusClasses} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="permanent-district">জেলা</Label>
-                                <Input id="permanent-district" name="permanent-district" value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} />
+                                <Input id="permanent-district" name="permanent-district" value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} className={inputFocusClasses} />
                             </div>
                         </div>
                    </div>
                </div>
 
-              <div className="flex justify-end pt-4 border-t mt-4">
-                <Button type="submit">সেভ করুন</Button>
+                <div className="flex justify-between pt-6 border-t">
+                    <Button type="button" variant="outline" onClick={prevStep}><ArrowLeft className="mr-2 h-4 w-4" /> পূর্ববর্তী ধাপ</Button>
+                    <Button type="submit" size="lg" className="px-12 font-black shadow-lg">শিক্ষার্থী সেভ করুন</Button>
+                </div>
               </div>
+              )}
+
             </form>
             ) : (
             <div className="space-y-8">
@@ -735,69 +807,6 @@ export default function AddStudentPage() {
                         <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
                     </div>
                 </div>
-                <div className="space-y-4">
-                    <Skeleton className="h-7 w-48" />
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2 md:col-span-3"><Skeleton className="h-5 w-20" /><div className="flex items-center gap-4"><Skeleton className="h-24 w-24 rounded-md" /><Skeleton className="h-10 w-32" /></div></div>
-                    </div>
-                </div>
-                <div className="space-y-4">
-                    <Skeleton className="h-7 w-48" />
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                    </div>
-                </div>
-                <div className="space-y-4">
-                    <Skeleton className="h-7 w-48" />
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                    </div>
-                </div>
-                <div className="space-y-4">
-                    <Skeleton className="h-7 w-48" />
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        </div>
-                    </div>
-                </div>
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center border-b pb-2">
-                        <Skeleton className="h-7 w-48" />
-                        <div className="flex items-center space-x-2">
-                            <Skeleton className="h-4 w-4" />
-                            <Skeleton className="h-4 w-32" />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10" /></div>
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10" /></div>
-                            <div className="space-y-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-10" /></div>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex justify-end pt-4 border-t mt-4">
-                    <Skeleton className="h-10 w-24" />
-                </div>
             </div>
             )}
           </CardContent>
@@ -806,3 +815,5 @@ export default function AddStudentPage() {
     </div>
   );
 }
+
+const Separator = ({ className }: { className?: string }) => <div className={cn("h-[1px] w-full bg-border", className)} />;
