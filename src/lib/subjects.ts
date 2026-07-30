@@ -1,4 +1,3 @@
-
 export interface Subject {
     name: string; // Bengali name
     englishName: string;
@@ -78,20 +77,23 @@ export const getSubjects = (className: string, group?: string): Subject[] => {
     if (['6', '7', '8'].includes(className)) {
         return subjectsFor6to8;
     }
+    
+    const normalizedGroup = group?.toLowerCase().trim();
+
     if (['9', '10'].includes(className)) {
         let subjects: Subject[] = [];
         const uniqueSubjects = new Map<string, Subject>();
 
         commonSubjectsFor9to10.forEach(s => uniqueSubjects.set(s.name, s));
 
-        if (group === 'science') {
+        if (normalizedGroup === 'science') {
             scienceSubjects.forEach(s => uniqueSubjects.set(s.name, s));
-        } else if (group === 'arts') {
+        } else if (normalizedGroup === 'arts') {
             artsSubjects.forEach(s => uniqueSubjects.set(s.name, s));
-        } else if (group === 'commerce') {
+        } else if (normalizedGroup === 'commerce') {
             commerceSubjects.forEach(s => uniqueSubjects.set(s.name, s));
         } else {
-             // If no group is selected, return all possible subjects for 9-10
+             // If no valid group is selected, return all possible subjects for 9-10 union
             [...scienceSubjects, ...artsSubjects, ...commerceSubjects].forEach(s => {
                 if (!uniqueSubjects.has(s.name)) {
                     uniqueSubjects.set(s.name, s);

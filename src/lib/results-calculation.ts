@@ -58,6 +58,7 @@ export function processStudentResults(
 ): StudentProcessedResult[] {
 
     const studentResults: StudentProcessedResult[] = students.map(student => {
+        const studentGroupNormalized = (student.group || '').toLowerCase().trim();
         const optionalSubjectName = student.optionalSubject;
 
         // Get the subjects actually allowed/expected for this student's group
@@ -81,11 +82,19 @@ export function processStudentResults(
         const subjectResults = new Map<string, StudentSubjectResult>();
 
         subjectsForStudent.forEach(subjectInfo => {
-            // Find the specific result document that matches this student's group (if applicable) or has no group (6-8)
+            // ROBUST MATCHING: Find the specific result document.
+            // Match criteria:
+            // 1. Same subject name
+            // 2. Same class name
+            // 3. Either student's group matches the result document group OR the document contains this student's ID
             const classResult = resultsBySubject.find(r => 
                 r.subject === subjectInfo.name && 
                 r.className === student.className &&
-                (student.className < '9' || r.group === student.group)
+                (
+                    student.className < '9' || 
+                    (r.group || '').toLowerCase().trim() === studentGroupNormalized ||
+                    r.results.some(res => res.studentId === student.id)
+                )
             );
             
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
@@ -98,7 +107,9 @@ export function processStudentResults(
             
             const passMark = Math.ceil(fullMarks * 0.33);
 
-            let isPassSubject = (written !== undefined || mcq !== undefined || practical !== undefined) && obtainedMarks >= passMark;
+            // A subject is passed if marks are >= 33% and at least one mark type was entered
+            const isMarkEntered = written !== undefined || mcq !== undefined || practical !== undefined;
+            const isPassSubject = isMarkEntered && obtainedMarks >= passMark;
             
             const percentageForGrade = (obtainedMarks / fullMarks) * 100;
             const { grade, point } = getGradePoint(isPassSubject ? percentageForGrade : 0);

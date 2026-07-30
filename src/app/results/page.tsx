@@ -645,7 +645,6 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { user, hasPermission } = useAuth();
-    const canPromote = hasPermission('promote:students');
     
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
@@ -671,11 +670,10 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         setIsLoading(true);
 
-        // Filter students for the class and year
         const studentsInClass = allStudents.filter(s => 
             s.academicYear === selectedYear && 
             s.className === className &&
-            (className < '9' || groupFilter === 'all' || !groupFilter || s.group === groupFilter)
+            (className < '9' || groupFilter === 'all' || !groupFilter || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim())
         ).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
 
         if (studentsInClass.length === 0) {
@@ -685,14 +683,11 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
             return;
         }
 
-        // Use getAllResults to fetch all results for the class at once (handles "All Groups" correctly)
         const allResults = await getAllResults(db, selectedYear, examName);
         const resultsBySubject = allResults.filter(r => r.className === className);
 
-        // Get subjects for processing. If "all" is selected, it returns the union of subjects for 9/10.
         const subjectsForSubjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
 
-        // Process results
         const finalResults = processStudentResults(studentsInClass, resultsBySubject, subjectsForSubjects);
         setProcessedResults(finalResults);
         setIsLoading(false);
@@ -703,14 +698,11 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         const groups: Record<string, StudentProcessedResult[]> = {};
         
         processedResults.forEach(res => {
-            // Group by actual student group ONLY if specific group is filtered.
-            // If groupFilter is 'all', force a single "all" group for combined sheet.
             const g = (className >= '9' && groupFilter !== 'all') ? (res.student.group || 'general') : 'all';
             if (!groups[g]) groups[g] = [];
             groups[g].push(res);
         });
 
-        // Ensure each group is sorted by roll
         Object.keys(groups).forEach(key => {
             groups[key].sort((a, b) => (Number(a.student.roll) || 0) - (Number(b.student.roll) || 0));
         });
@@ -719,16 +711,16 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     }, [processedResults, className, groupFilter]);
 
     const renderResultTable = (groupName: string, results: StudentProcessedResult[]) => {
-        // If we are in "all" group, use the union of all subjects for 9/10.
         const subjects = getSubjects(className, groupName === 'all' ? undefined : groupName).filter(s => s.isExamSubject !== false);
         
         return (
             <div key={groupName} className="space-y-4 mb-12">
-                {className >= '9' && (
-                    <h3 className="text-xl font-bold text-primary border-b-2 border-primary/20 pb-2 flex items-center gap-2">
+                <div className="flex items-center justify-between border-b-2 border-primary/20 pb-2">
+                    <h3 className="text-xl font-bold text-primary flex items-center gap-2">
                         <BookOpen className="h-5 w-5" /> শাখা: {groupNamesMap[groupName] || groupName}
                     </h3>
-                )}
+                    <Badge variant="outline" className="font-bold">{results.length.toLocaleString('bn-BD')} জন শিক্ষার্থী</Badge>
+                </div>
                 <div className="border rounded-md overflow-x-auto relative bg-white shadow-sm">
                     <Table className="min-w-max">
                         <TableHeader>
@@ -743,16 +735,16 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         colSpan = hasPractical ? 6 : 5;
                                     }
                                     return (
-                                        <TableHead key={subject.name} colSpan={colSpan} className="text-center border-x text-xs">
+                                        <TableHead key={subject.name} colSpan={colSpan} className="text-center border-x text-[11px] py-1 font-black">
                                             {subject.name}
                                         </TableHead>
                                     );
                                 })}
-                                <TableHead rowSpan={2} className="align-middle text-center">মোট</TableHead>
-                                <TableHead rowSpan={2} className="align-middle text-center">জি.পি.এ</TableHead>
-                                <TableHead rowSpan={2} className="align-middle text-center">গ্রেড</TableHead>
-                                <TableHead rowSpan={2} className="align-middle text-center">মেধাস্থান</TableHead>
-                                <TableHead rowSpan={2} className="align-middle text-center no-print">মার্কশিট</TableHead>
+                                <TableHead rowSpan={2} className="align-middle text-center font-black">মোট</TableHead>
+                                <TableHead rowSpan={2} className="align-middle text-center font-black">জি.পি.এ</TableHead>
+                                <TableHead rowSpan={2} className="align-middle text-center font-black">গ্রেড</TableHead>
+                                <TableHead rowSpan={2} className="align-middle text-center font-black">মেধাস্থান</TableHead>
+                                <TableHead rowSpan={2} className="align-middle text-center no-print font-black">মার্কশিট</TableHead>
                             </TableRow>
                             <TableRow className="bg-muted/30">
                                 {subjects.map(subject => {
@@ -762,14 +754,14 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <React.Fragment key={`${subject.name}-cols`}>
                                             {!isEnglish && (
                                                 <>
-                                                    <TableHead className="text-[10px] text-center border-l p-1">লিখিত</TableHead>
-                                                    <TableHead className="text-[10px] text-center border-l p-1">MCQ</TableHead>
-                                                    {hasPractical && <TableHead className="text-[10px] text-center border-l p-1">ব্যবহারিক</TableHead>}
+                                                    <TableHead className="text-[9px] text-center border-l p-1 font-bold">লিখিত</TableHead>
+                                                    <TableHead className="text-[9px] text-center border-l p-1 font-bold">MCQ</TableHead>
+                                                    {hasPractical && <TableHead className="text-[9px] text-center border-l p-1 font-bold">ব্যবহারিক</TableHead>}
                                                 </>
                                             )}
-                                            <TableHead className="text-[10px] text-center border-l p-1">প্রাপ্ত</TableHead>
-                                            <TableHead className="text-[10px] text-center border-l p-1">গ্রেড</TableHead>
-                                            <TableHead className="text-[10px] text-center border-l border-r p-1">পয়েন্ট</TableHead>
+                                            <TableHead className="text-[9px] text-center border-l p-1 font-black bg-blue-50/50">প্রাপ্ত</TableHead>
+                                            <TableHead className="text-[9px] text-center border-l p-1 font-bold">গ্রেড</TableHead>
+                                            <TableHead className="text-[9px] text-center border-l border-r p-1 font-bold">পয়েন্ট</TableHead>
                                         </React.Fragment>
                                     );
                                 })}
@@ -778,11 +770,16 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <TableBody>
                             {results.map(res => (
                                 <TableRow key={res.student.id} className="hover:bg-accent/5">
-                                    <TableCell className="text-center bg-background sticky left-0 z-10 md:min-w-[80px] font-bold">
+                                    <TableCell className="text-center bg-background sticky left-0 z-10 md:min-w-[80px] font-bold border-r">
                                         {res.student.roll.toLocaleString('bn-BD')}
                                     </TableCell>
-                                    <TableCell className="whitespace-nowrap bg-background md:sticky md:left-[80px] md:z-10 font-medium">
-                                        {res.student.studentNameBn}
+                                    <TableCell className="whitespace-nowrap bg-background md:sticky md:left-[80px] md:z-10 font-bold border-r">
+                                        <div className="flex flex-col">
+                                            <span>{res.student.studentNameBn}</span>
+                                            {groupName === 'all' && res.student.group && (
+                                                <span className="text-[9px] text-muted-foreground font-medium italic">শাখা: {groupNamesMap[res.student.group] || res.student.group}</span>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     {subjects.map(subject => {
                                         const subjectRes = res.subjectResults.get(subject.name);
@@ -792,21 +789,21 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             <React.Fragment key={`${res.student.id}-${subject.name}`}>
                                                 {!isEnglish && (
                                                     <>
-                                                        <TableCell className="text-center border-l text-[11px]">{subjectRes?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                        <TableCell className="text-center border-l text-[11px]">{subjectRes?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                        {hasPractical && <TableCell className="text-center border-l text-[11px]">{subjectRes?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
+                                                        <TableCell className="text-center border-l text-[10px]">{subjectRes?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                        <TableCell className="text-center border-l text-[10px]">{subjectRes?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                        {hasPractical && <TableCell className="text-center border-l text-[10px]">{subjectRes?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
                                                     </>
                                                 )}
-                                                <TableCell className="text-center border-l font-semibold">{subjectRes?.marks?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                <TableCell className={cn("text-center border-l text-[11px]", {"text-destructive font-bold": subjectRes && !subjectRes.isPass})}>{subjectRes?.grade ?? '-'}</TableCell>
-                                                <TableCell className="text-center border-l border-r text-[11px]">{subjectRes?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                <TableCell className="text-center border-l font-black bg-blue-50/20 text-blue-900">{subjectRes?.marks?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                <TableCell className={cn("text-center border-l text-[10px] font-bold", {"text-destructive": subjectRes && !subjectRes.isPass})}>{subjectRes?.grade ?? '-'}</TableCell>
+                                                <TableCell className="text-center border-l border-r text-[10px] font-medium">{subjectRes?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
                                             </React.Fragment>
                                         )
                                     })}
-                                    <TableCell className="text-center font-bold text-primary">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
-                                    <TableCell className="text-center font-black">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                                    <TableCell className="text-center font-bold">{res.finalGrade}</TableCell>
-                                    <TableCell className={cn("text-center font-bold", {"text-destructive": !res.isPass})}>
+                                    <TableCell className="text-center font-black text-primary border-r">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="text-center font-black border-r">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="text-center font-black border-r">{res.finalGrade}</TableCell>
+                                    <TableCell className={cn("text-center font-black", {"text-destructive": !res.isPass})}>
                                         {res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}
                                     </TableCell>
                                     <TableCell className="text-center no-print">
@@ -865,7 +862,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 )}
                 <Button onClick={handleViewResults} disabled={isLoading || !examName || !className} className={cn("w-full shadow-md", (className === '9' || className === '10') ? "lg:col-span-2" : "lg:col-span-3")}>
-                    {isLoading ? 'লোড হচ্ছে...' : 'ফলাফল দেখুন'}
+                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> লোড হচ্ছে...</> : 'ফলাফল দেখুন'}
                 </Button>
             </div>
             
@@ -921,7 +918,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
         const studentsInClass = allStudents.filter(s => 
             s.academicYear === selectedYear && 
             s.className === className &&
-            (className < '9' || groupFilter === 'all' || !groupFilter || s.group === groupFilter)
+            (className < '9' || groupFilter === 'all' || !groupFilter || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim())
         );
 
         if (studentsInClass.length === 0) {
@@ -1115,7 +1112,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         const studentsInClass = allStudents.filter(s =>
             s.academicYear === selectedYear &&
             s.className === className &&
-            (className < '9' || !group || s.group === group)
+            (className < '9' || !group || (s.group || '').toLowerCase().trim() === group.toLowerCase().trim())
         );
 
         if (studentsInClass.length === 0) {
@@ -1286,7 +1283,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 )}
                 <Button onClick={handleViewFailedStudents} disabled={isLoading || !examName || !className || (showGroupSelector && !group)} className={cn("w-full shadow-md", showGroupSelector ? "lg:col-span-2" : "lg:col-span-2")}>
-                    {isLoading ? 'লোড হচ্ছে...' : 'ফেল করা শিক্ষার্থী দেখুন'}
+                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> লোড হচ্ছে...</> : 'ফেল করা শিক্ষার্থী দেখুন'}
                 </Button>
             </div>
             
