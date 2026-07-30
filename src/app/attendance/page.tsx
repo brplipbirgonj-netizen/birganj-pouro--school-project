@@ -100,14 +100,10 @@ const AttendanceSheet = ({
             }
         }
 
-        if (currentAttendance.size < students.length) {
-            toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "অনুগ্রহ করে সকল শিক্ষার্থীর হাজিরা নিশ্চিত করুন।" });
-            return;
-        }
-
-        const attendanceData: StudentAttendance[] = Array.from(currentAttendance.entries()).map(([studentId, status]) => ({
-            studentId,
-            status,
+        // Logic Change: If student is not clicked, mark as absent automatically
+        const attendanceData: StudentAttendance[] = students.map(student => ({
+            studentId: student.id,
+            status: currentAttendance.get(student.id) || 'absent'
         }));
 
         const dailyAttendance: DailyAttendance = {
@@ -121,7 +117,10 @@ const AttendanceSheet = ({
             setSavedAttendance(dailyAttendance);
             setIsEditing(false);
             onRefresh();
-            toast({ title: isEditing ? "হাজিরা আপডেট হয়েছে" : "হাজিরা সেভ হয়েছে" });
+            toast({ 
+                title: isEditing ? "হাজিরা আপডেট হয়েছে" : "হাজিরা সেভ হয়েছে",
+                description: currentAttendance.size < students.length ? "বাকি শিক্ষার্থীদের অনুপস্থিত হিসেবে ধরা হয়েছে।" : undefined
+            });
         }).catch(() => {});
     };
 
@@ -310,7 +309,7 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <p className="text-sm font-black text-primary flex items-center gap-2">
                     <CalendarDays className="h-4 w-4" /> আজকের তারিখ: {formattedDate}
                 </p>
-                <p className="text-[10px] font-bold text-muted-foreground italic hidden sm:block">বাটন ক্লিক করে হাজিরা নিশ্চিত করুন।</p>
+                <p className="text-[10px] font-bold text-muted-foreground italic hidden sm:block">বাটন ক্লিক করে হাজিরা নিশ্চিত করুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</p>
             </div>
             <Tabs defaultValue="6">
                 <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1">
@@ -344,100 +343,6 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </TabsContent>
                 ))}
             </Tabs>
-        </div>
-    );
-};
-
-// Risks/Alerts Tab with requested styling
-const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
-    const db = useFirestore();
-    const { selectedYear } = useAcademicYear();
-    const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [alerts, setAlerts] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const fetchAlerts = useCallback(async () => {
-        if (!db) return;
-        setIsLoading(true);
-        try {
-            const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
-            setAlerts(data);
-        } catch (e) {
-            console.error(e);
-        }
-        setIsLoading(false);
-    }, [db, selectedClass, selectedYear]);
-
-    useEffect(() => {
-        fetchAlerts();
-    }, [fetchAlerts]);
-
-    const studentMap = useMemo(() => {
-        const map = new Map<string, Student>();
-        allStudents.forEach(s => map.set(s.id, s));
-        return map;
-    }, [allStudents]);
-
-    return (
-        <div className="mt-4 space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white/50 items-end">
-                <div className="space-y-2 flex-1">
-                    <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <Button onClick={fetchAlerts} disabled={isLoading} className="font-bold">আপডেট দেখুন</Button>
-            </div>
-
-            <Card className="border-2 border-rose-100">
-                <CardHeader className="bg-rose-50/30">
-                    <CardTitle className="text-rose-700 flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5" /> অনুপস্থিতি সতর্কবার্তা
-                    </CardTitle>
-                    <CardDescription>টানা ৩ দিনের বেশি অনুপস্থিত শিক্ষার্থীদের তালিকা</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {isLoading ? (
-                        <div className="p-12 text-center text-muted-foreground">লোড হচ্ছে...</div>
-                    ) : alerts.length === 0 ? (
-                        <div className="p-12 text-center text-red-600 font-black text-xl animate-in fade-in zoom-in duration-500">
-                            এই শ্রেণিতে বর্তমানে তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-20 text-center">রোল</TableHead>
-                                    <TableHead>নাম</TableHead>
-                                    <TableHead className="text-center">অনুপস্থিতি দিন</TableHead>
-                                    <TableHead className="text-right">শেষ তারিখ</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {alerts.map(alert => {
-                                    const student = studentMap.get(alert.studentId);
-                                    return (
-                                        <TableRow key={alert.studentId} className="hover:bg-rose-50 transition-colors">
-                                            <TableCell className="text-center font-black">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
-                                            <TableCell className="font-bold text-rose-900">{student?.studentNameBn || '-'}</TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="destructive" className="font-black px-3">{alert.absentDays.toLocaleString('bn-BD')} দিন</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right text-xs font-bold text-muted-foreground">
-                                                {format(new Date(alert.lastAbsentDate), 'PP', { locale: bn })}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
         </div>
     );
 };
@@ -527,7 +432,7 @@ const MissedAttendanceTab = () => {
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={fetchMissedAttendance} disabled={isLoading} className="font-bold">হাজিরা মিস ডাটা দেখুন</Button>
+                <Button onClick={fetchMissedAttendance} disabled={isLoading} className="font-bold">বকেয়া হাজিরা দেখুন</Button>
             </div>
 
             <Card className="border-2 border-amber-100 shadow-lg">
@@ -572,6 +477,100 @@ const MissedAttendanceTab = () => {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+// Risks/Alerts Tab
+const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [alerts, setAlerts] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const fetchAlerts = useCallback(async () => {
+        if (!db) return;
+        setIsLoading(true);
+        try {
+            const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
+            setAlerts(data);
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    }, [db, selectedClass, selectedYear]);
+
+    useEffect(() => {
+        fetchAlerts();
+    }, [fetchAlerts]);
+
+    const studentMap = useMemo(() => {
+        const map = new Map<string, Student>();
+        allStudents.forEach(s => map.set(s.id, s));
+        return map;
+    }, [allStudents]);
+
+    return (
+        <div className="mt-4 space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white/50 items-end">
+                <div className="space-y-2 flex-1">
+                    <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button onClick={fetchAlerts} disabled={isLoading} className="font-bold">আপডেট দেখুন</Button>
+            </div>
+
+            <Card className="border-2 border-rose-100">
+                <CardHeader className="bg-rose-50/30">
+                    <CardTitle className="text-rose-700 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5" /> অনুপস্থিতি সতর্কবার্তা
+                    </CardTitle>
+                    <CardDescription>টানা ৩ দিনের বেশি অনুপস্থিত শিক্ষার্থীদের তালিকা</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {isLoading ? (
+                        <div className="p-12 text-center text-muted-foreground">লোড হচ্ছে...</div>
+                    ) : alerts.length === 0 ? (
+                        <div className="p-12 text-center text-red-600 font-black text-xl animate-in fade-in zoom-in duration-500">
+                            এই শ্রেণিতে বর্তমানে তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-20 text-center">রোল</TableHead>
+                                    <TableHead>নাম</TableHead>
+                                    <TableHead className="text-center">অনুপস্থিতি দিন</TableHead>
+                                    <TableHead className="text-right">শেষ তারিখ</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {alerts.map(alert => {
+                                    const student = studentMap.get(alert.studentId);
+                                    return (
+                                        <TableRow key={alert.studentId} className="hover:bg-rose-50 transition-colors">
+                                            <TableCell className="text-center font-black">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
+                                            <TableCell className="font-bold text-rose-900">{student?.studentNameBn || '-'}</TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="destructive" className="font-black px-3">{alert.absentDays.toLocaleString('bn-BD')} দিন</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right text-xs font-bold text-muted-foreground">
+                                                {format(new Date(alert.lastAbsentDate), 'PP', { locale: bn })}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     )}
