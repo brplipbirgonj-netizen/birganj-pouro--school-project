@@ -43,6 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StaffDailyAttendance, StaffMemberAttendance, getStaffAttendanceByDate, saveStaffAttendance, getStaffAttendanceForRange, LeaveType } from '@/lib/staff-attendance-data';
+import { cn } from '@/lib/utils';
 
 const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
     { id: 'CL', label: 'নৈমিত্তিক (CL)', color: 'bg-blue-100 text-blue-700' },
@@ -87,7 +88,7 @@ export default function StaffListPage() {
     if (!db || !user) return;
     setIsLoading(true);
 
-    const staffQuery = query(collection(db, "staff"), orderBy("joinDate", "asc"));
+    const staffQuery = query(collection(db, "staff"), orderBy("nameBn", "asc"));
 
     const unsubscribe = onSnapshot(staffQuery, (querySnapshot) => {
       const staffData = querySnapshot.docs.map(staffFromDoc);
@@ -136,7 +137,7 @@ export default function StaffListPage() {
         if (idx > -1) {
             nextAtt[idx] = { ...nextAtt[idx], [field]: value };
         } else {
-            nextAtt.push({ staffId, [field]: value } as any);
+            nextAtt.push({ staffId, status: 'present', [field]: value } as any);
         }
         return { ...prev, attendance: nextAtt };
     });
