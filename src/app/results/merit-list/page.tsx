@@ -27,7 +27,7 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-// Constant for pagination
+// Constant for pagination - Adjusted to 22 to accommodate 0.5 inch padding
 const STUDENTS_PER_PAGE = 22;
 
 function MeritListPrintContent() {
@@ -130,12 +130,12 @@ function MeritListPrintContent() {
             {/* Printable Multi-page Container */}
             <div className="flex flex-col gap-8 print:gap-0">
                 {paginatedResults.length === 0 ? (
-                    <div className="printable-area w-[210mm] h-[297mm] bg-white p-10 border-[6px] border-double border-primary/40 flex items-center justify-center">
+                    <div className="printable-area w-[210mm] h-[297mm] bg-white p-12 border-[6px] border-double border-primary/40 flex items-center justify-center">
                         কোনো ফলাফল পাওয়া যায়নি।
                     </div>
                 ) : (
                     paginatedResults.map((pageData, pageIdx) => (
-                        <div key={pageIdx} className="printable-area w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 p-10 box-border border-[6px] border-double border-primary/40 overflow-hidden">
+                        <div key={pageIdx} className="printable-area w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 p-12 box-border border-[6px] border-double border-primary/40 overflow-hidden">
                             
                             {/* Watermark */}
                             {schoolInfo.logoUrl && (
