@@ -163,7 +163,7 @@ function MeritListPrintContent() {
                                 </div>
                             </header>
 
-                            {/* Only show full title on first page or simplified title on others */}
+                            {/* Title Section */}
                             <div className="relative z-10 text-center mb-6">
                                 <h2 className="inline-block bg-primary text-white text-lg font-black px-8 py-1 rounded-full shadow-md">
                                     {examName} - মেধা তালিকা
@@ -230,15 +230,12 @@ function MeritListPrintContent() {
 
                             {/* Footer - Only on the LAST page */}
                             {pageIdx === paginatedResults.length - 1 ? (
-                                <footer className="relative z-10 pt-10 flex justify-between items-end print-footer mt-auto">
+                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto">
                                     <div className="text-center">
-                                        <div className="w-40 border-t border-black pt-1 font-bold text-[10px]">রুটিন কমিটির স্বাক্ষর</div>
+                                        <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                                     </div>
                                     <div className="text-center">
-                                        <div className="w-40 border-t border-black pt-1 font-bold text-[10px]">শ্রেণি শিক্ষকের স্বাক্ষর</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="w-40 border-t border-black pt-1 font-bold text-[10px]">প্রধান শিক্ষকের স্বাক্ষর</div>
+                                        <div className="w-48 border-t border-black pt-1 font-bold text-sm">প্রধান শিক্ষকের স্বাক্ষর</div>
                                     </div>
                                 </footer>
                             ) : (
