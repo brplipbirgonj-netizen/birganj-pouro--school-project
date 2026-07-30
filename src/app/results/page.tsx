@@ -636,7 +636,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <h3 className="text-xl font-bold text-primary flex items-center gap-2"><BookOpen className="h-5 w-5" /> শাখা: {groupNamesMap[groupName] || groupName}</h3>
                     <Badge variant="outline" className="font-bold">{results.length.toLocaleString('bn-BD')} জন শিক্ষার্থী</Badge>
                 </div>
-                <div className="border rounded-md overflow-x-auto relative bg-white shadow-sm">
+                <div className="table-container relative">
                     <Table className="min-w-max">
                         <TableHeader>
                             <TableRow className="bg-muted/50">
@@ -684,7 +684,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <TableCell className="text-center font-black text-primary border-r">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
                                     <TableCell className="text-center font-black border-r">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
                                     <TableCell className={cn("text-center font-black border-r", !res.isPass && "text-destructive")}>
-                                        {res.isPass ? res.finalGrade : `F${res.failedSubjectsCount.toLocaleString('bn-BD')}`}
+                                        {res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}
                                     </TableCell>
                                     <TableCell className={cn("text-center font-black", {"text-destructive": !res.isPass})}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell><TableCell className="text-center no-print"><Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank"><Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><BookOpen className="h-4 w-4" /></Button></Link></TableCell>
                                 </TableRow>
@@ -790,7 +790,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <div className="flex gap-2 lg:col-span-1"><Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="flex-1">তালিকা দেখুন</Button><Button onClick={handlePrint} disabled={processedResults.length === 0} variant="outline" className="bg-white border-primary text-primary hover:bg-primary/5"><Printer className="h-4 w-4" /></Button></div>
             </div>
             {isLoading ? (<div className="space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-64 w-full" /></div>) : processedResults.length > 0 ? (<div className="border rounded-xl bg-white shadow-lg overflow-hidden animate-in fade-in duration-500"><div className="bg-primary/5 p-4 border-b flex justify-between items-center"><h3 className="text-xl font-black text-primary flex items-center gap-2"><Trophy className="h-6 w-6 text-amber-500" /> মেধা তালিকা: {classNamesMap[className]} শ্রেণি</h3><Badge variant="outline" className="bg-white font-bold">{processedResults.length.toLocaleString('bn-BD')} জন শিক্ষার্থী</Badge></div><div className="overflow-x-auto"><Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="text-center font-bold">মেধাস্থান</TableHead><TableHead className="text-center font-bold">রোল</TableHead><TableHead className="font-bold">শিক্ষার্থীর নাম</TableHead><TableHead className="text-center font-bold">মোট নম্বর</TableHead><TableHead className="text-center font-bold">GPA</TableHead><TableHead className="text-center font-bold">গ্রেড</TableHead><TableHead className="text-right font-bold">ফলাফল</TableHead></TableRow></TableHeader><TableBody>{processedResults.map((res, index) => (<TableRow key={res.student.id} className={cn("hover:bg-accent/5", !res.isPass && "bg-red-50/30")}><TableCell className="text-center">{res.isPass ? (<span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-full font-black", index === 0 ? "bg-amber-100 text-amber-700 border border-amber-300" : index === 1 ? "bg-slate-100 text-slate-700 border border-slate-300" : index === 2 ? "bg-orange-100 text-orange-700 border-orange-300" : "bg-muted")}>{(index + 1).toLocaleString('bn-BD')}</span>) : '-'}</TableCell><TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell><TableCell className="font-black text-slate-800">{res.student.studentNameBn}</TableCell><TableCell className="text-center font-bold text-primary">{res.totalMarks.toLocaleString('bn-BD')}</TableCell><TableCell className="text-center font-black">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell><TableCell className={cn("text-center font-bold", !res.isPass && "text-destructive")}>
-                {res.isPass ? res.finalGrade : `F${res.failedSubjectsCount.toLocaleString('bn-BD')}`}
+                {res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}
             </TableCell><TableCell className="text-right"><span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", res.isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>{res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}</span></TableCell></TableRow>))}</TableBody></Table></div></div>) : (className && <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-lg border-2 border-dashed">মেধা তালিকা দেখতে বাটনে ক্লিক করুন।</div>)}
         </div>
     );
@@ -902,9 +902,34 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <Button onClick={handleViewFailedStudents} disabled={isLoading || !examName || !className || (showGroupSelector && !group)} className="w-full shadow-md lg:col-span-2">{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> লোড হচ্ছে...</> : 'ফেল করা শিক্ষার্থী দেখুন'}</Button>
             </div>
             {failedStudents.length > 0 ? (
-                 <div className="border rounded-md bg-white shadow-sm overflow-hidden"><Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="p-2 w-12 text-center"><Checkbox checked={selectedStudentIds.size > 0 && selectedStudentIds.size === failedStudents.length} onCheckedChange={handleToggleAll} /></TableHead><TableHead className="w-20 text-center">রোল</TableHead><TableHead>নাম</TableHead><TableHead className="text-center">ফেল করা বিষয়ের সংখ্যা</TableHead></TableRow></TableHeader><TableBody>{failedStudents.map(res => (<TableRow key={res.student.id} data-state={selectedStudentIds.has(res.student.id) && "selected"} className="hover:bg-accent/5"><TableCell className="p-2 text-center"><Checkbox checked={selectedStudentIds.has(res.student.id)} onCheckedChange={() => handleToggleStudent(res.student.id)} /></TableCell><TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell><TableCell className="font-medium">{res.student.studentNameBn}</TableCell><TableCell className="text-center text-destructive font-black">{res.failedSubjectsCount.toLocaleString('bn-BD')}</TableCell></TableRow>))}</TableBody></Table></div>
+                 <div className="border rounded-md bg-white shadow-sm overflow-hidden"><Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="p-2 w-12 text-center"><Checkbox checked={selectedStudentIds.size > 0 && selectedStudentIds.size === failedStudents.length} onCheckedChange={handleToggleAll} /></TableHead><TableHead className="w-20 text-center">রোল</TableHead><TableHead>নাম</TableHead><TableHead className="text-center">ফেল করা বিষয়ের সংখ্যা</TableHead></TableRow></TableHeader><TableBody>{failedStudents.map(res => (<TableRow key={res.student.id} data-state={selectedStudentIds.has(res.student.id) && "selected"} className="hover:bg-accent/5"><TableCell className="p-2 text-center"><Checkbox checked={selectedStudentIds.has(res.student.id)} onCheckedChange={() => handleToggleStudent(res.student.id)} /></TableCell><TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell><TableCell className="font-medium">{res.student.studentNameBn}</TableCell><TableCell className="text-center text-destructive font-black">{res.failedSubjectsCount}</TableCell></TableRow>))}</TableBody></Table></div>
             ) : (!isLoading && className && <p className="text-center text-muted-foreground p-8 bg-white/30 rounded-lg border-2 border-dashed">তালিকা দেখতে বাটনে ক্লিক করুন।</p>)}
-            {canPromote && failedStudents.length > 0 && (<div className="flex justify-end"><AlertDialog><AlertDialogTrigger asChild><Button disabled={isLoading || selectedStudentIds.size === 0 || className === '10'} size="lg" className="shadow-lg">নির্বাচিতদের উত্তীর্ণ করুন</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle><AlertDialogDescription>নিম্নলিখিত {selectedStudentIds.size.toLocaleString('bn-BD')} জন শিক্ষার্থীকে উত্তীর্ণ করা হবে।</AlertDialogDescription></AlertDialogHeader><div className="max-h-60 overflow-y-auto my-4 border rounded-md p-2 bg-muted/20"><ul className="list-disc pl-5 space-y-1">{failedStudents.filter(s => selectedStudentIds.has(s.student.id)).map(res => <li key={res.student.id} className="text-sm font-medium">{res.student.studentNameBn} (রোল: {res.student.roll.toLocaleString('bn-BD')})</li>)}</ul></div><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={handlePromoteSelected}>উত্তীর্ণ করুন</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>)}
+            {canPromote && failedStudents.length > 0 && (
+                <div className="flex justify-end">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button disabled={isLoading || selectedStudentIds.size === 0 || className === '10'} size="lg" className="shadow-lg">নির্বাচিতদের উত্তীর্ণ করুন</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                <AlertDialogDescription>নিম্নলিখিত {selectedStudentIds.size.toLocaleString('bn-BD')} জন শিক্ষার্থীকে উত্তীর্ণ করা হবে।</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="max-h-60 overflow-y-auto my-4 border rounded-md p-2 bg-muted/20">
+                                <ul className="list-disc pl-5 space-y-1">
+                                    {failedStudents.filter(s => selectedStudentIds.has(s.student.id)).map(res => (
+                                        <li key={res.student.id} className="text-sm font-medium">{res.student.studentNameBn} (রোল: {res.student.roll.toLocaleString('bn-BD')})</li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                <AlertDialogAction onClick={handlePromoteSelected}>উত্তীর্ণ করুন</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
         </div>
     );
 };
@@ -1029,10 +1054,11 @@ export default function ResultsPage() {
                                 {canPromote && (<TabsContent value="special-promotion" className="mt-4">{isLoading ? <p>লোড হচ্ছে...</p> : <SpecialPromotionTab allStudents={allStudents} />}</TabsContent>)}
                                 {canViewResults && (<TabsContent value="upload" className="mt-4">{isLoading ? <p>লোড হচ্ছে...</p> : <BulkUploadTab allStudents={allStudents} />}</TabsContent>)}
                             </Tabs>
-                        ) : (<div className="space-y-4"><div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground"><div className="inline-flex items-center justify-center rounded-sm bg-background shadow-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div></div><div className="p-4 border rounded-lg"><Skeleton className="h-24 w-full" /></div></div>)}
+                        ) : (<div className="space-y-4"><div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground"><div className="inline-flex items-center justify-center rounded-sm bg-background shadow-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div></div><div className="p-4 border rounded-lg"><Skeleton className="h-24 w-full" /></div>)}
                     </CardContent>
                 </Card>
             </main>
         </div>
     );
 }
+
