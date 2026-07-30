@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -16,9 +17,9 @@ import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult,
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { getExams, Exam } from '@/lib/exam-data';
+import { Badge } from '@/components/ui/badge';
 
 
 type Marks = {
@@ -857,6 +859,194 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
+const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const { toast } = useToast();
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user } = useAuth();
+    
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
+    const [className, setClassName] = useState('');
+    const [groupFilter, setGroupFilter] = useState('');
+    
+    const [processedResults, setProcessedResults] = useState<StudentProcessedResult[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
+    const handleViewMeritList = async () => {
+        if (!examName || !className || !db || !user) {
+            toast({ variant: 'destructive', title: 'পরীক্ষা ও শ্রেণি নির্বাচন করুন' });
+            return;
+        }
+
+        setIsLoading(true);
+
+        const studentsInClass = allStudents.filter(s => 
+            s.academicYear === selectedYear && 
+            s.className === className &&
+            (className < '9' || !groupFilter || groupFilter === 'all' || s.group === groupFilter)
+        );
+
+        if (studentsInClass.length === 0) {
+            toast({ title: 'এই শ্রেণিতে কোনো শিক্ষার্থী নেই।' });
+            setProcessedResults([]);
+            setIsLoading(false);
+            return;
+        }
+
+        const allPossibleSubjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
+        const resultsPromises = allPossibleSubjects.map(subject => 
+            getResultsForClass(db, selectedYear, examName, className, subject.name, groupFilter === 'all' ? undefined : groupFilter)
+        );
+        const resultsBySubject = (await Promise.all(resultsPromises)).filter((res): res is ClassResult => !!res);
+
+        const finalResults = processStudentResults(studentsInClass, resultsBySubject, allPossibleSubjects);
+        
+        // Custom sort for Merit List: Pass status first, then Total Marks, then Roll
+        const sortedResults = finalResults.sort((a, b) => {
+            if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
+            if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+            return a.student.roll - b.student.roll;
+        });
+
+        setProcessedResults(sortedResults);
+        setIsLoading(false);
+    };
+
+    const handlePrint = () => {
+        if (!examName || !className) return;
+        const queryParams = new URLSearchParams({
+            academicYear: selectedYear,
+            examName,
+            className,
+            group: groupFilter || 'all'
+        });
+        window.open(`/results/merit-list?${queryParams.toString()}`, '_blank');
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
+                <div className="space-y-2">
+                    <Label>পরীক্ষা</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                        <SelectContent>
+                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="class-merit">শ্রেণি</Label>
+                    <Select value={className} onValueChange={setClassName}>
+                        <SelectTrigger id="class-merit" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="6">৬ষ্ঠ</SelectItem>
+                            <SelectItem value="7">৭ম</SelectItem>
+                            <SelectItem value="8">৮ম</SelectItem>
+                            <SelectItem value="9">৯ম</SelectItem>
+                            <SelectItem value="10">১০ম</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                {(className === '9' || className === '10') && (
+                    <div className="space-y-2">
+                        <Label htmlFor="group-merit">শাখা</Label>
+                        <Select value={groupFilter} onValueChange={setGroupFilter}>
+                            <SelectTrigger id="group-merit" className="bg-white"><SelectValue placeholder="শাখা নির্বাচন" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">সকল শাখা</SelectItem>
+                                <SelectItem value="science">বিজ্ঞান</SelectItem>
+                                <SelectItem value="arts">মানবিক</SelectItem>
+                                <SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+                <div className="flex gap-2 lg:col-span-1">
+                    <Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="flex-1">
+                        তালিকা দেখুন
+                    </Button>
+                    <Button onClick={handlePrint} disabled={processedResults.length === 0} variant="outline" className="bg-white border-primary text-primary hover:bg-primary/5">
+                        <Printer className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+
+            {isLoading ? (
+                <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            ) : processedResults.length > 0 ? (
+                <div className="border rounded-xl bg-white shadow-lg overflow-hidden animate-in fade-in duration-500">
+                    <div className="bg-primary/5 p-4 border-b flex justify-between items-center">
+                        <h3 className="text-xl font-black text-primary flex items-center gap-2">
+                            <Trophy className="h-6 w-6 text-amber-500" /> মেধা তালিকা: {classNamesMap[className]} শ্রেণি
+                        </h3>
+                        <Badge variant="outline" className="bg-white font-bold">{processedResults.length.toLocaleString('bn-BD')} জন শিক্ষার্থী</Badge>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-muted/50">
+                                <TableRow>
+                                    <TableHead className="text-center font-bold">মেধাস্থান</TableHead>
+                                    <TableHead className="text-center font-bold">রোল</TableHead>
+                                    <TableHead className="font-bold">শিক্ষার্থীর নাম</TableHead>
+                                    <TableHead className="text-center font-bold">মোট নম্বর</TableHead>
+                                    <TableHead className="text-center font-bold">GPA</TableHead>
+                                    <TableHead className="text-center font-bold">গ্রেড</TableHead>
+                                    <TableHead className="text-right font-bold">ফলাফল</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {processedResults.map((res, index) => (
+                                    <TableRow key={res.student.id} className={cn("hover:bg-accent/5", !res.isPass && "bg-red-50/30")}>
+                                        <TableCell className="text-center">
+                                            {res.isPass ? (
+                                                <span className={cn(
+                                                    "inline-flex items-center justify-center w-8 h-8 rounded-full font-black",
+                                                    index === 0 ? "bg-amber-100 text-amber-700 border border-amber-300" : 
+                                                    index === 1 ? "bg-slate-100 text-slate-700 border border-slate-300" :
+                                                    index === 2 ? "bg-orange-100 text-orange-700 border border-orange-300" : "bg-muted"
+                                                )}>
+                                                    {(index + 1).toLocaleString('bn-BD')}
+                                                </span>
+                                            ) : '-'}
+                                        </TableCell>
+                                        <TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="font-black text-slate-800">{res.student.studentNameBn}</TableCell>
+                                        <TableCell className="text-center font-bold text-primary">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="text-center font-black">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="text-center font-bold">{res.finalGrade}</TableCell>
+                                        <TableCell className="text-right">
+                                            <span className={cn(
+                                                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
+                                                res.isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                                            )}>
+                                                {res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}
+                                            </span>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+            ) : (
+                className && <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-lg border-2 border-dashed">মেধা তালিকা দেখতে বাটনে ক্লিক করুন।</div>
+            )}
+        </div>
+    );
+};
+
 const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -1530,6 +1720,7 @@ export default function ResultsPage() {
                                 <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
                                     <TabsTrigger value="management" className="flex-1 min-w-[100px] font-bold">নম্বর ব্যবস্থাপনা</TabsTrigger>
                                     <TabsTrigger value="sheet" className="flex-1 min-w-[100px] font-bold">ফলাফল শিট</TabsTrigger>
+                                    <TabsTrigger value="merit" className="flex-1 min-w-[100px] font-bold">মেধা তালিকা</TabsTrigger>
                                     {canPromote && <TabsTrigger value="special-promotion" className="flex-1 min-w-[100px] font-bold">বিশেষ পাশ</TabsTrigger>}
                                     <TabsTrigger value="upload" className="flex-1 min-w-[100px] font-bold">এক্সেল আপলোড</TabsTrigger>
                                 </TabsList>
@@ -1538,6 +1729,9 @@ export default function ResultsPage() {
                                 </TabsContent>
                                 <TabsContent value="sheet" className="mt-4">
                                     {isLoading ? <p>লোড হচ্ছে...</p> : <ResultSheetTab allStudents={allStudents} />}
+                                </TabsContent>
+                                <TabsContent value="merit" className="mt-4">
+                                    {isLoading ? <p>লোড হচ্ছে...</p> : <MeritListTab allStudents={allStudents} />}
                                 </TabsContent>
                                 {canPromote && (
                                     <TabsContent value="special-promotion" className="mt-4">
