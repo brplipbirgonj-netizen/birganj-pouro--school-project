@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -650,7 +651,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
-    const [groupFilter, setGroupFilter] = useState('');
+    const [groupFilter, setGroupFilter] = useState('all');
     
     const [processedResults, setProcessedResults] = useState<StudentProcessedResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -675,7 +676,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         const studentsInClass = allStudents.filter(s => 
             s.academicYear === selectedYear && 
             s.className === className &&
-            (className < '9' || !groupFilter || s.group === groupFilter)
+            (className < '9' || groupFilter === 'all' || !groupFilter || s.group === groupFilter)
         ).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
 
         if (studentsInClass.length === 0) {
@@ -685,15 +686,15 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
             return;
         }
 
-        // Fetch results for all possible subjects in this class
-        const allPossibleSubjects = getSubjects(className, groupFilter).filter(s => s.isExamSubject !== false);
-        const resultsPromises = allPossibleSubjects.map(subject => 
-            getResultsForClass(db, selectedYear, examName, className, subject.name, groupFilter || undefined)
-        );
-        const resultsBySubject = (await Promise.all(resultsPromises)).filter((res): res is ClassResult => !!res);
+        // Use getAllResults to fetch all results for the class at once (handles "All Groups" correctly)
+        const allResults = await getAllResults(db, selectedYear, examName);
+        const resultsBySubject = allResults.filter(r => r.className === className);
+
+        // Get subjects for processing
+        const subjectsForSubjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
 
         // Process results
-        const finalResults = processStudentResults(studentsInClass, resultsBySubject, allPossibleSubjects);
+        const finalResults = processStudentResults(studentsInClass, resultsBySubject, subjectsForSubjects);
         setProcessedResults(finalResults);
         setIsLoading(false);
     };
@@ -836,7 +837,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="class-sheet">শ্রেণি</Label>
-                    <Select value={className} onValueChange={c => { setClassName(c); setGroupFilter(''); setProcessedResults([]); }}>
+                    <Select value={className} onValueChange={c => { setClassName(c); setGroupFilter('all'); setProcessedResults([]); }}>
                         <SelectTrigger id="class-sheet" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="6">৬ষ্ঠ</SelectItem>
@@ -895,7 +896,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
-    const [groupFilter, setGroupFilter] = useState('');
+    const [groupFilter, setGroupFilter] = useState('all');
     
     const [processedResults, setProcessedResults] = useState<StudentProcessedResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -918,7 +919,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
         const studentsInClass = allStudents.filter(s => 
             s.academicYear === selectedYear && 
             s.className === className &&
-            (className < '9' || !groupFilter || groupFilter === 'all' || s.group === groupFilter)
+            (className < '9' || groupFilter === 'all' || !groupFilter || s.group === groupFilter)
         );
 
         if (studentsInClass.length === 0) {
@@ -928,11 +929,12 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
             return;
         }
 
-        const allPossibleSubjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
-        const resultsPromises = allPossibleSubjects.map(subject => 
-            getResultsForClass(db, selectedYear, examName, className, subject.name, groupFilter === 'all' ? undefined : groupFilter)
-        );
-        const resultsBySubject = (await Promise.all(resultsPromises)).filter((res): res is ClassResult => !!res);
+        // Fetch all results for the exam and academic year to handle "All Groups" correctly
+        const allResults = await getAllResults(db, selectedYear, examName);
+        const resultsBySubject = allResults.filter(r => r.className === className);
+
+        const groupForSubjects = groupFilter === 'all' ? undefined : groupFilter;
+        const allPossibleSubjects = getSubjects(className, groupForSubjects).filter(s => s.isExamSubject !== false);
 
         const finalResults = processStudentResults(studentsInClass, resultsBySubject, allPossibleSubjects);
         
@@ -1101,7 +1103,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             toast({ variant: 'destructive', title: 'পরীক্ষা ও শ্রেণি নির্বাচন করুন' });
             return;
         }
-        if (showGroupSelector && !group) {
+        if (showGroupSelector && (!group || group === 'all')) {
             toast({ variant: 'destructive', title: 'গ্রুপ নির্বাচন করুন' });
             return;
         }
@@ -1121,11 +1123,11 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             return;
         }
 
+        // Fetch results correctly using the group or Class results for specific className
+        const allResults = await getAllResults(db, selectedYear, examName);
+        const resultsBySubject = allResults.filter(r => r.className === className);
+
         const allSubjectsForGroup = getSubjects(className, group).filter(s => s.isExamSubject !== false);
-        const resultsBySubjectPromises = allSubjectsForGroup.map(subject =>
-            getResultsForClass(db, selectedYear, examName, className, subject.name, group)
-        );
-        const resultsBySubject = (await Promise.all(resultsBySubjectPromises)).filter((result): result is ClassResult => result !== undefined);
 
         const finalResults = processStudentResults(studentsInClass, resultsBySubject, allSubjectsForGroup);
         const failed = finalResults.filter(r => !r.isPass).sort((a,b) => (Number(a.student.roll) || 0) - (Number(b.student.roll) || 0));
@@ -1801,3 +1803,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
