@@ -1,10 +1,11 @@
+
 'use client';
 
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student } from '@/lib/student-data';
-import { getAttendanceFromStorage, DailyAttendance, saveDailyAttendance, getAttendanceForClassAndDate, StudentAttendance, AttendanceStatus, getConsecutiveAbsences, StudentConsecutiveAbsence } from '@/lib/attendance-data';
+import { getAttendanceFromStorage, DailyAttendance, saveDailyAttendance, getAttendanceForClassAndDate, StudentAttendance, AttendanceStatus } from '@/lib/attendance-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,11 +17,11 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday } from '@/lib/holiday-data';
-import { format, eachDayOfInterval, subDays, startOfMonth, endOfMonth, isAfter } from 'date-fns';
+import { format, eachDayOfInterval, subDays } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, CalendarDays, Check, X } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, Check, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,49 +32,54 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
+const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
 // Digital Attendance sheet
-const AttendanceSheet = ({ classId, students }: { classId: string, students: Student[] }) => {
+const AttendanceSheet = ({ 
+    classId, 
+    students, 
+    currentAttendance, 
+    onStatusChange, 
+    onRefresh 
+}: { 
+    classId: string, 
+    students: Student[], 
+    currentAttendance: Map<string, AttendanceStatus>,
+    onStatusChange: (studentId: string, status: AttendanceStatus) => void,
+    onRefresh: () => void
+}) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { user } = useAuth();
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
-    const dayOfWeek = today.getDay(); // 0 for Sunday, 5 for Friday, 6 for Saturday
+    const dayOfWeek = today.getDay(); 
 
-    const [attendance, setAttendance] = useState<Map<string, AttendanceStatus>>(new Map());
     const [savedAttendance, setSavedAttendance] = useState<DailyAttendance | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
     const [isEditing, setIsEditing] = useState(false);
 
-    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; // Friday & Saturday are weekend
+    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; 
     const isAdmin = user?.role === 'admin';
 
     const now = new Date();
-    const schoolStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30, 0); // 10:30 AM
-    const schoolEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 10, 0); // 4:10 PM
+    const schoolStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30, 0); 
+    const schoolEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 10, 0); 
     const isSchoolHours = now >= schoolStart && now <= schoolEnd;
 
     useEffect(() => {
         if (!db || !user) return;
         
-        const initialAttendance = new Map<string, AttendanceStatus>();
-        students.forEach(student => {
-            initialAttendance.set(student.id, 'present');
-        });
-        setAttendance(initialAttendance);
-
         const checkExistingData = async () => {
             const existingAttendance = await getAttendanceForClassAndDate(db, todayStr, classId, selectedYear);
             setSavedAttendance(existingAttendance);
             
-            if (existingAttendance) {
-                const savedMap = new Map<string, AttendanceStatus>();
+            if (existingAttendance && currentAttendance.size === 0) {
                 existingAttendance.attendance.forEach(item => {
-                    savedMap.set(item.studentId, item.status);
+                    onStatusChange(item.studentId, item.status);
                 });
-                setAttendance(savedMap);
             }
 
             const holidayToday = await isHoliday(db, todayStr);
@@ -83,12 +89,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
         }
 
         checkExistingData();
-
-    }, [students, todayStr, classId, selectedYear, db, user]);
-
-    const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
-        setAttendance(prev => new Map(prev).set(studentId, status));
-    };
+    }, [classId, todayStr, selectedYear, db, user]);
 
     const handleSaveAttendance = () => {
         if (!db || !user) return;
@@ -96,7 +97,6 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
         const rightNow = new Date();
         const currentIsSchoolHours = rightNow >= schoolStart && rightNow <= schoolEnd;
 
-        // Restriction check for non-admin users
         if (!isAdmin) {
             if (isWeekend) {
                 toast({ variant: "destructive", title: "আজ সাপ্তাহিক ছুটি।" });
@@ -112,7 +112,13 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
             }
         }
 
-        const attendanceData: StudentAttendance[] = Array.from(attendance.entries()).map(([studentId, status]) => ({
+        // Check if all students are marked
+        if (currentAttendance.size < students.length) {
+            toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "অনুগ্রহ করে সকল শিক্ষার্থীর হাজিরা নিশ্চিত করুন।" });
+            return;
+        }
+
+        const attendanceData: StudentAttendance[] = Array.from(currentAttendance.entries()).map(([studentId, status]) => ({
             studentId,
             status,
         }));
@@ -127,10 +133,9 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
         saveDailyAttendance(db, dailyAttendance).then(() => {
             setSavedAttendance(dailyAttendance);
             setIsEditing(false);
+            onRefresh();
             toast({ title: isEditing ? "হাজিরা আপডেট হয়েছে" : "হাজিরা সেভ হয়েছে" });
-        }).catch(() => {
-            // Error is handled by FirebaseErrorListener
-        });
+        }).catch(() => {});
     };
 
     if (isLoading) {
@@ -206,7 +211,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
         <div className="animate-in fade-in duration-500">
             <div className="p-4 bg-muted/30 border-b flex justify-between items-center">
                 <span className="text-sm font-bold text-muted-foreground">
-                    {isEditing ? 'হাজিরা সংশোধন করা হচ্ছে' : 'নতুন হাজিরা নিন'}
+                    {isEditing ? 'হাজিরা সংশোধন করা হচ্ছে' : 'নতুন হাজিরা নিন (আগে থেকে টিক দেওয়া নেই)'}
                 </span>
                 {isEditing && (
                     <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-8 text-xs">
@@ -225,7 +230,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
                     </TableHeader>
                     <TableBody>
                         {students.map(student => {
-                            const currentStatus = attendance.get(student.id);
+                            const currentStatus = currentAttendance.get(student.id);
                             return (
                                 <TableRow key={student.id} className="hover:bg-accent/5 h-16">
                                     <TableCell className="text-center font-bold text-lg">{student.roll.toLocaleString('bn-BD')}</TableCell>
@@ -242,7 +247,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
                                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white scale-110 shadow-lg border-emerald-700 ring-2 ring-emerald-200" 
                                                         : "text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
                                                 )}
-                                                onClick={() => handleStatusChange(student.id, 'present')}
+                                                onClick={() => onStatusChange(student.id, 'present')}
                                             >
                                                 <Check className={cn("mr-2 h-4 w-4", currentStatus === 'present' ? "block" : "hidden")} />
                                                 উপস্থিত
@@ -257,7 +262,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
                                                         ? "bg-rose-600 hover:bg-rose-700 text-white scale-110 shadow-lg border-rose-700 ring-2 ring-rose-200" 
                                                         : "text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                                                 )}
-                                                onClick={() => handleStatusChange(student.id, 'absent')}
+                                                onClick={() => onStatusChange(student.id, 'absent')}
                                             >
                                                 <X className={cn("mr-2 h-4 w-4", currentStatus === 'absent' ? "block" : "hidden")} />
                                                 অনুপস্থিত
@@ -280,265 +285,37 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
     );
 };
 
-// Risks/Alerts Tab
-const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
-    const db = useFirestore();
-    const { selectedYear } = useAcademicYear();
-    const { toast } = useToast();
-    const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [alerts, setAlerts] = useState<StudentConsecutiveAbsence[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
-
-    const checkAlerts = useCallback(async () => {
-        if (!db) return;
-        setIsLoading(true);
-        try {
-            const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
-            setAlerts(data);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [db, selectedClass, selectedYear]);
-
-    useEffect(() => {
-        checkAlerts();
-    }, [checkAlerts]);
-
-    const handleSendSMS = (student: Student, days: number) => {
-        const mobile = student.guardianMobile || student.studentMobile || '';
-        if (!mobile) {
-            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
-            return;
-        }
-
-        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} টানা ${days.toLocaleString('bn-BD')} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অনুপস্থিতির কারণ জানান। বীপৌউবি`;
-        const encodedMsg = encodeURIComponent(msg);
-        const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const separator = isIOS ? '&' : '?';
-        window.location.href = `sms:${mobile}${separator}body=${encodedMsg}`;
-    };
-
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-red-50/50 border-red-100">
-                <div className="space-y-2 flex-1">
-                    <Label className="font-bold text-red-900">শ্রেণি নির্বাচন করুন</Label>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {Object.entries(classNamesMap).map(([id, label]) => (
-                                <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex items-end">
-                    <Button variant="destructive" onClick={checkAlerts} disabled={isLoading} className="gap-2">
-                        <AlertCircle className="h-4 w-4" /> রিস্ক তালিকা আপডেট করুন
-                    </Button>
-                </div>
-            </div>
-
-            <Card className="border-red-200">
-                <CardHeader className="bg-red-50">
-                    <CardTitle className="text-red-900 flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5" /> টানা ৩+ দিন অনুপস্থিত শিক্ষার্থীর তালিকা
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {isLoading ? (
-                        <p className="text-center py-12">লোড হচ্ছে...</p>
-                    ) : alerts.length === 0 ? (
-                        <p className="text-center py-12 text-muted-foreground italic">এই শ্রেণিতে বর্তমানে কোনো ঝুঁকিপূর্ণ শিক্ষার্থী নেই।</p>
-                    ) : (
-                        <div className="table-container">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>রোল</TableHead>
-                                        <TableHead>নাম</TableHead>
-                                        <TableHead className="text-center">অনুপস্থিতি (টানা)</TableHead>
-                                        <TableHead className="text-right">কার্যক্রম</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {alerts.map(alert => {
-                                        const student = allStudents.find(s => s.id === alert.studentId);
-                                        return (
-                                            <TableRow key={alert.studentId} className="bg-red-50/20">
-                                                <TableCell className="font-bold">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
-                                                <TableCell className="font-medium">{student?.studentNameBn || '-'}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="destructive" className="font-black text-sm">
-                                                        {alert.absentDays.toLocaleString('bn-BD')} দিন
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => student && handleSendSMS(student, alert.absentDays)}>
-                                                        <Smartphone className="h-4 w-4 mr-2" /> SMS ড্রাফট
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    );
-};
-
-// Missed Attendance Tab
-const MissedAttendanceTab = () => {
-    const db = useFirestore();
-    const { selectedYear } = useAcademicYear();
-    const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [missedDays, setMissedDays] = useState<{ date: string, day: string }[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
-
-    const checkMissedDays = useCallback(async () => {
-        if (!db) return;
-        setIsLoading(true);
-        try {
-            // 1. Fetch all holidays
-            const holidaySnap = await getDocs(collection(db, 'holidays'));
-            const holidayDates = holidaySnap.docs.map(d => d.data().date);
-
-            // 2. Fetch existing attendance records for this class and year
-            const attQuery = query(
-                collection(db, 'attendance'),
-                where('academicYear', '==', selectedYear),
-                where('className', '==', selectedClass)
-            );
-            const attSnap = await getDocs(attQuery);
-            const recordedDates = new Set(attSnap.docs.map(d => d.data().date));
-
-            // 3. Define the time range (last 30 days or academic year start)
-            const today = new Date();
-            const start = subDays(today, 30);
-            const intervalDays = eachDayOfInterval({ start, end: today });
-
-            const missing: { date: string, day: string }[] = [];
-
-            intervalDays.forEach(day => {
-                const dateStr = format(day, 'yyyy-MM-dd');
-                const dayIdx = day.getDay(); // 5 = Friday, 6 = Saturday
-                
-                const isWeekend = dayIdx === 5 || dayIdx === 6;
-                const isHolidayDate = holidayDates.includes(dateStr);
-                const isRecorded = recordedDates.has(dateStr);
-
-                // If not weekend, not holiday, and no record exists, it's missed
-                if (!isWeekend && !isHolidayDate && !isRecorded) {
-                    missing.push({
-                        date: dateStr,
-                        day: format(day, 'EEEE', { locale: bn })
-                    });
-                }
-            });
-
-            setMissedDays(missing.reverse()); // Show most recent missed days first
-        } catch (e) {
-            console.error("Failed to check missed attendance:", e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [db, selectedClass, selectedYear]);
-
-    useEffect(() => {
-        checkMissedDays();
-    }, [checkMissedDays]);
-
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-blue-50/50 border-blue-100">
-                <div className="space-y-2 flex-1">
-                    <Label className="font-bold text-blue-900">শ্রেণি নির্বাচন করুন</Label>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {Object.entries(classNamesMap).map(([id, label]) => (
-                                <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex items-end">
-                    <Button variant="outline" onClick={checkMissedDays} disabled={isLoading} className="gap-2 border-blue-300 text-blue-700 bg-white">
-                        <RotateCcw className="h-4 w-4" /> আপডেট করুন
-                    </Button>
-                </div>
-            </div>
-
-            <Card className="border-blue-200">
-                <CardHeader className="bg-blue-50">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle className="text-blue-900 flex items-center gap-2">
-                                <CalendarX className="h-5 w-5" /> গত ৩০ দিনের বকেয়া হাজিরা তালিকা
-                            </CardTitle>
-                            <CardDescription className="text-blue-700">শুক্রবার, শনিবার এবং সরকারি ছুটি ব্যতিত</CardDescription>
-                        </div>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-900 border-blue-300 font-black text-sm">
-                            মোট: {missedDays.length.toLocaleString('bn-BD')} দিন
-                        </Badge>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {isLoading ? (
-                        <p className="text-center py-12">হিসাব করা হচ্ছে...</p>
-                    ) : missedDays.length === 0 ? (
-                        <p className="text-center py-12 text-emerald-600 font-black">অভিনন্দন! গত ৩০ দিনে এই শ্রেণিতে কোনো বকেয়া হাজিরা নেই।</p>
-                    ) : (
-                        <div className="table-container">
-                            <Table>
-                                <TableHeader className="bg-blue-50/30">
-                                    <TableRow>
-                                        <TableHead className="w-1/3">তারিখ</TableHead>
-                                        <TableHead className="w-1/3">বার</TableHead>
-                                        <TableHead className="text-right">অবস্থা</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {missedDays.map(item => (
-                                        <TableRow key={item.date} className="hover:bg-blue-50/10">
-                                            <TableCell className="font-bold">{format(new Date(item.date), 'dd MMMM, yyyy', { locale: bn })}</TableCell>
-                                            <TableCell className="font-medium text-muted-foreground">{item.day}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Badge variant="destructive" className="bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-100">হাজিরা নেই</Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    );
-};
-
 const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { selectedYear } = useAcademicYear();
+    const [classAttendance, setClassAttendance] = useState<Record<string, Map<string, AttendanceStatus>>>({
+        '6': new Map(), '7': new Map(), '8': new Map(), '9': new Map(), '10': new Map()
+    });
+
     const studentsForYear = useMemo(() => {
         return allStudents.filter(student => student.academicYear === selectedYear);
     }, [allStudents, selectedYear]);
 
     const classes = ['6', '7', '8', '9', '10'];
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     const getStudentsByClass = (className: string): Student[] => {
         return studentsForYear.filter((student) => student.className === className);
+    };
+
+    const handleStatusChange = (className: string, studentId: string, status: AttendanceStatus) => {
+        setClassAttendance(prev => {
+            const nextMap = new Map(prev[className]);
+            nextMap.set(studentId, status);
+            return { ...prev, [className]: nextMap };
+        });
+    };
+
+    const getPresentCount = (className: string) => {
+        const map = classAttendance[className];
+        let count = 0;
+        map.forEach(status => {
+            if (status === 'present') count++;
+        });
+        return count;
     };
 
     const today = new Date();
@@ -551,11 +328,15 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
             </p>
             <Tabs defaultValue="6">
                 <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1">
-                    {classes.map((className) => (
-                        <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm font-bold">
-                            {classNamesMap[className]} শ্রেণি
-                        </TabsTrigger>
-                    ))}
+                    {classes.map((className) => {
+                        const count = getPresentCount(className);
+                        return (
+                            <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm font-bold flex flex-col sm:flex-row items-center gap-1">
+                                <span>{classNamesMap[className]}</span>
+                                {count > 0 && <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 h-4 ml-1">({count.toLocaleString('bn-BD')})</Badge>}
+                            </TabsTrigger>
+                        );
+                    })}
                 </TabsList>
                 {classes.map((className) => (
                     <TabsContent key={className} value={className}>
@@ -564,7 +345,13 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 {getStudentsByClass(className).length === 0 ? (
                                     <p className="text-center text-muted-foreground py-12 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>
                                 ) : (
-                                    <AttendanceSheet classId={className} students={getStudentsByClass(className)} />
+                                    <AttendanceSheet 
+                                        classId={className} 
+                                        students={getStudentsByClass(className)} 
+                                        currentAttendance={classAttendance[className]}
+                                        onStatusChange={(sId, status) => handleStatusChange(className, sId, status)}
+                                        onRefresh={() => {}}
+                                    />
                                 )}
                             </CardContent>
                         </Card>
@@ -709,7 +496,6 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         return allStudents.filter(student => student.academicYear === selectedYear);
     }, [allStudents, selectedYear]);
     const classes = ['6', '7', '8', '9', '10'];
-    const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     const getStudentsByClass = (className: string): Student[] => {
         return studentsForYear.filter((student) => student.className === className);
@@ -748,6 +534,25 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         </div>
     );
 };
+
+// Risks/Alerts Tab
+const AbsenceAlertsTab = () => {
+    return (
+        <div className="mt-4">
+             <Card>
+                <CardHeader>
+                    <CardTitle className="text-rose-700 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5" /> অনুপস্থিতি সতর্কবার্তা
+                    </CardTitle>
+                    <CardDescription>টানা ৩ দিনের বেশি অনুপস্থিত শিক্ষার্থীদের তালিকা (শীঘ্রই আসছে)</CardDescription>
+                </CardHeader>
+                <CardContent className="p-12 text-center text-muted-foreground italic">
+                    এই ফিচারটি বর্তমানে ডেভেলপমেন্ট মোডে আছে।
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
 
 
 // Main Page Component
@@ -799,11 +604,10 @@ export default function AttendancePage() {
                             </div>
                         ) : (
                             <Tabs defaultValue="digital-attendance">
-                                <TabsList className="grid w-full grid-cols-4 h-12 mb-6 gap-1 bg-muted p-1">
-                                    <TabsTrigger value="digital-attendance" className="font-bold text-xs sm:text-sm">ডিজিটাল হাজিরা</TabsTrigger>
-                                    <TabsTrigger value="report" className="font-bold text-xs sm:text-sm">হাজিরা রিপোর্ট</TabsTrigger>
-                                    <TabsTrigger value="alerts" className="font-bold text-xs sm:text-sm text-red-600">সতর্কবার্তা</TabsTrigger>
-                                    <TabsTrigger value="missed" className="font-bold text-xs sm:text-sm text-blue-600">বকেয়া হাজিরা</TabsTrigger>
+                                <TabsList className="grid w-full grid-cols-3 h-12 mb-6 gap-1 bg-muted p-1">
+                                    <TabsTrigger value="digital-attendance" className="font-bold">ডিজিটাল হাজিরা</TabsTrigger>
+                                    <TabsTrigger value="report" className="font-bold">হাজিরা রিপোর্ট</TabsTrigger>
+                                    <TabsTrigger value="alerts" className="font-bold">সতর্কবার্তা</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="digital-attendance" className="mt-4">
                                     <DigitalAttendanceTab allStudents={allStudents} />
@@ -812,10 +616,7 @@ export default function AttendancePage() {
                                     <AttendanceReportTab allStudents={allStudents} />
                                 </TabsContent>
                                 <TabsContent value="alerts" className="mt-4">
-                                    <AbsenceAlertsTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="missed" className="mt-4">
-                                    <MissedAttendanceTab />
+                                    <AbsenceAlertsTab />
                                 </TabsContent>
                             </Tabs>
                         )}
