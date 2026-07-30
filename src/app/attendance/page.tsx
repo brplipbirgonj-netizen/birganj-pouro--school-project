@@ -17,15 +17,20 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday } from '@/lib/holiday-data';
-import { format, eachDayOfInterval, subDays } from 'date-fns';
+import { format, eachDayOfInterval, subDays, startOfMonth, endOfMonth, isAfter } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, CalendarDays } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+
+const BENGALI_MONTHS = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+];
 
 // Digital Attendance sheet
 const AttendanceSheet = ({ classId, students }: { classId: string, students: Student[] }) => {
@@ -375,6 +380,7 @@ const MissedAttendanceTab = () => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [missedDays, setMissedDays] = useState<{ date: string, day: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -397,10 +403,17 @@ const MissedAttendanceTab = () => {
             const attSnap = await getDocs(attQuery);
             const recordedDates = new Set(attSnap.docs.map(d => d.data().date));
 
-            // 3. Define the time range (e.g., last 30 days)
+            // 3. Define the time range based on selected month
+            const monthIdx = BENGALI_MONTHS.indexOf(selectedMonth);
             const today = new Date();
-            const startDate = subDays(today, 30);
-            const intervalDays = eachDayOfInterval({ start: startDate, end: today });
+            const year = parseInt(selectedYear);
+            
+            const start = startOfMonth(new Date(year, monthIdx));
+            const monthEnd = endOfMonth(new Date(year, monthIdx));
+            // Don't check days after today
+            const end = isAfter(monthEnd, today) ? today : monthEnd;
+
+            const intervalDays = eachDayOfInterval({ start, end });
 
             const missing: { date: string, day: string }[] = [];
 
@@ -427,7 +440,7 @@ const MissedAttendanceTab = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [db, selectedClass, selectedYear]);
+    }, [db, selectedClass, selectedYear, selectedMonth]);
 
     useEffect(() => {
         checkMissedDays();
@@ -435,8 +448,8 @@ const MissedAttendanceTab = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-blue-50/50 border-blue-100">
-                <div className="space-y-2 flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-lg bg-blue-50/50 border-blue-100">
+                <div className="space-y-2">
                     <Label className="font-bold text-blue-900">শ্রেণি নির্বাচন করুন</Label>
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
                         <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
@@ -447,8 +460,19 @@ const MissedAttendanceTab = () => {
                         </SelectContent>
                     </Select>
                 </div>
+                <div className="space-y-2">
+                    <Label className="font-bold text-blue-900">মাস নির্বাচন করুন</Label>
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {BENGALI_MONTHS.map(m => (
+                                <SelectItem key={m} value={m}>{m}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="flex items-end">
-                    <Button variant="outline" onClick={checkMissedDays} disabled={isLoading} className="gap-2 border-blue-300 text-blue-700 bg-white">
+                    <Button variant="outline" onClick={checkMissedDays} disabled={isLoading} className="w-full gap-2 border-blue-300 text-blue-700 bg-white">
                         <RotateCcw className="h-4 w-4" /> আপডেট করুন
                     </Button>
                 </div>
@@ -459,9 +483,9 @@ const MissedAttendanceTab = () => {
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle className="text-blue-900 flex items-center gap-2">
-                                <CalendarX className="h-5 w-5" /> হাজিরা নেওয়া হয়নি এমন দিনসমূহ (বিগত ৩০ দিন)
+                                <CalendarX className="h-5 w-5" /> {selectedMonth} মাসের বকেয়া হাজিরা তালিকা
                             </CardTitle>
-                            <CardDescription className="text-blue-700">শুক্রবার, শনিবার এবং নির্ধারিত সরকারি ছুটি ব্যতিত</CardDescription>
+                            <CardDescription className="text-blue-700">শুক্রবার, শনিবার এবং সরকারি ছুটি ব্যতিত</CardDescription>
                         </div>
                         <Badge variant="outline" className="bg-blue-100 text-blue-900 border-blue-300 font-black text-sm">
                             মোট: {missedDays.length.toLocaleString('bn-BD')} দিন
@@ -472,7 +496,7 @@ const MissedAttendanceTab = () => {
                     {isLoading ? (
                         <p className="text-center py-12">হিসাব করা হচ্ছে...</p>
                     ) : missedDays.length === 0 ? (
-                        <p className="text-center py-12 text-emerald-600 font-black">এই শ্রেণিতে কোনো বকেয়া হাজিরা নেই। সব দিন হাজিরা নেওয়া হয়েছে।</p>
+                        <p className="text-center py-12 text-emerald-600 font-black">অভিনন্দন! {selectedMonth} মাসে এই শ্রেণিতে কোনো বকেয়া হাজিরা নেই।</p>
                     ) : (
                         <div className="table-container">
                             <Table>
