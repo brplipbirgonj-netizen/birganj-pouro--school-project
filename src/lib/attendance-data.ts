@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -123,19 +122,20 @@ export interface StudentConsecutiveAbsence {
 }
 
 export const getConsecutiveAbsences = async (db: Firestore, className: string, academicYear: string): Promise<StudentConsecutiveAbsence[]> => {
-    // Corrected Query Order for Indexing
+    // To avoid Index errors, we fetch records without ordering and sort in memory
     const q = query(
         collection(db, ATTENDANCE_COLLECTION),
         where("academicYear", "==", academicYear),
-        where("className", "==", className),
-        orderBy("date", "desc"),
-        limit(15)
+        where("className", "==", className)
     );
 
     try {
         const snap = await getDocs(q);
-        const records = snap.docs.map(d => d.data() as DailyAttendance);
-        if (records.length === 0) return [];
+        const allRecords = snap.docs.map(d => d.data() as DailyAttendance);
+        if (allRecords.length === 0) return [];
+
+        // Sort by date DESC and take latest 15
+        const records = allRecords.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15);
 
         const studentAbsenceMap = new Map<string, number>();
         const studentLastDateMap = new Map<string, string>();
