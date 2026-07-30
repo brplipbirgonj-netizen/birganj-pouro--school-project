@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from '@/components/Header';
@@ -21,7 +20,7 @@ import { format, eachDayOfInterval, subDays, startOfMonth, endOfMonth, isSameDay
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, Check, X, Search, CalendarDays } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, Check, X, Search, CalendarDays, CalendarCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,7 +33,7 @@ const BENGALI_MONTHS = [
 
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
-// Digital Attendance sheet
+// Digital Attendance sheet component
 const AttendanceSheet = ({ 
     classId, 
     students, 
@@ -64,10 +63,6 @@ const AttendanceSheet = ({
     const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; 
     const isAdmin = user?.role === 'admin';
 
-    const now = new Date();
-    const schoolStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0); 
-    const schoolEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59); 
-
     useEffect(() => {
         if (!db || !user) return;
         
@@ -75,6 +70,7 @@ const AttendanceSheet = ({
             const existingAttendance = await getAttendanceForClassAndDate(db, todayStr, classId, selectedYear);
             setSavedAttendance(existingAttendance);
             
+            // If data exists and we are not in current memory state, populate it
             if (existingAttendance && currentAttendance.size === 0) {
                 existingAttendance.attendance.forEach(item => {
                     onStatusChange(item.studentId, item.status);
@@ -314,7 +310,7 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <p className="text-sm font-black text-primary flex items-center gap-2">
                     <CalendarDays className="h-4 w-4" /> আজকের তারিখ: {formattedDate}
                 </p>
-                <p className="text-[10px] font-bold text-muted-foreground italic hidden sm:block">আগে থেকে কোনো টিক দেওয়া নেই, বাটন ক্লিক করে হাজিরা দিন।</p>
+                <p className="text-[10px] font-bold text-muted-foreground italic hidden sm:block">বাটন ক্লিক করে হাজিরা নিশ্চিত করুন।</p>
             </div>
             <Tabs defaultValue="6">
                 <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1">
@@ -352,7 +348,7 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// Risks/Alerts Tab
+// Risks/Alerts Tab with requested styling
 const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
@@ -408,7 +404,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                     {isLoading ? (
                         <div className="p-12 text-center text-muted-foreground">লোড হচ্ছে...</div>
                     ) : alerts.length === 0 ? (
-                        <div className="p-12 text-center text-rose-600 font-black text-xl animate-in fade-in zoom-in duration-500">
+                        <div className="p-12 text-center text-red-600 font-black text-xl animate-in fade-in zoom-in duration-500">
                             এই শ্রেণিতে বর্তমানে তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।
                         </div>
                     ) : (
@@ -838,4 +834,3 @@ export default function AttendancePage() {
         </div>
     );
 }
-
