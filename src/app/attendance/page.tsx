@@ -14,14 +14,13 @@ import { useToast } from "@/hooks/use-toast";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday } from '@/lib/holiday-data';
 import { format, eachDayOfInterval, subDays, startOfMonth, endOfMonth, isAfter } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, CalendarDays } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, CalendarDays, Check, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -184,10 +183,10 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
                                     <TableCell className="font-medium">{student.studentNameBn}</TableCell>
                                     <TableCell className="text-right">
                                          <span className={cn(
-                                             "px-3 py-1 rounded-full text-xs font-bold",
-                                             savedMap.get(student.id) === 'present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                             "px-4 py-1.5 rounded-full text-sm font-black shadow-sm flex items-center gap-2 ml-auto w-fit",
+                                             savedMap.get(student.id) === 'present' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200'
                                          )}>
-                                            {savedMap.get(student.id) === 'present' ? 'উপস্থিত' : 'অনুপস্থিত'}
+                                            {savedMap.get(student.id) === 'present' ? <><Check className="h-4 w-4" /> উপস্থিত</> : <><X className="h-4 w-4" /> অনুপস্থিত</>}
                                         </span>
                                     </TableCell>
                                 </TableRow>
@@ -221,38 +220,59 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
                         <TableRow>
                             <TableHead className="w-20 text-center">রোল</TableHead>
                             <TableHead>নাম</TableHead>
-                            <TableHead className="text-right">হাজিরা</TableHead>
+                            <TableHead className="text-right">হাজিরা দিন</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {students.map(student => (
-                            <TableRow key={student.id} className="hover:bg-accent/5">
-                                <TableCell className="text-center font-bold">{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                <TableCell className="font-medium">{student.studentNameBn}</TableCell>
-                                <TableCell className="text-right">
-                                    <RadioGroup
-                                        value={attendance.get(student.id) || 'present'}
-                                        onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
-                                        className="flex justify-end gap-4"
-                                    >
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="present" id={`present-${classId}-${student.id}`} className="text-green-600 border-green-600" />
-                                            <Label htmlFor={`present-${classId}-${student.id}`} className="cursor-pointer">উপস্থিত</Label>
+                        {students.map(student => {
+                            const currentStatus = attendance.get(student.id);
+                            return (
+                                <TableRow key={student.id} className="hover:bg-accent/5 h-16">
+                                    <TableCell className="text-center font-bold text-lg">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="font-bold">{student.studentNameBn}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end items-center gap-3">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant={currentStatus === 'present' ? 'default' : 'outline'}
+                                                className={cn(
+                                                    "h-10 px-4 font-black transition-all duration-200 border-2",
+                                                    currentStatus === 'present' 
+                                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white scale-110 shadow-lg border-emerald-700 ring-2 ring-emerald-200" 
+                                                        : "text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                                )}
+                                                onClick={() => handleStatusChange(student.id, 'present')}
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", currentStatus === 'present' ? "block" : "hidden")} />
+                                                উপস্থিত
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant={currentStatus === 'absent' ? 'default' : 'outline'}
+                                                className={cn(
+                                                    "h-10 px-4 font-black transition-all duration-200 border-2",
+                                                    currentStatus === 'absent' 
+                                                        ? "bg-rose-600 hover:bg-rose-700 text-white scale-110 shadow-lg border-rose-700 ring-2 ring-rose-200" 
+                                                        : "text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                                                )}
+                                                onClick={() => handleStatusChange(student.id, 'absent')}
+                                            >
+                                                <X className={cn("mr-2 h-4 w-4", currentStatus === 'absent' ? "block" : "hidden")} />
+                                                অনুপস্থিত
+                                            </Button>
                                         </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="absent" id={`absent-${classId}-${student.id}`} className="text-red-600 border-red-600" />
-                                            <Label htmlFor={`absent-${classId}-${student.id}`} className="cursor-pointer">অনুপস্থিত</Label>
-                                        </div>
-                                    </RadioGroup>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
                     </TableBody>
                 </Table>
             </div>
             <div className="flex justify-end p-4 mt-4 border-t gap-2">
                 {isEditing && <Button variant="outline" onClick={() => setIsEditing(false)}>বাতিল</Button>}
-                <Button onClick={handleSaveAttendance} className="shadow-lg min-w-[120px]">
+                <Button onClick={handleSaveAttendance} size="lg" className="shadow-lg min-w-[150px] font-black h-12">
                     {isEditing ? 'পরিবর্তন সেভ করুন' : 'হাজিরা সেভ করুন'}
                 </Button>
             </div>
@@ -333,7 +353,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                     {isLoading ? (
                         <p className="text-center py-12">লোড হচ্ছে...</p>
                     ) : alerts.length === 0 ? (
-                        <p className="text-center py-12 text-red-600 font-black">এই শ্রেণিতে বর্তমানে তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।</p>
+                        <p className="text-center py-12 text-muted-foreground italic">এই শ্রেণিতে বর্তমানে কোনো ঝুঁকিপূর্ণ শিক্ষার্থী নেই।</p>
                     ) : (
                         <div className="table-container">
                             <Table>
@@ -380,7 +400,6 @@ const MissedAttendanceTab = () => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [missedDays, setMissedDays] = useState<{ date: string, day: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -403,17 +422,10 @@ const MissedAttendanceTab = () => {
             const attSnap = await getDocs(attQuery);
             const recordedDates = new Set(attSnap.docs.map(d => d.data().date));
 
-            // 3. Define the time range based on selected month
-            const monthIdx = BENGALI_MONTHS.indexOf(selectedMonth);
+            // 3. Define the time range (last 30 days or academic year start)
             const today = new Date();
-            const year = parseInt(selectedYear);
-            
-            const start = startOfMonth(new Date(year, monthIdx));
-            const monthEnd = endOfMonth(new Date(year, monthIdx));
-            // Don't check days after today
-            const end = isAfter(monthEnd, today) ? today : monthEnd;
-
-            const intervalDays = eachDayOfInterval({ start, end });
+            const start = subDays(today, 30);
+            const intervalDays = eachDayOfInterval({ start, end: today });
 
             const missing: { date: string, day: string }[] = [];
 
@@ -440,7 +452,7 @@ const MissedAttendanceTab = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [db, selectedClass, selectedYear, selectedMonth]);
+    }, [db, selectedClass, selectedYear]);
 
     useEffect(() => {
         checkMissedDays();
@@ -448,8 +460,8 @@ const MissedAttendanceTab = () => {
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 border rounded-lg bg-blue-50/50 border-blue-100">
-                <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-blue-50/50 border-blue-100">
+                <div className="space-y-2 flex-1">
                     <Label className="font-bold text-blue-900">শ্রেণি নির্বাচন করুন</Label>
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
                         <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
@@ -460,19 +472,8 @@ const MissedAttendanceTab = () => {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2">
-                    <Label className="font-bold text-blue-900">মাস নির্বাচন করুন</Label>
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {BENGALI_MONTHS.map(m => (
-                                <SelectItem key={m} value={m}>{m}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
                 <div className="flex items-end">
-                    <Button variant="outline" onClick={checkMissedDays} disabled={isLoading} className="w-full gap-2 border-blue-300 text-blue-700 bg-white">
+                    <Button variant="outline" onClick={checkMissedDays} disabled={isLoading} className="gap-2 border-blue-300 text-blue-700 bg-white">
                         <RotateCcw className="h-4 w-4" /> আপডেট করুন
                     </Button>
                 </div>
@@ -483,7 +484,7 @@ const MissedAttendanceTab = () => {
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle className="text-blue-900 flex items-center gap-2">
-                                <CalendarX className="h-5 w-5" /> {selectedMonth} মাসের বকেয়া হাজিরা তালিকা
+                                <CalendarX className="h-5 w-5" /> গত ৩০ দিনের বকেয়া হাজিরা তালিকা
                             </CardTitle>
                             <CardDescription className="text-blue-700">শুক্রবার, শনিবার এবং সরকারি ছুটি ব্যতিত</CardDescription>
                         </div>
@@ -496,7 +497,7 @@ const MissedAttendanceTab = () => {
                     {isLoading ? (
                         <p className="text-center py-12">হিসাব করা হচ্ছে...</p>
                     ) : missedDays.length === 0 ? (
-                        <p className="text-center py-12 text-emerald-600 font-black">অভিনন্দন! {selectedMonth} মাসে এই শ্রেণিতে কোনো বকেয়া হাজিরা নেই।</p>
+                        <p className="text-center py-12 text-emerald-600 font-black">অভিনন্দন! গত ৩০ দিনে এই শ্রেণিতে কোনো বকেয়া হাজিরা নেই।</p>
                     ) : (
                         <div className="table-container">
                             <Table>
