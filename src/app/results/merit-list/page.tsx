@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
@@ -12,9 +11,11 @@ import { getResultsForClass, ClassResult } from '@/lib/results-data';
 import { getSubjects } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Printer, Loader2, ArrowLeft, Trophy } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
@@ -195,7 +196,6 @@ function MeritListPrintContent() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {/* Empty rows to fill A4 if needed could be added here, but usually auto is fine */}
                             </TableBody>
                         </Table>
                     </div>
