@@ -732,11 +732,19 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <TableRow className="bg-muted/50">
                                 <TableHead rowSpan={2} className="align-middle text-center bg-muted/50 sticky left-0 z-10 md:min-w-[80px]">রোল</TableHead>
                                 <TableHead rowSpan={2} className="align-middle text-center min-w-[200px] bg-muted/50 md:sticky md:left-[80px] md:z-10">শিক্ষার্থীর নাম</TableHead>
-                                {subjects.map(subject => (
-                                    <TableHead key={subject.name} colSpan={3} className="text-center border-x text-xs">
-                                        {subject.name}
-                                    </TableHead>
-                                ))}
+                                {subjects.map(subject => {
+                                    const isEnglish = subject.name.includes('ইংরেজি');
+                                    const hasPractical = subject.practical;
+                                    let colSpan = 3;
+                                    if (!isEnglish) {
+                                        colSpan = hasPractical ? 6 : 5;
+                                    }
+                                    return (
+                                        <TableHead key={subject.name} colSpan={colSpan} className="text-center border-x text-xs">
+                                            {subject.name}
+                                        </TableHead>
+                                    );
+                                })}
                                 <TableHead rowSpan={2} className="align-middle text-center">মোট</TableHead>
                                 <TableHead rowSpan={2} className="align-middle text-center">জি.পি.এ</TableHead>
                                 <TableHead rowSpan={2} className="align-middle text-center">গ্রেড</TableHead>
@@ -744,13 +752,24 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <TableHead rowSpan={2} className="align-middle text-center no-print">মার্কশিট</TableHead>
                             </TableRow>
                             <TableRow className="bg-muted/30">
-                                {subjects.map(subject => (
-                                    <React.Fragment key={`${subject.name}-cols`}>
-                                        <TableHead className="text-[10px] text-center border-l p-1">প্রাপ্ত</TableHead>
-                                        <TableHead className="text-[10px] text-center border-l p-1">গ্রেড</TableHead>
-                                        <TableHead className="text-[10px] text-center border-l border-r p-1">পয়েন্ট</TableHead>
-                                    </React.Fragment>
-                                ))}
+                                {subjects.map(subject => {
+                                    const isEnglish = subject.name.includes('ইংরেজি');
+                                    const hasPractical = subject.practical;
+                                    return (
+                                        <React.Fragment key={`${subject.name}-cols`}>
+                                            {!isEnglish && (
+                                                <>
+                                                    <TableHead className="text-[10px] text-center border-l p-1">লিখিত</TableHead>
+                                                    <TableHead className="text-[10px] text-center border-l p-1">MCQ</TableHead>
+                                                    {hasPractical && <TableHead className="text-[10px] text-center border-l p-1">ব্যবহারিক</TableHead>}
+                                                </>
+                                            )}
+                                            <TableHead className="text-[10px] text-center border-l p-1">প্রাপ্ত</TableHead>
+                                            <TableHead className="text-[10px] text-center border-l p-1">গ্রেড</TableHead>
+                                            <TableHead className="text-[10px] text-center border-l border-r p-1">পয়েন্ট</TableHead>
+                                        </React.Fragment>
+                                    );
+                                })}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -764,8 +783,17 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     </TableCell>
                                     {subjects.map(subject => {
                                         const subjectRes = res.subjectResults.get(subject.name);
+                                        const isEnglish = subject.name.includes('ইংরেজি');
+                                        const hasPractical = subject.practical;
                                         return (
                                             <React.Fragment key={`${res.student.id}-${subject.name}`}>
+                                                {!isEnglish && (
+                                                    <>
+                                                        <TableCell className="text-center border-l text-[11px]">{subjectRes?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                        <TableCell className="text-center border-l text-[11px]">{subjectRes?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                        {hasPractical && <TableCell className="text-center border-l text-[11px]">{subjectRes?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
+                                                    </>
+                                                )}
                                                 <TableCell className="text-center border-l font-semibold">{subjectRes?.marks?.toLocaleString('bn-BD') ?? '-'}</TableCell>
                                                 <TableCell className={cn("text-center border-l text-[11px]", {"text-destructive font-bold": subjectRes && !subjectRes.isPass})}>{subjectRes?.grade ?? '-'}</TableCell>
                                                 <TableCell className="text-center border-l border-r text-[11px]">{subjectRes?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
