@@ -27,8 +27,8 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-// Constant for pagination - Adjusted to 22 to accommodate 0.5 inch padding
-const STUDENTS_PER_PAGE = 22;
+// Adjusted to 18 to ensure a minimum 0.5 to 1 inch gap at the bottom of each page
+const STUDENTS_PER_PAGE = 18;
 
 function MeritListPrintContent() {
     const searchParams = useSearchParams();
@@ -49,7 +49,6 @@ function MeritListPrintContent() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                // 1. Fetch Students
                 const studentQuery = query(
                     collection(db, 'students'),
                     where('academicYear', '==', academicYear),
@@ -65,17 +64,14 @@ function MeritListPrintContent() {
                     return;
                 }
 
-                // 2. Fetch Results
                 const subjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
                 const resultsPromises = subjects.map(subject => 
                     getResultsForClass(db, academicYear, examName, className, subject.name, groupFilter === 'all' ? undefined : groupFilter)
                 );
                 const resultsBySubject = (await Promise.all(resultsPromises)).filter((res): res is ClassResult => !!res);
 
-                // 3. Process
                 const finalResults = processStudentResults(students, resultsBySubject, subjects);
                 
-                // Merit Sort
                 const sortedResults = finalResults.sort((a, b) => {
                     if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
                     if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
@@ -92,7 +88,6 @@ function MeritListPrintContent() {
         fetchData();
     }, [db, academicYear, examName, className, groupFilter]);
 
-    // Chunking the results into pages
     const paginatedResults = useMemo(() => {
         const pages: StudentProcessedResult[][] = [];
         for (let i = 0; i < results.length; i += STUDENTS_PER_PAGE) {
@@ -112,7 +107,6 @@ function MeritListPrintContent() {
 
     return (
         <div className="bg-slate-200 min-h-screen p-4 sm:p-8 font-kalpurush print:p-0 print:bg-white flex flex-col items-center">
-            {/* Action Bar */}
             <div className="w-full max-w-[210mm] flex justify-between items-center mb-6 no-print bg-white p-4 rounded-lg shadow-md border">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" onClick={() => window.history.back()}><ArrowLeft className="h-4 w-4" /></Button>
@@ -127,7 +121,6 @@ function MeritListPrintContent() {
                 </Button>
             </div>
 
-            {/* Printable Multi-page Container */}
             <div className="flex flex-col gap-8 print:gap-0">
                 {paginatedResults.length === 0 ? (
                     <div className="printable-area w-[210mm] h-[297mm] bg-white p-12 border-[6px] border-double border-primary/40 flex items-center justify-center">
@@ -137,14 +130,12 @@ function MeritListPrintContent() {
                     paginatedResults.map((pageData, pageIdx) => (
                         <div key={pageIdx} className="printable-area w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 p-12 box-border border-[6px] border-double border-primary/40 overflow-hidden">
                             
-                            {/* Watermark */}
                             {schoolInfo.logoUrl && (
                                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-5">
                                     <Image src={schoolInfo.logoUrl} alt="Watermark" width={450} height={450} />
                                 </div>
                             )}
 
-                            {/* Header */}
                             <header className="relative z-10 flex items-center gap-6 border-b-2 border-primary/50 pb-4 mb-4 printable-header">
                                 {schoolInfo.logoUrl && (
                                     <div className="relative w-16 h-16 shrink-0">
@@ -163,7 +154,6 @@ function MeritListPrintContent() {
                                 </div>
                             </header>
 
-                            {/* Title Section */}
                             <div className="relative z-10 text-center mb-6">
                                 <h2 className="inline-block bg-primary text-white text-lg font-black px-8 py-1 rounded-full shadow-md">
                                     {examName} - মেধা তালিকা
@@ -173,8 +163,7 @@ function MeritListPrintContent() {
                                 </p>
                             </div>
 
-                            {/* Merit Table */}
-                            <main className="relative z-10 flex-grow">
+                            <main className="relative z-10">
                                 <div className="border-2 border-slate-800 rounded-sm">
                                     <Table className="border-collapse">
                                         <TableHeader>
@@ -228,9 +217,8 @@ function MeritListPrintContent() {
                                 </div>
                             </main>
 
-                            {/* Footer - Only on the LAST page */}
                             {pageIdx === paginatedResults.length - 1 ? (
-                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto">
+                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto pb-4">
                                     <div className="text-center">
                                         <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                                     </div>
@@ -239,12 +227,12 @@ function MeritListPrintContent() {
                                     </div>
                                 </footer>
                             ) : (
-                                <footer className="relative z-10 pt-4 text-center mt-auto">
+                                <footer className="relative z-10 pt-4 text-center mt-auto pb-4">
                                     <p className="text-[9px] text-slate-400 italic">তালিকা পরবর্তী পৃষ্ঠায় চলমান...</p>
                                 </footer>
                             )}
                             
-                            <div className="mt-4 text-[8px] text-slate-400 italic text-center relative z-10">
+                            <div className="text-[8px] text-slate-400 italic text-center relative z-10 mt-2">
                                 রিপোর্ট জেনারেট করার তারিখ: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Management System
                             </div>
                         </div>
