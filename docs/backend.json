@@ -124,6 +124,30 @@
       },
       "required": ["nameBn", "designation", "mobile", "joinDate", "photoUrl", "staffType", "isActive"]
     },
+    "staffAttendanceRecord": {
+      "title": "Staff Attendance Record",
+      "description": "Daily attendance and leave record for staff members.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "attendance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "staffId": { "type": "string" },
+              "status": { "type": "string", "enum": ["present", "leave"] },
+              "leaveType": { "type": "string", "enum": ["CL", "SL", "EL", "DL", "Other"] },
+              "checkIn": { "type": "string" },
+              "checkOut": { "type": "string" },
+              "note": { "type": "string" }
+            },
+            "required": ["staffId", "status"]
+          }
+        }
+      },
+      "required": ["date", "attendance"]
+    },
     "schoolInfo": {
       "title": "School Information",
       "description": "General information about the school.",
@@ -159,7 +183,7 @@
         "attendance": {
           "type": "array",
           "items": {
-            "type": "object",
+            "object",
             "properties": {
               "studentId": { "type": "string" },
               "status": { "type": "string", "enum": ["present", "absent"] }
@@ -382,6 +406,10 @@
     "/staff/{staffId}": {
       "schema": { "$ref": "#/entities/staff" },
       "description": "Stores individual teacher and staff records."
+    },
+    "/staffAttendance/{id}": {
+      "schema": { "$ref": "#/entities/staffAttendanceRecord" },
+      "description": "Stores daily attendance and leave records for staff."
     },
     "/school/info": {
       "schema": { "$ref": "#/entities/schoolInfo" },

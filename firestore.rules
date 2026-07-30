@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -72,6 +73,11 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow write: if isAdmin() || hasPermission('manage:staff');
       allow delete: if isAdmin();
+    }
+
+    match /staffAttendance/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin() || hasPermission('manage:staff');
     }
 
     match /attendance/{id} {
