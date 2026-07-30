@@ -34,7 +34,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -185,8 +185,10 @@ export default function StaffListPage() {
   const handleDeleteLeave = async (record: StaffDailyAttendance, staffId: string) => {
     if (!db) return;
     
+    // Changing status to present effectively cancels the leave for that specific staff in that daily record
     const updatedAttendance = record.attendance.map(a => {
         if (a.staffId === staffId) {
+            // We set status to present and clear leave type
             return { ...a, status: 'present' as const, leaveType: undefined };
         }
         return a;
@@ -197,6 +199,7 @@ export default function StaffListPage() {
     try {
         await saveStaffAttendance(db, updatedRecord as StaffDailyAttendance);
         toast({ title: 'ছুটি বাতিল করা হয়েছে এবং উপস্থিত হিসেবে গণ্য করা হয়েছে।' });
+        // Refetch report to update the UI
         fetchReport(); 
     } catch (e) {
         toast({ variant: 'destructive', title: 'ছুটি বাতিল করা যায়নি।' });

@@ -51,9 +51,22 @@ export const saveStaffAttendance = (db: Firestore, record: StaffDailyAttendance)
     const docId = record.date; // Use date as ID to prevent duplicates
     const docRef = doc(db, COLLECTION, docId);
     
+    // Clean up record data to ensure only relevant fields are saved
+    const cleanedAttendance = record.attendance.map(a => {
+        const item: any = { 
+            staffId: a.staffId, 
+            status: a.status 
+        };
+        if (a.leaveType) item.leaveType = a.leaveType;
+        if (a.checkIn) item.checkIn = a.checkIn;
+        if (a.checkOut) item.checkOut = a.checkOut;
+        if (a.note) item.note = a.note;
+        return item;
+    });
+
     const dataToSave = {
         date: record.date,
-        attendance: record.attendance
+        attendance: cleanedAttendance
     };
 
     return setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError) => {
