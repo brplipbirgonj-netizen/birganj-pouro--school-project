@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense, Fragment } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -12,7 +12,7 @@ import { getSubjects } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Printer, Loader2, ArrowLeft, Trophy } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,7 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-// Adjusted to 18 to ensure a minimum 0.5 to 1 inch gap at the bottom of each page
+// 18 students per page ensures enough space for footer even on the last page.
 const STUDENTS_PER_PAGE = 18;
 
 function MeritListPrintContent() {
@@ -107,6 +107,15 @@ function MeritListPrintContent() {
 
     return (
         <div className="bg-slate-200 min-h-screen p-4 sm:p-8 font-kalpurush print:p-0 print:bg-white flex flex-col items-center">
+            {/* Global style override for print to ensure the paddings are respected */}
+            <style jsx global>{`
+                @media print {
+                    .printable-area {
+                        padding: 12.7mm !important; /* Forces 0.5 inch margin inside the border */
+                    }
+                }
+            `}</style>
+
             <div className="w-full max-w-[210mm] flex justify-between items-center mb-6 no-print bg-white p-4 rounded-lg shadow-md border">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" onClick={() => window.history.back()}><ArrowLeft className="h-4 w-4" /></Button>
@@ -217,8 +226,9 @@ function MeritListPrintContent() {
                                 </div>
                             </main>
 
+                            {/* Ensure footer has a fixed bottom position with margin */}
                             {pageIdx === paginatedResults.length - 1 ? (
-                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto pb-4">
+                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto pb-6">
                                     <div className="text-center">
                                         <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                                     </div>
@@ -227,7 +237,7 @@ function MeritListPrintContent() {
                                     </div>
                                 </footer>
                             ) : (
-                                <footer className="relative z-10 pt-4 text-center mt-auto pb-4">
+                                <footer className="relative z-10 pt-4 text-center mt-auto pb-6">
                                     <p className="text-[9px] text-slate-400 italic">তালিকা পরবর্তী পৃষ্ঠায় চলমান...</p>
                                 </footer>
                             )}
