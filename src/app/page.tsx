@@ -4,13 +4,15 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
 import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
+import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
+import { getStaff } from '@/lib/staff-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
@@ -63,6 +65,80 @@ const periodTimes = [
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম',
+};
+
+const TeachersOnLeaveCard = () => {
+    const db = useFirestore();
+    const { user } = useAuth();
+    const [onLeave, setOnLeave] = useState<{name: string, type?: string}[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        
+        const fetchLeaveInfo = async () => {
+            setIsLoading(true);
+            try {
+                const todayStr = format(new Date(), 'yyyy-MM-dd');
+                const [attRecord, allStaff] = await Promise.all([
+                    getStaffAttendanceByDate(db, todayStr),
+                    getStaff(db)
+                ]);
+
+                if (attRecord) {
+                    const leaveEntries = attRecord.attendance.filter(a => a.status === 'leave');
+                    const leaveDetails = leaveEntries.map(l => {
+                        const staff = allStaff.find(s => s.id === l.staffId);
+                        return { name: staff?.nameBn || 'অজানা', type: l.leaveType };
+                    });
+                    setOnLeave(leaveDetails);
+                } else {
+                    setOnLeave([]);
+                }
+            } catch (e) {
+                console.error("Error fetching leave info:", e);
+            }
+            setIsLoading(false);
+        };
+        
+        fetchLeaveInfo();
+    }, [db, user]);
+
+    return (
+        <Card className="lg:col-span-1 shadow-md border-rose-200 bg-rose-50/30">
+            <CardHeader className="bg-rose-100/50 rounded-t-lg pb-3">
+                <CardTitle className="text-lg flex items-center gap-2 text-rose-800">
+                    <UserMinus className="h-5 w-5" /> ছুটিতে থাকা শিক্ষক
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+                {isLoading ? (
+                    <Skeleton className="h-24 w-full rounded-md" />
+                ) : onLeave.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-muted-foreground italic text-center">
+                        <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2 opacity-20" />
+                        <p className="text-xs">আজ সব শিক্ষক উপস্থিত আছেন।</p>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {onLeave.map((teacher, idx) => (
+                            <div key={idx} className="flex justify-between items-center p-2.5 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                    <span className="font-bold text-rose-900 text-sm">{teacher.name}</span>
+                                </div>
+                                {teacher.type && (
+                                    <Badge variant="outline" className="text-[10px] font-black bg-rose-50 text-rose-700 border-rose-200">
+                                        {teacher.type}
+                                    </Badge>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
 };
 
 const NoticeBoard = () => {
@@ -803,6 +879,7 @@ export default function Home() {
           <LiveRoutineCard />
           <IncomeExpenseChart />
           <NoticeBoard />
+          <TeachersOnLeaveCard />
         </div>
       </main>
     </div>
