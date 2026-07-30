@@ -1,6 +1,6 @@
 'use client';
 import type { Student } from './student-data';
-import { getSubjects } from './subjects';
+import { getSubjects, subjectNameNormalization } from './subjects';
 import type { ClassResult } from './results-data';
 import type { Subject } from './subjects';
 
@@ -51,6 +51,11 @@ const getFinalGrade = (gpa: number): string => {
     return 'F';
 }
 
+/**
+ * Normalizes a subject name for comparison
+ */
+const normalize = (name: string) => (subjectNameNormalization[name.trim()] || name.trim()).toLowerCase();
+
 export function processStudentResults(
     students: Student[],
     resultsBySubject: ClassResult[],
@@ -69,7 +74,7 @@ export function processStudentResults(
 
             // Important: If we are in "All Groups" view, the allSubjectsForGroup list is the Union.
             // We must only process subjects that this student actually takes.
-            if (!groupAllowedSubjects.includes(subjectInfo.name)) return false;
+            if (!groupAllowedSubjects.some(name => normalize(name) === normalize(subjectInfo.name))) return false;
 
             if (optionalSubjectName === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
             if (optionalSubjectName === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
@@ -82,20 +87,25 @@ export function processStudentResults(
         const subjectResults = new Map<string, StudentSubjectResult>();
 
         subjectsForStudent.forEach(subjectInfo => {
+            const normalizedSubjectName = normalize(subjectInfo.name);
+            
             // ROBUST MATCHING: Find the specific result document.
-            // Match criteria:
-            // 1. Same subject name
-            // 2. Same class name
-            // 3. Either student's group matches the result document group OR the document contains this student's ID
-            const classResult = resultsBySubject.find(r => 
-                r.subject === subjectInfo.name && 
-                r.className === student.className &&
-                (
-                    student.className < '9' || 
-                    (r.group || '').toLowerCase().trim() === studentGroupNormalized ||
-                    r.results.some(res => res.studentId === student.id)
-                )
+            // Search through all records for this subject and class
+            const matchingRecords = resultsBySubject.filter(r => 
+                normalize(r.subject) === normalizedSubjectName && 
+                r.className === student.className
             );
+
+            // Priority 1: Find the record that specifically contains this student's ID
+            let classResult = matchingRecords.find(r => r.results.some(res => res.studentId === student.id));
+            
+            // Priority 2: Fallback to matching by group name if not found by ID
+            if (!classResult) {
+                classResult = matchingRecords.find(r => 
+                    student.className < '9' || 
+                    (r.group || '').toLowerCase().trim() === studentGroupNormalized
+                );
+            }
             
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
