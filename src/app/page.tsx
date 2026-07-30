@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -131,7 +130,7 @@ const NoticeBoard = () => {
         <Card className="lg:col-span-1 shadow-md border-primary/10">
             <CardHeader className="flex flex-row items-center justify-between pb-2 bg-primary/5 rounded-t-lg">
                 <div className="flex items-center gap-2">
-                    <Bell className="h-5 v-5 text-primary animate-pulse" />
+                    <Bell className="h-5 w-5 text-primary animate-pulse" />
                     <CardTitle className="text-lg">নোটিশ বোর্ড</CardTitle>
                 </div>
                 {isAdmin && (
@@ -739,8 +738,7 @@ export default function Home() {
               <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
                 <Users className="h-4 w-4 text-red-700" />
               </div>
-            </CardHeader>
-            <CardContent className="relative z-10">
+            </CardHeader>            <CardContent className="relative z-10">
               <div className="text-3xl font-black text-red-950 mb-1">{totalAbsent.toLocaleString('bn-BD')}</div>
               <p className="text-xs text-red-700 font-medium">
                 আজকের মোট অনুপস্থিত শিক্ষার্থী

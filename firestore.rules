@@ -42,8 +42,8 @@ service cloud.firestore {
 
     match /proxyClasses/{id} {
       allow read: if isAuthed();
-      // Explicitly allow write for admin or those with routine management permission
-      allow create, update, delete: if isAdmin() || hasPermission('manage:routines');
+      // Use direct admin check for better reliability
+      allow write: if isAdmin() || hasPermission('manage:routines');
     }
 
     match /notices/{id} {
