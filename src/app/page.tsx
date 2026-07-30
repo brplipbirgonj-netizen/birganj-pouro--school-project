@@ -131,7 +131,7 @@ const NoticeBoard = () => {
         <Card className="lg:col-span-1 shadow-md border-primary/10">
             <CardHeader className="flex flex-row items-center justify-between pb-2 bg-primary/5 rounded-t-lg">
                 <div className="flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-primary animate-pulse" />
+                    <Bell className="h-5 v-5 text-primary animate-pulse" />
                     <CardTitle className="text-lg">নোটিশ বোর্ড</CardTitle>
                 </div>
                 {isAdmin && (
@@ -271,21 +271,23 @@ const LiveRoutineCard = () => {
         let status = 'ক্লাস চলছে';
         let runningClasses: any[] = [];
         let isSpecialStatus = false;
+        let nextClasses: any[] = [];
+        let nextStatus = '';
 
         if (activeHoliday) {
             isSpecialStatus = true;
-            return { status: `আজ ${activeHoliday.description}।`, runningClasses: [], isSpecialStatus };
+            return { status: `আজ ${activeHoliday.description}।`, runningClasses: [], isSpecialStatus, nextClasses: [], nextStatus: '' };
         }
         
         if (currentDayName === 'শুক্রবার' || currentDayName === 'শনিবার') {
             isSpecialStatus = true;
-            return { status: 'আজ সাপ্তাহিক ছুটি।', runningClasses: [], isSpecialStatus };
+            return { status: 'আজ সাপ্তাহিক ছুটি।', runningClasses: [], isSpecialStatus, nextClasses: [], nextStatus: '' };
         }
 
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
+        // 1. Find Current Class status
         let periodIndex = -1;
-        
         for(let i=0; i<periodTimes.length; i++) {
             const period = periodTimes[i];
             const startMinutes = period.start.h * 60 + period.start.m;
@@ -293,53 +295,46 @@ const LiveRoutineCard = () => {
 
             if(currentMinutes >= startMinutes && currentMinutes < endMinutes) {
                 if (period.name === 'বিরতি') {
-                    return { status: 'এখন টিফিনের বিরতি চলছে।', runningClasses: [], isSpecialStatus };
+                    status = 'এখন টিফিনের বিরতি চলছে।';
+                } else {
+                    // 3+3 logic
+                    if (i < 3) periodIndex = i; 
+                    if (i > 3) periodIndex = i - 1;
                 }
-                // Updated 3+3 logic
-                if (i < 3) periodIndex = i; // 0, 1, 2
-                if (i > 3) periodIndex = i - 1; // 4->3, 5->4, 6->5
                 break;
             }
         }
         
-        if (periodIndex === -1) {
-             return { status: 'এখন কোনো ক্লাস চলছে না।', runningClasses: [], isSpecialStatus };
+        if (periodIndex !== -1) {
+            runningClasses = fullRoutine
+                .filter(r => r.day === currentDayName)
+                .map(r => {
+                    const periodContent = r.periods[periodIndex];
+                    if (periodContent) {
+                        const adjustedPeriodIndex = periodIndex + (periodIndex >= 3 ? 1 : 0);
+                        const periodInfo = periodTimes[adjustedPeriodIndex];
+                        const proxy = proxies.find(p => p.className === r.className && p.periodIndex === periodIndex);
+                        return {
+                            className: r.className,
+                            displayClassName: classNamesMap[r.className] || r.className,
+                            teacher: proxy ? proxy.proxyTeacher : parseTeacherName(periodContent),
+                            isProxy: !!proxy,
+                            period: periodInfo.name,
+                            time: `${periodInfo.start.h.toString().padStart(2, '0')}:${periodInfo.start.m.toString().padStart(2, '0')} - ${periodInfo.end.h.toString().padStart(2, '0')}:${periodInfo.end.m.toString().padStart(2, '0')}`
+                        };
+                    }
+                    return null;
+                })
+                .filter((c): c is NonNullable<typeof c> => c !== null)
+                .sort((a, b) => parseInt(a.className) - parseInt(b.className));
+            
+            if (runningClasses.length === 0) status = 'এখন কোনো ক্লাস চলছে না।';
+        } else if (status === 'ক্লাস চলছে') {
+             status = 'এখন কোনো ক্লাস চলছে না।';
         }
 
-        runningClasses = fullRoutine
-            .filter(r => r.day === currentDayName)
-            .map(r => {
-                const periodContent = r.periods[periodIndex];
-                if (periodContent) {
-                    const adjustedPeriodIndex = periodIndex + (periodIndex >= 3 ? 1 : 0);
-                    const periodInfo = periodTimes[adjustedPeriodIndex];
-                    
-                    // Check for proxy
-                    const proxy = proxies.find(p => p.className === r.className && p.periodIndex === periodIndex);
-                    
-                    return {
-                        className: r.className,
-                        displayClassName: classNamesMap[r.className] || r.className,
-                        teacher: proxy ? proxy.proxyTeacher : parseTeacherName(periodContent),
-                        isProxy: !!proxy,
-                        period: periodInfo.name,
-                        time: `${periodInfo.start.h.toString().padStart(2, '0')}:${periodInfo.start.m.toString().padStart(2, '0')} - ${periodInfo.end.h.toString().padStart(2, '0')}:${periodInfo.end.m.toString().padStart(2, '0')}`
-                    };
-                }
-                return null;
-            })
-            .filter((c): c is NonNullable<typeof c> => c !== null)
-            .sort((a, b) => parseInt(a.className) - parseInt(b.className));
-
-        if (runningClasses.length === 0 && status === 'ক্লাস চলছে') {
-            status = 'এখন কোনো ক্লাস চলছে না।';
-        }
-
-        let nextPeriodIndex = -1;
+        // 2. Find Next Class info (don't return early above!)
         let nextRawPeriodIndex = -1;
-        let nextStatus = '';
-        let nextClasses: any[] = [];
-
         for(let i=0; i<periodTimes.length; i++) {
             const period = periodTimes[i];
             const startMinutes = period.start.h * 60 + period.start.m;
@@ -354,28 +349,31 @@ const LiveRoutineCard = () => {
             if (nextPeriodInfo.name === 'বিরতি') {
                 nextStatus = `পরবর্তী: টিফিনের বিরতি (${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')})`;
             } else {
+                let nextPeriodIndex = -1;
                 if (nextRawPeriodIndex < 3) nextPeriodIndex = nextRawPeriodIndex;
                 if (nextRawPeriodIndex > 3) nextPeriodIndex = nextRawPeriodIndex - 1;
 
-                nextClasses = fullRoutine
-                    .filter(r => r.day === currentDayName)
-                    .map(r => {
-                        const periodContent = r.periods[nextPeriodIndex];
-                        if (periodContent) {
-                            const proxy = proxies.find(p => p.className === r.className && p.periodIndex === nextPeriodIndex);
-                            return {
-                                className: r.className,
-                                displayClassName: classNamesMap[r.className] || r.className,
-                                teacher: proxy ? proxy.proxyTeacher : parseTeacherName(periodContent),
-                                isProxy: !!proxy,
-                                period: nextPeriodInfo.name,
-                                time: `${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} - ${nextPeriodInfo.end.h > 12 ? nextPeriodInfo.end.h - 12 : nextPeriodInfo.end.h}:${nextPeriodInfo.end.m.toString().padStart(2, '0')}`
-                            };
-                        }
-                        return null;
-                    })
-                    .filter((c): c is NonNullable<typeof c> => c !== null)
-                    .sort((a, b) => parseInt(a.className) - parseInt(b.className));
+                if (nextPeriodIndex !== -1) {
+                    nextClasses = fullRoutine
+                        .filter(r => r.day === currentDayName)
+                        .map(r => {
+                            const periodContent = r.periods[nextPeriodIndex];
+                            if (periodContent) {
+                                const proxy = proxies.find(p => p.className === r.className && p.periodIndex === nextPeriodIndex);
+                                return {
+                                    className: r.className,
+                                    displayClassName: classNamesMap[r.className] || r.className,
+                                    teacher: proxy ? proxy.proxyTeacher : parseTeacherName(periodContent),
+                                    isProxy: !!proxy,
+                                    period: nextPeriodInfo.name,
+                                    time: `${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} - ${nextPeriodInfo.end.h > 12 ? nextPeriodInfo.end.h - 12 : nextPeriodInfo.end.h}:${nextPeriodInfo.end.m.toString().padStart(2, '0')}`
+                                };
+                            }
+                            return null;
+                        })
+                        .filter((c): c is NonNullable<typeof c> => c !== null)
+                        .sort((a, b) => parseInt(a.className) - parseInt(b.className));
+                }
                 
                 nextStatus = `পরবর্তী ক্লাস শুরু হবে ${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} এ`;
             }
@@ -459,7 +457,7 @@ const LiveRoutineCard = () => {
                         {/* Next Classes */}
                         {!isSpecialStatus && (
                             <div>
-                                {nextClasses.length > 0 ? (
+                                {nextClasses && nextClasses.length > 0 ? (
                                     <div className="space-y-2">
                                         <div className="text-indigo-600 font-semibold text-sm mb-2 border-t pt-4">
                                             {nextStatus}

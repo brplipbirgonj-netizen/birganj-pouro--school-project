@@ -43,24 +43,25 @@ service cloud.firestore {
 
     match /classRoutines/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:routines');
+      allow write: if isAdmin() || hasPermission('manage:routines');
       allow delete: if isAdmin();
     }
 
     match /proxyClasses/{id} {
       allow read: if isAuthed();
       allow write: if isAdmin() || hasPermission('manage:routines');
+      allow delete: if isAdmin();
     }
 
     match /notices/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:documents');
+      allow write: if isAdmin() || hasPermission('manage:documents');
       allow delete: if isAdmin();
     }
 
     match /holidays/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:documents');
+      allow write: if isAdmin() || hasPermission('manage:documents');
       allow delete: if isAdmin();
     }
     
@@ -71,49 +72,49 @@ service cloud.firestore {
 
     match /students/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:students');
+      allow write: if isAdmin() || hasPermission('manage:students');
       allow delete: if isAdmin();
     }
     
     match /staff/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:staff');
+      allow write: if isAdmin() || hasPermission('manage:staff');
       allow delete: if isAdmin();
     }
 
     match /attendance/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:attendance');
+      allow write: if isAdmin() || hasPermission('manage:attendance');
       allow delete: if isAdmin();
     }
     
     match /results/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('input:results') || hasPermission('manage:results');
+      allow write: if isAdmin() || hasPermission('input:results') || hasPermission('manage:results');
       allow delete: if isAdmin();
     }
 
     match /messageLogs/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:messaging');
+      allow write: if isAdmin() || hasPermission('manage:messaging');
       allow delete: if isAdmin();
     }
 
     match /emailLogs/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:messaging');
+      allow write: if isAdmin() || hasPermission('manage:messaging');
       allow delete: if isAdmin();
     }
 
     match /feeCollections/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('collect:fees');
+      allow write: if isAdmin() || hasPermission('collect:fees');
       allow delete: if isAdmin();
     }
 
     match /transactions/{id} {
       allow read: if isAuthed();
-      allow create, update, write: if isAdmin() || hasPermission('manage:transactions');
+      allow write: if isAdmin() || hasPermission('manage:transactions');
       allow delete: if isAdmin();
     }
   }
