@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
@@ -262,8 +263,8 @@ function MeritListPrintContent() {
                                                         <TableCell className="text-center font-black border-r border-slate-300 text-[12px]">
                                                             {toBengaliNumber(res.gpa.toFixed(2))}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-bold border-r border-slate-300 text-[12px]">
-                                                            {res.finalGrade}
+                                                        <TableCell className={cn("text-center font-bold border-r border-slate-300 text-[12px]", !res.isPass && "text-rose-600")}>
+                                                            {res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}
                                                         </TableCell>
                                                         <TableCell className={cn(
                                                             "text-center font-black text-[11px]",
