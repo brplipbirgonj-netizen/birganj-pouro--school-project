@@ -77,7 +77,7 @@ service cloud.firestore {
 
     match /staffAttendance/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:staff');
+      allow write: if isAdmin() || hasPermission('manage:staff-attendance');
     }
 
     match /attendance/{id} {
