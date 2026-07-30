@@ -1655,6 +1655,7 @@ export default function ResultsPage() {
     const { user, hasPermission } = useAuth();
     const canPromote = hasPermission('promote:students');
     const canViewResults = hasPermission('manage:results') || hasPermission('input:results');
+    const canViewMeritList = hasPermission('view:merit-list');
 
     const fetchAllStudents = useCallback(() => {
         if (!db || !user) return;
@@ -1689,7 +1690,7 @@ export default function ResultsPage() {
         };
     }, [fetchAllStudents]);
 
-    if (isClient && !canViewResults && user?.role !== 'admin') {
+    if (isClient && !canViewResults && !canViewMeritList && user?.role !== 'admin') {
         return (
             <div className="flex min-h-screen w-full flex-col bg-violet-50">
                 <Header />
@@ -1715,31 +1716,43 @@ export default function ResultsPage() {
                     </CardHeader>
                     <CardContent className="pt-6">
                         {isClient ? (
-                            <Tabs defaultValue="management">
+                            <Tabs defaultValue={canViewResults ? "management" : "merit"}>
                                 <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
-                                    <TabsTrigger value="management" className="flex-1 min-w-[100px] font-bold">নম্বর ব্যবস্থাপনা</TabsTrigger>
-                                    <TabsTrigger value="sheet" className="flex-1 min-w-[100px] font-bold">ফলাফল শিট</TabsTrigger>
-                                    <TabsTrigger value="merit" className="flex-1 min-w-[100px] font-bold">মেধা তালিকা</TabsTrigger>
+                                    {canViewResults && <TabsTrigger value="management" className="flex-1 min-w-[100px] font-bold">নম্বর ব্যবস্থাপনা</TabsTrigger>}
+                                    {canViewResults && <TabsTrigger value="sheet" className="flex-1 min-w-[100px] font-bold">ফলাফল শিট</TabsTrigger>}
+                                    {canViewMeritList && <TabsTrigger value="merit" className="flex-1 min-w-[100px] font-bold">মেধা তালিকা</TabsTrigger>}
                                     {canPromote && <TabsTrigger value="special-promotion" className="flex-1 min-w-[100px] font-bold">বিশেষ পাশ</TabsTrigger>}
-                                    <TabsTrigger value="upload" className="flex-1 min-w-[100px] font-bold">এক্সেল আপলোড</TabsTrigger>
+                                    {canViewResults && <TabsTrigger value="upload" className="flex-1 min-w-[100px] font-bold">এক্সেল আপলোড</TabsTrigger>}
                                 </TabsList>
-                                <TabsContent value="management" className="mt-4">
-                                     {isLoading ? <p>লোড হচ্ছে...</p> : <MarkManagementTab allStudents={allStudents} />}
-                                </TabsContent>
-                                <TabsContent value="sheet" className="mt-4">
-                                    {isLoading ? <p>লোড হচ্ছে...</p> : <ResultSheetTab allStudents={allStudents} />}
-                                </TabsContent>
-                                <TabsContent value="merit" className="mt-4">
-                                    {isLoading ? <p>লোড হচ্ছে...</p> : <MeritListTab allStudents={allStudents} />}
-                                </TabsContent>
+                                
+                                {canViewResults && (
+                                    <>
+                                        <TabsContent value="management" className="mt-4">
+                                            {isLoading ? <p>লোড হচ্ছে...</p> : <MarkManagementTab allStudents={allStudents} />}
+                                        </TabsContent>
+                                        <TabsContent value="sheet" className="mt-4">
+                                            {isLoading ? <p>লোড হচ্ছে...</p> : <ResultSheetTab allStudents={allStudents} />}
+                                        </TabsContent>
+                                    </>
+                                )}
+                                
+                                {canViewMeritList && (
+                                    <TabsContent value="merit" className="mt-4">
+                                        {isLoading ? <p>লোড হচ্ছে...</p> : <MeritListTab allStudents={allStudents} />}
+                                    </TabsContent>
+                                )}
+
                                 {canPromote && (
                                     <TabsContent value="special-promotion" className="mt-4">
                                         {isLoading ? <p>লোড হচ্ছে...</p> : <SpecialPromotionTab allStudents={allStudents} />}
                                     </TabsContent>
                                 )}
-                                <TabsContent value="upload" className="mt-4">
-                                     {isLoading ? <p>লোড হচ্ছে...</p> : <BulkUploadTab allStudents={allStudents} />}
-                                </TabsContent>
+
+                                {canViewResults && (
+                                    <TabsContent value="upload" className="mt-4">
+                                        {isLoading ? <p>লোড হচ্ছে...</p> : <BulkUploadTab allStudents={allStudents} />}
+                                    </TabsContent>
+                                )}
                             </Tabs>
                         ) : (
                            <div className="space-y-4">

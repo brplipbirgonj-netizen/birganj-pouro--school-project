@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useFirestore } from '@/firebase';
@@ -12,10 +12,11 @@ import { getSubjects } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Printer, Loader2, ArrowLeft } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
@@ -27,13 +28,14 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-// 15 students per page ensures a generous 0.5 inch (12.7mm) bottom margin is strictly respected
 const STUDENTS_PER_PAGE = 15;
 
 function MeritListPrintContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const db = useFirestore();
     const { schoolInfo, isLoading: isSchoolLoading } = useSchoolInfo();
+    const { user, hasPermission, loading: authLoading } = useAuth();
 
     const academicYear = searchParams.get('academicYear') || '';
     const examName = searchParams.get('examName') || '';
@@ -43,7 +45,14 @@ function MeritListPrintContent() {
     const [results, setResults] = useState<StudentProcessedResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    const canViewMeritList = hasPermission('view:merit-list');
+
     useEffect(() => {
+        if (authLoading) return;
+        if (!user || !canViewMeritList) {
+            return;
+        }
+
         if (!db || !academicYear || !examName || !className) return;
 
         const fetchData = async () => {
@@ -86,7 +95,7 @@ function MeritListPrintContent() {
         };
 
         fetchData();
-    }, [db, academicYear, examName, className, groupFilter]);
+    }, [db, academicYear, examName, className, groupFilter, user, canViewMeritList, authLoading]);
 
     const paginatedResults = useMemo(() => {
         const pages: StudentProcessedResult[][] = [];
@@ -96,7 +105,27 @@ function MeritListPrintContent() {
         return pages;
     }, [results]);
 
-    if (isLoading || isSchoolLoading) {
+    if (authLoading || isSchoolLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4 font-kalpurush">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-muted-foreground font-medium">লোড হচ্ছে...</p>
+            </div>
+        );
+    }
+
+    if (!user || !canViewMeritList) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4 text-center font-kalpurush">
+                <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+                <h1 className="text-2xl font-bold mb-2">প্রবেশাধিকার সংরক্ষিত</h1>
+                <p className="text-muted-foreground mb-6">আপনার এই পৃষ্ঠাটি দেখার অনুমতি নেই।</p>
+                <Button onClick={() => router.push('/')}>হোম পেজে ফিরে যান</Button>
+            </div>
+        );
+    }
+
+    if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4 font-kalpurush">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -107,7 +136,6 @@ function MeritListPrintContent() {
 
     return (
         <div className="bg-slate-200 min-h-screen p-4 sm:p-8 font-kalpurush print:p-0 print:bg-white flex flex-col items-center">
-            {/* Global style override to strictly force 12.7mm (0.5in) padding for the container */}
             <style jsx global>{`
                 @media print {
                     .merit-print-page {
