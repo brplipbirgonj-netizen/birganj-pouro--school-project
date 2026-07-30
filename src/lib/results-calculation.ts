@@ -1,6 +1,6 @@
-
 'use client';
 import type { Student } from './student-data';
+import { getSubjects } from './subjects';
 import type { ClassResult } from './results-data';
 import type { Subject } from './subjects';
 
@@ -60,10 +60,16 @@ export function processStudentResults(
     const studentResults: StudentProcessedResult[] = students.map(student => {
         const optionalSubjectName = student.optionalSubject;
 
+        // Get the subjects actually allowed/expected for this student's group
+        const groupAllowedSubjects = getSubjects(student.className, student.group).map(s => s.name);
+
         const subjectsForStudent = allSubjectsForGroup.filter(subjectInfo => {
             if (student.className < '9') return true;
 
-            const group = student.group;
+            // Important: If we are in "All Groups" view, the allSubjectsForGroup list is the Union.
+            // We must only process subjects that this student actually takes.
+            if (!groupAllowedSubjects.includes(subjectInfo.name)) return false;
+
             if (optionalSubjectName === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
             if (optionalSubjectName === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
             
@@ -75,7 +81,13 @@ export function processStudentResults(
         const subjectResults = new Map<string, StudentSubjectResult>();
 
         subjectsForStudent.forEach(subjectInfo => {
-            const classResult = resultsBySubject.find(r => r.subject === subjectInfo.name && (student.className < '9' || r.group === student.group) && r.className === student.className);
+            // Find the specific result document that matches this student's group (if applicable) or has no group (6-8)
+            const classResult = resultsBySubject.find(r => 
+                r.subject === subjectInfo.name && 
+                r.className === student.className &&
+                (student.className < '9' || r.group === student.group)
+            );
+            
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
 

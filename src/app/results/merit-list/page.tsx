@@ -7,7 +7,7 @@ import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
-import { getResultsForClass, ClassResult } from '@/lib/results-data';
+import { getAllResults, ClassResult } from '@/lib/results-data';
 import { getSubjects } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-const STUDENTS_PER_PAGE = 15;
+const STUDENTS_PER_PAGE = 20;
 
 function MeritListPrintContent() {
     const searchParams = useSearchParams();
@@ -58,6 +58,7 @@ function MeritListPrintContent() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
+                // Fetch all students for the class
                 const studentQuery = query(
                     collection(db, 'students'),
                     where('academicYear', '==', academicYear),
@@ -73,12 +74,15 @@ function MeritListPrintContent() {
                     return;
                 }
 
-                const subjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
-                const resultsPromises = subjects.map(subject => 
-                    getResultsForClass(db, academicYear, examName, className, subject.name, groupFilter === 'all' ? undefined : groupFilter)
-                );
-                const resultsBySubject = (await Promise.all(resultsPromises)).filter((res): res is ClassResult => !!res);
+                // Important: Use getAllResults to fetch all marks for this class at once.
+                // This correctly handles "All Groups" by pulling in Science, Arts, etc. results.
+                const allResults = await getAllResults(db, academicYear, examName);
+                const resultsBySubject = allResults.filter(r => r.className === className);
 
+                // If "all" group, getSubjects returns the union of all subjects for 9/10.
+                const subjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
+                
+                // Process results
                 const finalResults = processStudentResults(students, resultsBySubject, subjects);
                 
                 const sortedResults = finalResults.sort((a, b) => {

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -657,7 +656,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
-    const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'general': 'সাধারণ' };
+    const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'general': 'সাধারণ', 'all': 'সকল শাখা' };
 
     useEffect(() => {
         if (!db || !user) return;
@@ -690,7 +689,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         const allResults = await getAllResults(db, selectedYear, examName);
         const resultsBySubject = allResults.filter(r => r.className === className);
 
-        // Get subjects for processing
+        // Get subjects for processing. If "all" is selected, it returns the union of subjects for 9/10.
         const subjectsForSubjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
 
         // Process results
@@ -704,7 +703,9 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         const groups: Record<string, StudentProcessedResult[]> = {};
         
         processedResults.forEach(res => {
-            const g = (className >= '9') ? (res.student.group || 'general') : 'general';
+            // Group by actual student group ONLY if specific group is filtered.
+            // If groupFilter is 'all', force a single "all" group for combined sheet.
+            const g = (className >= '9' && groupFilter !== 'all') ? (res.student.group || 'general') : 'all';
             if (!groups[g]) groups[g] = [];
             groups[g].push(res);
         });
@@ -715,10 +716,11 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         });
 
         return groups;
-    }, [processedResults, className]);
+    }, [processedResults, className, groupFilter]);
 
     const renderResultTable = (groupName: string, results: StudentProcessedResult[]) => {
-        const subjects = getSubjects(className, groupName === 'general' ? undefined : groupName).filter(s => s.isExamSubject !== false);
+        // If we are in "all" group, use the union of all subjects for 9/10.
+        const subjects = getSubjects(className, groupName === 'all' ? undefined : groupName).filter(s => s.isExamSubject !== false);
         
         return (
             <div key={groupName} className="space-y-4 mb-12">
@@ -1803,4 +1805,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
