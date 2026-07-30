@@ -65,9 +65,17 @@ function MeritListPrintContent() {
                     where('className', '==', className)
                 );
                 const studentSnap = await getDocs(studentQuery);
-                const students = studentSnap.docs.map(studentFromDoc).filter(s => 
-                    groupFilter === 'all' || s.group === groupFilter
-                );
+                
+                const groupComparisonMap: Record<string, string> = { 'science': 'science', 'বিজ্ঞান': 'science', 'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce' };
+                
+                const students = studentSnap.docs.map(studentFromDoc).filter(s => {
+                    const classNum = parseInt(className);
+                    if (classNum < 9 || groupFilter === 'all') return true;
+                    
+                    const sGroup = groupComparisonMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                    const fGroup = groupComparisonMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
+                    return sGroup === fGroup;
+                });
 
                 if (students.length === 0) {
                     setIsLoading(false);
@@ -75,7 +83,6 @@ function MeritListPrintContent() {
                 }
 
                 // Important: Use getAllResults to fetch all marks for this class at once.
-                // This correctly handles "All Groups" by pulling in Science, Arts, etc. results.
                 const allResults = await getAllResults(db, academicYear, examName);
                 const resultsBySubject = allResults.filter(r => r.className === className);
 
@@ -137,6 +144,8 @@ function MeritListPrintContent() {
             </div>
         );
     }
+
+    const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 
     return (
         <div className="bg-slate-200 min-h-screen p-4 sm:p-8 font-kalpurush print:p-0 print:bg-white flex flex-col items-center">
@@ -212,7 +221,7 @@ function MeritListPrintContent() {
                                     {examName} - মেধা তালিকা
                                 </h2>
                                 <p className="mt-2 font-bold text-slate-700 text-sm">
-                                    শ্রেণি: {classNamesMap[className]} {groupFilter !== 'all' && `(${groupFilter === 'science' ? 'বিজ্ঞান' : groupFilter === 'arts' ? 'মানবিক' : 'ব্যবসায় শিক্ষা'})`}
+                                    শ্রেণি: {classNamesMap[className]} {groupFilter !== 'all' && `(${groupNamesMap[groupFilter] || groupFilter})`}
                                 </p>
                             </div>
 

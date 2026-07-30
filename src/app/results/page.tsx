@@ -143,7 +143,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         return Object.keys(groupedResults).sort((a, b) => parseInt(a) - parseInt(b));
     }, [groupedResults]);
 
-    const showGroupSelector = useMemo(() => className === '9' || className === '10', [className]);
+    const showGroupSelector = useMemo(() => {
+        const cNum = parseInt(className);
+        return cNum === 9 || cNum === 10;
+    }, [className]);
 
     useEffect(() => {
         let newSubjects = getSubjects(className, group).filter(s => s.isExamSubject !== false);
@@ -503,7 +506,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         }, {} as Record<string, ClassResult[]>);
                                         return Object.entries(resultsByGroup).map(([groupKey, results]) => (
                                             <div key={groupKey} className="mb-6 last:mb-0">
-                                                {(classNameKey === '9' || classNameKey === '10') && <h4 className="font-semibold text-md mb-2 pl-1">{groupMap[groupKey] || 'সাধারণ শাখা'}</h4>}
+                                                {(parseInt(classNameKey) >= 9) && <h4 className="font-semibold text-md mb-2 pl-1">{groupMap[groupKey] || 'সাধারণ শাখা'}</h4>}
                                                 <div className="border rounded-md overflow-x-auto">
                                                     <Table>
                                                         <TableHeader><TableRow><TableHead>ক্রমিক নং</TableHead><TableHead>বিষয়</TableHead><TableHead>পূর্ণমান</TableHead><TableHead className="text-right">কার্যক্রম</TableHead></TableRow></TableHeader>
@@ -578,7 +581,10 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
             const matchesYear = s.academicYear === selectedYear;
             const matchesClass = s.className === className;
             if (!matchesYear || !matchesClass) return false;
-            if (className < '9' || groupFilter === 'all') return true;
+            
+            const classNum = parseInt(className);
+            if (classNum < 9 || groupFilter === 'all') return true;
+            
             const sGroup = groupComparisonMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
             const fGroup = groupComparisonMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
             return sGroup === fGroup;
@@ -602,12 +608,21 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const groupedProcessedResults = useMemo(() => {
         if (processedResults.length === 0) return {};
         const groups: Record<string, StudentProcessedResult[]> = {};
+        const isNineOrTen = parseInt(className) >= 9;
+
         processedResults.forEach(res => {
-            const rawG = (res.student.group || '').toLowerCase().trim();
-            const g = (className >= '9' && groupFilter !== 'all') ? (groupComparisonMap[rawG] || rawG || 'general') : 'all';
+            // When filtering by a specific group, we use that group as the bucket key
+            // When selecting "All Groups", we use "all" to show everyone in one table
+            let g = 'all';
+            if (isNineOrTen && groupFilter !== 'all') {
+                const rawG = (res.student.group || '').toLowerCase().trim();
+                g = groupComparisonMap[rawG] || rawG || 'general';
+            }
+            
             if (!groups[g]) groups[g] = [];
             groups[g].push(res);
         });
+        
         Object.keys(groups).forEach(key => groups[key].sort((a, b) => (Number(a.student.roll) || 0) - (Number(b.student.roll) || 0)));
         return groups;
     }, [processedResults, className, groupFilter]);
@@ -627,7 +642,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <TableHead rowSpan={2} className="align-middle text-center bg-muted/50 sticky left-0 z-10 md:min-w-[80px]">রোল</TableHead>
                                 <TableHead rowSpan={2} className="align-middle text-center min-w-[200px] bg-muted/50 md:sticky md:left-[80px] md:z-10">শিক্ষার্থীর নাম</TableHead>
                                 {subjects.map(subject => {
-                                    const isEnglish = subject.name.includes('ইংরেজি');
+                                    const isEnglish = subject.name.includes('ইংরেজি') || subject.name.includes('ইংরেজী');
                                     const hasPractical = subject.practical;
                                     const colSpan = isEnglish ? 3 : (hasPractical ? 6 : 5);
                                     return <TableHead key={subject.name} colSpan={colSpan} className="text-center border-x text-[11px] py-1 font-black">{subject.name}</TableHead>;
@@ -636,7 +651,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             </TableRow>
                             <TableRow className="bg-muted/30">
                                 {subjects.map(subject => {
-                                    const isEnglish = subject.name.includes('ইংরেজি');
+                                    const isEnglish = subject.name.includes('ইংরেজি') || subject.name.includes('ইংরেজী');
                                     const hasPractical = subject.practical;
                                     return (
                                         <React.Fragment key={`${subject.name}-cols`}>
@@ -656,7 +671,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     </TableCell>
                                     {subjects.map(subject => {
                                         const subjectRes = res.subjectResults.get(subject.name);
-                                        const isEnglish = subject.name.includes('ইংরেজি');
+                                        const isEnglish = subject.name.includes('ইংরেজি') || subject.name.includes('ইংরেজী');
                                         const hasPractical = subject.practical;
                                         return (
                                             <React.Fragment key={`${res.student.id}-${subject.name}`}>
@@ -680,8 +695,8 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50">
                 <div className="space-y-2"><Label>পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><Label htmlFor="class-sheet">শ্রেণি</Label><Select value={className} onValueChange={c => { setClassName(c); setGroupFilter('all'); setProcessedResults([]); }}><SelectTrigger id="class-sheet" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-                {(className === '9' || className === '10') && (<div className="space-y-2"><Label htmlFor="group-sheet">শাখা (ঐচ্ছিক)</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger id="group-sheet" className="bg-white"><SelectValue placeholder="সকল শাখা" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
-                <Button onClick={handleViewResults} disabled={isLoading || !examName || !className} className={cn("w-full shadow-md", (className === '9' || className === '10') ? "lg:col-span-2" : "lg:col-span-3")}>{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> লোড হচ্ছে...</> : 'ফলাফল দেখুন'}</Button>
+                {(parseInt(className) >= 9) && (<div className="space-y-2"><Label htmlFor="group-sheet">শাখা (ঐচ্ছিক)</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger id="group-sheet" className="bg-white"><SelectValue placeholder="সকল শাখা" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
+                <Button onClick={handleViewResults} disabled={isLoading || !examName || !className} className={cn("w-full shadow-md", (parseInt(className) >= 9) ? "lg:col-span-2" : "lg:col-span-3")}>{isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> লোড হচ্ছে...</> : 'ফলাফল দেখুন'}</Button>
             </div>
             {isLoading && (<div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>)}
             {!isLoading && Object.keys(groupedProcessedResults).length > 0 ? (<div className="space-y-8 animate-in fade-in duration-500">{Object.entries(groupedProcessedResults).sort().map(([groupName, results]) => renderResultTable(groupName, results))}</div>) : (!isLoading && className && <p className="text-center py-12 text-muted-foreground italic">ফলাফল লোড করতে বাটনে ক্লিক করুন।</p>)}
@@ -720,7 +735,10 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
             const matchesYear = s.academicYear === selectedYear;
             const matchesClass = s.className === className;
             if (!matchesYear || !matchesClass) return false;
-            if (className < '9' || groupFilter === 'all') return true;
+            
+            const classNum = parseInt(className);
+            if (classNum < 9 || groupFilter === 'all') return true;
+            
             const groupComparisonMap: Record<string, string> = { 'science': 'science', 'বিজ্ঞান': 'science', 'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce' };
             const sGroup = groupComparisonMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
             const fGroup = groupComparisonMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
@@ -760,7 +778,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
                 <div className="space-y-2"><Label>পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><Label htmlFor="class-merit">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger id="class-merit" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-                {(className === '9' || className === '10') && (<div className="space-y-2"><Label htmlFor="group-merit">শাখা</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger id="group-merit" className="bg-white"><SelectValue placeholder="শাখা নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
+                {(parseInt(className) >= 9) && (<div className="space-y-2"><Label htmlFor="group-merit">শাখা</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger id="group-merit" className="bg-white"><SelectValue placeholder="শাখা নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
                 <div className="flex gap-2 lg:col-span-1"><Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="flex-1">তালিকা দেখুন</Button><Button onClick={handlePrint} disabled={processedResults.length === 0} variant="outline" className="bg-white border-primary text-primary hover:bg-primary/5"><Printer className="h-4 w-4" /></Button></div>
             </div>
             {isLoading ? (<div className="space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-64 w-full" /></div>) : processedResults.length > 0 ? (<div className="border rounded-xl bg-white shadow-lg overflow-hidden animate-in fade-in duration-500"><div className="bg-primary/5 p-4 border-b flex justify-between items-center"><h3 className="text-xl font-black text-primary flex items-center gap-2"><Trophy className="h-6 w-6 text-amber-500" /> মেধা তালিকা: {classNamesMap[className]} শ্রেণি</h3><Badge variant="outline" className="bg-white font-bold">{processedResults.length.toLocaleString('bn-BD')} জন শিক্ষার্থী</Badge></div><div className="overflow-x-auto"><Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="text-center font-bold">মেধাস্থান</TableHead><TableHead className="text-center font-bold">রোল</TableHead><TableHead className="font-bold">শিক্ষার্থীর নাম</TableHead><TableHead className="text-center font-bold">মোট নম্বর</TableHead><TableHead className="text-center font-bold">GPA</TableHead><TableHead className="text-center font-bold">গ্রেড</TableHead><TableHead className="text-right font-bold">ফলাফল</TableHead></TableRow></TableHeader><TableBody>{processedResults.map((res, index) => (<TableRow key={res.student.id} className={cn("hover:bg-accent/5", !res.isPass && "bg-red-50/30")}><TableCell className="text-center">{res.isPass ? (<span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-full font-black", index === 0 ? "bg-amber-100 text-amber-700 border border-amber-300" : index === 1 ? "bg-slate-100 text-slate-700 border border-slate-300" : index === 2 ? "bg-orange-100 text-orange-700 border-orange-300" : "bg-muted")}>{(index + 1).toLocaleString('bn-BD')}</span>) : '-'}</TableCell><TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell><TableCell className="font-black text-slate-800">{res.student.studentNameBn}</TableCell><TableCell className="text-center font-bold text-primary">{res.totalMarks.toLocaleString('bn-BD')}</TableCell><TableCell className="text-center font-black">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell><TableCell className="text-center font-bold">{res.finalGrade}</TableCell><TableCell className="text-right"><span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", res.isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>{res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}</span></TableCell></TableRow>))}</TableBody></Table></div></div>) : (className && <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-lg border-2 border-dashed">মেধা তালিকা দেখতে বাটনে ক্লিক করুন।</div>)}
@@ -783,7 +801,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [failedStudents, setFailedStudents] = useState<StudentProcessedResult[]>([]);
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
 
-    const showGroupSelector = className === '9' || className === '10';
+    const showGroupSelector = parseInt(className) >= 9;
 
     useEffect(() => {
         if (!db || !user) return;
@@ -801,7 +819,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         }
         setIsLoading(true);
 
-        const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (className < '9' || !group || (s.group || '').toLowerCase().trim() === group.toLowerCase().trim()));
+        const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || !group || (s.group || '').toLowerCase().trim() === group.toLowerCase().trim()));
         if (studentsInClass.length === 0) {
             toast({ title: 'এই শ্রেণিতে কোনো শিক্ষার্থী নেই।' });
             setFailedStudents([]);
@@ -852,7 +870,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             if (studentsInNextYear.some(s => s.studentNameBn === result.student.studentNameBn && s.fatherNameBn === result.student.fatherNameBn)) { skippedCount++; continue; }
             lastRoll++;
             const { id, createdAt, updatedAt, ...currentData } = result.student;
-            const newStudentData: NewStudentData = { ...currentData, academicYear: nextYear, className: nextClass, roll: lastRoll, group: (nextClass === '9' || nextClass === '10') ? currentData.group : '', optionalSubject: (nextClass === '9' || nextClass === '10') ? currentData.optionalSubject : '', };
+            const newStudentData: NewStudentData = { ...currentData, academicYear: nextYear, className: nextClass, roll: lastRoll, group: (parseInt(nextClass) >= 9) ? currentData.group : '', optionalSubject: (parseInt(nextClass) >= 9) ? currentData.optionalSubject : '', };
             promotionPromises.push(addStudent(db, newStudentData));
             promotedCount++;
         }
@@ -899,7 +917,7 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (!className) { toast({ variant: 'destructive', title: 'শ্রেণি নির্বাচন করুন' }); return; }
         const headers: string[] = ['রোল', 'নাম'];
         const addHeader = (header: string, hasPractical: boolean) => { if (isSubjectPermitted(className, header)) { headers.push(`${header} (লিখিত)`, `${header} (বহুনির্বাচনী)`); if (hasPractical) headers.push(`${header} (ব্যবহারিক)`); } };
-        if (className === '9' || className === '10') { if (!group) { ['বাংলা প্রথম', 'বাংলা দ্বিতীয়', 'ইংরেজি প্রথম', 'ইংরেজি দ্বিতীয়', 'গণিত', 'ধর্ম ও নৈতিক শিক্ষা', 'তথ্য ও যোগাযোগ প্রযুক্তি', 'সাধারণ বিজ্ঞান', 'বাংলাদেশ ও বিশ্ব পরিচয়', 'পদার্থ', 'রসায়ন', 'জীব বিজ্ঞান', 'কৃষি শিক্ষা', 'উচ্চতর গণিত', 'বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা', 'ভূগোল ও পরিবেশ', 'পৌরনীতি ও নাগরিকতা', 'ব্যবসায় উদ্যোগ', 'হিসাব বিজ্ঞান', 'ফিন্যান্স ও ব্যাংকিং'].forEach(h => addHeader(h, ['পদার্থ', 'রসায়ন', 'জীব বিজ্ঞান', 'কৃষি শিক্ষা', 'উচ্চতর গণিত'].includes(h))); } else { getSubjects(className, group).filter(s => s.isExamSubject).forEach(sub => addHeader(sub.name, sub.practical)); } } else { getSubjects(className).filter(s => s.isExamSubject).forEach(sub => addHeader(sub.name, sub.practical)); }
+        if (parseInt(className) >= 9) { if (!group) { ['বাংলা প্রথম', 'বাংলা দ্বিতীয়', 'ইংরেজি প্রথম', 'ইংরেজি দ্বিতীয়', 'গণিত', 'ধর্ম ও নৈতিক শিক্ষা', 'তথ্য ও যোগাযোগ প্রযুক্তি', 'সাধারণ বিজ্ঞান', 'বাংলাদেশ ও বিশ্ব পরিচয়', 'পদার্থ', 'রসায়ন', 'জীব বিজ্ঞান', 'কৃষি শিক্ষা', 'উচ্চতর গণিত', 'বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা', 'ভূগোল ও পরিবেশ', 'পৌরনীতি ও নাগরিকতা', 'ব্যবসায় উদ্যোগ', 'হিসাব বিজ্ঞান', 'ফিন্যান্স ও ব্যাংকিং'].forEach(h => addHeader(h, ['পদার্থ', 'রসায়ন', 'জীব বিজ্ঞান', 'কৃষি শিক্ষা', 'উচ্চতর গণিত'].includes(h))); } else { getSubjects(className, group).filter(s => s.isExamSubject).forEach(sub => addHeader(sub.name, sub.practical)); } } else { getSubjects(className).filter(s => s.isExamSubject).forEach(sub => addHeader(sub.name, sub.practical)); }
         if (headers.length <= 2) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
         const ws = XLSX.utils.aoa_to_sheet([headers]); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'ফলাফল নমুনা'); XLSX.writeFile(wb, `results_sample_${className}.xlsx`);
     };
@@ -940,7 +958,7 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
         };
         reader.readAsArrayBuffer(file);
     };
-    return (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50"><div className="space-y-2"><Label>পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="class-upload">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger id="class-upload" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div><div className={cn("space-y-2", (className === '9' || className === '10') ? '' : 'lg:hidden')}><Label htmlFor="group-upload">গ্রুপ</Label><Select value={group || 'all'} onValueChange={(val) => setGroup(val === 'all' ? '' : val)} disabled={className < '9'}><SelectTrigger id="group-upload" className="bg-white"><SelectValue placeholder="সকল গ্রুপ" /></SelectTrigger><SelectContent><SelectItem value="all">সকল গ্রুপ</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div><div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:col-span-2"><Button variant="outline" onClick={handleDownloadSample} className="w-full bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা ফাইল</Button><Button onClick={() => fileInputRef.current?.click()} disabled={isLoading || !examName} className="w-full shadow-md"><FileUp className="mr-2 h-4 w-4" /> {isLoading ? 'আপলোড হচ্ছে...' : 'ফাইল আপলোড করুন'}</Button><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" /></div></div>);
+    return (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50"><div className="space-y-2"><Label>পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="class-upload">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger id="class-upload" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div><div className={cn("space-y-2", (parseInt(className) >= 9) ? '' : 'lg:hidden')}><Label htmlFor="group-upload">গ্রুপ</Label><Select value={group || 'all'} onValueChange={(val) => setGroup(val === 'all' ? '' : val)} disabled={parseInt(className) < 9}><SelectTrigger id="group-upload" className="bg-white"><SelectValue placeholder="সকল গ্রুপ" /></SelectTrigger><SelectContent><SelectItem value="all">সকল গ্রুপ</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div><div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:col-span-2"><Button variant="outline" onClick={handleDownloadSample} className="w-full bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা ফাইল</Button><Button onClick={() => fileInputRef.current?.click()} disabled={isLoading || !examName} className="w-full shadow-md"><FileUp className="mr-2 h-4 w-4" /> {isLoading ? 'আপলোড হচ্ছে...' : 'ফাইল আপলোড করুন'}</Button><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" /></div></div>);
 };
 
 

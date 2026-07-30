@@ -76,12 +76,13 @@ export function processStudentResults(
         const rawGroup = (student.group || '').toLowerCase().trim();
         const studentGroupNormalized = groupMap[rawGroup] || rawGroup;
         const optionalSubjectName = student.optionalSubject;
+        const studentClassNum = parseInt(student.className);
 
         // Get the subjects actually allowed/expected for this student's specific group
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized).map(s => s.name);
 
         const subjectsForStudent = allSubjectsForGroup.filter(subjectInfo => {
-            if (student.className < '9') return true;
+            if (studentClassNum < 9) return true;
 
             // Important: If we are in "All Groups" view, the allSubjectsForGroup list is the Union.
             // We must only process subjects that this specific student actually takes.
@@ -107,6 +108,7 @@ export function processStudentResults(
             );
 
             // Priority 1: Match by direct Student ID inclusion in the record's results array
+            // This is the most reliable way as it connects the specific student with their marks regardless of group label.
             let classResult = matchingRecords.find(r => r.results.some(res => res.studentId === student.id));
             
             // Priority 2: Fallback to matching by group name if not found by ID (lenient match)
@@ -114,7 +116,7 @@ export function processStudentResults(
                 classResult = matchingRecords.find(r => {
                     const recordGroup = (r.group || '').toLowerCase().trim();
                     const recordGroupNormalized = groupMap[recordGroup] || recordGroup;
-                    return student.className < '9' || recordGroupNormalized === studentGroupNormalized || !recordGroupNormalized || recordGroupNormalized === 'none';
+                    return studentClassNum < 9 || recordGroupNormalized === studentGroupNormalized || !recordGroupNormalized || recordGroupNormalized === 'none';
                 });
             }
             
