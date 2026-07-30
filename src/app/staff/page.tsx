@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -89,6 +88,7 @@ export default function StaffListPage() {
   
   const canManageStaff = hasPermission('manage:staff');
   const canManageAttendance = hasPermission('manage:staff-attendance');
+  const canViewAttendanceReport = hasPermission('view:staff-attendance-report');
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
@@ -316,7 +316,7 @@ export default function StaffListPage() {
                     <TabsList className="grid w-full grid-cols-3 bg-muted p-1.5 h-12">
                         <TabsTrigger value="list" className="font-black">স্টাফ তালিকা</TabsTrigger>
                         <TabsTrigger value="attendance" className="font-black" disabled={!canManageAttendance}>দৈনিক হাজিরা ও ছুটি</TabsTrigger>
-                        <TabsTrigger value="report" className="font-black" disabled={!canManageAttendance}>ছুটির রিপোর্ট</TabsTrigger>
+                        <TabsTrigger value="report" className="font-black" disabled={!canViewAttendanceReport}>ছুটির রিপোর্ট</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="list" className="space-y-8 animate-in fade-in duration-500">
@@ -457,7 +457,7 @@ export default function StaffListPage() {
                     </TabsContent>
 
                     <TabsContent value="report" className="space-y-6">
-                        {canManageAttendance ? (
+                        {canViewAttendanceReport ? (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm items-end">
                                 <div className="space-y-2">

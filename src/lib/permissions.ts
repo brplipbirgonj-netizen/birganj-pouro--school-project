@@ -10,7 +10,8 @@ export const availablePermissions = [
 
   { id: 'view:staff', label: 'শিক্ষক ও কর্মচারী তালিকা দেখুন' },
   { id: 'manage:staff', label: 'শিক্ষক ও কর্মচারী ম্যানেজ করুন' },
-  { id: 'manage:staff-attendance', label: 'স্টাফ হাজিরা ও ছুটি ম্যানেজ' },
+  { id: 'manage:staff-attendance', label: 'স্টাফ হাজিরা ও ছুটি ম্যানেজ (ইনপুট)' },
+  { id: 'view:staff-attendance-report', label: 'স্টাফ হাজিরা ও ছুটির রিপোর্ট দেখুন' },
 
   { id: 'manage:attendance', label: 'হাজিরা ম্যানেজ করুন' },
 
@@ -40,6 +41,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:student-profile',
     'view:staff',
     'manage:staff-attendance',
+    'view:staff-attendance-report',
     'manage:attendance',
     'input:results', 
     'view:accounts',
