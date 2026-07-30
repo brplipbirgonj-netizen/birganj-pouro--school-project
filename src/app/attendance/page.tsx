@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from '@/components/Header';
@@ -329,7 +328,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                     {isLoading ? (
                         <p className="text-center py-12">লোড হচ্ছে...</p>
                     ) : alerts.length === 0 ? (
-                        <p className="text-center py-12 text-muted-foreground italic font-medium">এই শ্রেণিতে বর্তমানে কোনো তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।</p>
+                        <p className="text-center py-12 text-red-600 italic font-bold">এই শ্রেণিতে বর্তমানে তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।</p>
                     ) : (
                         <div className="table-container">
                             <Table>
