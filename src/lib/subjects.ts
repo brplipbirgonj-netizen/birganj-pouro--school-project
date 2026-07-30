@@ -90,19 +90,17 @@ export const getSubjects = (className: string, group?: string): Subject[] => {
     const normalizedGroup = group?.toLowerCase().trim();
 
     if (['9', '10'].includes(className)) {
-        let subjects: Subject[] = [];
         const uniqueSubjects = new Map<string, Subject>();
-
         commonSubjectsFor9to10.forEach(s => uniqueSubjects.set(s.name, s));
 
-        if (normalizedGroup === 'science') {
+        if (normalizedGroup === 'science' || normalizedGroup === 'বিজ্ঞান') {
             scienceSubjects.forEach(s => uniqueSubjects.set(s.name, s));
-        } else if (normalizedGroup === 'arts') {
+        } else if (normalizedGroup === 'arts' || normalizedGroup === 'মানবিক' || normalizedGroup === 'humanities') {
             artsSubjects.forEach(s => uniqueSubjects.set(s.name, s));
-        } else if (normalizedGroup === 'commerce') {
+        } else if (normalizedGroup === 'commerce' || normalizedGroup === 'ব্যবসায় শিক্ষা' || normalizedGroup === 'business') {
             commerceSubjects.forEach(s => uniqueSubjects.set(s.name, s));
         } else {
-             // If no valid group is selected, return all possible subjects for 9-10 union
+            // Union of all subjects for the "All Groups" view
             [...scienceSubjects, ...artsSubjects, ...commerceSubjects].forEach(s => {
                 if (!uniqueSubjects.has(s.name)) {
                     uniqueSubjects.set(s.name, s);
@@ -110,8 +108,7 @@ export const getSubjects = (className: string, group?: string): Subject[] => {
             });
         }
 
-        subjects = Array.from(uniqueSubjects.values());
-        return subjects;
+        return Array.from(uniqueSubjects.values());
     }
     return [];
 };

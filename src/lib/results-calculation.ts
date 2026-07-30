@@ -54,7 +54,17 @@ const getFinalGrade = (gpa: number): string => {
 /**
  * Normalizes a subject name for comparison
  */
-const normalize = (name: string) => (subjectNameNormalization[name.trim()] || name.trim()).toLowerCase();
+const normalize = (name: string) => {
+    if (!name) return "";
+    const trimmed = name.trim();
+    return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
+};
+
+const groupMap: Record<string, string> = { 
+    'science': 'science', 'বিজ্ঞান': 'science',
+    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts',
+    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce'
+};
 
 export function processStudentResults(
     students: Student[],
@@ -63,17 +73,18 @@ export function processStudentResults(
 ): StudentProcessedResult[] {
 
     const studentResults: StudentProcessedResult[] = students.map(student => {
-        const studentGroupNormalized = (student.group || '').toLowerCase().trim();
+        const rawGroup = (student.group || '').toLowerCase().trim();
+        const studentGroupNormalized = groupMap[rawGroup] || rawGroup;
         const optionalSubjectName = student.optionalSubject;
 
-        // Get the subjects actually allowed/expected for this student's group
-        const groupAllowedSubjects = getSubjects(student.className, student.group).map(s => s.name);
+        // Get the subjects actually allowed/expected for this student's specific group
+        const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized).map(s => s.name);
 
         const subjectsForStudent = allSubjectsForGroup.filter(subjectInfo => {
             if (student.className < '9') return true;
 
             // Important: If we are in "All Groups" view, the allSubjectsForGroup list is the Union.
-            // We must only process subjects that this student actually takes.
+            // We must only process subjects that this specific student actually takes.
             if (!groupAllowedSubjects.some(name => normalize(name) === normalize(subjectInfo.name))) return false;
 
             if (optionalSubjectName === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
@@ -89,22 +100,22 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const normalizedSubjectName = normalize(subjectInfo.name);
             
-            // ROBUST MATCHING: Find the specific result document.
-            // Search through all records for this subject and class
+            // ROBUST MATCHING: Find the specific result document for this subject.
             const matchingRecords = resultsBySubject.filter(r => 
                 normalize(r.subject) === normalizedSubjectName && 
                 r.className === student.className
             );
 
-            // Priority 1: Find the record that specifically contains this student's ID
+            // Priority 1: Match by direct Student ID inclusion in the record's results array
             let classResult = matchingRecords.find(r => r.results.some(res => res.studentId === student.id));
             
-            // Priority 2: Fallback to matching by group name if not found by ID
+            // Priority 2: Fallback to matching by group name if not found by ID (lenient match)
             if (!classResult) {
-                classResult = matchingRecords.find(r => 
-                    student.className < '9' || 
-                    (r.group || '').toLowerCase().trim() === studentGroupNormalized
-                );
+                classResult = matchingRecords.find(r => {
+                    const recordGroup = (r.group || '').toLowerCase().trim();
+                    const recordGroupNormalized = groupMap[recordGroup] || recordGroup;
+                    return student.className < '9' || recordGroupNormalized === studentGroupNormalized || !recordGroupNormalized || recordGroupNormalized === 'none';
+                });
             }
             
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
@@ -167,9 +178,7 @@ export function processStudentResults(
             gpa = (totalCompulsoryPoints + bonusPoints) / compulsorySubjectsCount;
         }
         
-        if (gpa > 5.0) {
-            gpa = 5.0;
-        }
+        if (gpa > 5.0) gpa = 5.0;
 
         const finalGrade = isPass ? getFinalGrade(gpa) : 'F';
         
