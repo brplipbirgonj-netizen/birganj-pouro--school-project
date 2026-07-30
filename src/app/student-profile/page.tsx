@@ -427,15 +427,19 @@ function StudentProfileSearchContent() {
                                     <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2">
                                         <Banknote className="h-5 w-5" /> বেতন পরিশোধের অবস্থা
                                     </h3>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {BENGALI_MONTHS.map(m => (
-                                            <div key={m} className={cn(
-                                                "p-1.5 text-[10px] text-center border-2 rounded font-black",
-                                                paidMonths.includes(m) ? "border-emerald-500 text-emerald-700 bg-emerald-50" : "border-rose-200 text-rose-400 bg-rose-50"
-                                            )}>
-                                                {m}
-                                            </div>
-                                        ))}
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {BENGALI_MONTHS.map(m => {
+                                            const isPaid = paidMonths.includes(m);
+                                            return (
+                                                <div key={m} className={cn(
+                                                    "p-1 text-[9px] text-center border rounded flex flex-col items-center justify-center min-h-[40px] font-black",
+                                                    isPaid ? "border-emerald-700 text-emerald-800 bg-emerald-50" : "border-rose-300 text-rose-700 bg-rose-50"
+                                                )}>
+                                                    <span className="leading-tight">{m}</span>
+                                                    <span className="text-[7px] mt-0.5 uppercase">{isPaid ? 'পরিশোধিত' : 'বকেয়া'}</span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </section>
