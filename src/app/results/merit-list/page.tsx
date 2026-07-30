@@ -27,8 +27,8 @@ const toBengaliNumber = (str: string | number) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-// 18 students per page ensures enough space for footer even on the last page.
-const STUDENTS_PER_PAGE = 18;
+// 15 students per page ensures a generous 0.5 inch (12.7mm) bottom margin is strictly respected
+const STUDENTS_PER_PAGE = 15;
 
 function MeritListPrintContent() {
     const searchParams = useSearchParams();
@@ -107,11 +107,23 @@ function MeritListPrintContent() {
 
     return (
         <div className="bg-slate-200 min-h-screen p-4 sm:p-8 font-kalpurush print:p-0 print:bg-white flex flex-col items-center">
-            {/* Global style override for print to ensure the paddings are respected */}
+            {/* Global style override to strictly force 12.7mm (0.5in) padding for the container */}
             <style jsx global>{`
                 @media print {
-                    .printable-area {
-                        padding: 12.7mm !important; /* Forces 0.5 inch margin inside the border */
+                    .merit-print-page {
+                        padding: 12.7mm !important;
+                        box-sizing: border-box !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        height: 297mm !important;
+                        width: 210mm !important;
+                        position: relative !important;
+                        page-break-after: always !important;
+                    }
+                    .merit-main-content {
+                        flex-grow: 1 !important;
+                        display: block !important;
+                        overflow: hidden !important;
                     }
                 }
             `}</style>
@@ -132,12 +144,12 @@ function MeritListPrintContent() {
 
             <div className="flex flex-col gap-8 print:gap-0">
                 {paginatedResults.length === 0 ? (
-                    <div className="printable-area w-[210mm] h-[297mm] bg-white p-12 border-[6px] border-double border-primary/40 flex items-center justify-center">
+                    <div className="printable-area merit-print-page w-[210mm] h-[297mm] bg-white p-[12.7mm] border-[6px] border-double border-primary/40 flex items-center justify-center">
                         কোনো ফলাফল পাওয়া যায়নি।
                     </div>
                 ) : (
                     paginatedResults.map((pageData, pageIdx) => (
-                        <div key={pageIdx} className="printable-area w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 p-12 box-border border-[6px] border-double border-primary/40 overflow-hidden">
+                        <div key={pageIdx} className="printable-area merit-print-page w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 p-[12.7mm] box-border border-[6px] border-double border-primary/40 overflow-hidden">
                             
                             {schoolInfo.logoUrl && (
                                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-5">
@@ -145,7 +157,7 @@ function MeritListPrintContent() {
                                 </div>
                             )}
 
-                            <header className="relative z-10 flex items-center gap-6 border-b-2 border-primary/50 pb-4 mb-4 printable-header">
+                            <header className="relative z-10 flex items-center gap-6 border-b-2 border-primary/50 pb-3 mb-3 printable-header">
                                 {schoolInfo.logoUrl && (
                                     <div className="relative w-16 h-16 shrink-0">
                                         <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />
@@ -163,7 +175,7 @@ function MeritListPrintContent() {
                                 </div>
                             </header>
 
-                            <div className="relative z-10 text-center mb-6">
+                            <div className="relative z-10 text-center mb-4">
                                 <h2 className="inline-block bg-primary text-white text-lg font-black px-8 py-1 rounded-full shadow-md">
                                     {examName} - মেধা তালিকা
                                 </h2>
@@ -172,8 +184,8 @@ function MeritListPrintContent() {
                                 </p>
                             </div>
 
-                            <main className="relative z-10">
-                                <div className="border-2 border-slate-800 rounded-sm">
+                            <main className="relative z-10 merit-main-content">
+                                <div className="border-2 border-slate-800 rounded-sm overflow-hidden">
                                     <Table className="border-collapse">
                                         <TableHeader>
                                             <TableRow className="bg-slate-100 border-b-2 border-slate-800 h-9">
@@ -191,7 +203,7 @@ function MeritListPrintContent() {
                                                 const globalIdx = (pageIdx * STUDENTS_PER_PAGE) + pageInternalIdx;
                                                 return (
                                                     <TableRow key={res.student.id} className={cn(
-                                                        "h-9 border-b border-slate-300 last:border-b-0",
+                                                        "h-10 border-b border-slate-300 last:border-b-0",
                                                         !res.isPass && "bg-rose-50/50"
                                                     )}>
                                                         <TableCell className="text-center font-black border-r border-slate-300 text-[11px]">
@@ -226,9 +238,9 @@ function MeritListPrintContent() {
                                 </div>
                             </main>
 
-                            {/* Ensure footer has a fixed bottom position with margin */}
+                            {/* Ensure footer is always pushed towards the bottom, but above the 12.7mm margin */}
                             {pageIdx === paginatedResults.length - 1 ? (
-                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto pb-6">
+                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto pb-4">
                                     <div className="text-center">
                                         <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                                     </div>
@@ -237,12 +249,12 @@ function MeritListPrintContent() {
                                     </div>
                                 </footer>
                             ) : (
-                                <footer className="relative z-10 pt-4 text-center mt-auto pb-6">
+                                <footer className="relative z-10 pt-4 text-center mt-auto pb-4">
                                     <p className="text-[9px] text-slate-400 italic">তালিকা পরবর্তী পৃষ্ঠায় চলমান...</p>
                                 </footer>
                             )}
                             
-                            <div className="text-[8px] text-slate-400 italic text-center relative z-10 mt-2">
+                            <div className="text-[8px] text-slate-400 italic text-center relative z-10 mt-1">
                                 রিপোর্ট জেনারেট করার তারিখ: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Management System
                             </div>
                         </div>

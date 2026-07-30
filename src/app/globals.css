@@ -98,7 +98,7 @@
     .printable-area {
       width: 210mm !important;
       height: 297mm !important;
-      padding: 0 !important; /* Removed static padding, controlled by components */
+      padding: 0; /* REMOVED !important to allow component-specific margins */
       margin: 0 !important;
       box-sizing: border-box !important;
       page-break-after: always !important;
