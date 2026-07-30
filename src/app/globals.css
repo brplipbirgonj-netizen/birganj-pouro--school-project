@@ -126,12 +126,13 @@
 
 /* Custom Table Container for Desktop Scroll visibility */
 .table-container {
-  @apply overflow-auto border rounded-md shadow-inner bg-white;
+  @apply overflow-auto border rounded-md shadow-inner bg-white w-full;
 }
 
 @media (min-width: 768px) {
   .table-container {
-    max-height: calc(100vh - 380px);
+    /* Adjusted height to ensure horizontal scrollbar is visible on most screens */
+    max-height: calc(100vh - 450px);
     scrollbar-gutter: stable;
   }
 }
