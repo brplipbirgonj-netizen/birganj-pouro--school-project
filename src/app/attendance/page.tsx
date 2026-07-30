@@ -139,7 +139,7 @@ const AttendanceSheet = ({ classId, students }: { classId: string, students: Stu
     }
 
     if (activeHoliday && !isAdmin) {
-        return <p className="text-center text-muted-foreground p-8">আজ {activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
+        return <p className="text-center text-muted-foreground p-8">আজ ${activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
     }
     
     if (savedAttendance && !isEditing) {

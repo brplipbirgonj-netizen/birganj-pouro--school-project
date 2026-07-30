@@ -249,9 +249,9 @@ const LiveRoutineCard = () => {
                     isHoliday(db, todayStr),
                     getProxyClasses(db, todayStr, selectedYear)
                 ]);
-                setFullRoutine(routineData);
+                setFullRoutine(routineData || []);
                 setActiveHoliday(holidayInfo);
-                setProxies(proxyData);
+                setProxies(proxyData || []);
             } catch (e) {
                 console.error(e);
             }
@@ -333,7 +333,7 @@ const LiveRoutineCard = () => {
              status = 'এখন কোনো ক্লাস চলছে না।';
         }
 
-        // 2. Find Next Class info (don't return early above!)
+        // 2. Find Next Class info
         let nextRawPeriodIndex = -1;
         for(let i=0; i<periodTimes.length; i++) {
             const period = periodTimes[i];
@@ -349,17 +349,17 @@ const LiveRoutineCard = () => {
             if (nextPeriodInfo.name === 'বিরতি') {
                 nextStatus = `পরবর্তী: টিফিনের বিরতি (${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')})`;
             } else {
-                let nextPeriodIndex = -1;
-                if (nextRawPeriodIndex < 3) nextPeriodIndex = nextRawPeriodIndex;
-                if (nextRawPeriodIndex > 3) nextPeriodIndex = nextRawPeriodIndex - 1;
+                let nextPeriodIndexCalc = -1;
+                if (nextRawPeriodIndex < 3) nextPeriodIndexCalc = nextRawPeriodIndex;
+                if (nextRawPeriodIndex > 3) nextPeriodIndexCalc = nextRawPeriodIndex - 1;
 
-                if (nextPeriodIndex !== -1) {
+                if (nextPeriodIndexCalc !== -1) {
                     nextClasses = fullRoutine
                         .filter(r => r.day === currentDayName)
                         .map(r => {
-                            const periodContent = r.periods[nextPeriodIndex];
+                            const periodContent = r.periods[nextPeriodIndexCalc];
                             if (periodContent) {
-                                const proxy = proxies.find(p => p.className === r.className && p.periodIndex === nextPeriodIndex);
+                                const proxy = proxies.find(p => p.className === r.className && p.periodIndex === nextPeriodIndexCalc);
                                 return {
                                     className: r.className,
                                     displayClassName: classNamesMap[r.className] || r.className,
@@ -384,7 +384,7 @@ const LiveRoutineCard = () => {
         return { status, runningClasses, isSpecialStatus, nextClasses, nextStatus };
     };
 
-    const { status, runningClasses, isSpecialStatus, nextClasses, nextStatus } = getCurrentPeriodInfo();
+    const periodInfo = getCurrentPeriodInfo();
 
     return (
         <Card className="lg:col-span-2 shadow-md border-primary/10">
@@ -411,7 +411,7 @@ const LiveRoutineCard = () => {
                     <div className="space-y-6">
                         {/* Current Classes */}
                         <div>
-                            {runningClasses.length > 0 ? (
+                            {periodInfo.runningClasses && periodInfo.runningClasses.length > 0 ? (
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2 mb-2 text-emerald-600 font-semibold text-sm">
                                         <span className="relative flex h-2 w-2">
@@ -429,7 +429,7 @@ const LiveRoutineCard = () => {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {runningClasses.map((rc, index) => (
+                                            {periodInfo.runningClasses.map((rc, index) => (
                                                 <TableRow key={index}>
                                                     <TableCell className="text-xs font-medium">{rc.time}</TableCell>
                                                     <TableCell className="font-semibold text-primary">
@@ -446,21 +446,21 @@ const LiveRoutineCard = () => {
                                 <div className="flex items-center justify-center h-20 text-center bg-muted/20 rounded-md border border-dashed">
                                     <p className={cn(
                                         "text-muted-foreground transition-all duration-500",
-                                        isSpecialStatus ? "text-red-600 font-bold" : "text-sm"
+                                        periodInfo.isSpecialStatus ? "text-red-600 font-bold" : "text-sm"
                                     )}>
-                                        {status}
+                                        {periodInfo.status}
                                     </p>
                                 </div>
                             )}
                         </div>
 
                         {/* Next Classes */}
-                        {!isSpecialStatus && (
+                        {!periodInfo.isSpecialStatus && (
                             <div>
-                                {nextClasses && nextClasses.length > 0 ? (
+                                {periodInfo.nextClasses && periodInfo.nextClasses.length > 0 ? (
                                     <div className="space-y-2">
                                         <div className="text-indigo-600 font-semibold text-sm mb-2 border-t pt-4">
-                                            {nextStatus}
+                                            {periodInfo.nextStatus}
                                         </div>
                                         <Table>
                                             <TableHeader className="bg-indigo-50/50">
@@ -471,7 +471,7 @@ const LiveRoutineCard = () => {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {nextClasses.map((nc, index) => (
+                                                {periodInfo.nextClasses.map((nc, index) => (
                                                     <TableRow key={index}>
                                                         <TableCell className="text-xs text-muted-foreground">{nc.time}</TableCell>
                                                         <TableCell className="font-medium text-indigo-900">
@@ -486,7 +486,7 @@ const LiveRoutineCard = () => {
                                     </div>
                                 ) : (
                                     <div className="text-center text-xs text-muted-foreground border-t pt-4">
-                                        {nextStatus}
+                                        {periodInfo.nextStatus}
                                     </div>
                                 )}
                             </div>
