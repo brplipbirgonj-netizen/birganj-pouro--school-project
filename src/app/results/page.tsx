@@ -16,7 +16,7 @@ import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult,
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
@@ -1043,7 +1043,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     "inline-flex items-center justify-center w-8 h-8 rounded-full font-black",
                                                     index === 0 ? "bg-amber-100 text-amber-700 border border-amber-300" : 
                                                     index === 1 ? "bg-slate-100 text-slate-700 border border-slate-300" :
-                                                    index === 2 ? "bg-orange-100 text-orange-700 border border-orange-300" : "bg-muted"
+                                                    index === 2 ? "bg-orange-100 text-orange-700 border-orange-300" : "bg-muted"
                                                 )}>
                                                     {(index + 1).toLocaleString('bn-BD')}
                                                 </span>
