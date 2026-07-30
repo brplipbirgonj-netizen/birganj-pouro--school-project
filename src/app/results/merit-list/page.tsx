@@ -206,26 +206,26 @@ function MeritListPrintContent() {
                                                         "h-10 border-b border-slate-300 last:border-b-0",
                                                         !res.isPass && "bg-rose-50/50"
                                                     )}>
-                                                        <TableCell className="text-center font-black border-r border-slate-300 text-[11px]">
+                                                        <TableCell className="text-center font-black border-r border-slate-300 text-[12px]">
                                                             {res.isPass ? toBengaliNumber(globalIdx + 1) : '-'}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-bold border-r border-slate-300 text-[11px]">
+                                                        <TableCell className="text-center font-bold border-r border-slate-300 text-[12px]">
                                                             {toBengaliNumber(res.student.roll)}
                                                         </TableCell>
-                                                        <TableCell className="font-bold border-r border-slate-300 pl-3 text-[11px]">
+                                                        <TableCell className="font-bold border-r border-slate-300 pl-3 text-[12px]">
                                                             {res.student.studentNameBn}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-black border-r border-slate-300 text-primary text-[11px]">
+                                                        <TableCell className="text-center font-black border-r border-slate-300 text-primary text-[12px]">
                                                             {toBengaliNumber(res.totalMarks)}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-black border-r border-slate-300 text-[11px]">
+                                                        <TableCell className="text-center font-black border-r border-slate-300 text-[12px]">
                                                             {toBengaliNumber(res.gpa.toFixed(2))}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-bold border-r border-slate-300 text-[11px]">
+                                                        <TableCell className="text-center font-bold border-r border-slate-300 text-[12px]">
                                                             {res.finalGrade}
                                                         </TableCell>
                                                         <TableCell className={cn(
-                                                            "text-center font-black text-[9px]",
+                                                            "text-center font-black text-[11px]",
                                                             res.isPass ? "text-emerald-700" : "text-rose-700"
                                                         )}>
                                                             {res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}
