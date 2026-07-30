@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -58,7 +59,6 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-// Custom sort orders as per user request
 const TEACHER_ORDER = [
     'আনিছুর রহমান',
     'নীলা রায়',
@@ -90,12 +90,10 @@ export default function StaffListPage() {
   const canManageStaff = hasPermission('manage:staff');
   const canManageAttendance = hasPermission('manage:staff-attendance');
 
-  // Attendance State
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
 
-  // Leave Report State
   const [reportMonth, setReportMonth] = useState(new Date().getMonth().toString());
   const [reportYear, setReportYear] = useState(new Date().getFullYear().toString());
   const [reportStaffId, setReportStaffId] = useState('all');
@@ -174,7 +172,7 @@ export default function StaffListPage() {
     toast({ title: 'দৈনিক হাজিরা ও ছুটি সংরক্ষিত হয়েছে' });
   };
 
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     if (!db) return;
     setIsReportLoading(true);
     const start = format(startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 'yyyy-MM-dd');
@@ -182,6 +180,27 @@ export default function StaffListPage() {
     const records = await getStaffAttendanceForRange(db, start, end);
     setRangeRecords(records);
     setIsReportLoading(false);
+  }, [db, reportMonth, reportYear]);
+
+  const handleDeleteLeave = async (record: StaffDailyAttendance, staffId: string) => {
+    if (!db) return;
+    
+    const updatedAttendance = record.attendance.map(a => {
+        if (a.staffId === staffId) {
+            return { ...a, status: 'present' as const, leaveType: undefined };
+        }
+        return a;
+    });
+
+    const updatedRecord = { ...record, attendance: updatedAttendance };
+    
+    try {
+        await saveStaffAttendance(db, updatedRecord as StaffDailyAttendance);
+        toast({ title: 'ছুটি বাতিল করা হয়েছে এবং উপস্থিত হিসেবে গণ্য করা হয়েছে।' });
+        fetchReport(); 
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'ছুটি বাতিল করা যায়নি।' });
+    }
   };
 
   const staffTypeMap: { [key: string]: string } = { 'teacher': 'শিক্ষক', 'staff': 'কর্মচারী' };
@@ -193,7 +212,6 @@ export default function StaffListPage() {
     }).catch(() => {});
   };
 
-  // Memoized sorted lists based on user request
   const sortedTeachers = useMemo(() => {
       return allStaff
         .filter(s => s.staffType === 'teacher')
@@ -227,7 +245,6 @@ export default function StaffListPage() {
             <TableRow>
                 <TableHead className="w-16">ক্রমিক</TableHead>
                 <TableHead className="w-16">ছবি</TableHead>
-                <TableHead>আইডি</TableHead>
                 <TableHead>নাম</TableHead>
                 <TableHead>পদবি</TableHead>
                 <TableHead>মোবাইল</TableHead>
@@ -241,7 +258,6 @@ export default function StaffListPage() {
                     <TableCell>
                         <Image src={staff.photoUrl || 'https://picsum.photos/seed/staff/40/40'} alt={staff.nameBn} width={40} height={40} className="rounded-full object-cover border" />
                     </TableCell>
-                    <TableCell>{toBengaliNumber(staff.employeeId || 'N/A')}</TableCell>
                     <TableCell className="whitespace-nowrap font-black text-primary">{staff.nameBn}</TableCell>
                     <TableCell className="whitespace-nowrap font-bold text-xs">{staff.designation}</TableCell>
                     <TableCell className="text-xs font-bold">{toBengaliNumber(staff.mobile)}</TableCell>
@@ -300,7 +316,6 @@ export default function StaffListPage() {
                         <TabsTrigger value="report" className="font-black" disabled={!canManageAttendance}>ছুটির রিপোর্ট</TabsTrigger>
                     </TabsList>
 
-                    {/* Staff List Tab */}
                     <TabsContent value="list" className="space-y-8 animate-in fade-in duration-500">
                         {isLoading ? (
                             <div className="space-y-4">
@@ -336,7 +351,6 @@ export default function StaffListPage() {
                         )}
                     </TabsContent>
 
-                    {/* Attendance Tab */}
                     <TabsContent value="attendance" className="space-y-6">
                         {canManageAttendance ? (
                         <>
@@ -439,7 +453,6 @@ export default function StaffListPage() {
                         )}
                     </TabsContent>
 
-                    {/* Report Tab */}
                     <TabsContent value="report" className="space-y-6">
                         {canManageAttendance ? (
                         <>
@@ -498,6 +511,7 @@ export default function StaffListPage() {
                                                                 <TableHead className="font-black">তারিখ</TableHead>
                                                                 <TableHead className="font-black">বার</TableHead>
                                                                 <TableHead className="text-center font-black">ছুটির ধরণ</TableHead>
+                                                                <TableHead className="text-right font-black">কার্যক্রম</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -512,6 +526,29 @@ export default function StaffListPage() {
                                                                             <Badge variant="outline" className={cn("text-[10px] font-black px-4 py-1 shadow-sm", leaveType?.color)}>
                                                                                 {leaveType?.label || att?.leaveType || 'অন্যান্য'}
                                                                             </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50">
+                                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                                    </Button>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>ছুটি বাতিল করতে চান?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            এটি এই তারিখের ছুটির রেকর্ড মুছে ফেলে শিক্ষককে "উপস্থিত" হিসেবে গণ্য করবে।
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>না</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={() => handleDeleteLeave(record, staff.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                                                            হ্যাঁ, বাতিল করুন
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
                                                                         </TableCell>
                                                                     </TableRow>
                                                                 );
@@ -556,7 +593,6 @@ export default function StaffListPage() {
                     </DialogHeader>
                     <div className="max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin">
                         <div className="space-y-4 py-4 text-sm font-bold text-slate-700">
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">কর্মচারী আইডি:</span> <span>{toBengaliNumber(staffToView.employeeId || 'N/A')}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">নাম (ইংরেজি):</span> <span>{staffToView.nameEn || 'N/A'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">জন্ম তারিখ:</span> <span>{staffToView.dob ? format(new Date(staffToView.dob), "d MMMM yyyy", { locale: bn }) : 'N/A'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">বিষয়:</span> <span>{staffToView.subject || 'N/A'}</span></p>

@@ -56,13 +56,14 @@ export const saveStaffAttendance = (db: Firestore, record: StaffDailyAttendance)
         attendance: record.attendance
     };
 
-    setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError) => {
+    return setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: COLLECTION,
             operation: 'write',
             requestResourceData: dataToSave,
         });
         errorEmitter.emit('permission-error', permissionError);
+        throw permissionError;
     });
 };
 
