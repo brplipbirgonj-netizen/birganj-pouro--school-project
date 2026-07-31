@@ -70,7 +70,6 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                     
                     daysInMonth.forEach(day => {
                         const dayOfWeek = day.getDay();
-                        // If it's Sunday and the current week already has some data, move to next week
                         if (dayOfWeek === 0 && weeks[currentWeekIdx].some(d => d !== null)) {
                             currentWeekIdx++;
                             weeks[currentWeekIdx] = Array(7).fill(null);
@@ -78,7 +77,6 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                         weeks[currentWeekIdx][dayOfWeek] = day;
                     });
 
-                    // Ensure at least 6 weeks are shown for uniform sizing
                     while (weeks.length < 6) {
                         weeks.push(Array(7).fill(null));
                     }
@@ -92,7 +90,6 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                 {BENGALI_MONTHS[monthIdx]}
                             </div>
                             <div className="flex gap-4">
-                                {/* Weekday labels inside each month box for better recognition */}
                                 <div className="flex flex-col justify-between text-[11px] font-black text-muted-foreground py-1 h-[228px] shrink-0 border-r-2 border-dashed border-slate-200 pr-2">
                                     <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span><span>শনি</span>
                                 </div>
@@ -153,7 +150,6 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                 })}
             </div>
             
-            {/* Heatmap Legend */}
             <div className="mt-10 flex flex-wrap items-center gap-8 text-sm font-black text-slate-700 bg-white p-5 rounded-xl border-4 border-black shadow-lg">
                 <div className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-green-600 rounded-md shadow-md ring-2 ring-green-600/30" /> 
@@ -170,9 +166,6 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                 <div className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-slate-100 rounded-md border border-black/10" /> 
                     <span>রেকর্ড নেই</span>
-                </div>
-                <div className="ml-auto text-muted-foreground italic font-bold">
-                    * প্রতিটি মাসের জন্য আলাদা কালো বর্ডার দেওয়া হয়েছে।
                 </div>
             </div>
         </div>
@@ -262,11 +255,9 @@ function StudentProfileSearchContent() {
             const foundStudent = studentFromDoc(studentSnap.docs[0]);
             setStudentData(foundStudent);
 
-            // Fetch Holidays
             const holidaySnap = await getDocs(collection(db, 'holidays'));
             setHolidays(holidaySnap.docs.map(d => d.data().date));
 
-            // Fetch All Attendance for Heatmap
             const attQuery = query(
                 collection(db, 'attendance'),
                 where('academicYear', '==', selectedYear),
@@ -283,7 +274,6 @@ function StudentProfileSearchContent() {
             });
             setAttendanceRecords(records);
 
-            // Fees
             const feeQuery = query(
                 collection(db, 'feeCollections'),
                 where('studentId', '==', foundStudent.id),
@@ -372,11 +362,10 @@ function StudentProfileSearchContent() {
                 </main>
             </div>
 
-            {/* Dedicated Printable Area (Hidden on screen) */}
+            {/* Print Layout */}
             {studentData && (
                 <div className="hidden print:block printable-area font-kalpurush">
                     <div className="flex flex-col h-full text-black p-8">
-                        {/* School Header */}
                         <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-8 printable-header">
                             {schoolInfo.logoUrl && (
                                 <div className="relative w-24 h-24">
@@ -400,7 +389,6 @@ function StudentProfileSearchContent() {
                         </header>
 
                         <div className="space-y-8 flex-grow">
-                            {/* Personal Info Grid */}
                             <section>
                                 <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2">
                                     <User className="h-5 w-5" /> ব্যক্তিগত তথ্য
@@ -441,7 +429,6 @@ function StudentProfileSearchContent() {
                                 </div>
                             </section>
 
-                            {/* Attendance & Fees Stats */}
                             <section className="grid grid-cols-2 gap-8">
                                 <div className="border-2 border-emerald-100 p-4 rounded-lg bg-emerald-50/10">
                                     <h3 className="text-xl font-black border-b-2 border-emerald-800 pb-1 mb-4 flex items-center gap-2">
@@ -475,7 +462,6 @@ function StudentProfileSearchContent() {
                                 </div>
                             </section>
 
-                            {/* Address Section */}
                             <section>
                                 <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2">
                                     <MapPin className="h-5 w-5" /> যোগাযোগ ও ঠিকানা
@@ -495,7 +481,6 @@ function StudentProfileSearchContent() {
                             </section>
                         </div>
 
-                        {/* Footer Signatures */}
                         <footer className="mt-auto border-t-2 border-black pt-12 pb-4 flex justify-between print-footer">
                             <div className="text-center w-48">
                                 <div className="border-t-2 border-black pt-1 font-black text-sm">অভিভাবকের স্বাক্ষর</div>
@@ -507,157 +492,136 @@ function StudentProfileSearchContent() {
                                 <div className="border-t-2 border-black pt-1 font-black text-sm">প্রধান শিক্ষকের স্বাক্ষর</div>
                             </div>
                         </footer>
-                        <div className="text-center text-[10px] text-gray-400 italic mt-4">
-                            রিপোর্ট তৈরির তারিখ: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Management System
-                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Main Screen Dialog */}
+            {/* Screen Profile Dialog */}
             <Dialog open={showProfile} onOpenChange={setShowProfile}>
-                <DialogContent className="sm:max-w-5xl max-h-[95vh] overflow-y-auto p-0 no-print font-kalpurush">
+                <DialogContent className="sm:max-w-4xl max-h-[95vh] overflow-y-auto p-0 no-print font-kalpurush">
                     <DialogHeader className="sr-only">
                         <DialogTitle>শিক্ষার্থী প্রোফাইল</DialogTitle>
-                        <DialogDescription>বিস্তারিত তথ্য, হাজিরা ও বেতন রিপোর্ট</DialogDescription>
                     </DialogHeader>
                     
                     {studentData && (
                         <div className="flex flex-col">
-                            {/* Modern Header */}
-                            <div className="relative h-48 sm:h-64 bg-gradient-to-r from-indigo-600 to-purple-600">
-                                <div className="absolute -bottom-4 left-6 flex items-end gap-6">
-                                    <div className="relative h-32 w-32 sm:h-44 sm:w-44 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl">
+                            {/* Standard Header Size */}
+                            <div className="relative h-40 sm:h-48 bg-gradient-to-r from-indigo-600 to-purple-600">
+                                <div className="absolute -bottom-4 left-6 flex items-end gap-4">
+                                    <div className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl">
                                         {studentData.photoUrl ? (
                                             <Image src={studentData.photoUrl} alt={studentData.studentNameBn} fill className="object-cover" />
                                         ) : (
                                             <div className="flex h-full w-full items-center justify-center bg-muted">
-                                                <User className="h-16 w-16 text-muted-foreground" />
+                                                <User className="h-12 w-12 text-muted-foreground" />
                                             </div>
                                         )}
                                     </div>
-                                    <div className="pb-8 hidden sm:block">
-                                        <h1 className="text-4xl font-black text-white leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                                    <div className="pb-6 hidden sm:block">
+                                        <h1 className="text-2xl font-black text-white drop-shadow-md">
                                             {studentData.studentNameBn}
                                         </h1>
-                                        <p className="text-xl font-bold text-white/90 mt-2 drop-shadow-md">
+                                        <p className="text-sm font-bold text-white/90 drop-shadow-sm">
                                             রোল: {toBengaliNumber(studentData.roll)} | {classNamesMap[studentData.className]} শ্রেণি
                                         </p>
                                     </div>
                                 </div>
-                                <div className="absolute top-4 right-4 flex gap-2">
-                                    <Button variant="secondary" size="sm" className="bg-white/80 backdrop-blur-sm shadow-lg font-black" onClick={() => window.print()}>
-                                        <Printer className="h-4 w-4 mr-2" /> প্রিন্ট করুন
+                                <div className="absolute top-4 right-4">
+                                    <Button variant="secondary" size="sm" className="bg-white/80 font-black" onClick={() => window.print()}>
+                                        <Printer className="h-4 w-4 mr-2" /> প্রিন্ট
                                     </Button>
                                 </div>
                             </div>
 
                             <div className="mt-8 px-6 space-y-6 pb-8">
-                                {/* Mobile Name Display */}
-                                <div className="sm:hidden text-center mb-6 pt-10">
-                                    <h1 className="text-3xl font-black text-black">{studentData.studentNameBn}</h1>
-                                    <p className="text-md font-bold text-muted-foreground">
+                                <div className="sm:hidden text-center pt-8">
+                                    <h1 className="text-2xl font-black text-black">{studentData.studentNameBn}</h1>
+                                    <p className="text-sm font-bold text-muted-foreground">
                                         রোল: {toBengaliNumber(studentData.roll)} | {classNamesMap[studentData.className]} শ্রেণি
                                     </p>
                                 </div>
 
                                 <Tabs defaultValue="info" className="w-full">
-                                    <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50 p-1 mb-6">
-                                        <TabsTrigger value="info" className="font-bold gap-2"><Info className="h-4 w-4" /> তথ্য</TabsTrigger>
-                                        <TabsTrigger value="attendance" className="font-bold gap-2"><CalendarCheck className="h-4 w-4" /> হাজিরা</TabsTrigger>
-                                        <TabsTrigger value="fees" className="font-bold gap-2"><Banknote className="h-4 w-4" /> বেতন</TabsTrigger>
+                                    <TabsList className="grid w-full grid-cols-3 h-10 bg-muted/50 p-1">
+                                        <TabsTrigger value="info" className="font-bold text-xs"><Info className="h-3.5 w-3.5 mr-1" /> তথ্য</TabsTrigger>
+                                        <TabsTrigger value="attendance" className="font-bold text-xs"><CalendarCheck className="h-3.5 w-3.5 mr-1" /> হাজিরা</TabsTrigger>
+                                        <TabsTrigger value="fees" className="font-bold text-xs"><Banknote className="h-3.5 w-3.5 mr-1" /> বেতন</TabsTrigger>
                                     </TabsList>
 
-                                    <TabsContent value="info" className="space-y-6">
+                                    <TabsContent value="info" className="pt-4 space-y-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <Card className="border-none shadow-sm bg-indigo-50/50">
-                                                <CardHeader className="pb-2"><CardTitle className="text-lg font-bold text-indigo-900">ব্যক্তিগত তথ্য</CardTitle></CardHeader>
-                                                <CardContent className="space-y-2 text-sm">
-                                                    <div className="flex justify-between border-b py-1"><span>শিক্ষার্থী আইডি:</span> <span className="font-bold">{toBengaliNumber(studentData.generatedId || '')}</span></div>
-                                                    <div className="flex justify-between border-b py-1"><span>নাম (ইংরেজি):</span> <span className="font-bold">{studentData.studentNameEn || '-'}</span></div>
-                                                    <div className="flex justify-between border-b py-1"><span>জন্ম তারিখ:</span> <span className="font-bold">{studentData.dob ? format(new Date(studentData.dob), 'dd MMMM yyyy', { locale: bn }) : '-'}</span></div>
-                                                    <div className="flex justify-between border-b py-1"><span>লিঙ্গ:</span> <span className="font-bold">{studentData.gender === 'male' ? 'ছাত্র' : 'ছাত্রী'}</span></div>
-                                                    <div className="flex justify-between border-b py-1"><span>ধর্ম:</span> <span className="font-bold">{religionMapBn[studentData.religion?.toLowerCase() || ''] || studentData.religion || 'অন্যান্য'}</span></div>
-                                                    <div className="flex justify-between py-1"><span>বিভাগ:</span> <span className="font-bold">{groupMapBn[studentData.group?.toLowerCase() || ''] || studentData.group || 'সাধারণ'}</span></div>
-                                                </CardContent>
+                                            <Card className="border-none shadow-sm bg-indigo-50/30 p-4">
+                                                <h3 className="font-black text-indigo-900 mb-4 border-b pb-1">ব্যক্তিগত তথ্য</h3>
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex justify-between border-b border-indigo-100 py-1"><span>শিক্ষার্থী আইডি:</span> <span className="font-bold">{toBengaliNumber(studentData.generatedId || '')}</span></div>
+                                                    <div className="flex justify-between border-b border-indigo-100 py-1"><span>জন্ম তারিখ:</span> <span className="font-bold">{studentData.dob ? format(new Date(studentData.dob), 'dd MMMM yyyy', { locale: bn }) : '-'}</span></div>
+                                                    <div className="flex justify-between border-b border-indigo-100 py-1"><span>লিঙ্গ:</span> <span className="font-bold">{studentData.gender === 'male' ? 'ছাত্র' : 'ছাত্রী'}</span></div>
+                                                    <div className="flex justify-between py-1"><span>ধর্ম:</span> <span className="font-bold">{religionMapBn[studentData.religion?.toLowerCase() || ''] || studentData.religion || 'অন্যান্য'}</span></div>
+                                                </div>
                                             </Card>
-                                            <Card className="border-none shadow-sm bg-indigo-50/50">
-                                                <CardHeader className="pb-2"><CardTitle className="text-lg font-bold text-indigo-900">অভিভাবক ও যোগাযোগ</CardTitle></CardHeader>
-                                                <CardContent className="space-y-2 text-sm">
-                                                    <div className="flex justify-between border-b py-1"><span>পিতার নাম:</span> <span className="font-bold">{studentData.fatherNameBn}</span></div>
-                                                    <div className="flex justify-between border-b py-1"><span>মাতার নাম:</span> <span className="font-bold">{studentData.motherNameBn}</span></div>
-                                                    <div className="flex justify-between border-b py-1"><span>মোবাইল (অভিভাবক):</span> <span className="font-bold text-primary">{studentData.guardianMobile || '-'}</span></div>
-                                                    <div className="flex justify-between py-1"><span>ঠিকানা:</span> <span className="font-bold text-right max-w-[200px]">{studentData.presentVillage}, {studentData.presentUpazila}</span></div>
-                                                </CardContent>
+                                            <Card className="border-none shadow-sm bg-indigo-50/30 p-4">
+                                                <h3 className="font-black text-indigo-900 mb-4 border-b pb-1">যোগাযোগ</h3>
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex justify-between border-b border-indigo-100 py-1"><span>পিতার নাম:</span> <span className="font-bold">{studentData.fatherNameBn}</span></div>
+                                                    <div className="flex justify-between border-b border-indigo-100 py-1"><span>মোবাইল:</span> <span className="font-bold text-primary">{studentData.guardianMobile || '-'}</span></div>
+                                                    <div className="flex flex-col py-1"><span>ঠিকানা:</span> <span className="font-bold">{studentData.presentVillage}, {studentData.presentUpazila}</span></div>
+                                                </div>
                                             </Card>
                                         </div>
                                     </TabsContent>
 
-                                    <TabsContent value="attendance" className="space-y-6">
-                                        <Card className="border-none shadow-sm bg-white">
-                                            <CardHeader>
-                                                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                                    <CalendarCheck className="h-5 w-5 text-emerald-600" /> হাজিরা পরিসংখ্যান ({toBengaliNumber(selectedYear)})
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-8">
-                                                <div className="grid grid-cols-3 gap-4 text-center">
-                                                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 shadow-sm">
-                                                        <p className="text-sm font-bold text-emerald-700">উপস্থিতি</p>
-                                                        <p className="text-2xl font-black">{toBengaliNumber(attendanceStats.present)} দিন</p>
-                                                    </div>
-                                                    <div className="p-4 bg-rose-50 rounded-xl border border-rose-100 shadow-sm">
-                                                        <p className="text-sm font-bold text-rose-700">অনুপস্থিতি</p>
-                                                        <p className="text-2xl font-black">{toBengaliNumber(attendanceStats.absent)} দিন</p>
-                                                    </div>
-                                                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 shadow-sm">
-                                                        <p className="text-sm font-bold text-blue-700">উপস্থিতির হার</p>
-                                                        <p className="text-2xl font-black">{toBengaliNumber(attendancePercentage.toFixed(1))}%</p>
-                                                    </div>
+                                    <TabsContent value="attendance" className="pt-4 space-y-6">
+                                        <Card className="border-none shadow-sm p-4">
+                                            <div className="grid grid-cols-3 gap-4 mb-6">
+                                                <div className="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-100">
+                                                    <p className="text-[10px] font-black text-emerald-700 uppercase">উপস্থিতি</p>
+                                                    <p className="text-xl font-black">{toBengaliNumber(attendanceStats.present)} দিন</p>
                                                 </div>
+                                                <div className="p-3 bg-rose-50 rounded-lg text-center border border-rose-100">
+                                                    <p className="text-[10px] font-black text-rose-700 uppercase">অনুপস্থিতি</p>
+                                                    <p className="text-xl font-black">{toBengaliNumber(attendanceStats.absent)} দিন</p>
+                                                </div>
+                                                <div className="p-3 bg-blue-50 rounded-lg text-center border border-blue-100">
+                                                    <p className="text-[10px] font-black text-blue-700 uppercase">হার (%)</p>
+                                                    <p className="text-xl font-black">{toBengaliNumber(attendancePercentage.toFixed(1))}%</p>
+                                                </div>
+                                            </div>
 
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                                                        <span>বার্ষিক উপস্থিতি প্রগতি</span>
-                                                        <span>{toBengaliNumber(attendancePercentage.toFixed(0))}% সম্পন্ন</span>
-                                                    </div>
-                                                    <Progress value={attendancePercentage} className="h-3 bg-slate-100" />
+                                            <div className="space-y-1 mb-8">
+                                                <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
+                                                    <span>বার্ষিক প্রগতি</span>
+                                                    <span>{toBengaliNumber(attendancePercentage.toFixed(0))}%</span>
                                                 </div>
+                                                <Progress value={attendancePercentage} className="h-2" />
+                                            </div>
 
-                                                <div className="border-t pt-8">
-                                                    <h3 className="text-md font-black mb-6 uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                                        <LayoutGrid className="h-4 w-4" /> অ্যাটেন্ডেন্স হিটম্যাপ (বার্ষিক ক্যালেন্ডার)
-                                                    </h3>
-                                                    <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
-                                                </div>
-                                            </CardContent>
+                                            {/* Large Heatmap Only */}
+                                            <div className="border-t pt-6">
+                                                <h3 className="text-xs font-black mb-4 uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                    <LayoutGrid className="h-3.5 w-3.5" /> বার্ষিক অ্যাটেন্ডেন্স হিটম্যাপ
+                                                </h3>
+                                                <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
+                                            </div>
                                         </Card>
                                     </TabsContent>
 
-                                    <TabsContent value="fees" className="space-y-6">
-                                        <Card className="border-none shadow-sm bg-white">
-                                            <CardHeader>
-                                                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                                    <Banknote className="h-5 w-5 text-primary" /> বেতন পরিশোধের অবস্থা
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                                    {BENGALI_MONTHS.map(month => {
-                                                        const isPaid = paidMonths.includes(month);
-                                                        return (
-                                                            <div key={month} className={cn(
-                                                                "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all",
-                                                                isPaid ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-600 opacity-60"
-                                                            )}>
-                                                                {isPaid ? <CheckCircle2 className="h-6 w-6 mb-2" /> : <XCircle className="h-6 w-6 mb-2" />}
-                                                                <span className="text-xs font-black">{month}</span>
-                                                                <span className="text-[10px] font-bold uppercase mt-1">{isPaid ? 'পরিশোধিত' : 'বকেয়া'}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </CardContent>
+                                    <TabsContent value="fees" className="pt-4 space-y-6">
+                                        <Card className="border-none shadow-sm p-4">
+                                            <h3 className="font-black text-primary mb-4 border-b pb-1">বেতন রিপোর্ট ({toBengaliNumber(selectedYear)})</h3>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                                                {BENGALI_MONTHS.map(month => {
+                                                    const isPaid = paidMonths.includes(month);
+                                                    return (
+                                                        <div key={month} className={cn(
+                                                            "flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all",
+                                                            isPaid ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-600 opacity-60"
+                                                        )}>
+                                                            {isPaid ? <CheckCircle2 className="h-5 w-5 mb-1" /> : <XCircle className="h-5 w-5 mb-1" />}
+                                                            <span className="text-[10px] font-black">{month}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </Card>
                                     </TabsContent>
                                 </Tabs>
@@ -677,4 +641,3 @@ export default function StudentProfileSearchPage() {
         </Suspense>
     );
 }
-
