@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Student } from '@/lib/student-data';
+import { Student, isFemale, getStudentPlaceholderImage } from '@/lib/student-data';
 import { SchoolInfo } from '@/lib/school-info';
 
 interface AdmitCardProps {
@@ -71,11 +71,14 @@ export const AdmitCard = ({ student, schoolInfo, examName }: AdmitCardProps) => 
                         </div>
                     </div>
                     <div className="w-[85px] h-[100px] border-2 border-black p-0.5 bg-white shrink-0 ml-2">
-                        {student.photoUrl ? (
-                            <Image src={student.photoUrl} alt="Photo" width={85} height={100} className="object-cover w-full h-full" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-[10px] text-gray-400">ছবি নেই</div>
-                        )}
+                        <Image 
+                            src={student.photoUrl || getStudentPlaceholderImage(student.gender)} 
+                            alt="Photo" 
+                            width={85} 
+                            height={100} 
+                            className="object-cover w-full h-full" 
+                            data-ai-hint={isFemale(student.gender) ? "girl face" : "boy face"}
+                        />
                     </div>
                 </div>
             </main>

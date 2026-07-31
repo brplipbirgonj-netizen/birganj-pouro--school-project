@@ -51,6 +51,7 @@ export type Student = {
   permanentUpazila?: string;
   permanentDistrict?: string;
   photoUrl: string;
+  isStipendReceiver?: boolean;
   // Firestore specific fields
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -59,6 +60,24 @@ export type Student = {
 // Data from form won't have id or timestamps
 export type NewStudentData = Omit<Student, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateStudentData = Partial<NewStudentData>;
+
+// Helpers for gender identification
+export const isMale = (g: string | undefined | null) => {
+    if (!g) return false;
+    const gl = g.trim().toLowerCase();
+    return gl === 'male' || gl === 'পুরুষ' || gl === 'ছাত্র' || gl === 'boy' || gl === 'm';
+};
+
+export const isFemale = (g: string | undefined | null) => {
+    if (!g) return false;
+    const gl = g.trim().toLowerCase();
+    return gl === 'female' || gl === 'মহিলা' || gl === 'ছাত্রী' || gl === 'girl' || gl === 'f';
+};
+
+export const getStudentPlaceholderImage = (gender?: string) => {
+    if (isFemale(gender)) return 'https://picsum.photos/seed/student-female/200/200';
+    return 'https://picsum.photos/seed/student-male/200/200';
+};
 
 // To handle data from Firestore
 export const studentFromDoc = (doc: DocumentData): Student => {
@@ -202,5 +221,3 @@ export const deleteStudent = async (db: Firestore, id: string) => {
         throw permissionError;
     });
 };
-
-    

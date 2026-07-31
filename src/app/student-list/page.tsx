@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { deleteStudent, Student, studentFromDoc } from '@/lib/student-data';
-import { Eye, FilePen, Trash2, LayoutGrid, List, Filter, UserRound, Droplets, MapPin, Search } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPlaceholderImage } from '@/lib/student-data';
+import { Eye, FilePen, Trash2, LayoutGrid, List, UserRound, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Suspense, useEffect, useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -37,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Separator } from '@/components/ui/separator';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -69,16 +67,6 @@ function StudentListContent() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
-  const isMale = (g: string | undefined | null) => {
-      if (!g) return false;
-      const gl = g.trim().toLowerCase();
-      return gl === 'male' || gl === 'পুরুষ' || gl === 'ছাত্র' || gl === 'boy' || gl === 'm';
-  };
-  const isFemale = (g: string | undefined | null) => {
-      if (!g) return false;
-      const gl = g.trim().toLowerCase();
-      return gl === 'female' || gl === 'মহিলা' || gl === 'ছাত্রী' || gl === 'girl' || gl === 'f';
-  };
 
   // Calculate religion, gender and group counts for the current selected class
   const classStats = useMemo(() => {
@@ -383,11 +371,12 @@ function StudentListContent() {
                                             <div className="relative mb-3">
                                                 <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-sm"></div>
                                                 <Image
-                                                    src={student.photoUrl || '/placeholder.png'}
+                                                    src={student.photoUrl || getStudentPlaceholderImage(student.gender)}
                                                     alt={student.studentNameBn}
                                                     width={80}
                                                     height={80}
                                                     className="rounded-full object-cover relative ring-2 ring-background border"
+                                                    data-ai-hint={isFemale(student.gender) ? "girl face" : "boy face"}
                                                 />
                                             </div>
                                             <h3 className="font-bold text-base line-clamp-1">{student.studentNameBn}</h3>
@@ -453,11 +442,12 @@ function StudentListContent() {
                                     <TableCell>{(index + 1).toLocaleString('bn-BD')}</TableCell>
                                     <TableCell>
                                       <Image
-                                        src={student.photoUrl || '/placeholder.png'}
+                                        src={student.photoUrl || getStudentPlaceholderImage(student.gender)}
                                         alt={student.studentNameBn}
                                         width={40}
                                         height={40}
                                         className="rounded-full object-cover"
+                                        data-ai-hint={isFemale(student.gender) ? "girl face" : "boy face"}
                                       />
                                     </TableCell>
                                     <TableCell>{student.roll != null ? student.roll.toLocaleString('bn-BD') : '-'}</TableCell>
@@ -529,7 +519,7 @@ function StudentListContent() {
              {studentToView && (
                 <>
                     <DialogHeader className="flex-row items-center gap-4">
-                        <Image src={studentToView.photoUrl || '/placeholder.png'} alt={studentToView.studentNameBn} width={80} height={80} className="rounded-lg object-cover" />
+                        <Image src={studentToView.photoUrl || getStudentPlaceholderImage(studentToView.gender)} alt={studentToView.studentNameBn} width={80} height={80} className="rounded-lg object-cover" data-ai-hint={isFemale(studentToView.gender) ? "girl face" : "boy face"} />
                         <div>
                             <DialogTitle className="text-2xl mb-1">{studentToView.studentNameBn}</DialogTitle>
                             <DialogDescription>

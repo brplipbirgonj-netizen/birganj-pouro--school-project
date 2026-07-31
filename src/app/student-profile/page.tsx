@@ -11,17 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import { Student, studentFromDoc } from '@/lib/student-data';
+import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage } from '@/lib/student-data';
 import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, CheckCircle2, XCircle, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Phone, Loader2 } from 'lucide-react';
+import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -389,11 +388,14 @@ function StudentProfileSearchContent() {
                                 </div>
                             </div>
                             <div className="w-24 h-24 border-2 border-black p-1 bg-white flex items-center justify-center overflow-hidden">
-                                {studentData.photoUrl ? (
-                                    <Image src={studentData.photoUrl} alt="Student" width={96} height={96} className="object-cover w-full h-full" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">ছবি নেই</div>
-                                )}
+                                <Image 
+                                    src={studentData.photoUrl || getStudentPlaceholderImage(studentData.gender)} 
+                                    alt="Student" 
+                                    width={96} 
+                                    height={96} 
+                                    className="object-cover w-full h-full" 
+                                    data-ai-hint={isFemale(studentData.gender) ? "girl face" : "boy face"}
+                                />
                             </div>
                         </header>
 
@@ -521,13 +523,13 @@ function StudentProfileSearchContent() {
                                     <div className="flex flex-col items-center gap-3 shrink-0">
                                         <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full border-4 border-primary/20 p-1 shadow-lg">
                                             <div className="relative h-full w-full rounded-full overflow-hidden bg-muted">
-                                                {studentData.photoUrl ? (
-                                                    <Image src={studentData.photoUrl} alt={studentData.studentNameBn} fill className="object-cover" />
-                                                ) : (
-                                                    <div className="flex h-full w-full items-center justify-center">
-                                                        <User className="h-12 w-12 text-muted-foreground" />
-                                                    </div>
-                                                )}
+                                                <Image 
+                                                    src={studentData.photoUrl || getStudentPlaceholderImage(studentData.gender)} 
+                                                    alt={studentData.studentNameBn} 
+                                                    fill 
+                                                    className="object-cover" 
+                                                    data-ai-hint={isFemale(studentData.gender) ? "girl face" : "boy face"}
+                                                />
                                             </div>
                                         </div>
                                         <Button variant="outline" size="sm" className="font-black h-8 border-primary text-primary hover:bg-primary/5 shadow-sm" onClick={() => window.print()}>
