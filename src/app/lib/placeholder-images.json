@@ -2,13 +2,13 @@
   "placeholderImages": [
     {
       "id": "default-male-student",
-      "description": "Default placeholder for male student photos",
+      "description": "Default portrait for male students",
       "imageUrl": "https://picsum.photos/seed/student-male/200/200",
       "imageHint": "boy face"
     },
     {
       "id": "default-female-student",
-      "description": "Default placeholder for female student photos",
+      "description": "Default portrait for female students",
       "imageUrl": "https://picsum.photos/seed/student-female/200/200",
       "imageHint": "girl face"
     },

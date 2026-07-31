@@ -413,7 +413,8 @@ export default function AddStudentPage() {
                             promises.push(updateStudent(db, existingStudent.id, newStudentData));
                             updatedCount++;
                         } else {
-                            newStudentData.photoUrl = `https://picsum.photos/seed/${newStudentData.roll || Math.random()}/96/96`;
+                            // Reset photoUrl for new imports so the UI uses gender-based face profiles
+                            newStudentData.photoUrl = '';
                             promises.push(addStudent(db, newStudentData as NewStudentData));
                             addedCount++;
                         }
