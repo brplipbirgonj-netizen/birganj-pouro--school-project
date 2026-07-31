@@ -109,7 +109,7 @@ const TeachersOnLeaveCard = () => {
     }, [db, user]);
 
     return (
-        <Card className="lg:col-span-1 shadow-md border-rose-200 bg-rose-50/30">
+        <Card className="lg:col-span-1 shadow-md border-2 border-black bg-rose-50/30">
             <CardHeader className="bg-rose-100/50 rounded-t-lg pb-3">
                 <CardTitle className="text-lg flex items-center gap-2 text-rose-800">
                     <UserMinus className="h-5 w-5" /> ছুটিতে থাকা শিক্ষক ও কর্মচারী
@@ -212,7 +212,7 @@ const NoticeBoard = () => {
     };
 
     return (
-        <Card className="lg:col-span-1 shadow-md border-primary/10">
+        <Card className="lg:col-span-1 shadow-md border-2 border-black">
             <CardHeader className="flex flex-row items-center justify-between pb-2 bg-primary/5 rounded-t-lg">
                 <div className="flex items-center gap-2">
                     <Bell className="h-5 w-5 text-primary animate-pulse" />
@@ -471,7 +471,7 @@ const LiveRoutineCard = () => {
     const periodInfo = getCurrentPeriodInfo();
 
     return (
-        <Card className="lg:col-span-2 shadow-md border-primary/10">
+        <Card className="lg:col-span-2 shadow-md border-2 border-black">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
@@ -613,7 +613,7 @@ const IncomeExpenseChart = () => {
     if (loading) return <Skeleton className="h-64 w-full rounded-lg" />;
 
     return (
-        <Card className="shadow-md border-primary/10">
+        <Card className="shadow-md border-2 border-black">
             <CardHeader className="bg-primary/5 rounded-t-lg">
                 <CardTitle className="text-lg flex items-center gap-2">
                     <PieChartIcon className="h-5 w-5 text-primary" /> আয়-ব্যয় চিত্র
@@ -770,7 +770,7 @@ export default function Home() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
           {/* Total Students Card */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-indigo-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <Users className="h-28 w-28 text-indigo-900" />
             </div>
@@ -791,7 +791,7 @@ export default function Home() {
           </Card>
           
           {/* Total Present Card */}
-           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 border-teal-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <CheckCircle2 className="h-28 w-28 text-teal-900" />
             </div>
@@ -812,7 +812,7 @@ export default function Home() {
           </Card>
 
           {/* Total Absent Card */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-rose-50 to-red-100 border-red-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-rose-50 to-red-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <XCircle className="h-28 w-28 text-red-900" />
             </div>
@@ -832,7 +832,7 @@ export default function Home() {
           </Card>
 
           {/* Total Teachers Card */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-100 border-orange-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
              <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <GraduationCap className="h-28 w-28 text-orange-900" />
             </div>
@@ -853,7 +853,7 @@ export default function Home() {
           </Card>
         </div>
         <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-          <Card className="lg:col-span-1 shadow-md border-primary/10">
+          <Card className="lg:col-span-1 shadow-md border-2 border-black">
             <CardHeader className="bg-primary/5 rounded-t-lg">
                 <CardTitle className="text-lg flex items-center gap-2">
                     <Info className="h-5 w-5 text-primary" /> আজকের হাজিরা
