@@ -41,6 +41,7 @@ type Marks = {
     practical?: number;
 }
 
+// Separate Tab Component for Mark Input (Only Obtained Marks)
 const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -58,7 +59,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [className, setClassName] = useState('');
     const [group, setGroup] = useState('');
     const [subject, setSubject] = useState('');
-    const [fullMarks, setFullMarks] = useState<number | undefined>(100);
+    const [fullMarks, setFullMarks] = useState<number>(100);
     
     const [availableSubjects, setAvailableSubjects] = useState<SubjectType[]>([]);
     const [selectedSubjectInfo, setSelectedSubjectInfo] = useState<SubjectType | null>(null);
@@ -67,68 +68,13 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [marks, setMarks] = useState<Map<string, Marks>>(new Map());
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-    const [savedResults, setSavedResults] = useState<ClassResult[]>([]);
-    const [listFullMarksInputs, setListFullMarksInputs] = useState<Record<string, string>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
-    const groupMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'সাধারণ': 'সাধারণ' };
 
     useEffect(() => {
         if (!db || !user) return;
         getExams(db, selectedYear).then(setExams);
     }, [db, selectedYear, user]);
 
-    const updateSavedResults = useCallback(async () => {
-        if (!db || !user) return;
-        const allResults = await getAllResults(db, selectedYear, examName || undefined);
-        
-        if (user?.role !== 'admin' && !hasPermission('manage:results')) {
-             setSavedResults(allResults.filter(res => isSubjectPermitted(res.className, res.subject)));
-        } else {
-             setSavedResults(allResults);
-        }
-    }, [db, selectedYear, user, examName, hasPermission, isSubjectPermitted]);
-    
-    useEffect(() => {
-        updateSavedResults();
-    }, [updateSavedResults]);
-
-    const canEditCurrent = useMemo(() => {
-        if (!className || !subject) return false;
-        return isSubjectPermitted(className, subject);
-    }, [className, subject, isSubjectPermitted]);
-
-    const groupedResults = useMemo(() => {
-        if (savedResults.length === 0) return {};
-        const groups: { [key: string]: ClassResult[] } = {};
-        savedResults.forEach(res => {
-            const key = res.className;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(res);
-        });
-        const subjectOrder = [
-            'বাংলা প্রথম', 'বাংলা দ্বিতীয়', 'ইংরেজি প্রথম', 'ইংরেজি দ্বিতীয়', 'গণিত', 'ধর্ম ও নৈতিক শিক্ষা',
-            'তথ্য ও যোগাযোগ প্রযুক্তি', 'সাধারণ বিজ্ঞান', 'বিজ্ঞান', 'বাংলাদেশ ও বিশ্ব পরিচয়', 'কৃষি শিক্ষা',
-            'পদার্থ', 'রসায়ন', 'জীব বিজ্ঞান', 'উচ্চতর গণিত', 'বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা',
-            'ভূগোল ও পরিবেশ', 'পৌরনীতি ও নাগরিকতা', 'ব্যবসায় উদ্যোগ', 'হিসাব বিজ্ঞান', 'ফিন্যান্স ও ব্যাংকিং'
-        ];
-        for (const key in groups) {
-            groups[key].sort((a, b) => {
-                const groupA = a.group || '';
-                const groupB = b.group || '';
-                if (groupA !== groupB) return groupA.localeCompare(groupB, 'bn');
-                const indexA = subjectOrder.indexOf(a.subject);
-                const indexB = subjectOrder.indexOf(b.subject);
-                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                if (indexA !== -1) return -1;
-                if (indexB !== -1) return 1;
-                return a.subject.localeCompare(b.subject, 'bn');
-            });
-        }
-        return groups;
-    }, [savedResults]);
-
-    const sortedClassKeys = useMemo(() => Object.keys(groupedResults).sort((a, b) => parseInt(a) - parseInt(b)), [groupedResults]);
     const showGroupSelector = useMemo(() => parseInt(className) >= 9, [className]);
 
     useEffect(() => {
@@ -147,9 +93,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (subject) {
             const subInfo = availableSubjects.find(s => s.name === subject);
             setSelectedSubjectInfo(subInfo || null);
-            if (subInfo && studentsForClass.length === 0) setFullMarks(subInfo.fullMarks);
         } else setSelectedSubjectInfo(null);
-    }, [subject, availableSubjects, studentsForClass.length]);
+    }, [subject, availableSubjects]);
     
     const handleLoadStudents = async () => {
         if (!examName || !className || !subject || !db || !user) {
@@ -159,6 +104,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsLoadingStudents(true);
         const filteredStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (!showGroupSelector || !group || s.group === group)).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
         setStudentsForClass(filteredStudents);
+        
         const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, group);
         const initialMarks = new Map<string, Marks>();
         if (existingResults) {
@@ -184,38 +130,21 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const handleSaveResults = () => {
         if (!db || !user) return;
-        if (!canEditCurrent) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
+        if (!isSubjectPermitted(className, subject)) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
         if (studentsForClass.length === 0) { toast({ variant: 'destructive', title: 'কোনো শিক্ষার্থী নেই' }); return; }
+        
         const resultsData: StudentResult[] = Array.from(marks.entries()).map(([studentId, marks]) => ({ studentId, ...marks }));
-        saveClassResults(db, { academicYear: selectedYear, examName, className, group: group || undefined, subject, fullMarks: fullMarks || selectedSubjectInfo?.fullMarks || 100, results: resultsData }).then(() => {
-            updateSavedResults();
+        saveClassResults(db, { 
+            academicYear: selectedYear, 
+            examName, 
+            className, 
+            group: group || undefined, 
+            subject, 
+            fullMarks: fullMarks, 
+            results: resultsData 
+        }).then(() => {
             toast({ title: 'ফলাফল সেভ হয়েছে' });
         }).catch(() => {});
-    };
-
-    const handleUpdateFullMarksFromList = async (result: ClassResult, newVal: string) => {
-        const val = parseInt(newVal, 10);
-        if (isNaN(val) || !db || !user) return;
-        if (!isSubjectPermitted(result.className, result.subject)) {
-            toast({ variant: 'destructive', title: 'আপনার এই বিষয়ের পূর্ণমান পরিবর্তন করার অনুমতি নেই।' });
-            return;
-        }
-        try {
-            await saveClassResults(db, { ...result, fullMarks: val });
-            toast({ title: 'পূর্ণমান সফলভাবে আপডেট করা হয়েছে' });
-            updateSavedResults();
-        } catch (e) {}
-    }
-
-    const handleDeleteResult = (result: ClassResult) => {
-        if (!db || !result.id || !user) return;
-        if (!isSubjectPermitted(result.className, result.subject)) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
-        deleteClassResult(db, result.id).then(() => { updateSavedResults(); toast({ title: 'ফলাফল মোছা হয়েছে' }); }).catch(() => {});
-    }
-
-    const handleEditClick = (resultToEdit: ClassResult) => {
-        setExamName(resultToEdit.examName); setClassName(resultToEdit.className); setGroup(resultToEdit.group || ''); setFullMarks(resultToEdit.fullMarks);
-        setTimeout(() => { setSubject(resultToEdit.subject); setStudentsForClass([]); setMarks(new Map()); window.scrollTo({ top: 0, behavior: 'smooth' }); }, 0);
     };
 
     const handleDownloadSample = () => {
@@ -225,7 +154,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!db || !user || !className || !subject || !examName) { toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ" }); return; }
-        if (!canEditCurrent) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
+        if (!isSubjectPermitted(className, subject)) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
         const file = event.target.files?.[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -291,10 +220,13 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             {studentsForClass.length > 0 && (
                 <Card className="overflow-hidden border-2">
                     <CardHeader className="bg-muted/30 p-3 flex flex-row justify-between items-center space-y-0 border-b">
-                         <div className="flex items-center gap-2">{!canEditCurrent && <Badge variant="destructive">পারমিশন নেই</Badge>} <span className="font-bold text-sm">{subject} ({studentsForClass.length.toLocaleString('bn-BD')} জন)</span></div>
+                         <div className="flex items-center gap-4">
+                            <span className="font-bold text-sm text-primary">{subject} ({studentsForClass.length.toLocaleString('bn-BD')} জন)</span>
+                            <Badge variant="outline" className="bg-white font-black text-xs px-3">পূর্ণমান: {fullMarks.toLocaleString('bn-BD')}</Badge>
+                         </div>
                          <div className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা</Button>
-                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!canEditCurrent} className="h-8 bg-white"><FileUp className="mr-2 h-4 w-4" /> আপলোড</Button>
+                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 bg-white"><FileUp className="mr-2 h-4 w-4" /> আপলোড</Button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
                         </div>
                     </CardHeader>
@@ -309,90 +241,223 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableRow key={student.id} className="hover:bg-accent/5">
                                             <TableCell className="font-black text-center">{student.roll.toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.written || ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} className="h-9 font-bold" disabled={!canEditCurrent} /></TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq || ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} className="h-9 font-bold" disabled={!canEditCurrent} /></TableCell>
-                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical || ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} className="h-9 font-bold" disabled={!canEditCurrent} /></TableCell>}
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.written || ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} className="h-9 font-bold" /></TableCell>
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq || ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} className="h-9 font-bold" /></TableCell>
+                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical || ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} className="h-9 font-bold" /></TableCell>}
                                         </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="flex justify-end p-4 border-t bg-muted/10"><Button onClick={handleSaveResults} disabled={!canEditCurrent} size="lg" className="px-10 font-black shadow-md">ফলাফল সেভ করুন</Button></div>
+                        <div className="flex justify-end p-4 border-t bg-muted/10"><Button onClick={handleSaveResults} size="lg" className="px-10 font-black shadow-md">প্রাপ্ত নম্বর সেভ করুন</Button></div>
                     </CardContent>
                 </Card>
             )}
+        </div>
+    );
+};
 
-            {savedResults.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2"><CheckCircle2 className="h-6 w-6" /> সংরক্ষিত নম্বরের তালিকা (শ্রেণি অনুযায়ী)</h3>
-                    <Accordion type="multiple" className="w-full space-y-2">
-                        {sortedClassKeys.map(ck => (
-                            <AccordionItem value={ck} key={ck} className="border-2 rounded-lg bg-white overflow-hidden">
-                                <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/10">
-                                    <span className="font-black text-lg text-slate-800">{classNamesMap[ck] || ck} শ্রেণি</span>
-                                    <Badge variant="secondary" className="ml-2">মোট {groupedResults[ck].length.toLocaleString('bn-BD')} বিষয়</Badge>
-                                </AccordionTrigger>
-                                <AccordionContent className="p-0 border-t">
-                                    <Table>
-                                        <TableHeader className="bg-muted/30">
-                                            <TableRow>
-                                                <TableHead className="pl-4">বিষয়ের নাম</TableHead>
-                                                <TableHead>পরীক্ষা</TableHead>
-                                                <TableHead>শাখা</TableHead>
-                                                <TableHead className="w-40 text-center">পূর্ণমান</TableHead>
-                                                <TableHead className="text-right pr-4">কার্যক্রম</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {groupedResults[ck].map((res, i) => {
-                                                const resId = res.id || `${res.className}-${res.subject}-${res.group}-${res.examName}`;
-                                                return (
-                                                <TableRow key={i} className={cn("h-14", !isSubjectPermitted(res.className, res.subject) && "opacity-50 grayscale")}>
-                                                    <TableCell className="font-black pl-4 text-primary">{res.subject}</TableCell>
-                                                    <TableCell className="text-xs font-bold">{res.examName}</TableCell>
-                                                    <TableCell>{groupMap[res.group || ''] || 'সাধারণ'}</TableCell>
-                                                    <TableCell className="text-center p-1">
-                                                        <div className="flex items-center gap-2 justify-center">
-                                                            <Input 
-                                                                type="number" 
-                                                                value={listFullMarksInputs[resId] !== undefined ? listFullMarksInputs[resId] : res.fullMarks}
-                                                                onChange={(e) => setListFullMarksInputs(prev => ({ ...prev, [resId]: e.target.value }))}
-                                                                className="h-9 w-20 text-center font-bold bg-white" 
-                                                                disabled={!isSubjectPermitted(ck, res.subject)} 
-                                                            />
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="icon" 
-                                                                className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 border-emerald-200"
-                                                                disabled={!isSubjectPermitted(ck, res.subject) || listFullMarksInputs[resId] === undefined}
-                                                                onClick={() => handleUpdateFullMarksFromList(res, listFullMarksInputs[resId])}
-                                                            >
-                                                                <Save className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right pr-4">
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50 border-blue-100" onClick={() => handleEditClick(res)} disabled={!isSubjectPermitted(ck, res.subject)}><FilePen className="h-4 w-4" /></Button>
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 text-rose-600 hover:bg-rose-50 border-rose-100" disabled={!isSubjectPermitted(ck, res.subject)}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader><AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle><AlertDialogDescription>এই বিষয়ের সকল ফলাফল স্থায়ীভাবে মুছে যাবে।</AlertDialogDescription></AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => handleDeleteResult(res)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )})}
-                                        </TableBody>
-                                    </Table>
-                                </AccordionContent>
-                            </AccordionItem>
-                        ))}
+// Enhanced Tab for Subject Config and Full Marks Management
+const FullMarksTab = () => {
+    const { toast } = useToast();
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user, hasPermission } = useAuth();
+    
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
+    const [savedResults, setSavedResults] = useState<ClassResult[]>([]);
+    const [fullMarksInputs, setFullMarksInputs] = useState<Record<string, string>>({});
+    const [isSaving, setIsSaving] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
+    const updateSavedResults = useCallback(async () => {
+        if (!db || !user) return;
+        const allResults = await getAllResults(db, selectedYear, examName || undefined);
+        setSavedResults(allResults);
+    }, [db, selectedYear, user, examName]);
+    
+    useEffect(() => {
+        updateSavedResults();
+    }, [updateSavedResults]);
+
+    const isSubjectPermitted = useCallback((cls: string, sub: string) => {
+        if (user?.role === 'admin') return true;
+        if (hasPermission('manage:results')) return true;
+        return (user as any)?.marksPermissions?.[cls]?.includes(sub) ?? false;
+    }, [user, hasPermission]);
+
+    const handleUpdateFullMarks = async (cls: string, sub: string, exam: string, currentRecord: ClassResult | null, newVal: string) => {
+        const val = parseInt(newVal, 10);
+        if (isNaN(val) || !db || !user) return;
+        if (!isSubjectPermitted(cls, sub)) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই' });
+            return;
+        }
+        
+        const inputKey = `${cls}-${sub}-${exam}`;
+        setIsSaving(inputKey);
+
+        try {
+            if (currentRecord) {
+                await saveClassResults(db, { ...currentRecord, fullMarks: val });
+            } else {
+                // Create a placeholder record with empty results but saved fullMarks
+                await saveClassResults(db, {
+                    academicYear: selectedYear,
+                    examName: exam,
+                    className: cls,
+                    subject: sub,
+                    fullMarks: val,
+                    results: []
+                });
+            }
+            toast({ title: 'পূর্ণমান সংরক্ষিত হয়েছে' });
+            updateSavedResults();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSaving(null);
+        }
+    };
+
+    const handleDeleteResult = (id: string) => {
+        if (!db || !id || !user) return;
+        deleteClassResult(db, id).then(() => { updateSavedResults(); toast({ title: 'ফলাফল মোছা হয়েছে' }); }).catch(() => {});
+    }
+
+    const classes = ['6', '7', '8', '9', '10'];
+
+    return (
+        <div className="space-y-6">
+            <div className="max-w-md p-4 border rounded-lg bg-white/50 shadow-sm">
+                <div className="space-y-2">
+                    <Label className="font-bold">১. পরীক্ষা নির্বাচন করুন</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {examName && (
+                <div className="space-y-4 animate-in fade-in duration-500">
+                    <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2">
+                        <CheckCircle2 className="h-6 w-6" /> বিষয় ভিত্তিক পূর্ণমান তালিকা ({examName})
+                    </h3>
+                    
+                    <Accordion type="multiple" defaultValue={['6']} className="w-full space-y-3">
+                        {classes.map(cls => {
+                            const subjects = getSubjects(cls).filter(s => s.isExamSubject !== false);
+                            // Ensure unique subjects if duplicates exist in list
+                            const uniqueSubjects = Array.from(new Set(subjects.map(s => s.name)))
+                                .map(name => subjects.find(s => s.name === name)!);
+
+                            return (
+                                <AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
+                                    <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/10">
+                                        <span className="font-black text-lg text-slate-800">{classNamesMap[cls]} শ্রেণি</span>
+                                        <Badge variant="secondary" className="ml-2 font-bold">{uniqueSubjects.length.toLocaleString('bn-BD')} টি বিষয়</Badge>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="p-0 border-t">
+                                        <div className="overflow-x-auto">
+                                            <Table>
+                                                <TableHeader className="bg-muted/30">
+                                                    <TableRow>
+                                                        <TableHead className="pl-6 font-bold">বিষয়ের নাম</TableHead>
+                                                        <TableHead className="text-center font-bold">অবস্থা</TableHead>
+                                                        <TableHead className="w-48 text-center font-bold">পূর্ণমান (Full Marks)</TableHead>
+                                                        <TableHead className="text-right pr-6 font-bold">কার্যক্রম</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {uniqueSubjects.map((subInfo, i) => {
+                                                        const existingRecord = savedResults.find(r => 
+                                                            r.className === cls && 
+                                                            r.subject === subInfo.name && 
+                                                            r.examName === examName
+                                                        );
+                                                        
+                                                        const inputKey = `${cls}-${subInfo.name}-${examName}`;
+                                                        const inputValue = fullMarksInputs[inputKey] !== undefined 
+                                                            ? fullMarksInputs[inputKey] 
+                                                            : (existingRecord?.fullMarks?.toString() || subInfo.fullMarks.toString());
+                                                        
+                                                        const isPermitted = isSubjectPermitted(cls, subInfo.name);
+                                                        const hasData = existingRecord && existingRecord.results.length > 0;
+
+                                                        return (
+                                                            <TableRow key={i} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                                <TableCell className="font-black pl-6 text-primary text-base">
+                                                                    {subInfo.name}
+                                                                </TableCell>
+                                                                <TableCell className="text-center">
+                                                                    {hasData ? (
+                                                                        <Badge className="bg-emerald-600 text-[10px] font-black">নম্বর এন্ট্রি হয়েছে</Badge>
+                                                                    ) : (
+                                                                        <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">বকেয়া</Badge>
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell className="text-center">
+                                                                    <div className="flex items-center gap-2 justify-center">
+                                                                        <Input 
+                                                                            type="number" 
+                                                                            value={inputValue}
+                                                                            onChange={(e) => setFullMarksInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
+                                                                            className="h-10 w-24 text-center font-black bg-white border-2 text-lg" 
+                                                                            disabled={!isPermitted} 
+                                                                        />
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="icon" 
+                                                                            className={cn(
+                                                                                "h-10 w-10 shrink-0 shadow-sm border-2",
+                                                                                isSaving === inputKey ? "text-slate-400" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                                                            )}
+                                                                            disabled={!isPermitted || isSaving === inputKey}
+                                                                            onClick={() => handleUpdateFullMarks(cls, subInfo.name, examName, existingRecord || null, inputValue)}
+                                                                        >
+                                                                            {isSaving === inputKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-5 w-5" />}
+                                                                        </Button>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="text-right pr-6">
+                                                                    {existingRecord && (
+                                                                        <AlertDialog>
+                                                                            <AlertDialogTrigger asChild>
+                                                                                <Button variant="outline" size="icon" className="h-9 w-9 text-rose-600 border-rose-100 hover:bg-rose-50" disabled={!isPermitted}>
+                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </AlertDialogTrigger>
+                                                                            <AlertDialogContent>
+                                                                                <AlertDialogHeader>
+                                                                                    <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                                    <AlertDialogDescription>
+                                                                                        এই বিষয়ের জন্য এন্ট্রি করা সকল ফলাফল মুছে যাবে। (পূর্ণমান সংরক্ষিত থাকবে না)
+                                                                                    </AlertDialogDescription>
+                                                                                </AlertDialogHeader>
+                                                                                <AlertDialogFooter>
+                                                                                    <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                                                    <AlertDialogAction onClick={() => handleDeleteResult(existingRecord.id!)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
+                                                                                </AlertDialogFooter>
+                                                                            </AlertDialogContent>
+                                                                        </AlertDialog>
+                                                                    )}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            );
+                        })}
                     </Accordion>
                 </div>
             )}
@@ -885,8 +950,9 @@ export default function ResultsPage() {
                     <CardContent className="pt-6 bg-slate-50/30">
                         {isClient ? (
                             <Tabs defaultValue={canViewRes ? "management" : "merit"}>
-                                <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto bg-muted/50 p-1.5 gap-2 border rounded-lg mb-6">
+                                <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto bg-muted/50 p-1.5 gap-2 border rounded-lg mb-6">
                                     {canViewRes && <TabsTrigger value="management" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">নম্বর ইনপুট</TabsTrigger>}
+                                    {canViewRes && <TabsTrigger value="full-marks" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিষয় ও পূর্ণমান</TabsTrigger>}
                                     {canViewRes && <TabsTrigger value="sheet" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">ফলাফল শিট</TabsTrigger>}
                                     {hasPermission('view:merit-list') && <TabsTrigger value="merit" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">মেধা তালিকা</TabsTrigger>}
                                     {hasPermission('promote:students') && <TabsTrigger value="special-promotion" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিশেষ পাশ</TabsTrigger>}
@@ -894,6 +960,9 @@ export default function ResultsPage() {
                                 </TabsList>
                                 <TabsContent value="management" className="mt-4 animate-in fade-in duration-500">
                                     <MarkManagementTab allStudents={allStudents} />
+                                </TabsContent>
+                                <TabsContent value="full-marks" className="mt-4 animate-in fade-in duration-500">
+                                    <FullMarksTab />
                                 </TabsContent>
                                 <TabsContent value="sheet" className="mt-4 animate-in fade-in duration-500">
                                     <ResultSheetTab allStudents={allStudents} />
@@ -910,13 +979,8 @@ export default function ResultsPage() {
                             </Tabs>
                         ) : (
                             <div className="space-y-4">
-                                <div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-                                    <div className="inline-flex items-center justify-center rounded-sm bg-background shadow-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                    <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                    <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                    <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                </div>
-                                <div className="p-4 border rounded-lg"><Skeleton className="h-24 w-full" /></div>
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-64 w-full" />
                             </div>
                         )}
                     </CardContent>
@@ -925,4 +989,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-

@@ -1,3 +1,4 @@
+
 'use client';
 import type { Student } from './student-data';
 import { getSubjects, subjectNameNormalization } from './subjects';
@@ -83,14 +84,9 @@ export function processStudentResults(
 
         const subjectsForStudent = allSubjectsForGroup.filter(subjectInfo => {
             if (studentClassNum < 9) return true;
-
-            // Important: If we are in "All Groups" view, the allSubjectsForGroup list is the Union.
-            // We must only process subjects that this specific student actually takes.
             if (!groupAllowedSubjects.some(name => normalize(name) === normalize(subjectInfo.name))) return false;
-
             if (optionalSubjectName === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
             if (optionalSubjectName === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
-            
             return true;
         });
 
@@ -101,17 +97,12 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const normalizedSubjectName = normalize(subjectInfo.name);
             
-            // ROBUST MATCHING: Find the specific result document for this subject.
             const matchingRecords = resultsBySubject.filter(r => 
                 normalize(r.subject) === normalizedSubjectName && 
                 r.className === student.className
             );
 
-            // Priority 1: Match by direct Student ID inclusion in the record's results array
-            // This is the most reliable way as it connects the specific student with their marks regardless of group label.
             let classResult = matchingRecords.find(r => r.results.some(res => res.studentId === student.id));
-            
-            // Priority 2: Fallback to matching by group name if not found by ID (lenient match)
             if (!classResult) {
                 classResult = matchingRecords.find(r => {
                     const recordGroup = (r.group || '').toLowerCase().trim();
@@ -120,6 +111,10 @@ export function processStudentResults(
                 });
             }
             
+            // Skip this subject for calculation if NO marks exist for ANY student (it's a placeholder/config record)
+            const hasAnyMarks = classResult?.results.some(r => r.written !== undefined || r.mcq !== undefined || r.practical !== undefined);
+            if (!hasAnyMarks) return;
+
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
 
@@ -129,8 +124,6 @@ export function processStudentResults(
             const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
             
             const passMark = Math.ceil(fullMarks * 0.33);
-
-            // A subject is passed if marks are >= 33% and at least one mark type was entered
             const isMarkEntered = written !== undefined || mcq !== undefined || practical !== undefined;
             const isPassSubject = isMarkEntered && obtainedMarks >= passMark;
             
@@ -181,7 +174,6 @@ export function processStudentResults(
         }
         
         if (gpa > 5.0) gpa = 5.0;
-
         const finalGrade = isPass ? getFinalGrade(gpa) : 'F';
         
         return {
