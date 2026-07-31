@@ -324,7 +324,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
             {savedResults.length > 0 && (
                 <div className="space-y-4">
-                    <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2"><CheckCircle2 className="h-6 w-6" /> সংরক্ষিত নম্বরের তালিকা</h3>
+                    <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2"><CheckCircle2 className="h-6 w-6" /> সংরক্ষিত নম্বরের তালিকা (শ্রেণি অনুযায়ী)</h3>
                     <Accordion type="multiple" className="w-full space-y-2">
                         {sortedClassKeys.map(ck => (
                             <AccordionItem value={ck} key={ck} className="border-2 rounded-lg bg-white overflow-hidden">
@@ -337,6 +337,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableHeader className="bg-muted/30">
                                             <TableRow>
                                                 <TableHead className="pl-4">বিষয়ের নাম</TableHead>
+                                                <TableHead>পরীক্ষা</TableHead>
                                                 <TableHead>শাখা</TableHead>
                                                 <TableHead className="w-40 text-center">পূর্ণমান</TableHead>
                                                 <TableHead className="text-right pr-4">কার্যক্রম</TableHead>
@@ -344,10 +345,11 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         </TableHeader>
                                         <TableBody>
                                             {groupedResults[ck].map((res, i) => {
-                                                const resId = res.id || `${res.className}-${res.subject}-${res.group}`;
+                                                const resId = res.id || `${res.className}-${res.subject}-${res.group}-${res.examName}`;
                                                 return (
                                                 <TableRow key={i} className={cn("h-14", !isSubjectPermitted(res.className, res.subject) && "opacity-50 grayscale")}>
                                                     <TableCell className="font-black pl-4 text-primary">{res.subject}</TableCell>
+                                                    <TableCell className="text-xs font-bold">{res.examName}</TableCell>
                                                     <TableCell>{groupMap[res.group || ''] || 'সাধারণ'}</TableCell>
                                                     <TableCell className="text-center p-1">
                                                         <div className="flex items-center gap-2 justify-center">
@@ -923,3 +925,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
