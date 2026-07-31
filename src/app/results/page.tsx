@@ -337,7 +337,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                                 <AlertDialogTrigger asChild><Button variant="outline" size="icon" className="h-8 w-8 text-rose-600 hover:bg-rose-50 border-rose-100" disabled={!isSubjectPermitted(ck, res.subject)}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                                                 <AlertDialogContent>
                                                                     <AlertDialogHeader><AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle><AlertDialogDescription>এই বিষয়ের সকল ফলাফল স্থায়ীভাবে মুছে যাবে।</AlertDialogDescription></AlertDialogHeader>
-                                                                    <AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteResult(res)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction></AlertDialogFooter>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDeleteResult(res)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
+                                                                    </AlertDialogFooter>
                                                                 </AlertDialogContent>
                                                             </AlertDialog>
                                                         </div>
@@ -471,10 +474,11 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-primary/20 sticky left-0 top-0 z-50 w-12 text-[10px] p-0 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">রোল</TableHead>
                                         <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-primary/20 sticky left-12 top-0 z-50 min-w-[140px] text-[10px] p-0 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">শিক্ষার্থীর নাম</TableHead>
                                         {subs.map(s => <TableHead key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="text-center border-x border-b border-primary/10 font-black py-0 text-[10px] bg-slate-50 sticky top-0 z-30">{s.name}</TableHead>)}
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[120px] z-30">মোট</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[80px] z-30">GPA</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[40px] z-30">গ্রেড</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-0 z-30">মেধা</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[160px] z-30">মোট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[120px] z-30">GPA</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[80px] z-30">গ্রেড</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[40px] z-30">মেধা</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-0 z-30">মার্কশিট</TableHead>
                                     </TableRow>
                                     <TableRow className="h-7">
                                         {subs.map(s => {
@@ -521,10 +525,15 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <TableCell className="text-center font-black text-primary border-r border-primary/10 text-[10px] p-0 sticky right-[120px] bg-white z-10">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-[80px] bg-white z-10">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-[40px] bg-white z-10", !res.isPass && "text-rose-600 bg-rose-50/50")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-0 bg-white z-10", !res.isPass && "text-rose-400 italic")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
+                                            <TableCell className="text-center font-black text-primary border-r border-primary/10 text-[10px] p-0 sticky right-[160px] bg-white z-10">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-[120px] bg-white z-10">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-[80px] bg-white z-10", !res.isPass && "text-rose-600 bg-rose-50/50")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-[40px] bg-white z-10", !res.isPass && "text-rose-400 italic")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
+                                            <TableCell className="text-center border-r border-primary/10 text-[10px] p-0 sticky right-0 bg-white z-10">
+                                                <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6"><Printer className="h-3.5 w-3.5 text-primary" /></Button>
+                                                </Link>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
