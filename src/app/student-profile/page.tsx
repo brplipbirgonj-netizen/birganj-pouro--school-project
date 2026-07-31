@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
@@ -26,8 +25,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, startOfYear, endOfYear, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -85,19 +85,19 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                             key={monthIdx} 
                             className="flex flex-col border-[4px] border-black rounded-xl p-4 bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]"
                         >
-                            <div className="text-center font-black text-base mb-3 text-primary border-b-[4px] border-black pb-1 bg-primary/5 -mx-4 -mt-4 rounded-t-lg pt-1">
+                            <div className="text-center font-black text-lg mb-3 text-primary border-b-[4px] border-black pb-1 bg-primary/5 -mx-4 -mt-4 rounded-t-lg pt-1">
                                 {BENGALI_MONTHS[monthIdx]}
                             </div>
                             <div className="flex gap-2">
-                                <div className="flex flex-col justify-between text-[10px] font-black text-muted-foreground py-1 h-[190px] shrink-0 border-r-2 border-dashed border-slate-200 pr-1.5">
+                                <div className="flex flex-col justify-between text-[12px] font-black text-muted-foreground py-1 h-[220px] shrink-0 border-r-2 border-dashed border-slate-200 pr-1.5">
                                     <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span><span>শনি</span>
                                 </div>
                                 
-                                <div className="flex gap-1.5">
+                                <div className="flex gap-2">
                                     {weeks.map((week, wIdx) => (
-                                        <div key={wIdx} className="flex flex-col gap-1.5">
+                                        <div key={wIdx} className="flex flex-col gap-2">
                                             {week.map((day, dIdx) => {
-                                                if (!day) return <div key={dIdx} className="w-6 h-6 bg-slate-50/30 rounded-md border border-dashed border-slate-100" />;
+                                                if (!day) return <div key={dIdx} className="w-7 h-7 bg-slate-50/30 rounded-md border border-dashed border-slate-100" />;
                                                 
                                                 const dateStr = format(day, 'yyyy-MM-dd');
                                                 const record = records.find(r => r.date === dateStr);
@@ -128,7 +128,7 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className={cn(
-                                                                    "w-6 h-6 rounded-md transition-all cursor-pointer border border-black/5", 
+                                                                    "w-7 h-7 rounded-md transition-all cursor-pointer border border-black/5", 
                                                                     colorClass
                                                                 )} />
                                                             </TooltipTrigger>
@@ -149,18 +149,18 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                 })}
             </div>
             
-            <div className="mt-4 flex flex-wrap items-center gap-4 text-[10px] font-black text-slate-700 bg-white p-3 rounded-lg border-2 border-black">
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-black text-slate-700 bg-white p-3 rounded-lg border-2 border-black">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 bg-green-600 rounded-md shadow-sm" /> <span>উপস্থিত</span>
+                    <div className="w-5 h-5 bg-green-600 rounded-md shadow-sm" /> <span>উপস্থিত</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 bg-red-600 rounded-md shadow-sm" /> <span>অনুপস্থিত</span>
+                    <div className="w-5 h-5 bg-red-600 rounded-md shadow-sm" /> <span>অনুপস্থিত</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 bg-yellow-400 rounded-md shadow-sm" /> <span>ছুটি</span>
+                    <div className="w-5 h-5 bg-yellow-400 rounded-md shadow-sm" /> <span>ছুটি</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 bg-slate-100 rounded-md border" /> <span>রেকর্ড নেই</span>
+                    <div className="w-5 h-5 bg-slate-100 rounded-md border" /> <span>রেকর্ড নেই</span>
                 </div>
             </div>
         </div>
@@ -337,16 +337,14 @@ function StudentProfileSearchContent() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="class" className="font-bold">শ্রেণি</Label>
-                                        {isMounted && (
-                                            <Select value={className} onValueChange={setClassName} required>
-                                                <SelectTrigger id="class" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
-                                                <SelectContent position="item-aligned">
-                                                    {Object.entries(classNamesMap).map(([id, label]) => (
-                                                        <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        )}
+                                        <Select value={className} onValueChange={setClassName} required>
+                                            <SelectTrigger id="class" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                                            <SelectContent position="item-aligned">
+                                                {Object.entries(classNamesMap).map(([id, label]) => (
+                                                    <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
 
