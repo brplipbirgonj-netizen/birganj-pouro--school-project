@@ -507,7 +507,20 @@ function BackupAndExportSettings() {
             } else {
                 const wb = XLSX.utils.book_new();
                 for (const sheetName in fullData) {
-                    const ws = XLSX.utils.json_to_sheet(fullData[sheetName]);
+                    // FIX: Excel cell text limit is 32,767 characters. 
+                    // Base64 images or very long fields will crash the exporter.
+                    const sanitizedData = fullData[sheetName].map((row: any) => {
+                        const newRow = { ...row };
+                        for (const key in newRow) {
+                            if (typeof newRow[key] === 'string' && newRow[key].length > 32000) {
+                                // For Excel, we truncate/exclude image data to stay within limits.
+                                // Users should use JSON export for a full recovery backup.
+                                newRow[key] = "[Large Data - Excluded from Excel]";
+                            }
+                        }
+                        return newRow;
+                    });
+                    const ws = XLSX.utils.json_to_sheet(sanitizedData);
                     XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31)); // sheet names limited to 31 chars
                 }
                 XLSX.writeFile(wb, `${fileName}.xlsx`);
