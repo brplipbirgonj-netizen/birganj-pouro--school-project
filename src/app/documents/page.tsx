@@ -4,98 +4,111 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, FilePlus } from 'lucide-react';
+import { ArrowRight, FilePlus, IdCard, FileText, GraduationCap } from 'lucide-react';
 
 export default function DocumentsPage() {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-100">
+    <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
-        <Card>
-            <CardHeader>
-                <CardTitle>ডকুমেন্ট</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>প্রত্যয়ন পত্র</CardTitle>
-                            <CardDescription>শিক্ষার্থীদের জন্য প্রশংসাপত্র বা প্রত্যয়ন পত্র জেনারেট করুন।</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <p className="text-sm text-muted-foreground">
-                                প্রত্যয়ন পত্র তৈরি করতে, শিক্ষার্থী তালিকা থেকে নির্দিষ্ট শিক্ষার্থীকে বেছে নিন এবং তার প্রোফাইল থেকে "প্রত্যয়ন পত্র" অপশনটি নির্বাচন করুন।
-                           </p>
-                        </CardContent>
-                         <CardFooter>
-                            <Link href="/student-list" className="w-full">
-                                <Button className="w-full">
-                                    শিক্ষার্থী তালিকা দেখুন
-                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </Link>
-                        </CardFooter>
-                    </Card>
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>খালি প্যাড</CardTitle>
-                            <CardDescription>প্রতিষ্ঠানের প্যাডে কাস্টম ডকুমেন্ট তৈরি ও প্রিন্ট করুন।</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <p className="text-sm text-muted-foreground">
-                               যেকোনো ধরনের কাস্টম চিঠি বা ডকুমেন্ট তৈরি করতে প্রতিষ্ঠানের প্যাড ব্যবহার করুন।
-                           </p>
-                        </CardContent>
-                         <CardFooter>
-                            <Link href="/documents/custom-pad" className="w-full">
-                                <Button className="w-full">
-                                    প্যাড খুলুন
-                                    <FilePlus className="ml-2 h-4 w-4" />
-                                </Button>
-                            </Link>
-                        </CardFooter>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>প্রবেশ পত্র</CardTitle>
-                            <CardDescription>পরীক্ষার জন্য শিক্ষার্থীদের প্রবেশ পত্র জেনারেট করুন।</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <p className="text-sm text-muted-foreground">
-                                পরীক্ষা এবং শ্রেণি নির্বাচন করে সকল শিক্ষার্থীর জন্য একসাথে প্রবেশপত্র তৈরি ও প্রিন্ট করুন।
-                           </p>
-                        </CardContent>
-                         <CardFooter>
-                            <Link href="/documents/admit-card" className="w-full">
-                                <Button className="w-full">
-                                    প্রবেশ পত্র তৈরি করুন
-                                    <FilePlus className="ml-2 h-4 w-4" />
-                                </Button>
-                            </Link>
-                        </CardFooter>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>ছাড়পত্র (TC)</CardTitle>
-                            <CardDescription>শিক্ষার্থীদের জন্য স্থানান্তর বা ছাড়পত্র (Transfer Certificate) জেনারেট করুন।</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <p className="text-sm text-muted-foreground">
-                                শিক্ষার্থী নির্বাচন করে প্রয়োজনীয় তথ্য সহ প্রাতিষ্ঠানিক ছাড়পত্র (TC) তৈরি ও প্রিন্ট করুন।
-                           </p>
-                        </CardContent>
-                         <CardFooter>
-                            <Link href="/documents/tc" className="w-full">
-                                <Button className="w-full" variant="default">
-                                    ছাড়পত্র তৈরি করুন
-                                    <FilePlus className="ml-2 h-4 w-4" />
-                                </Button>
-                            </Link>
-                        </CardFooter>
-                    </Card>
-                </div>
-            </CardContent>
-        </Card>
+        <div className="mb-4">
+            <h1 className="text-3xl font-black text-primary">অফিসিয়াল ডকুমেন্ট জেনারেটর</h1>
+            <p className="text-muted-foreground">শিক্ষার্থীদের জন্য প্রয়োজনীয় কাগজপত্র তৈরি ও প্রিন্ট করুন</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Admit Card Card */}
+            <Card className="border-2 border-primary/10 hover:border-primary/30 transition-all shadow-md">
+                <CardHeader className="bg-primary/5">
+                    <CardTitle className="flex items-center gap-2">
+                        <IdCard className="h-6 w-6 text-primary" /> প্রবেশ পত্র
+                    </CardTitle>
+                    <CardDescription>পরীক্ষার জন্য ডিজিটাল প্রবেশ পত্র</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                        একক বা শ্রেণি অনুযায়ী সকল শিক্ষার্থীর জন্য লাইভ প্রিভিউ দেখে প্রবেশপত্র তৈরি ও প্রিন্ট করুন।
+                   </p>
+                </CardContent>
+                 <CardFooter>
+                    <Link href="/documents/admit-card" className="w-full">
+                        <Button className="w-full font-bold">
+                            জেনারেট করুন
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            </Card>
+
+            {/* Testimonial Card */}
+            <Card className="border-2 border-emerald-100 hover:border-emerald-300 transition-all shadow-md">
+                <CardHeader className="bg-emerald-50">
+                    <CardTitle className="flex items-center gap-2 text-emerald-800">
+                        <GraduationCap className="h-6 w-6" /> প্রশংসাপত্র (Testimonial)
+                    </CardTitle>
+                    <CardDescription>অধ্যয়নরত বা উত্তীর্ণ শিক্ষার্থীদের জন্য</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                        শিক্ষার্থীর জন্য প্রফেশনাল প্রশংসাপত্র বা প্রত্যয়ন পত্র তৈরি করুন। লাইভ এডিট সুবিধা সহ।
+                   </p>
+                </CardContent>
+                 <CardFooter>
+                    <Link href="/documents/testimonial" className="w-full">
+                        <Button className="w-full bg-emerald-700 hover:bg-emerald-800 font-bold">
+                            জেনারেট করুন
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            </Card>
+
+            {/* TC Card */}
+            <Card className="border-2 border-amber-100 hover:border-amber-300 transition-all shadow-md">
+                <CardHeader className="bg-amber-50">
+                    <CardTitle className="flex items-center gap-2 text-amber-800">
+                        <FileText className="h-6 w-6" /> ছাড়পত্র (TC)
+                    </CardTitle>
+                    <CardDescription>স্থানান্তর বা ছাড়পত্র সনদ</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                        বিদ্যালয় ত্যাগের কারণ ও ফলাফল উল্লেখ করে প্রফেশনাল ছাড়পত্র (Transfer Certificate) তৈরি করুন।
+                   </p>
+                </CardContent>
+                 <CardFooter>
+                    <Link href="/documents/tc" className="w-full">
+                        <Button className="w-full bg-amber-700 hover:bg-amber-800 font-bold">
+                            জেনারেট করুন
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            </Card>
+            
+            {/* Custom Pad Card */}
+            <Card className="border-2 border-slate-200 hover:border-slate-400 transition-all shadow-md">
+                <CardHeader className="bg-slate-50">
+                    <CardTitle className="flex items-center gap-2 text-slate-800">
+                        <FilePlus className="h-6 w-6" /> খালি প্যাড
+                    </CardTitle>
+                    <CardDescription>প্রতিষ্ঠানের লেটারহেড প্যাড</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                       যেকোনো কাস্টম ডকুমেন্ট বা চিঠি সরাসরি প্যাডে লিখে প্রিন্ট করার সুবিধা।
+                   </p>
+                </CardContent>
+                 <CardFooter>
+                    <Link href="/documents/custom-pad" className="w-full">
+                        <Button variant="outline" className="w-full font-bold">
+                            প্যাড খুলুন
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            </Card>
+        </div>
       </main>
     </div>
   );

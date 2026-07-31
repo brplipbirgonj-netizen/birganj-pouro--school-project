@@ -1,40 +1,54 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { FileText, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import { useSchoolInfo } from '@/context/SchoolInfoContext';
+import { Printer, Loader2, ArrowLeft, FileText, Info } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { format } from 'date-fns';
+import { bn } from 'date-fns/locale';
+import { Staff } from '@/lib/staff-data';
 
 const classNamesMap: { [key: string]: string } = {
-  '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+  '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
 };
 
-export default function TCSelectionPage() {
+const toBengaliNumber = (str: string | number) => {
+  if (!str && str !== 0) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
+
+export default function TCGeneratorPage() {
   const db = useFirestore();
-  const router = useRouter();
   const { selectedYear } = useAcademicYear();
+  const { schoolInfo } = useSchoolInfo();
 
   const [className, setClassName] = useState<string>('6');
   const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [headmaster, setHeadmaster] = useState<Staff | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-  // Form parameters
-  const [smarakNo, setSmarakNo] = useState<string>(`বিপৌউবি/ছাড়পত্র/${new Date().getFullYear()}/`);
-  const [reason, setReason] = useState<string>('অভিভাবকের স্থানান্তর / পারিবারিক কারণ');
-  const [conduct, setConduct] = useState<string>('উত্তম ও সন্তোষজনক');
-  const [status, setStatus] = useState<string>('উত্তীর্ণ হয়ে পরবর্তী শ্রেণিতে ভর্তির যোগ্য');
-  const [dues, setDues] = useState<string>('বিদ্যালয়ের সকল দেনা-পাওনা পরিশোধিত');
+  // Form Fields for Live Edit
+  const [formData, setFormData] = useState({
+    smarakNo: `বিপৌউবি/ছাড়পত্র/${new Date().getFullYear()}/`,
+    reason: 'অভিভাবকের স্থানান্তর / পারিবারিক কারণ',
+    conduct: 'উত্তম ও সন্তোষজনক',
+    status: 'উত্তীর্ণ হয়ে পরবর্তী শ্রেণিতে ভর্তির যোগ্য',
+    dues: 'বিদ্যালয়ের সকল দেনা-পাওনা পরিশোধিত',
+    issueDate: format(new Date(), "d MMMM, yyyy", { locale: bn })
+  });
 
   useEffect(() => {
     if (!db || !className) return;
@@ -51,133 +65,144 @@ export default function TCSelectionPage() {
         const list = snap.docs.map(studentFromDoc);
         list.sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
         setStudents(list);
-        if (list.length > 0) {
-          setSelectedStudentId(list[0].id);
-        } else {
-          setSelectedStudentId('');
-        }
-      } catch (e) {
-        console.error('Error fetching students:', e);
-      } finally {
-        setIsLoadingStudents(false);
-      }
+        if (list.length > 0) setSelectedStudent(list[0]);
+        else setSelectedStudent(null);
+      } catch (e) { console.error(e); }
+      setIsLoadingStudents(false);
     };
-
     fetchStudents();
   }, [db, className, selectedYear]);
 
-  const handleGenerateTC = () => {
-    if (!selectedStudentId) return;
+  useEffect(() => {
+    if (!db) return;
+    const fetchHeadmaster = async () => {
+      const q = query(collection(db, 'staff'), where('isActive', '==', true), where('designation', 'in', ['প্রধান শিক্ষক', 'প্রধান শিক্ষক (ভারপ্রাপ্ত)']));
+      const snap = await getDocs(q);
+      if (!snap.empty) setHeadmaster({ id: snap.docs[0].id, ...snap.docs[0].data() } as Staff);
+    };
+    fetchHeadmaster();
+  }, [db]);
 
-    const queryParams = new URLSearchParams({
-      smarak: smarakNo,
-      reason,
-      conduct,
-      status,
-      dues
-    });
-
-    router.push(`/documents/tc/${selectedStudentId}?${queryParams.toString()}`);
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const studentDob = selectedStudent?.dob ? toBengaliNumber(format(new Date(selectedStudent.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-32 max-w-4xl mx-auto w-full">
-        <div className="flex items-center gap-4 mb-2">
-          <Link href="/documents">
-            <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-primary">ছাড়পত্র (Transfer Certificate - TC) জেনারেটর</h1>
-            <p className="text-sm text-muted-foreground">শিক্ষার্থী নির্বাচন করে ছাড়পত্র তৈরি করুন</p>
-          </div>
+      <main className="flex-1 p-4 md:p-8 no-print">
+        <div className="max-w-[1400px] mx-auto space-y-6">
+            <div className="flex items-center gap-4">
+                <Link href="/documents">
+                    <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+                </Link>
+                <div>
+                    <h1 className="text-2xl font-black text-primary">ছাড়পত্র (TC) জেনারেটর</h1>
+                    <p className="text-sm text-muted-foreground">লাইভ প্রিভিউ দেখে ডকুমেন্ট তৈরি করুন</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                {/* Form Column */}
+                <Card className="shadow-lg border-2">
+                    <CardHeader className="bg-amber-50 border-b">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-amber-700" /> ছাড়পত্রের বিবরণ
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="font-bold">শ্রেণি</Label>
+                                <Select value={className} onValueChange={setClassName}>
+                                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-bold">শিক্ষার্থী</Label>
+                                <Select value={selectedStudent?.id || ''} onValueChange={(v) => setSelectedStudent(students.find(s => s.id === v) || null)}>
+                                    <SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
+                                    <SelectContent>
+                                        {students.map(s => <SelectItem key={s.id} value={s.id}>রোল {s.roll} - {s.studentNameBn}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 border-t pt-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label className="font-bold">স্মারক নং</Label><Input value={formData.smarakNo} onChange={e => handleFieldChange('smarakNo', e.target.value)} /></div>
+                                <div className="space-y-2"><Label className="font-bold">ইস্যুর তারিখ</Label><Input value={formData.issueDate} onChange={e => handleFieldChange('issueDate', e.target.value)} /></div>
+                            </div>
+                            <div className="space-y-2"><Label className="font-bold">ত্যাগের কারণ</Label><Input value={formData.reason} onChange={e => handleFieldChange('reason', e.target.value)} /></div>
+                            <div className="space-y-2"><Label className="font-bold">আচরণ</Label><Input value={formData.conduct} onChange={e => handleFieldChange('conduct', e.target.value)} /></div>
+                            <div className="space-y-2"><Label className="font-bold">অ্যাকাডেমিক অবস্থা</Label><Input value={formData.status} onChange={e => handleFieldChange('status', e.target.value)} /></div>
+                            <div className="space-y-2"><Label className="font-bold">দেনা-পাওনা</Label><Input value={formData.dues} onChange={e => handleFieldChange('dues', e.target.value)} /></div>
+                        </div>
+
+                        <Button onClick={() => window.print()} size="lg" className="w-full font-black shadow-lg bg-amber-700 hover:bg-amber-800" disabled={!selectedStudent}>
+                            <Printer className="mr-2 h-5 w-5" /> ছাড়পত্র প্রিন্ট করুন
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                {/* Preview Column */}
+                <div className="sticky top-24">
+                    <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
+                        <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4)
+                    </h3>
+                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.65] sm:scale-[0.75] lg:scale-[0.8] xl:scale-100">
+                        {selectedStudent ? (
+                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} studentDob={studentDob} headmaster={headmaster} />
+                        ) : (
+                            <div className="w-[210mm] h-[297mm] bg-white flex items-center justify-center"><p>শিক্ষার্থী নির্বাচন করুন</p></div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" /> শিক্ষার্থীর তথ্য ও ছাড়পত্রের বিবরণ
-            </CardTitle>
-            <CardDescription>নিচের ফরমটি পূরণ করে ছাড়পত্র তৈরি বাটনে ক্লিক করুন</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="classSelect" className="font-bold">১. শ্রেণি নির্বাচন করুন</Label>
-                <Select value={className} onValueChange={setClassName}>
-                  <SelectTrigger id="classSelect">
-                    <SelectValue placeholder="শ্রেণি সিলেক্ট করুন" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(classNamesMap).map(([val, label]) => (
-                      <SelectItem key={val} value={val}>{label} শ্রেণি</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="studentSelect" className="font-bold">২. শিক্ষার্থী নির্বাচন করুন</Label>
-                {isLoadingStudents ? (
-                  <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-muted-foreground bg-muted">
-                    <Loader2 className="h-4 w-4 animate-spin" /> লোড হচ্ছে...
-                  </div>
-                ) : (
-                  <Select value={selectedStudentId} onValueChange={setSelectedStudentId} disabled={students.length === 0}>
-                    <SelectTrigger id="studentSelect">
-                      <SelectValue placeholder={students.length === 0 ? "কোনো শিক্ষার্থী পাওয়া যায়নি" : "শিক্ষার্থী সিলেক্ট করুন"} />
-                    </SelectTrigger>
-                    <SelectContent position="item-aligned" className="max-h-[300px]">
-                      {students.map((st) => (
-                        <SelectItem key={st.id} value={st.id}>
-                          রোল {st.roll} - {st.studentNameBn} ({st.fatherNameBn})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4 border-t pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="smarak" className="font-bold">স্মারক নম্বর</Label>
-                  <Input id="smarak" value={smarakNo} onChange={(e) => setSmarakNo(e.target.value)} placeholder="স্মারক নম্বর লিখুন" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reason" className="font-bold">ছাড়পত্রের কারণ</Label>
-                  <Input id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="যেমন: অভিভাবকের স্থানাস্তর" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="conduct" className="font-bold">আচরণ ও চরিত্র</Label>
-                  <Input id="conduct" value={conduct} onChange={(e) => setConduct(e.target.value)} placeholder="যেমন: উত্তম ও সন্তোষজনক" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="font-bold">পড়াশোনার অগ্রগতি / ফলাফল</Label>
-                  <Input id="status" value={status} onChange={(e) => setStatus(e.target.value)} placeholder="যেমন: উত্তীর্ণ হয়ে পরবর্তী শ্রেণিতে ভর্তির যোগ্য" />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="dues" className="font-bold">বকেয়া হিসাবের অবস্থা</Label>
-                  <Input id="dues" value={dues} onChange={(e) => setDues(e.target.value)} placeholder="যেমন: বিদ্যালয়ের সকল দেনা-পাওনা পরিশোধিত" />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-
-          <CardFooter className="border-t pt-4 flex justify-end">
-            <Button onClick={handleGenerateTC} size="lg" disabled={!selectedStudentId} className="gap-2">
-              ছাড়পত্র জেনারেট ও প্রিন্ট করুন
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </CardFooter>
-        </Card>
       </main>
+
+      <div className="hidden print:block printable-area">
+        {selectedStudent && <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} studentDob={studentDob} headmaster={headmaster} />}
+      </div>
     </div>
   );
+}
+
+function TCTemplate({ student, schoolInfo, formData, studentDob, headmaster }: any) {
+    return (
+        <div className="w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-10 box-border border-8 border-double border-emerald-800 font-kalpurush">
+            <div className="text-center border-b-2 border-emerald-800 pb-3 mb-6 flex justify-between items-center px-4">
+                <div className="w-20 h-20 relative">{schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}</div>
+                <div className="flex-grow">
+                    <h1 className="text-3xl font-black text-emerald-900 mb-0.5">{schoolInfo.name}</h1>
+                    <p className="text-sm font-bold text-gray-700">{schoolInfo.address} | EIIN: {toBengaliNumber(schoolInfo.eiin)}</p>
+                </div>
+                <div className="w-20 h-20 border border-gray-300 p-0.5">{student.photoUrl && <Image src={student.photoUrl} alt="Student" width={80} height={80} className="object-cover w-full h-full" />}</div>
+            </div>
+
+            <div className="text-center mb-8"><span className="inline-block bg-emerald-800 text-white text-xl font-bold px-10 py-1.5 rounded-full border-2 border-emerald-900">ছাড়পত্র (TC)</span></div>
+
+            <div className="flex justify-between font-bold text-sm mb-10 px-4"><span>স্মারক নং: {formData.smarakNo}</span><span>তারিখ: {toBengaliNumber(formData.issueDate)} ইং</span></div>
+
+            <div className="flex-grow space-y-8 text-xl font-semibold leading-relaxed px-4 text-justify">
+                <p>এই মর্মে ছাড়পত্র প্রদান করা যাইতেছে যে, <span className="font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>।</p>
+                <p>তিনি এই বিদ্যালয়ে <span className="font-black px-2">{toBengaliNumber(student.academicYear)}</span> শিক্ষাবর্ষে <span className="font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে রোল নম্বর <span className="font-black px-2">{toBengaliNumber(student.roll)}</span> নিয়মানুগ শিক্ষার্থী হিসেবে অধ্যয়ন করিয়াছেন। তাহার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।</p>
+                <p>তাহার চরিত্র এবং নৈতিক আচরণ <span className="font-black border-b-2 border-black border-dotted px-2">{formData.conduct}</span>। পড়াশোনার অগ্রগতি ও ফলাফলের দিক থেকে তিনি <span className="font-black border-b-2 border-black border-dotted px-2">{formData.status}</span>।</p>
+                <p>বিদ্যালয় ত্যাগের কারণ: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.reason}</span>। বিদ্যালয়ের পাওনা সংক্রান্ত অবস্থা: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.dues}</span>।</p>
+                <p className="italic text-emerald-900 pt-4">আমি তাহার ভবিষ্যৎ জীবনে সর্বাঙ্গীন কল্যাণ ও সাফল্য কামনা করি।</p>
+            </div>
+
+            <footer className="pt-20 flex justify-between items-end px-4 mb-8">
+                <div className="text-center w-48 border-t border-black pt-1 font-bold">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                <div className="text-center w-48 border-t border-black pt-1 font-bold"><p className="mb-1">{headmaster?.nameBn || schoolInfo.name}</p><p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p></div>
+            </footer>
+        </div>
+    );
 }
