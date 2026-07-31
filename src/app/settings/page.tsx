@@ -262,7 +262,7 @@ function HolidaySettings() {
                     <CardDescription>নতুন ছুটি যোগ করুন অথবা বিদ্যমান তালিকা পরিবর্তন করুন</CardDescription>
                 </CardHeader>
                 <CardContent className="px-0 pt-4 space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 items-end gap-6 p-6 border-2 border-dashed rounded-xl bg-muted/20">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gl:grid-cols-2 items-end gap-6 p-6 border-2 border-dashed rounded-xl bg-muted/20">
                         <div className="w-full space-y-2">
                             <Label className="font-bold">শুরুর তারিখ</Label>
                             <DatePicker value={startDate} onChange={setStartDate} />
@@ -475,9 +475,12 @@ function UserManagementSettings() {
         return () => unsubscribe();
     }, [db, currentUser]);
 
-    const staffNameMap = useMemo(() => {
-        const map = new Map<string, string>();
-        allStaff.forEach(s => { if (s.email) map.set(s.email.toLowerCase(), s.nameBn); });
+    // Enhanced map that includes both name and photo for lookup
+    const staffInfoMap = useMemo(() => {
+        const map = new Map<string, { name: string, photo: string }>();
+        allStaff.forEach(s => { 
+            if (s.email) map.set(s.email.toLowerCase().trim(), { name: s.nameBn, photo: s.photoUrl }); 
+        });
         return map;
     }, [allStaff]);
 
@@ -516,15 +519,22 @@ function UserManagementSettings() {
                         </TableHeader>
                         <TableBody>
                             {users.map(u => {
-                                const teacherName = staffNameMap.get(u.email?.toLowerCase() || '');
+                                const staffInfo = staffInfoMap.get(u.email?.toLowerCase().trim() || '');
                                 const isMe = u.uid === currentUser?.uid;
+                                // Prefer the photo from staff collection for synced teachers
+                                const finalPhoto = staffInfo?.photo || u.photoUrl;
+                                const finalName = staffInfo?.name || u.displayName || 'Admin';
+
                                 return (
                                     <TableRow key={u.uid} className={isMe ? "bg-primary/5" : ""}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <Avatar className="h-9 w-9 border shadow-sm"><AvatarImage src={u.photoUrl} /><AvatarFallback>{u.email?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                                                <Avatar className="h-9 w-9 border shadow-sm">
+                                                    <AvatarImage src={finalPhoto} />
+                                                    <AvatarFallback>{u.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                                                </Avatar>
                                                 <div>
-                                                    <p className="font-bold text-sm">{teacherName || u.displayName || 'Admin'}</p>
+                                                    <p className="font-bold text-sm">{finalName}</p>
                                                     <p className="text-[10px] text-muted-foreground">{u.email}</p>
                                                 </div>
                                             </div>
@@ -603,7 +613,7 @@ function ProfileSettings() {
         let unsubscribe: (() => void) | undefined;
         
         if (user.role === 'teacher' && user.email) {
-            const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase()), limit(1));
+            const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase().trim()), limit(1));
             unsubscribe = onSnapshot(staffQuery, (snapshot) => {
                 if (!snapshot.empty) {
                     const staffData = snapshot.docs[0].data();
