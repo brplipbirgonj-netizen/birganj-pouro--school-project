@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, Calculator, Clock, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { 
+    Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, 
+    Calculator, Clock, Loader2, ChevronRight, User, School, 
+    Calendar, Users, HardDriveDownload, Monitor, ShieldAlert,
+    FileSpreadsheet, FileJson, CheckCircle2, Download
+} from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +30,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { User, userFromDoc, UserRole } from '@/lib/user';
+import { User as SystemUser, userFromDoc, UserRole } from '@/lib/user';
 import { updateUserPermissions, deleteUserRecord, updateUserRole } from '@/lib/user-management';
 import { changePassword } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
@@ -38,12 +43,15 @@ import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSubjects } from '@/lib/subjects';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import * as XLSX from 'xlsx';
+
+// --- Sub Components ---
 
 function SystemUsageInfo() {
     return (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="border-blue-200 bg-blue-50">
-                <CardHeader>
+        <div className="grid gap-6 md:grid-cols-2">
+            <Card className="border-blue-200 bg-blue-50 shadow-sm">
+                <CardHeader className="pb-2">
                     <div className="flex items-center gap-2 text-blue-700">
                         <Database className="h-5 w-5" />
                         <CardTitle className="text-lg">ডাটাবেস লিমিট (ফ্রি)</CardTitle>
@@ -57,44 +65,30 @@ function SystemUsageInfo() {
                 </CardContent>
             </Card>
 
-            <Card className="border-emerald-200 bg-emerald-50">
-                <CardHeader>
+            <Card className="border-emerald-200 bg-emerald-50 shadow-sm">
+                <CardHeader className="pb-2">
                     <div className="flex items-center gap-2 text-emerald-700">
                         <Calculator className="h-5 w-5" />
-                        <CardTitle className="text-lg">১০০০ শিক্ষার্থীর হিসেবে স্থায়িত্ব</CardTitle>
+                        <CardTitle className="text-lg">স্থায়িত্ব প্রাক্কলন</CardTitle>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-emerald-900">
-                    <p>• <strong>বছরে ডাটা খরচ:</strong> প্রায় ৫০-১০০ মেগাবাইট</p>
-                    <p>• <strong>ব্যবহারযোগ্য সময়:</strong> প্রায় ১০-১৫ বছর (ফ্রি)</p>
-                    <p>• <strong>ডেইলি এক্টিভিটি:</strong> প্রতিদিন ১০০০ জনের হাজিরা ও কাজ অনায়াসেই ফ্রি লিমিটের মধ্যে থাকবে।</p>
+                    <p>• <strong>১০০০ শিক্ষার্থীর জন্য:</strong> বছরে প্রায় ৫০-১০০ মেগাবাইট।</p>
+                    <p>• <strong>ব্যবহারযোগ্য সময়:</strong> প্রায় ১০-১৫ বছর (সম্পূর্ণ ফ্রি)।</p>
+                    <p>• <strong>ডেইলি অ্যাক্টিভিটি:</strong> ১০০০ হাজিরার কাজ অনায়াসেই ফ্রি লিমিটের মধ্যে থাকবে।</p>
                 </CardContent>
             </Card>
 
-            <Card className="border-amber-200 bg-amber-50">
-                <CardHeader>
-                    <div className="flex items-center gap-2 text-amber-700">
-                        <Cloud className="h-5 w-5" />
-                        <CardTitle className="text-lg">হোস্টিং ও ছবি</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-amber-900">
-                    <p>• <strong>ফাইল স্টোরেজ:</strong> ৫-১০ জিবি (ছবির জন্য)</p>
-                    <p>• <strong>ব্যান্ডউইথ:</strong> প্রতিদিন ৩৬০ এমবি</p>
-                    <p>• <strong>আপলোড:</strong> মাসিক ৫ জিবি পর্যন্ত</p>
-                </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2 lg:col-span-3">
-                <CardHeader>
+            <Card className="md:col-span-2 border-slate-200">
+                <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
                         <Info className="h-5 w-5 text-primary" />
                         <CardTitle className="text-lg">সতর্কতা ও পরামর্শ</CardTitle>
                     </div>
                 </CardHeader>
-                <CardContent className="text-sm space-y-2">
-                    <p>১. আপনার বিদ্যালয়ের ছাত্র সংখ্যা ১০০০ হলেও আপনি এই ফ্রি লিমিট অতিক্রম করবেন না, যদি না প্রতিদিন অস্বাভাবিক বেশি রিড/রাইট করা হয়।</p>
-                    <p>২. ১০ বছর পর যদি ডাটাবেস পূর্ণ হয়ে যায়, তবে পুরনো বছরের ডাটা ডিলিট করে জায়গা খালি করা যাবে অথবা সামান্য খরচে প্ল্যান আপগ্রেড করা যাবে।</p>
+                <CardContent className="text-sm space-y-2 leading-relaxed">
+                    <p>১. বিদ্যালয়ের ছাত্র সংখ্যা ১০০০ হলেও আপনি এই ফ্রি লিমিট অতিক্রম করবেন না, যদি না প্রতিদিন অস্বাভাবিক বেশি রিড/রাইট করা হয়।</p>
+                    <p>২. ১০ বছর পর যদি ডাটাবেস পূর্ণ হয়ে যায়, তবে পুরনো বছরের ডাটা এক্সপোর্ট করে রিমুভ করলে জায়গা খালি করা যাবে।</p>
                     <p>৩. বড় সাইজের ছবি আপলোড থেকে বিরত থাকলে স্টোরেজ আরও অনেক বেশি বছর স্থায়ী হবে।</p>
                 </CardContent>
             </Card>
@@ -132,99 +126,64 @@ function SchoolInfoSettings() {
 
     const handleSaveChanges = () => {
         updateSchoolInfo(info).then(() => {
-            toast({
-                title: 'তথ্য সংরক্ষিত হয়েছে',
-            });
-        }).catch(() => {
-            // Error handled by listener
-        });
+            toast({ title: 'প্রতিষ্ঠানের তথ্য সংরক্ষিত হয়েছে' });
+        }).catch(() => {});
     };
     
-    if (isLoading) {
-        return (
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-6 w-1/3" />
-                </CardHeader>
-                <CardContent className="space-y-8">
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-10" /></div>
-                            <div className="space-y-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-10" /></div>
-                            <div className="space-y-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-10" /></div>
-                            <div className="space-y-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-10" /></div>
-                        </div>
-                    </div>
-                        <div className="space-y-4">
-                        <Skeleton className="h-5 w-16" />
-                        <div className="flex items-center gap-4">
-                            <Skeleton className="w-24 h-24 rounded-md" />
-                            <Skeleton className="h-10 w-32" />
-                        </div>
-                    </div>
-                </CardContent>
-                <CardFooter className="border-t justify-end pt-6">
-                    <Skeleton className="h-10 w-36" />
-                </CardFooter>
-            </Card>
-        )
-    }
-
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>প্রতিষ্ঠানের সাধারণ তথ্য</CardTitle>
+        <Card className="border-none shadow-none">
+            <CardHeader className="px-0 pt-0">
+                <CardTitle className="text-2xl font-black">প্রতিষ্ঠানের সাধারণ তথ্য</CardTitle>
+                <CardDescription>আপনার বিদ্যালয়ের দাপ্তরিক তথ্য এখান থেকে পরিবর্তন করুন</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-8">
-                 <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="schoolName">প্রতিষ্ঠানের নাম (বাংলা)</Label>
-                            <Input id="schoolName" value={info.name} onChange={(e) => handleInputChange('name', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="schoolNameEn">School Name (English)</Label>
-                            <Input id="schoolNameEn" value={info.nameEn || ''} onChange={(e) => handleInputChange('nameEn', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="eiin">EIIN</Label>
-                            <Input id="eiin" value={info.eiin} onChange={(e) => handleInputChange('eiin', e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="schoolCode">স্কুল কোড</Label>
-                            <Input id="schoolCode" value={info.code} onChange={(e) => handleInputChange('code', e.target.value)} />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="address">ঠিকানা</Label>
-                            <Textarea id="address" value={info.address} onChange={(e) => handleInputChange('address', e.target.value)} />
-                        </div>
+            <CardContent className="px-0 space-y-8 pt-4">
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="schoolName" className="font-bold">প্রতিষ্ঠানের নাম (বাংলা)</Label>
+                        <Input id="schoolName" value={info.name} onChange={(e) => handleInputChange('name', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="schoolNameEn" className="font-bold">School Name (English)</Label>
+                        <Input id="schoolNameEn" value={info.nameEn || ''} onChange={(e) => handleInputChange('nameEn', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="eiin" className="font-bold">EIIN</Label>
+                        <Input id="eiin" value={info.eiin} onChange={(e) => handleInputChange('eiin', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="schoolCode" className="font-bold">স্কুল কোড</Label>
+                        <Input id="schoolCode" value={info.code} onChange={(e) => handleInputChange('code', e.target.value)} />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="address" className="font-bold">ঠিকানা</Label>
+                        <Textarea id="address" value={info.address} onChange={(e) => handleInputChange('address', e.target.value)} />
                     </div>
                  </div>
 
-                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">লোগো</h3>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-4">
-                            <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted overflow-hidden">
-                                {logoPreview ? (
-                                    <Image src={logoPreview} alt="School Logo" width={96} height={96} className="object-contain w-full h-full" />
-                                ) : (
-                                    <div className="flex flex-col items-center gap-1 text-center text-muted-foreground">
-                                        <Upload className="h-8 w-8" />
-                                        <span>লোগো</span>
-                                    </div>
-                                )}
-                            </div>
+                 <div className="space-y-4 border-t pt-6">
+                    <Label className="font-bold text-lg">প্রতিষ্ঠানের লোগো</Label>
+                    <div className="flex items-center gap-6">
+                        <div className="w-32 h-32 rounded-xl border-4 border-white shadow-xl bg-muted overflow-hidden shrink-0">
+                            {logoPreview ? (
+                                <Image src={logoPreview} alt="School Logo" width={128} height={128} className="object-contain w-full h-full" />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full gap-1 text-center text-muted-foreground">
+                                    <Upload className="h-8 w-8" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-3">
                             <Input id="logo" name="logo" type="file" className="hidden" onChange={handleLogoChange} accept="image/*" />
                             <Button type="button" variant="outline" onClick={() => document.getElementById('logo')?.click()}>
-                                লোগো আপলোড করুন
+                                নতুন লোগো আপলোড করুন
                             </Button>
+                            <p className="text-xs text-muted-foreground">বর্গাকার (Square) এবং পিএনজি (PNG) লোগো ব্যবহারের পরামর্শ দেওয়া হলো।</p>
                         </div>
                     </div>
-              </div>
+                 </div>
             </CardContent>
-            <CardFooter className="border-t justify-end pt-6">
-                <Button onClick={handleSaveChanges}>পরিবর্তন সেভ করুন</Button>
+            <CardFooter className="px-0 border-t justify-end pt-6">
+                <Button onClick={handleSaveChanges} className="px-8 font-black">পরিবর্তন সেভ করুন</Button>
             </CardFooter>
         </Card>
     );
@@ -247,101 +206,34 @@ function HolidaySettings() {
         try {
             const data = await getHolidays(db);
             setHolidays(data);
-        } catch (e) {
-            console.error("Failed to fetch holidays", e);
-        } finally {
+        } catch (e) {} finally {
             setIsLoading(false);
         }
     }, [db]);
 
-    useEffect(() => {
-        fetchHolidays();
-    }, [fetchHolidays]);
+    useEffect(() => { fetchHolidays(); }, [fetchHolidays]);
 
     const handleAddHolidays = async () => {
-        if (!db) return;
-        if (!startDate || !newHolidayDescription) {
-            toast({
-                variant: 'destructive',
-                title: 'তথ্য অসম্পূর্ণ',
-                description: 'অনুগ্রহ করে শুরুর তারিখ এবং ছুটির কারণ পূরণ করুন।',
-            });
+        if (!db || !startDate || !newHolidayDescription) {
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' });
             return;
         }
-
         const loopEndDate = endDate || startDate;
-
-        if (loopEndDate < startDate) {
-            toast({
-                variant: 'destructive',
-                title: 'তারিখ নির্বাচনে ভুল',
-                description: 'শেষের তারিখ শুরুর তারিখের আগে হতে পারে না।',
-            });
-            return;
-        }
-
         let currentDate = new Date(startDate);
         const promises: Promise<any>[] = [];
-
         while (currentDate <= loopEndDate) {
-            const holidayData: NewHolidayData = {
-                date: format(currentDate, 'yyyy-MM-dd'),
-                description: newHolidayDescription,
-            };
-            promises.push(addHoliday(db, holidayData));
+            promises.push(addHoliday(db, { date: format(currentDate, 'yyyy-MM-dd'), description: newHolidayDescription }));
             currentDate.setDate(currentDate.getDate() + 1);
         }
-
-        if (promises.length === 0) return;
-
-        try {
-            const results = await Promise.all(promises);
-            let addedCount = 0;
-            let duplicateCount = 0;
-
-            results.forEach(result => {
-                if (result) {
-                    addedCount++;
-                } else {
-                    duplicateCount++;
-                }
-            });
-
-            let toastTitle = '';
-            let toastDescription = '';
-            
-            if (addedCount > 0) {
-                toastTitle = 'ছুটি যোগ হয়েছে';
-                toastDescription = `${addedCount.toLocaleString('bn-BD')}টি নতুন ছুটি যোগ হয়েছে।`;
-                if (duplicateCount > 0) {
-                    toastDescription += ` ${duplicateCount.toLocaleString('bn-BD')}টি ছুটি ইতিমধ্যে বিদ্যমান থাকায় যোগ করা হয়নি।`;
-                }
-                toast({ title: toastTitle, description: toastDescription });
-                setStartDate(undefined);
-                setEndDate(undefined);
-                setNewHolidayDescription('');
-                fetchHolidays(); // Refetch
-            } else if (duplicateCount > 0) {
-                toastTitle = 'ছুটি যোগ করা যায়নি';
-                toastDescription = `আপনি যে তারিখগুলো দিয়েছেন, সেগুলোতে ইতিমধ্যে ছুটি রয়েছে।`;
-                toast({ title: toastTitle, description: toastDescription, variant: 'destructive' });
-            }
-        } catch (e) {
-            // Error is handled inside addHoliday and emitted.
-        }
+        await Promise.all(promises);
+        toast({ title: 'ছুটি যোগ হয়েছে' });
+        setStartDate(undefined); setEndDate(undefined); setNewHolidayDescription('');
+        fetchHolidays();
     };
-
 
     const handleDeleteHoliday = (id: string) => {
         if (!db) return;
-        deleteHoliday(db, id).then(() => {
-            toast({
-                title: 'ছুটি মুছে ফেলা হয়েছে',
-            });
-            fetchHolidays(); // Refetch
-        }).catch(() => {
-            // Error handled by listener
-        });
+        deleteHoliday(db, id).then(() => { toast({ title: 'ছুটি মুছে ফেলা হয়েছে' }); fetchHolidays(); });
     };
 
     const handleResetHolidays = async () => {
@@ -350,270 +242,84 @@ function HolidaySettings() {
         try {
             const defaultHolidays = await createInitialHolidays(db);
             setHolidays(defaultHolidays);
-            toast({ title: "ছুটির তালিকা রিসেট হয়েছে", description: "তালিকাটি ডিফল্ট ছুটিতে রিসেট করা হয়েছে।" });
-        } catch (e) {
-            console.error("Failed to reset holidays", e);
-            toast({ variant: 'destructive', title: 'রিসেট করা যায়নি' });
-        } finally {
-            setIsLoading(false);
-        }
+            toast({ title: "ছুটির তালিকা রিসেট হয়েছে" });
+        } catch (e) {} finally { setIsLoading(false); }
     };
     
     return (
-        <div className="space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle>নতুন ছুটি যোগ করুন</CardTitle>
+        <div className="space-y-10">
+            <Card className="border-none shadow-none">
+                <CardHeader className="px-0 pt-0">
+                    <CardTitle className="text-2xl font-black">অতিরিক্ত ছুটি ব্যবস্থাপনা</CardTitle>
+                    <CardDescription>নতুন ছুটি যোগ করুন অথবা বিদ্যমান তালিকা পরিবর্তন করুন</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 items-end gap-4">
+                <CardContent className="px-0 pt-4 space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 items-end gap-6 p-6 border-2 border-dashed rounded-xl bg-muted/20">
                         <div className="w-full space-y-2">
-                            <Label htmlFor="holiday-start-date">শুরুর তারিখ</Label>
+                            <Label className="font-bold">শুরুর তারিখ</Label>
                             <DatePicker value={startDate} onChange={setStartDate} />
                         </div>
                         <div className="w-full space-y-2">
-                            <Label htmlFor="holiday-end-date">শেষের তারিখ</Label>
-                            <DatePicker value={endDate} onChange={setEndDate} placeholder="শুরুর তারিখের সমান" />
+                            <Label className="font-bold">শেষের তারিখ (ঐচ্ছিক)</Label>
+                            <DatePicker value={endDate} onChange={setEndDate} placeholder="একদিনের বেশি হলে" />
                         </div>
                         <div className="w-full sm:col-span-2 space-y-2">
-                            <Label htmlFor="holiday-description">ছুটির কারণ</Label>
-                            <Input
-                                id="holiday-description"
-                                value={newHolidayDescription}
-                                onChange={(e) => setNewHolidayDescription(e.target.value)}
-                            />
+                            <Label className="font-bold">ছুটির কারণ</Label>
+                            <Input value={newHolidayDescription} onChange={(e) => setNewHolidayDescription(e.target.value)} placeholder="উদা: পবিত্র ঈদ-উল-ফিতর" />
+                        </div>
+                        <div className="sm:col-span-2 flex justify-end">
+                            <Button onClick={handleAddHolidays} disabled={!canManageSettings} className="px-10 font-bold">ছুটি যোগ করুন</Button>
                         </div>
                     </div>
-                </CardContent>
-                <CardFooter className="border-t pt-6 justify-end">
-                    <Button onClick={handleAddHolidays} disabled={!canManageSettings}>যোগ করুন</Button>
-                </CardFooter>
-            </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>ছুটির তালিকা</CardTitle>
-                    <CardDescription>সরকারি এবং অন্যান্য সকল ছুটির তালিকা। তালিকাটি ভুল দেখালে রিসেট করতে পারেন।</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="border rounded-md overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ক্রমিক নং</TableHead>
-                                    <TableHead>তারিখ</TableHead>
-                                    <TableHead>বার</TableHead>
-                                    <TableHead>কারণ</TableHead>
-                                    <TableHead className="text-right">কার্যক্রম</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading ? (
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-black text-lg">চলতি বছরের ছুটির তালিকা</h3>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-8 text-xs" disabled={!canManageSettings}>রিসেট করুন</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>রিসেট করতে চান?</AlertDialogTitle><AlertDialogDescription>এটি বর্তমান তালিকা মুছে ডিফল্ট ছুটিতে রিসেট করবে।</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={handleResetHolidays}>নিশ্চিত করুন</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                        <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                            <Table>
+                                <TableHeader className="bg-muted/50">
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">লোড হচ্ছে...</TableCell>
+                                        <TableHead className="w-16">ক্রমিক</TableHead>
+                                        <TableHead>তারিখ ও বার</TableHead>
+                                        <TableHead>কারণ</TableHead>
+                                        <TableHead className="text-right">কার্যক্রম</TableHead>
                                     </TableRow>
-                                ) : holidays.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                            কোনো অতিরিক্ত ছুটি যোগ করা হয়নি।
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    holidays.map((holiday, index) => {
-                                        const hDate = new Date(holiday.date.replace(/-/g, '/'));
-                                        return (
-                                            <TableRow key={holiday.id}>
-                                                <TableCell>{(index + 1).toLocaleString('bn-BD')}</TableCell>
-                                                <TableCell>{format(hDate, "d MMMM yyyy", { locale: bn })}</TableCell>
-                                                <TableCell>{format(hDate, "EEEE", { locale: bn })}</TableCell>
-                                                <TableCell>{holiday.description}</TableCell>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoading ? (
+                                        <TableRow><TableCell colSpan={4} className="text-center py-10 italic">লোড হচ্ছে...</TableCell></TableRow>
+                                    ) : (
+                                        holidays.map((h, i) => (
+                                            <TableRow key={h.id}>
+                                                <TableCell>{toBengaliNumber(i + 1)}</TableCell>
+                                                <TableCell>
+                                                    <p className="font-bold">{format(new Date(h.date.replace(/-/g, '/')), "d MMMM yyyy", { locale: bn })}</p>
+                                                    <p className="text-[10px] text-muted-foreground">{format(new Date(h.date.replace(/-/g, '/')), "EEEE", { locale: bn })}</p>
+                                                </TableCell>
+                                                <TableCell className="font-medium">{h.description}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="destructive" size="icon" disabled={!canManageSettings}>
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    এই ছুটিটি তালিকা থেকে স্থায়ীভাবে মুছে যাবে।
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDeleteHoliday(holiday.id)}>
-                                                                    মুছে ফেলুন
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                    <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteHoliday(h.id)}><Trash2 className="h-4 w-4" /></Button>
                                                 </TableCell>
                                             </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </div>
                 </CardContent>
-                <CardFooter className="border-t pt-6 justify-end">
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="outline" disabled={!canManageSettings}>তালিকা রিসেট করুন</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    এটি ডাটাবেস থেকে ২০২৬ সালের সকল ছুটি মুছে ফেলে ডিফল্ট তালিকা দিয়ে প্রতিস্থাপন করবে। এই কাজটি ফিরিয়ে আনা যাবে না।
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleResetHolidays}>
-                                    রিসেট করুন
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </CardFooter>
             </Card>
         </div>
-    );
-}
-
-function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { user: User, open: boolean, onOpenChange: (open: boolean) => void, onPermissionsUpdate: () => void }) {
-    const db = useFirestore();
-    const { toast } = useToast();
-    const [permissions, setPermissions] = useState<Set<string>>(new Set());
-    const [marksPermissions, setMarksPermissions] = useState<Record<string, string[]>>({});
-
-    useEffect(() => {
-        if (user) {
-            const initialPermissions = user.permissions && user.permissions.length > 0 ? user.permissions : (defaultPermissions[user.role] || []);
-            setPermissions(new Set(initialPermissions));
-            setMarksPermissions(user.marksPermissions || {});
-        }
-    }, [user]);
-
-    const handlePermissionChange = (permissionId: string, checked: boolean | string) => {
-        setPermissions(prev => {
-            const newPermissions = new Set(prev);
-            if (checked) {
-                newPermissions.add(permissionId);
-            } else {
-                newPermissions.delete(permissionId);
-            }
-            return newPermissions;
-        });
-    };
-
-    const handleMarksPermissionChange = (cls: string, sub: string, checked: boolean | string) => {
-        setMarksPermissions(prev => {
-            const next = { ...prev };
-            const classSubs = [...(next[cls] || [])];
-            if (checked) {
-                if (!classSubs.includes(sub)) classSubs.push(sub);
-            } else {
-                const idx = classSubs.indexOf(sub);
-                if (idx > -1) classSubs.splice(idx, 1);
-            }
-            next[cls] = classSubs;
-            return next;
-        });
-    };
-
-    const handleSave = async () => {
-        if (!db || !user) return;
-        try {
-            await updateUserPermissions(db, user.uid, Array.from(permissions), marksPermissions);
-            toast({ title: 'পারমিশন আপডেট হয়েছে' });
-            onPermissionsUpdate();
-            onOpenChange(false);
-        } catch (error) {
-            // Error is handled by the data function
-        }
-    };
-
-    if (!user) return null;
-
-    const classes = ['6', '7', '8', '9', '10'];
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>পারমিশন সম্পাদনা করুন</DialogTitle>
-                    <DialogDescription>
-                        {user.email} এর জন্য এক্সেস লেভেল নির্ধারণ করুন।
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="flex-1 overflow-y-auto py-4 space-y-8 pr-2">
-                    <section>
-                        <h3 className="text-sm font-black mb-4 uppercase tracking-wider text-primary flex items-center gap-2">
-                            <ShieldCheck className="h-4 w-4" /> সাধারণ মডিউল পারমিশন
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {availablePermissions.map(permission => (
-                                <div key={permission.id} className="flex items-center space-x-2 bg-muted/30 p-2 rounded-md border border-transparent hover:border-primary/20 transition-colors">
-                                    <Checkbox
-                                        id={`perm-${permission.id}`}
-                                        checked={permissions.has(permission.id)}
-                                        onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
-                                        disabled={user.role === 'admin'}
-                                    />
-                                    <label
-                                        htmlFor={`perm-${permission.id}`}
-                                        className="text-xs font-bold leading-none cursor-pointer"
-                                    >
-                                        {permission.label}
-                                    </label>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="border-t pt-6">
-                        <h3 className="text-sm font-black mb-4 uppercase tracking-wider text-orange-700 flex items-center gap-2">
-                            <Info className="h-4 w-4" /> শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন
-                        </h3>
-                        <p className="text-[10px] text-muted-foreground mb-4 italic">এই পারমিশনগুলো শুধুমাত্র তখনই কার্যকর হবে যখন 'ফলাফল ও নম্বর ম্যানেজ' করার সাধারণ পারমিশনটি বন্ধ থাকবে।</p>
-                        
-                        <Accordion type="multiple" className="w-full space-y-2">
-                            {classes.map(cls => (
-                                <AccordionItem key={cls} value={cls} className="border rounded-md overflow-hidden bg-white">
-                                    <AccordionTrigger className="px-4 py-2 hover:no-underline bg-muted/20">
-                                        <span className="font-bold text-sm">{cn(cls === '10' ? 'দশম' : cls === '9' ? 'নবম' : cls === '8' ? 'অষ্টম' : cls === '7' ? 'সপ্তম' : 'ষষ্ঠ')} শ্রেণি</span>
-                                        <Badge variant="outline" className="ml-2 text-[10px]">{(marksPermissions[cls] || []).length.toLocaleString('bn-BD')} বিষয়</Badge>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="px-4 py-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                            {getSubjects(cls).filter(s => s.isExamSubject).map(sub => (
-                                                <div key={sub.name} className="flex items-center space-x-2">
-                                                    <Checkbox 
-                                                        id={`sub-${cls}-${sub.name}`}
-                                                        checked={(marksPermissions[cls] || []).includes(sub.name)}
-                                                        onCheckedChange={(checked) => handleMarksPermissionChange(cls, sub.name, checked)}
-                                                        disabled={user.role === 'admin'}
-                                                    />
-                                                    <label htmlFor={`sub-${cls}-${sub.name}`} className="text-xs cursor-pointer truncate" title={sub.name}>{sub.name}</label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
-                    </section>
-                </div>
-                <DialogFooter className="border-t pt-4">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>বাতিল</Button>
-                    <Button onClick={handleSave} disabled={user.role === 'admin'}>পরিবর্তন সেভ করুন</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     );
 }
 
@@ -621,483 +327,364 @@ function UserManagementSettings() {
     const db = useFirestore();
     const { toast } = useToast();
     const { user: currentUser } = useAuth();
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<SystemUser[]>([]);
     const [allStaff, setAllStaff] = useState<Staff[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
-    
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
     const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
 
     useEffect(() => {
         if (!db || !currentUser || currentUser.role !== 'admin') return;
-        
         setIsLoading(true);
-        const usersRef = collection(db, 'users');
-        const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
-            const usersData = snapshot.docs.map(doc => userFromDoc(doc));
-            setUsers(usersData.sort((a, b) => (a.email || '').localeCompare(b.email || '')));
-            setIsLoading(false);
-        }, (error) => {
-            console.error("User Snapshot Error:", error);
+        const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+            setUsers(snapshot.docs.map(userFromDoc).sort((a, b) => (a.email || '').localeCompare(b.email || '')));
             setIsLoading(false);
         });
-
-        const fetchStaff = async () => {
-            try {
-                const staffQuery = query(collection(db, 'staff'));
-                const staffSnap = await getDocs(staffQuery);
-                const staffData = staffSnap.docs.map(staffFromDoc);
-                setAllStaff(staffData);
-            } catch (e) {}
-        };
-        fetchStaff();
-
-        return () => unsubscribeUsers();
+        getDocs(collection(db, 'staff')).then(snap => setAllStaff(snap.docs.map(staffFromDoc)));
+        return () => unsubscribe();
     }, [db, currentUser]);
 
     const staffNameMap = useMemo(() => {
         const map = new Map<string, string>();
-        allStaff.forEach(s => {
-            if (s.email) {
-                map.set(s.email.toLowerCase(), s.nameBn);
-            }
-        });
+        allStaff.forEach(s => { if (s.email) map.set(s.email.toLowerCase(), s.nameBn); });
         return map;
     }, [allStaff]);
 
-    const staffPhotoMap = useMemo(() => {
-        const map = new Map<string, string>();
-        allStaff.forEach(s => {
-            if (s.email && s.photoUrl) {
-                map.set(s.email.toLowerCase(), s.photoUrl);
-            }
-        });
-        return map;
-    }, [allStaff]);
-
-    const handleDeleteUser = async (userToDelete: User) => {
-        if (!db || !currentUser || userToDelete.uid === currentUser.uid) return;
-        
-        setIsDeleting(userToDelete.uid);
-        try {
-            await deleteUserRecord(db, userToDelete.uid);
-            toast({ title: 'ব্যবহারকারী মুছে ফেলা হয়েছে' });
-        } catch (error: any) {
-            console.error("Failed to delete user:", error);
-            // Error is handled by data function, but showing extra feedback here
-            toast({ 
-                variant: 'destructive', 
-                title: 'ডিলিট করা যায়নি', 
-                description: 'আপনার এই কাজটি করার অনুমতি নেই বা সার্ভার ত্রুটি।' 
-            });
-        } finally {
-            setIsDeleting(null);
-        }
-    }
-    
     const handleUpdateRole = async (uid: string, newRole: UserRole) => {
-        if (!db || !currentUser) return;
-        try {
-            await updateUserRole(db, uid, newRole);
-            toast({ title: 'ভূমিকা (Role) আপডেট হয়েছে' });
-        } catch (error) {}
+        await updateUserRole(db!, uid, newRole);
+        toast({ title: 'রোল আপডেট হয়েছে' });
     };
-
-    const openPermissionDialog = (user: User) => {
-        setSelectedUser(user);
-        setIsPermissionDialogOpen(true);
-    };
-
-    const roleMap: { [key: string]: string } = { admin: 'এডমিন', teacher: 'শিক্ষক' };
 
     return (
-        <>
-            <Card>
-                <CardHeader>
-                    <CardTitle>ব্যবহারকারী ম্যানেজমেন্ট</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     <div className="border rounded-md overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ছবি</TableHead>
-                                    <TableHead>নাম</TableHead>
-                                    <TableHead>ইমেইল</TableHead>
-                                    <TableHead>ভূমিকা (Role)</TableHead>
-                                    <TableHead>অবস্থা (Status)</TableHead>
-                                    <TableHead>সর্বশেষ লগইন</TableHead>
-                                    <TableHead className="text-right">কার্যক্রম</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                 {isLoading && users.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">লোড হচ্ছে...</TableCell>
-                                    </TableRow>
-                                ) : users.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                                            কোনো ব্যবহারকারী পাওয়া যায়নি।
+        <Card className="border-none shadow-none">
+            <CardHeader className="px-0 pt-0">
+                <CardTitle className="text-2xl font-black">ব্যবহারকারী ও নিরাপত্তা</CardTitle>
+                <CardDescription>সিস্টেমে প্রবেশাধিকার এবং ইউজার রোল নিয়ন্ত্রণ করুন</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 pt-4">
+                <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                    <Table>
+                        <TableHeader className="bg-muted/50">
+                            <TableRow>
+                                <TableHead>নাম ও ইমেইল</TableHead>
+                                <TableHead>রোল (Role)</TableHead>
+                                <TableHead>অবস্থা</TableHead>
+                                <TableHead className="text-right">একশন</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {users.map(u => {
+                                const teacherName = staffNameMap.get(u.email?.toLowerCase() || '');
+                                const isMe = u.uid === currentUser?.uid;
+                                return (
+                                    <TableRow key={u.uid} className={isMe ? "bg-primary/5" : ""}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-9 w-9 border shadow-sm"><AvatarImage src={u.photoUrl} /><AvatarFallback>{u.email?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                                                <div>
+                                                    <p className="font-bold text-sm">{teacherName || u.displayName || 'Admin'}</p>
+                                                    <p className="text-[10px] text-muted-foreground">{u.email}</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Select value={u.role} onValueChange={(v) => handleUpdateRole(u.uid, v as UserRole)} disabled={isMe}>
+                                                <SelectTrigger className="h-8 w-28 text-xs font-bold"><SelectValue /></SelectTrigger>
+                                                <SelectContent><SelectItem value="admin">এডমিন</SelectItem><SelectItem value="teacher">শিক্ষক</SelectItem></SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
+                                            {u.isOnline ? <Badge className="bg-green-500 h-5 text-[10px]">অনলাইন</Badge> : <span className="text-[10px] text-muted-foreground">অফলাইন</span>}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm" className="h-8 px-4 font-bold" onClick={() => { setSelectedUser(u); setIsPermissionDialogOpen(true); }} disabled={u.role === 'admin'}>পারমিশন</Button>
                                         </TableCell>
                                     </TableRow>
-                                ) : (
-                                    users.map(u => {
-                                        const userEmail = u.email?.toLowerCase() || '';
-                                        const teacherName = staffNameMap.get(userEmail);
-                                        const teacherPhoto = staffPhotoMap.get(userEmail);
-                                        const displayName = teacherName || u.displayName || (u.role === 'admin' ? 'Admin' : '-');
-                                        const isCurrentUser = u.uid === currentUser?.uid;
-
-                                        return (
-                                            <TableRow key={u.uid} className={cn(isCurrentUser && "bg-green-50 border-l-4 border-l-green-500")}>
-                                                <TableCell>
-                                                    <Avatar className="h-8 w-8 border">
-                                                        <AvatarImage src={teacherPhoto || u.photoUrl || ''} alt={displayName} />
-                                                        <AvatarFallback>{u.email ? u.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-                                                    </Avatar>
-                                                </TableCell>
-                                                <TableCell className="font-medium">
-                                                    {displayName}
-                                                    {isCurrentUser && <span className="ml-2 text-xs text-green-600">(আপনি)</span>}
-                                                </TableCell>
-                                                <TableCell>{u.email}</TableCell>
-                                                <TableCell>
-                                                    {isCurrentUser ? (
-                                                        <Badge variant={u.role === 'admin' ? 'destructive' : 'secondary'}>
-                                                            {roleMap[u.role] || u.role}
-                                                        </Badge>
-                                                    ) : (
-                                                        <Select value={u.role} onValueChange={(val) => handleUpdateRole(u.uid, val as UserRole)}>
-                                                            <SelectTrigger className="h-8 w-[110px] text-xs">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="admin">এডমিন</SelectItem>
-                                                                <SelectItem value="teacher">শিক্ষক</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {u.isOnline ? (
-                                                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 flex items-center w-fit gap-1">
-                                                            <Circle className="h-2 w-2 fill-green-600 border-none" />
-                                                            অনলাইন
-                                                        </Badge>
-                                                    ) : (
-                                                        <span className="text-xs text-muted-foreground">অফলাইন</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-xs whitespace-nowrap">
-                                                    {u.lastLoginAt ? (
-                                                        <div className="flex items-center gap-1">
-                                                            <Clock className="h-3 w-3 text-muted-foreground" />
-                                                            {format(u.lastLoginAt, 'PPp', { locale: bn })}
-                                                        </div>
-                                                    ) : 'কখনো নয়'}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button variant="outline" size="sm" onClick={() => openPermissionDialog(u)} disabled={u.role === 'admin'}>
-                                                            পারমিশন
-                                                        </Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="destructive" size="sm" disabled={isCurrentUser || isDeleting === u.uid}>
-                                                                    {isDeleting === u.uid ? <Loader2 className="h-3 w-3 animate-spin" /> : 'ডিলিট'}
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        এই ব্যবহারকারীকে স্থায়ীভাবে মুছে ফেলা হবে। এই কাজটি ফিরিয়ে আনা যাবে না।
-                                                                        {isCurrentUser && " আপনি বর্তমানে এই একাউন্ট দিয়ে লগইন আছেন, তাই এটি ডিলিট করা সম্ভব নয়।"}
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDeleteUser(u)} disabled={isCurrentUser || isDeleting === u.uid}>
-                                                                        ডিলিট করুন
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
-                     </div>
-                </CardContent>
-            </Card>
-            {selectedUser && (
-                <PermissionDialog
-                    user={selectedUser}
-                    open={isPermissionDialogOpen}
-                    onOpenChange={setIsPermissionDialogOpen}
-                    onPermissionsUpdate={() => {}}
-                />
-            )}
-        </>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+            {selectedUser && <PermissionDialog user={selectedUser} open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen} onPermissionsUpdate={() => {}} />}
+        </Card>
     );
 }
 
 function ProfileSettings() {
     const { user } = useAuth();
     const { toast } = useToast();
-    const db = useFirestore();
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSaving, setIsSaving] = useState(false);
-    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-    const [isPhotoSaving, setIsPhotoSaving] = useState(false);
-    const [displayName, setDisplayName] = useState<string | null>(null);
 
-    const isAdmin = user?.role === 'admin';
-
-    useEffect(() => {
-        if (!user || !db) return;
-        
-        if (user.role === 'teacher' && user.email) {
-            const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase()), limit(1));
-            const unsubscribe = onSnapshot(staffQuery, (snapshot) => {
-                if (!snapshot.empty) {
-                    const staffData = snapshot.docs[0].data();
-                    setDisplayName(staffData.nameBn);
-                    setPhotoPreview(staffData.photoUrl);
-                } else {
-                    setDisplayName(user.displayName || null);
-                    setPhotoPreview(user.photoUrl || null);
-                }
-            });
-            return () => unsubscribe();
-        } else {
-            setDisplayName(user.displayName || 'Admin');
-            setPhotoPreview(user.photoUrl || null);
-        }
-    }, [user, db]);
-
-    const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                toast({
-                    variant: "destructive",
-                    title: "ফাইল ತುಂಬಾ বড়",
-                    description: "অনুগ্রহ করে ২ মেগাবাইটের কম আকারের ছবি আপলোড করুন।",
-                });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPhotoPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    
-    const handleSavePhoto = async () => {
-        if (!db || !user || !photoPreview) return;
-
-        setIsPhotoSaving(true);
-        try {
-            const userRef = doc(db, 'users', user.uid);
-            await setDoc(userRef, { photoUrl: photoPreview }, { merge: true });
-            toast({ title: 'প্রোফাইল ছবি আপডেট হয়েছে' });
-        } catch (e) {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: `users/${user.uid}`,
-                operation: 'update',
-            }));
-        } finally {
-            setIsPhotoSaving(false);
-        }
-    }
-    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newPassword !== confirmPassword) {
-            toast({ variant: 'destructive', title: 'পাসওয়ার্ড মিলেনি' });
-            return;
-        }
-        if (newPassword.length < 6) {
-             toast({ variant: 'destructive', title: 'পাসওয়ার্ডটি খুবই দুর্বল' });
-            return;
-        }
-
+        if (newPassword !== confirmPassword) { toast({ variant: 'destructive', title: 'পাসওয়ার্ড মিলেনি' }); return; }
         setIsSaving(true);
         const result = await changePassword(currentPassword, newPassword);
         setIsSaving(false);
-
         if (result.success) {
-            toast({ title: 'পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে।'});
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-        } else {
-            toast({ variant: 'destructive', title: 'একটি ত্রুটি ঘটেছে', description: result.error });
-        }
+            toast({ title: 'পাসওয়ার্ড পরিবর্তিত হয়েছে' });
+            setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+        } else toast({ variant: 'destructive', title: result.error });
     }
-    
+
     return (
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-             <Card>
-                <CardHeader>
-                    <CardTitle>প্রোফাইল তথ্য</CardTitle>
+        <div className="space-y-10">
+            <Card className="border-none shadow-none">
+                <CardHeader className="px-0 pt-0">
+                    <CardTitle className="text-2xl font-black">আমার প্রোফাইল</CardTitle>
+                    <CardDescription>আপনার ব্যক্তিগত তথ্য এবং নিরাপত্তা সেটিংস</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                     {photoPreview && (
-                        <div className="flex justify-center mb-4">
-                            <Avatar className="h-24 w-24 border-2 border-primary/10">
-                                <AvatarImage src={photoPreview} alt={displayName || 'User'} />
-                                <AvatarFallback>{user?.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-                            </Avatar>
+                <CardContent className="px-0 pt-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-8 p-8 border-2 rounded-2xl bg-white shadow-sm mb-8">
+                        <Avatar className="h-32 w-32 border-4 border-primary/10 shadow-lg">
+                            <AvatarImage src={user?.photoUrl} />
+                            <AvatarFallback className="text-3xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1 text-center sm:text-left">
+                            <h2 className="text-2xl font-black text-slate-800">{user?.displayName || 'ব্যবহারকারী'}</h2>
+                            <p className="font-bold text-primary">{user?.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'সহকারী শিক্ষক'}</p>
+                            <p className="text-sm text-muted-foreground">{user?.email}</p>
+                            <div className="pt-3"><Badge variant="outline" className="font-black bg-muted/50 border-none px-4">আইডি: {user?.uid.slice(0, 8)}</Badge></div>
                         </div>
-                     )}
-                     <div>
-                        <Label className="text-muted-foreground">নাম</Label>
-                        <p className="text-md font-bold">{displayName || '-'}</p>
                     </div>
-                     <div>
-                        <Label className="text-muted-foreground">ইমেইল</Label>
-                        <p className="text-sm">{user?.email}</p>
+
+                    <div className="max-w-md">
+                        <h3 className="font-black text-lg mb-4">পাসওয়ার্ড পরিবর্তন করুন</h3>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-2"><Label className="font-bold">বর্তমান পাসওয়ার্ড</Label><Input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required /></div>
+                            <div className="space-y-2"><Label className="font-bold">নতুন পাসওয়ার্ড</Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required /></div>
+                            <div className="space-y-2"><Label className="font-bold">পুনরায় লিখুন</Label><Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required /></div>
+                            <Button type="submit" disabled={isSaving} className="w-full h-11 font-black shadow-md">{isSaving ? 'সেভ হচ্ছে...' : 'পাসওয়ার্ড আপডেট করুন'}</Button>
+                        </form>
                     </div>
-                     <div>
-                        <Label className="text-muted-foreground">ভূমিকা (Role)</Label>
-                        <p className="text-sm font-medium">{user?.role === 'admin' ? 'এডমিন' : 'শিক্ষক'}</p>
-                    </div>
-                    {user?.lastLoginAt && (
-                        <div>
-                            <Label className="text-muted-foreground">সর্বশেষ লগইন</Label>
-                            <p className="text-sm flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {format(user.lastLoginAt, 'PPp', { locale: bn })}
-                            </p>
-                        </div>
-                    )}
                 </CardContent>
-            </Card>
-
-            {isAdmin && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>প্রোফাইল ছবি</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex flex-col items-center gap-4">
-                            <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
-                                <AvatarImage src={photoPreview || ''} alt={user?.email || 'User'} />
-                                <AvatarFallback>{user?.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-                            </Avatar>
-                            <Input id="photo" name="photo" type="file" className="hidden" onChange={handlePhotoChange} accept="image/*" />
-                            <Button type="button" variant="outline" onClick={() => document.getElementById('photo')?.click()} className="w-full">
-                                <Upload className="mr-2 h-4 w-4" />
-                                ছবি নির্বাচন করুন
-                            </Button>
-                        </div>
-                    </CardContent>
-                    <CardFooter className="border-t pt-6">
-                        <Button onClick={handleSavePhoto} disabled={isPhotoSaving || !photoPreview} className="w-full shadow-md">
-                            {isPhotoSaving ? 'সেভ হচ্ছে...' : 'ছবি আপডেট করুন'}
-                        </Button>
-                    </CardFooter>
-                </Card>
-            )}
-
-             <Card>
-                <form onSubmit={handleSubmit}>
-                    <CardHeader>
-                        <CardTitle>পাসওয়ার্ড পরিবর্তন</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="currentPassword">বর্তমান পাসওয়ার্ড</Label>
-                            <Input id="currentPassword" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="newPassword">নতুন পাসওয়ার্ড</Label>
-                            <Input id="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">পুনরায় লিখুন</Label>
-                            <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
-                        </div>
-                    </CardContent>
-                    <CardFooter className="border-t pt-6">
-                        <Button type="submit" disabled={isSaving} className="w-full">
-                            {isSaving ? 'সেভ হচ্ছে...' : 'পাসওয়ার্ড সেভ করুন'}
-                        </Button>
-                    </CardFooter>
-                </form>
             </Card>
         </div>
     );
 }
 
+function BackupAndExportSettings() {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [isExporting, setIsExporting] = useState(false);
+
+    const collectionsToExport = [
+        'students', 'staff', 'attendance', 'feeCollections', 
+        'transactions', 'results', 'notices', 'holidays', 
+        'classRoutines', 'proxyClasses'
+    ];
+
+    const handleFullBackup = async (format: 'json' | 'excel') => {
+        if (!db) return;
+        setIsExporting(true);
+        try {
+            const fullData: any = {};
+            
+            // Fetch all data
+            for (const collName of collectionsToExport) {
+                const snap = await getDocs(collection(db, collName));
+                fullData[collName] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            }
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const fileName = `BPHS_Backup_${timestamp}`;
+
+            if (format === 'json') {
+                const jsonStr = JSON.stringify(fullData, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${fileName}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                const wb = XLSX.utils.book_new();
+                for (const sheetName in fullData) {
+                    const ws = XLSX.utils.json_to_sheet(fullData[sheetName]);
+                    XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31)); // sheet names limited to 31 chars
+                }
+                XLSX.writeFile(wb, `${fileName}.xlsx`);
+            }
+
+            toast({ title: 'ব্যাকআপ সফল হয়েছে', description: `সিস্টেমের পূর্ণাঙ্গ ডেটা এক্সপোর্ট করা হয়েছে।` });
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'এক্সপোর্ট ব্যর্থ হয়েছে', description: 'সার্ভার থেকে তথ্য পাওয়া যায়নি।' });
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    return (
+        <Card className="border-none shadow-none">
+            <CardHeader className="px-0 pt-0">
+                <CardTitle className="text-2xl font-black">ডেটা ব্যাকআপ ও এক্সপোর্ট</CardTitle>
+                <CardDescription>পুরো সিস্টেমের ডেটা নিরাপদ রাখতে ব্যাকআপ ফাইল ডাউনলোড করুন</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 space-y-10">
+                <div className="grid gap-6 md:grid-cols-2">
+                    <Card className="border-2 border-emerald-100 bg-emerald-50/20 p-6 flex flex-col gap-4 relative overflow-hidden group">
+                        <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                            <FileSpreadsheet className="h-32 w-32 text-emerald-900" />
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="font-black text-xl text-emerald-950 flex items-center gap-2"><FileSpreadsheet className="h-5 w-5" /> Excel ব্যাকআপ</h4>
+                            <p className="text-xs text-muted-foreground font-bold">সকল তথ্য আলাদা শিট আকারে এক্সেল ফাইলে সেভ হবে।</p>
+                        </div>
+                        <p className="text-sm leading-relaxed text-emerald-900 italic">"পাস করা শিক্ষার্থী, স্টাফ তালিকা এবং হিসাবের রেকর্ড সংরক্ষণের জন্য এটি সর্বোত্তম।"</p>
+                        <Button onClick={() => handleFullBackup('excel')} disabled={isExporting} className="mt-4 bg-emerald-600 hover:bg-emerald-700 shadow-md font-black h-12">
+                            {isExporting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Download className="h-5 w-5 mr-2" />}
+                            Excel ডাউনলোড করুন
+                        </Button>
+                    </Card>
+
+                    <Card className="border-2 border-indigo-100 bg-indigo-50/20 p-6 flex flex-col gap-4 relative overflow-hidden group">
+                        <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                            <FileJson className="h-32 w-32 text-indigo-900" />
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="font-black text-xl text-indigo-950 flex items-center gap-2"><FileJson className="h-5 w-5" /> JSON রিকভারি ফাইল</h4>
+                            <p className="text-xs text-muted-foreground font-bold">পুরো ডাটাবেস স্ন্যাপশট JSON ফরম্যাটে ডাউনলোড হবে।</p>
+                        </div>
+                        <p className="text-sm leading-relaxed text-indigo-900 italic">"ভবিষ্যতে সিস্টেম রিসেট বা অন্য কোনো ডাটাবেসে তথ্য স্থানান্তরের জন্য এটি প্রয়োজন।"</p>
+                        <Button onClick={() => handleFullBackup('json')} disabled={isExporting} className="mt-4 bg-indigo-600 hover:bg-indigo-700 shadow-md font-black h-12">
+                            {isExporting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Download className="h-5 w-5 mr-2" />}
+                            JSON ডাউনলোড করুন
+                        </Button>
+                    </Card>
+                </div>
+
+                <div className="p-6 border-2 border-amber-100 bg-amber-50 rounded-2xl flex items-start gap-4">
+                    <div className="p-3 bg-amber-100 rounded-full shrink-0"><ShieldAlert className="h-6 w-6 text-amber-600" /></div>
+                    <div className="space-y-1">
+                        <h5 className="font-black text-amber-900">গুরুত্বপূর্ণ সতর্কতা</h5>
+                        <p className="text-sm text-amber-800 leading-relaxed font-bold">
+                            আপনার ডাটাবেস ব্যাকআপ ফাইলে শিক্ষার্থীদের ফোন নম্বর, ঠিকানা এবং অন্যান্য ব্যক্তিগত তথ্য থাকে। তাই ব্যাকআপ ফাইলটি নিরাপদ স্থানে সংরক্ষণ করুন এবং অননুমোদিত কাউকে ফাইলটি দেবেন না। মাসে অন্তত একবার ব্যাকআপ ডাউনলোড করার পরামর্শ দেওয়া হচ্ছে।
+                        </p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+// --- Main Page Component ---
+
 export default function SettingsPage() {
     const [isClient, setIsClient] = useState(false);
     const { user } = useAuth();
+    const [activeSection, setActiveSection] = useState('profile');
 
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
+    useEffect(() => { setIsClient(true); }, []);
 
     const isAdmin = user?.role === 'admin';
 
+    const sidebarItems = useMemo(() => {
+        const items = [
+            { id: 'profile', label: 'আমার প্রোফাইল', icon: User, color: 'text-indigo-600 bg-indigo-50' },
+        ];
+        if (isAdmin) {
+            items.push(
+                { id: 'school', label: 'প্রতিষ্ঠানের তথ্য', icon: School, color: 'text-emerald-600 bg-emerald-50' },
+                { id: 'holidays', label: 'অতিরিক্ত ছুটি', icon: Calendar, color: 'text-rose-600 bg-rose-50' },
+                { id: 'users', label: 'ইউজার ম্যানেজমেন্ট', icon: Users, color: 'text-blue-600 bg-blue-50' },
+                { id: 'backup', label: 'ব্যাকআপ ও এক্সপোর্ট', icon: HardDriveDownload, color: 'text-amber-600 bg-amber-50' },
+                { id: 'system', label: 'সিস্টেম স্ট্যাটাস', icon: Monitor, color: 'text-slate-600 bg-slate-50' }
+            );
+        }
+        return items;
+    }, [isAdmin]);
+
+    if (!isClient) return <div className="flex h-screen items-center justify-center bg-indigo-50"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+
     return (
-        <div className="flex min-h-screen w-full flex-col bg-indigo-50">
+        <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
-                <Card className="border-2 border-primary/10 shadow-xl">
-                    <CardHeader className="bg-white/50">
-                        <CardTitle className="text-3xl font-black">সেটিংস</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        {isClient ? (
-                            <Tabs defaultValue="profile">
-                                <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
-                                    <TabsTrigger value="profile" className="flex-1 min-w-[80px] font-bold">প্রোফাইল</TabsTrigger>
-                                    {isAdmin && <TabsTrigger value="school-info" className="flex-1 min-w-[80px] font-bold">প্রতিষ্ঠানের তথ্য</TabsTrigger>}
-                                    {isAdmin && <TabsTrigger value="holidays" className="flex-1 min-w-[80px] font-bold">অতিরিক্ত ছুটি</TabsTrigger>}
-                                    {isAdmin && <TabsTrigger value="user-management" className="flex-1 min-w-[80px] font-bold">ব্যবহারকারী</TabsTrigger>}
-                                    {isAdmin && <TabsTrigger value="system-info" className="flex-1 min-w-[80px] font-bold">সিস্টেম তথ্য</TabsTrigger>}
-                                </TabsList>
-                                <TabsContent value="profile" className="pt-2">
-                                    <ProfileSettings />
-                                </TabsContent>
-                                {isAdmin && (
-                                    <>
-                                        <TabsContent value="school-info" className="pt-2">
-                                            <SchoolInfoSettings />
-                                        </TabsContent>
-                                        <TabsContent value="holidays" className="pt-2">
-                                           <HolidaySettings />
-                                        </TabsContent>
-                                        <TabsContent value="user-management" className="pt-2">
-                                            <UserManagementSettings />
-                                        </TabsContent>
-                                        <TabsContent value="system-info" className="pt-2">
-                                            <SystemUsageInfo />
-                                        </TabsContent>
-                                    </>
+            <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-40">
+                
+                {/* Sidebar Navigation */}
+                <aside className="w-full md:w-72 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0">
+                    <h2 className="text-3xl font-black mb-8 px-4 hidden md:block text-slate-900 tracking-tight">সেটিংস</h2>
+                    <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                        {sidebarItems.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveSection(item.id)}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                    activeSection === item.id 
+                                        ? "bg-white shadow-md text-primary scale-105" 
+                                        : "text-muted-foreground hover:bg-slate-200/50"
                                 )}
-                            </Tabs>
-                        ) : (
-                            <div className="space-y-4">
-                                <Skeleton className="h-12 w-full rounded-md" />
-                                <Skeleton className="h-64 w-full rounded-md" />
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            >
+                                <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                                    <item.icon className="h-4 w-4" />
+                                </div>
+                                <span className="text-sm">{item.label}</span>
+                                {activeSection === item.id && <ChevronRight className="ml-auto h-4 w-4 hidden md:block" />}
+                            </button>
+                        ))}
+                    </div>
+                </aside>
+
+                {/* Content Area */}
+                <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+                    <div className="p-6 sm:p-10 lg:p-14 flex-1">
+                        {activeSection === 'profile' && <ProfileSettings />}
+                        {activeSection === 'school' && isAdmin && <SchoolInfoSettings />}
+                        {activeSection === 'holidays' && isAdmin && <HolidaySettings />}
+                        {activeSection === 'users' && isAdmin && <UserManagementSettings />}
+                        {activeSection === 'backup' && isAdmin && <BackupAndExportSettings />}
+                        {activeSection === 'system' && isAdmin && <SystemUsageInfo />}
+                    </div>
+                </div>
+
             </main>
         </div>
+    );
+}
+
+function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { user: SystemUser, open: boolean, onOpenChange: (open: boolean) => void, onPermissionsUpdate: () => void }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [permissions, setPermissions] = useState<Set<string>>(new Set());
+    const [marksPermissions, setMarksPermissions] = useState<Record<string, string[]>>({});
+
+    useEffect(() => {
+        if (user) {
+            setPermissions(new Set(user.permissions?.length ? user.permissions : (defaultPermissions[user.role] || [])));
+            setMarksPermissions(user.marksPermissions || {});
+        }
+    }, [user]);
+
+    const handleSave = async () => {
+        await updateUserPermissions(db!, user.uid, Array.from(permissions), marksPermissions);
+        toast({ title: 'পারমিশন আপডেট হয়েছে' });
+        onPermissionsUpdate(); onOpenChange(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>পারমিশন সেটিংস - {user.email}</DialogTitle></DialogHeader>
+                <div className="py-4 space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {availablePermissions.map(p => (
+                            <div key={p.id} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/20">
+                                <Checkbox checked={permissions.has(p.id)} onCheckedChange={c => { const n = new Set(permissions); if (c) n.add(p.id); else n.delete(p.id); setPermissions(n); }} />
+                                <Label className="text-xs font-bold leading-none cursor-pointer">{p.label}</Label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter><Button onClick={handleSave} className="w-full font-black">সেভ করুন</Button></DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
