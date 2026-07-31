@@ -23,7 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDocs, where, limit } from 'firebase/firestore';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { User as SystemUser, userFromDoc, UserRole } from '@/lib/user';
@@ -577,12 +577,46 @@ function UserManagementSettings() {
 }
 
 function ProfileSettings() {
+    const db = useFirestore();
     const { user } = useAuth();
     const { toast } = useToast();
+    
+    const [displayPhoto, setDisplayPhoto] = useState<string | null>(null);
+    const [displayName, setDisplayName] = useState<string | null>(null);
+
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (!user || !db) return;
+
+        let unsubscribe: (() => void) | undefined;
+        
+        if (user.role === 'teacher' && user.email) {
+            const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase()), limit(1));
+            unsubscribe = onSnapshot(staffQuery, (snapshot) => {
+                if (!snapshot.empty) {
+                    const staffData = snapshot.docs[0].data();
+                    setDisplayPhoto(staffData.photoUrl);
+                    setDisplayName(staffData.nameBn);
+                } else {
+                    setDisplayPhoto(user.photoUrl || null);
+                    setDisplayName(user.displayName || null);
+                }
+            }, (error) => {
+                if (error.code === 'permission-denied') return;
+            });
+        } else {
+            setDisplayPhoto(user.photoUrl || null);
+            setDisplayName(user.displayName || 'Admin');
+        }
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user, db]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -606,12 +640,12 @@ function ProfileSettings() {
                 <CardContent className="px-0 pt-4">
                     <div className="flex flex-col sm:flex-row items-center gap-8 p-8 border-2 rounded-2xl bg-white shadow-sm mb-8">
                         <Avatar className="h-32 w-32 border-4 border-primary/10 shadow-lg">
-                            <AvatarImage src={user?.photoUrl} />
+                            <AvatarImage src={displayPhoto || undefined} />
                             <AvatarFallback className="text-3xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="space-y-1 text-center sm:text-left">
-                            <h2 className="text-2xl font-black text-slate-800">{user?.displayName || 'ব্যবহারকারী'}</h2>
-                            <p className="font-bold text-primary">{user?.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'সহকারী শিক্ষক'}</p>
+                            <h2 className="text-2xl font-black text-slate-800">{displayName || 'ব্যবহারকারী'}</h2>
+                            <p className="font-bold text-primary">{user?.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'सहকারী শিক্ষক'}</p>
                             <p className="text-sm text-muted-foreground">{user?.email}</p>
                             <div className="pt-3"><Badge variant="outline" className="font-black bg-muted/50 border-none px-4">আইডি: {user?.uid.slice(0, 8)}</Badge></div>
                         </div>
