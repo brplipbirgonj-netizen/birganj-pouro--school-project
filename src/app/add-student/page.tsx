@@ -505,7 +505,7 @@ export default function AddStudentPage() {
                                 "h-8 w-8 rounded-full flex items-center justify-center border-2 transition-all duration-500",
                                 currentStep >= step.id ? "bg-primary border-primary text-white scale-110 shadow-md" : "bg-white border-muted-foreground/30 text-muted-foreground"
                             )}>
-                                {currentWeekIdx > step.id ? <CheckCircle2 className="h-5 w-5" /> : <step.icon className="h-4 w-4" />}
+                                {currentStep > step.id ? <CheckCircle2 className="h-5 w-5" /> : <step.icon className="h-4 w-4" />}
                             </div>
                             <span className={cn(
                                 "text-[10px] sm:text-xs mt-2 font-bold transition-colors",
