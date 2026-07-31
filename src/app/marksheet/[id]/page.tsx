@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -50,6 +49,7 @@ function MarksheetContent() {
 
     const [student, setStudent] = useState<Student | null>(null);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
+    const [resultsBySubject, setResultsBySubject] = useState<ClassResult[]>([]);
     const [processedResult, setProcessedResult] = useState<StudentProcessedResult | null>(null);
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -109,17 +109,18 @@ function MarksheetContent() {
             const resultsPromises = allSubjectsForGroup
                 .map(subject => getResultsForClass(db, academicYear, rawExamName, studentData.className, subject.name, studentData.group || undefined));
             
-            const resultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
+            const fetchedResultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
+            setResultsBySubject(fetchedResultsBySubject);
             
-            // Filter subjects list to only include those where effective full marks > 0
+            // Filter subjects list based on effective full marks (User logic: Only show subjects with Full Marks > 0)
             const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
                 if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
                      if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
                      if (studentData.optionalSubject === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
                 }
                 
-                // Effective full marks check
-                const matchingRecord = resultsBySubject.find(r => 
+                // Effective full marks check: If full marks is 0 or not found, hide it
+                const matchingRecord = fetchedResultsBySubject.find(r => 
                     normalize(r.subject) === normalize(subjectInfo.name) && 
                     r.className === studentData.className
                 );
@@ -127,7 +128,7 @@ function MarksheetContent() {
                 return effectiveFullMarks > 0;
             });
 
-            const allFinalResults = processStudentResults(allStudentsInClass, resultsBySubject, allSubjectsForGroup);
+            const allFinalResults = processStudentResults(allStudentsInClass, fetchedResultsBySubject, allSubjectsForGroup);
             const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
 
             if (!finalResultForThisStudent) {
