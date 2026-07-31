@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -293,7 +292,7 @@ const FullMarksTab = () => {
 
     const isSubjectPermitted = useCallback((cls: string, sub: string) => {
         if (user?.role === 'admin') return true;
-        if (hasPermission('manage:results')) return true;
+        if (hasPermission('manage:results') || hasPermission('manage:full-marks')) return true;
         return (user as any)?.marksPermissions?.[cls]?.includes(sub) ?? false;
     }, [user, hasPermission]);
 
@@ -931,7 +930,9 @@ export default function ResultsPage() {
     const db = useFirestore(); 
     const { selectedYear } = useAcademicYear(); 
     const { user, hasPermission } = useAuth();
+    
     const canViewRes = hasPermission('manage:results') || hasPermission('input:results');
+    const canManageFullMarks = hasPermission('manage:full-marks') || hasPermission('manage:results');
 
     useEffect(() => {
         setIsClient(true); 
@@ -946,7 +947,7 @@ export default function ResultsPage() {
         return () => unsubscribe();
     }, [db, user]);
 
-    if (isClient && !canViewRes && !hasPermission('view:merit-list') && user?.role !== 'admin') return (
+    if (isClient && !canViewRes && !hasPermission('view:merit-list') && user?.role !== 'admin' && !canManageFullMarks) return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50">
             <Header />
             <main className="flex flex-1 items-center justify-center p-4">
@@ -969,10 +970,10 @@ export default function ResultsPage() {
                     </CardHeader>
                     <CardContent className="pt-6 bg-slate-50/30">
                         {isClient ? (
-                            <Tabs defaultValue={canViewRes ? "management" : "merit"}>
+                            <Tabs defaultValue={canViewRes ? "management" : (canManageFullMarks ? "full-marks" : "merit")}>
                                 <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto bg-muted/50 p-1.5 gap-2 border rounded-lg mb-6">
                                     {canViewRes && <TabsTrigger value="management" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">নম্বর ইনপুট</TabsTrigger>}
-                                    {canViewRes && <TabsTrigger value="full-marks" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিষয় ও পূর্ণমান</TabsTrigger>}
+                                    {canManageFullMarks && <TabsTrigger value="full-marks" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিষয় ও পূর্ণমান</TabsTrigger>}
                                     {canViewRes && <TabsTrigger value="sheet" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">ফলাফল শিট</TabsTrigger>}
                                     {hasPermission('view:merit-list') && <TabsTrigger value="merit" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">মেধা তালিকা</TabsTrigger>}
                                     {hasPermission('promote:students') && <TabsTrigger value="special-promotion" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিশেষ পাশ</TabsTrigger>}
