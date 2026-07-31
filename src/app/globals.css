@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -98,7 +99,7 @@
     .printable-area {
       width: 210mm !important;
       height: 297mm !important;
-      padding: 0; /* REMOVED !important to allow component-specific margins */
+      padding: 0;
       margin: 0 !important;
       box-sizing: border-box !important;
       page-break-after: always !important;
@@ -131,8 +132,8 @@
 
 @media (min-width: 768px) {
   .table-container {
-    /* Adjusted height to ensure horizontal scrollbar is visible on most screens */
-    max-height: calc(100vh - 450px);
+    /* Set a reasonable height so scrollbar is always visible in viewport */
+    max-height: 600px;
     scrollbar-gutter: stable;
   }
 }
