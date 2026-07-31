@@ -79,12 +79,13 @@ export function processStudentResults(
         const optionalSubjectName = student.optionalSubject;
         const studentClassNum = parseInt(student.className);
 
-        // Get the subjects actually allowed/expected for this student's specific group
+        // ৪র্থ বিষয়ের লজিক প্রয়োগের জন্য বিষয়ের তালিকা প্রস্তুত
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized).map(s => s.name);
 
         const subjectsForStudent = allSubjectsForGroup.filter(subjectInfo => {
             if (studentClassNum < 9) return true;
             if (!groupAllowedSubjects.some(name => normalize(name) === normalize(subjectInfo.name))) return false;
+            // ঐচ্ছিক বিষয় নির্বাচনে ভুল প্রতিরোধ (যদি শিক্ষার্থী কৃষি নেয় কিন্তু উচ্চতর গণিত এর নম্বর লোড হয়)
             if (optionalSubjectName === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
             if (optionalSubjectName === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
             return true;
@@ -119,6 +120,7 @@ export function processStudentResults(
             const practical = studentResult?.practical;
             const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
             
+            // পাস মার্কস নির্ধারণ (পূর্ণমানের ৩৩%)
             const passMark = Math.ceil(fullMarks * 0.33);
             const isPassSubject = obtainedMarks >= passMark;
             
@@ -147,16 +149,18 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const result = subjectResults.get(subjectInfo.name);
             if (!result) {
-                // If a subject was expected but not found at all, it's a fail in original logic
+                // যদি নম্বর এন্ট্রি না থাকে তবে ফেল ধরা হবে (আগের লজিক)
                 failedInCompulsoryCount++;
                 compulsorySubjectsCount++;
                 return;
             }
     
+            // ৪র্থ বিষয়ের জন্য বোনাস পয়েন্ট ক্যালকুলেশন
             if (subjectInfo.name === optionalSubjectName) {
                 if (result.isPass && result.point > 2.0) {
                     bonusPoints = result.point - 2.0;
                 }
+                // ৪র্থ বিষয়ে ফেল করলে মূল রেজাল্ট ফেল হয় না, তাই failedInCompulsoryCount বাড়ানো হয় না
             } else {
                 totalCompulsoryPoints += result.point;
                 compulsorySubjectsCount++;
@@ -170,10 +174,11 @@ export function processStudentResults(
         let gpa = 0;
 
         if (isPass && compulsorySubjectsCount > 0) {
+            // সূত্র: (আবশ্যিক বিষয়ের পয়েন্ট + ৪র্থ বিষয়ের বোনাস পয়েন্ট) / আবশ্যিক বিষয়ের সংখ্যা
             gpa = (totalCompulsoryPoints + bonusPoints) / compulsorySubjectsCount;
         }
         
-        if (gpa > 5.0) gpa = 5.0;
+        if (gpa > 5.0) gpa = 5.0; // ৫.০০ এর বেশি হতে পারবে না
         const finalGrade = isPass ? getFinalGrade(gpa) : 'F';
         
         return {
@@ -188,6 +193,7 @@ export function processStudentResults(
         };
     });
 
+    // মেধাক্রম নির্ধারণ (পাস করা শিক্ষার্থীদের মাঝে)
     const passedStudents = studentResults
         .filter(s => s.isPass)
         .sort((a, b) => {
