@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,7 +50,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const isSubjectPermitted = useCallback((cls: string, sub: string) => {
         if (user?.role === 'admin') return true;
         if (hasPermission('manage:results')) return true;
-        return user?.marksPermissions?.[cls]?.includes(sub) ?? false;
+        return (user as any)?.marksPermissions?.[cls]?.includes(sub) ?? false;
     }, [user, hasPermission]);
 
     const [exams, setExams] = useState<Exam[]>([]);
@@ -400,7 +400,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <h3 className="font-black text-primary text-xs">শাখা: {groupNamesMap[gk] || gk}</h3>
                             <Badge variant="outline" className="text-[9px] h-5">মোট: {results.length.toLocaleString('bn-BD')}</Badge>
                         </div>
-                        <div className="table-container border-2 border-primary/20 max-h-[550px] overflow-auto relative">
+                        <div className="table-container border-2 border-primary/20 max-height-[600px] overflow-auto relative">
                             <Table className="min-w-max border-collapse">
                                 <TableHeader className="sticky top-0 bg-white z-40 shadow-sm">
                                     <TableRow className="h-7">
@@ -488,7 +488,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg bg-white/50">
                 <div className="space-y-2"><Label>পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><Label>শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-                {parseInt(className) >= 9 && (<div className="space-y-2"><Label>শাখা</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger><SelectValue placeholder="সকল শাখা" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
+                {parseInt(className) >= 9 && (<div className="space-y-2"><Label>শাখা</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger className="bg-white"><SelectValue placeholder="সকল শাখা" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
                 <div className="flex gap-2 lg:col-span-1"><Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="flex-1">তালিকা দেখুন</Button><Button onClick={handlePrint} disabled={processedResults.length === 0} variant="outline"><Printer className="h-4 w-4" /></Button></div>
             </div>
             {processedResults.length > 0 && (
@@ -551,7 +551,7 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <div className="border rounded-md overflow-x-auto"><Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="w-12"><Checkbox checked={selectedIds.size === failedStudents.length} onCheckedChange={(c) => setSelectedIds(c ? new Set(failedStudents.map(s => s.student.id)) : new Set())} /></TableHead><TableHead className="text-center">রোল</TableHead><TableHead>নাম</TableHead><TableHead className="text-center">ফেল সংখ্যা</TableHead></TableRow></TableHeader><TableBody>{failedStudents.map(res => (
                         <TableRow key={res.student.id}><TableCell><Checkbox checked={selectedIds.has(res.student.id)} onCheckedChange={(c) => { const n = new Set(selectedIds); if (c) n.add(res.student.id); else n.delete(res.student.id); setSelectedIds(n); }} /></TableCell><TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell><TableCell className="font-bold">{res.student.studentNameBn}</TableCell><TableCell className="text-center text-rose-600 font-black">F{res.failedSubjectsCount}</TableCell></TableRow>
                     ))}</TableBody></Table></div>
-                    <div className="flex justify-end"><AlertDialog><AlertDialogTrigger asChild><Button size="lg" disabled={selectedIds.size === 0}>নির্বাচিতদের উত্তীর্ণ করুন</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle><AlertDialogDescription>{selectedIds.size.toLocaleString('bn-BD')} জনকে পরের শ্রেণিতে উঠানো হবে।</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={handlePromote}>উত্তীর্ণ করুন</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>
+                    <div className="flex justify-end"><AlertDialog><AlertDialogTrigger asChild><Button size="lg" disabled={selectedIds.size === 0}>নির্বাচিতদের উত্তীর্ণ করুন</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle><AlertDialogDescription>{selectedIds.size.toLocaleString('bn-BD')} জনকে পরের শ্রেণিতে উঠানো হবে।</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={handlePromote}>উত্তীর্ণ করুন</AlertDialogAction></AlertDialogFooter></AlertDialog></div>
                 </div>
             )}
         </div>
@@ -624,11 +624,21 @@ export default function ResultsPage() {
                                     {hasPermission('promote:students') && <TabsTrigger value="special-promotion" className="text-xs py-2 font-bold">বিশেষ পাশ</TabsTrigger>}
                                     {canViewRes && <TabsTrigger value="upload" className="text-xs py-2 font-bold">Excel আপলোড</TabsTrigger>}
                                 </TabsList>
-                                <TabsContent value="management" className="mt-4"><MarkManagementTab allStudents={allStudents} /></TabsContent>
-                                <TabsContent value="sheet" className="mt-4"><ResultSheetTab allStudents={allStudents} /></TabsContent>
-                                <TabsContent value="merit" className="mt-4"><MeritListTab allStudents={allStudents} /></TabsContent>
-                                <TabsContent value="special-promotion" className="mt-4"><SpecialPromotionTab allStudents={allStudents} /></TabsContent>
-                                <TabsContent value="upload" className="mt-4"><BulkUploadTab allStudents={allStudents} /></TabsContent>
+                                <TabsContent value="management" className="mt-4">
+                                    <MarkManagementTab allStudents={allStudents} />
+                                </TabsContent>
+                                <TabsContent value="sheet" className="mt-4">
+                                    <ResultSheetTab allStudents={allStudents} />
+                                </TabsContent>
+                                <TabsContent value="merit" className="mt-4">
+                                    <MeritListTab allStudents={allStudents} />
+                                </TabsContent>
+                                <TabsContent value="special-promotion" className="mt-4">
+                                    <SpecialPromotionTab allStudents={allStudents} />
+                                </TabsContent>
+                                <TabsContent value="upload" className="mt-4">
+                                    <BulkUploadTab allStudents={allStudents} />
+                                </TabsContent>
                             </Tabs>
                         ) : (
                             <div className="space-y-4">
@@ -642,4 +652,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
