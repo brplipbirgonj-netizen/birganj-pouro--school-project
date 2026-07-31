@@ -13,7 +13,7 @@ export const availablePermissions = [
   { id: 'manage:staff-attendance', label: 'স্টাফ হাজিরা ও ছুটি ম্যানেজ (ইনপুট)' },
   { id: 'view:staff-attendance-report', label: 'স্টাফ হাজিরা ও ছুটির রিপোর্ট দেখুন' },
 
-  { id: 'manage:attendance', label: 'হাজিরা ম্যানেজ করুন' },
+  { id: 'manage:attendance', label: 'শিক্ষার্থীর হাজিরা ম্যানেজ করুন' },
 
   { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
   { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
