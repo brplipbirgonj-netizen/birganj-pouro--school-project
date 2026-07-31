@@ -81,75 +81,106 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
     }
 
     return (
-        <div className="w-full overflow-x-auto pb-4">
-            <div className="flex flex-col gap-1 min-w-[800px]">
-                <div className="flex gap-1">
-                    <div className="w-8 shrink-0" />
+        <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-primary/20">
+            <div className="flex flex-col gap-2 min-w-[1000px]">
+                {/* Month Labels */}
+                <div className="flex gap-1 mb-1">
+                    <div className="w-10 shrink-0" />
                     <div className="flex flex-1 gap-1">
                         {BENGALI_MONTHS.map(m => (
-                            <div key={m} className="flex-1 text-[10px] text-muted-foreground font-bold text-center">{m}</div>
+                            <div key={m} className="flex-1 text-[12px] text-primary font-black text-center">{m}</div>
                         ))}
                     </div>
                 </div>
                 
-                <div className="flex gap-1">
-                    <div className="flex flex-col gap-1 w-8 shrink-0 text-[10px] text-muted-foreground font-bold pt-1">
-                        <span>র</span><span className="mt-1">ম</span><span className="mt-1">বু</span><span className="mt-1">বৃহ</span>
+                <div className="flex gap-2">
+                    {/* Day Labels */}
+                    <div className="flex flex-col justify-between w-10 shrink-0 text-[11px] text-muted-foreground font-black py-1 h-[190px]">
+                        <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span><span>শনি</span>
                     </div>
+                    
+                    {/* Grid */}
                     <div className="flex flex-1 gap-1">
-                        {weeks.map((week, wIdx) => (
-                            <div key={wIdx} className="flex flex-col gap-1 flex-1">
-                                {week.map((day, dIdx) => {
-                                    if (day.getTime() === 0) return <div key={dIdx} className="w-full aspect-square bg-transparent" />;
-                                    
-                                    const dateStr = format(day, 'yyyy-MM-dd');
-                                    const record = records.find(r => r.date === dateStr);
-                                    const holiday = holidays.includes(dateStr);
-                                    const isWeekend = day.getDay() === 5 || day.getDay() === 6;
-
-                                    let colorClass = "bg-slate-100";
-                                    let statusText = "রেকর্ড নেই";
-                                    
-                                    if (holiday || isWeekend) {
-                                        colorClass = "bg-amber-100/50";
-                                        statusText = isWeekend ? "সাপ্তাহিক ছুটি" : "সরকারি ছুটি";
+                        {weeks.map((week, wIdx) => {
+                            // Check if this week contains a month boundary for the vertical border
+                            let hasMonthEnd = false;
+                            const validDays = week.filter(d => d.getTime() !== 0);
+                            if (validDays.length > 0) {
+                                const lastDay = validDays[validDays.length - 1];
+                                const nextWeek = weeks[wIdx + 1];
+                                if (nextWeek) {
+                                    const nextValidDays = nextWeek.filter(d => d.getTime() !== 0);
+                                    if (nextValidDays.length > 0 && nextValidDays[0].getMonth() !== lastDay.getMonth()) {
+                                        hasMonthEnd = true;
                                     }
+                                }
+                            }
 
-                                    if (record) {
-                                        const att = record.attendance.find(a => !!a);
-                                        if (att?.status === 'present') {
-                                            colorClass = "bg-emerald-500 shadow-sm";
-                                            statusText = "উপস্থিত";
-                                        } else if (att?.status === 'absent') {
-                                            colorClass = "bg-rose-500 shadow-sm";
-                                            statusText = "অনুপস্থিত";
+                            return (
+                                <div 
+                                    key={wIdx} 
+                                    className={cn(
+                                        "flex flex-col gap-1 flex-1 pb-1",
+                                        hasMonthEnd && "border-r-2 border-primary/30 pr-1"
+                                    )}
+                                >
+                                    {week.map((day, dIdx) => {
+                                        if (day.getTime() === 0) return <div key={dIdx} className="w-full h-6 bg-transparent" />;
+                                        
+                                        const dateStr = format(day, 'yyyy-MM-dd');
+                                        const record = records.find(r => r.date === dateStr);
+                                        const holiday = holidays.includes(dateStr);
+                                        const isWeekend = day.getDay() === 5 || day.getDay() === 6;
+
+                                        let colorClass = "bg-slate-100";
+                                        let statusText = "রেকর্ড নেই";
+                                        
+                                        if (holiday || isWeekend) {
+                                            colorClass = "bg-yellow-400 shadow-sm";
+                                            statusText = isWeekend ? "সাপ্তাহিক ছুটি" : "সরকারি ছুটি";
                                         }
-                                    }
 
-                                    return (
-                                        <TooltipProvider key={dIdx}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <div className={cn("w-full aspect-square rounded-sm transition-all hover:ring-1 hover:ring-primary cursor-pointer", colorClass)} />
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p className="text-xs font-bold">{format(day, 'PPP', { locale: bn })}</p>
-                                                    <p className="text-[10px]">{statusText}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    );
-                                })}
-                            </div>
-                        ))}
+                                        if (record) {
+                                            const att = record.attendance.find(a => !!a);
+                                            if (att?.status === 'present') {
+                                                colorClass = "bg-green-600 shadow-md scale-105 z-10";
+                                                statusText = "উপস্থিত";
+                                            } else if (att?.status === 'absent') {
+                                                colorClass = "bg-red-600 shadow-md scale-105 z-10";
+                                                statusText = "অনুপস্থিত";
+                                            }
+                                        }
+
+                                        return (
+                                            <TooltipProvider key={dIdx}>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className={cn(
+                                                            "w-full h-6 rounded-md transition-all hover:ring-2 hover:ring-primary cursor-pointer border border-black/5", 
+                                                            colorClass
+                                                        )} />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p className="text-sm font-black">{format(day, 'PPP', { locale: bn })}</p>
+                                                        <p className="text-xs font-bold">{statusText}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
-            <div className="mt-4 flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
-                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-emerald-500 rounded-sm" /> উপস্থিত</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-rose-500 rounded-sm" /> অনুপস্থিত</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-100 rounded-sm" /> ছুটি</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-100 rounded-sm" /> কোনো ডাটা নেই</div>
+            {/* Heatmap Legend */}
+            <div className="mt-8 flex flex-wrap items-center gap-6 text-[12px] font-black text-slate-700 bg-white p-4 rounded-lg border shadow-sm">
+                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-green-600 rounded-md shadow-sm" /> উপস্থিত</div>
+                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-red-600 rounded-md shadow-sm" /> অনুপস্থিত</div>
+                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-yellow-400 rounded-md shadow-sm" /> সরকারি/সাপ্তাহিক ছুটি</div>
+                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-slate-100 rounded-md border" /> রেকর্ড নেই</div>
+                <div className="ml-auto text-muted-foreground italic font-medium">* প্রতিটি মাসের শেষে খাড়া বর্ডার দেওয়া হয়েছে।</div>
             </div>
         </div>
     );
@@ -493,7 +524,7 @@ function StudentProfileSearchContent() {
                     
                     {studentData && (
                         <div className="flex flex-col">
-                            {/* Modern Header: Facebook-style */}
+                            {/* Modern Header */}
                             <div className="relative h-48 sm:h-64 bg-gradient-to-r from-indigo-600 to-purple-600">
                                 <div className="absolute -bottom-4 left-6 flex items-end gap-6">
                                     <div className="relative h-32 w-32 sm:h-44 sm:w-44 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl">
@@ -595,7 +626,7 @@ function StudentProfileSearchContent() {
 
                                                 <div className="border-t pt-8">
                                                     <h3 className="text-md font-black mb-6 uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                                        <LayoutGrid className="h-4 w-4" /> অ্যাটেন্ডেন্স হিটম্যাপ
+                                                        <LayoutGrid className="h-4 w-4" /> অ্যাটেন্ডেন্স হিটম্যাপ (বার্ষিক ক্যালেন্ডার)
                                                     </h3>
                                                     <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
                                                 </div>
