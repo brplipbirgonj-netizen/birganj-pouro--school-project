@@ -272,9 +272,10 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear }: an
                     <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                 </div>
                 <div className="text-center">
-                    <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">প্রধান শিক্ষকের স্বাক্ষর</div>
+                    <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
                 </div>
             </footer>
         </div>
     );
 }
+

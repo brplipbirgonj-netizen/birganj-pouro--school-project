@@ -320,7 +320,7 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 <h2 className="inline-block text-4xl font-black border-b-4 border-blue-900 pb-2 px-16 uppercase tracking-widest text-blue-950">প্রশংসাপত্র</h2>
             </div>
 
-            <div className="relative z-10 text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900">
+            <div className="relative z-10 text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900 pb-32">
                 <p className="indent-20">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
@@ -339,7 +339,7 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                     অত্র বিদ্যালয়ে অধ্যয়নকালীন মেধা তালিকায় {formData.meritPosition && <>(মেধাক্রম: <span className="font-black px-1">{toBengaliNumber(formData.meritPosition)}</span>)</>} তার অর্জিত GPA: <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
                 </p>
 
-                <p className="italic text-blue-950 pt-6 text-center text-2xl font-black">
+                <p className="italic text-blue-950 pt-8 text-center text-2xl font-black">
                     আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
                 </p>
             </div>
@@ -350,7 +350,6 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 </div>
                 <div className="text-center">
                     <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">
-                        <p className="mb-1">{schoolInfo.name}</p>
                         <p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
                     </div>
                 </div>
@@ -358,3 +357,4 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
         </div>
     );
 }
+

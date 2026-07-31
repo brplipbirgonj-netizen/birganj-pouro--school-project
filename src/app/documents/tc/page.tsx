@@ -39,7 +39,6 @@ export default function TCGeneratorPage() {
   const [className, setClassName] = useState<string>('10');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [headmaster, setHeadmaster] = useState<Staff | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -77,16 +76,6 @@ export default function TCGeneratorPage() {
     };
     fetchStudents();
   }, [db, className, selectedYear, isClient]);
-
-  useEffect(() => {
-    if (!db || !isClient) return;
-    const fetchHeadmaster = async () => {
-      const q = query(collection(db, 'staff'), where('isActive', '==', true), where('designation', 'in', ['প্রধান শিক্ষক', 'প্রধান শিক্ষক (ভারপ্রাপ্ত)']));
-      const snap = await getDocs(q);
-      if (!snap.empty) setHeadmaster({ id: snap.docs[0].id, ...snap.docs[0].data() } as Staff);
-    };
-    fetchHeadmaster();
-  }, [db, isClient]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -170,7 +159,7 @@ export default function TCGeneratorPage() {
                     </h3>
                     <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.65] sm:scale-[0.75] lg:scale-[0.8] xl:scale-100">
                         {selectedStudent ? (
-                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} headmaster={headmaster} />
+                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} />
                         ) : (
                             <div className="w-[210mm] h-[297mm] bg-white flex flex-col items-center justify-center text-muted-foreground italic"><Info className="h-12 w-12 mb-4 opacity-10" /><p>শিক্ষার্থী নির্বাচন করুন</p></div>
                         )}
@@ -181,13 +170,13 @@ export default function TCGeneratorPage() {
       </main>
 
       <div className="hidden print:block printable-area">
-        {selectedStudent && <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} headmaster={headmaster} />}
+        {selectedStudent && <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} />}
       </div>
     </div>
   );
 }
 
-function TCTemplate({ student, schoolInfo, formData, headmaster }: any) {
+function TCTemplate({ student, schoolInfo, formData }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
@@ -224,11 +213,10 @@ function TCTemplate({ student, schoolInfo, formData, headmaster }: any) {
 
             <footer className="absolute bottom-16 left-0 right-0 pt-20 flex justify-around items-end px-4 mb-8">
                 <div className="text-center">
-                    <div className="w-48 border-t border-black pt-1 font-bold">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                    <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                 </div>
                 <div className="text-center">
                     <div className="w-48 border-t border-black pt-1 font-bold">
-                        <p className="mb-1">{schoolInfo.name}</p>
                         <p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
                     </div>
                 </div>
@@ -236,3 +224,4 @@ function TCTemplate({ student, schoolInfo, formData, headmaster }: any) {
         </div>
     );
 }
+
