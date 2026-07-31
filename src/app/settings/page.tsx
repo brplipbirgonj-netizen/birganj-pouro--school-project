@@ -364,6 +364,10 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
         });
     };
 
+    const totalApprovedSubjects = useMemo(() => {
+        return Object.values(marksPermissions).reduce((acc, subs) => acc + subs.length, 0);
+    }, [marksPermissions]);
+
     const availableSubjects = getSubjects(selectedClass);
 
     return (
@@ -423,9 +427,9 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
                         </div>
                         
                         {/* Summary of selected marks permissions */}
-                        {Object.keys(marksPermissions).length > 0 && (
-                            <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-dashed">
-                                <p className="text-[10px] font-black text-muted-foreground mb-2">অনুমোদিত বিষয়সমূহ:</p>
+                        <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-dashed">
+                            <p className="text-[10px] font-black text-muted-foreground mb-2">অনুমোদিত বিষয়সমূহ: ({toBengaliNumber(totalApprovedSubjects)})</p>
+                            {Object.keys(marksPermissions).length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                     {Object.entries(marksPermissions).map(([cls, subs]) => (
                                         subs.map(sub => (
@@ -435,8 +439,10 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
                                         ))
                                     ))}
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <p className="text-[9px] italic text-muted-foreground">এখনো কোনো বিষয় নির্বাচন করা হয়নি।</p>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t">
@@ -818,4 +824,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-
