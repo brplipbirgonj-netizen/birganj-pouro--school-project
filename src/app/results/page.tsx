@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Student, studentFromDoc, addStudent } from '@/lib/student-data';
-import { getSubjects, Subject as SubjectType } from '@/lib/subjects';
+import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
@@ -40,6 +40,12 @@ type Marks = {
     mcq?: number;
     practical?: number;
 }
+
+const normalize = (name: string) => {
+    if (!name) return "";
+    const trimmed = name.trim();
+    return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
+};
 
 // Separate Tab Component for Mark Input (Only Obtained Marks)
 const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
@@ -476,6 +482,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [groupFilter, setGroupFilter] = useState('all');
     const [processedResults, setProcessedResults] = useState<StudentProcessedResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [classResults, setClassResults] = useState<ClassResult[]>([]);
 
     useEffect(() => { 
         if (db && user) getExams(db, selectedYear).then(setExams); 
@@ -488,6 +495,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (students.length === 0) { toast({ title: 'কোনো শিক্ষার্থী নেই' }); setProcessedResults([]); setIsLoading(false); return; }
         const allResults = await getAllResults(db, selectedYear, examName);
         const classRes = allResults.filter(r => r.className === className);
+        setClassResults(classRes);
         const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
         setProcessedResults(processStudentResults(students, classRes, subs));
         setIsLoading(false);
@@ -496,7 +504,13 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const handleDownloadExcel = () => {
         if (processedResults.length === 0) return;
         const data: any[] = [];
-        const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
+        const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => {
+            if (!s.isExamSubject) return false;
+            const matchingRecord = classResults.find(r => normalize(r.subject) === normalize(s.name));
+            const effectiveFullMarks = matchingRecord?.fullMarks ?? s.fullMarks;
+            return effectiveFullMarks > 0;
+        });
+
         processedResults.forEach(res => {
             const row: any = { 'রোল': res.student.roll, 'শিক্ষার্থীর নাম': res.student.studentNameBn, 'বিভাগ': groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ' };
             subs.forEach(s => {
@@ -568,7 +582,13 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
 
             {Object.keys(groupedData).map(gk => {
                 const results = groupedData[gk];
-                const subs = getSubjects(className, gk === 'all' ? undefined : gk).filter(s => s.isExamSubject !== false);
+                const subs = getSubjects(className, gk === 'all' ? undefined : gk).filter(s => {
+                    if (!s.isExamSubject) return false;
+                    const matchingRecord = classResults.find(r => normalize(r.subject) === normalize(s.name));
+                    const effectiveFullMarks = matchingRecord?.fullMarks ?? s.fullMarks;
+                    return effectiveFullMarks > 0;
+                });
+
                 return (
                     <div key={gk} className="space-y-0 animate-in fade-in duration-500">
                         <div className="flex justify-between items-center bg-primary/10 p-3 rounded-t-lg border-x-2 border-t-2 border-slate-400">

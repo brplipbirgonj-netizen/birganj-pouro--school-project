@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Student } from '@/lib/student-data';
-import { getSubjects, Subject } from '@/lib/subjects';
+import { getSubjects, Subject, subjectNameNormalization } from '@/lib/subjects';
 import { getResultsForClass, ClassResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,12 @@ const examNameEnglishMap: { [key: string]: string } = {
     'Annual Examination': 'Annual Examination',
     'Pre-Test Examination': 'Pre-Test Examination',
     'Test Examination': 'Test Examination'
+};
+
+const normalize = (name: string) => {
+    if (!name) return "";
+    const trimmed = name.trim();
+    return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
 };
 
 function MarksheetContent() {
@@ -104,8 +111,23 @@ function MarksheetContent() {
             
             const resultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
             
-            const allFinalResults = processStudentResults(allStudentsInClass, resultsBySubject, allSubjectsForGroup);
+            // Filter subjects list to only include those where effective full marks > 0
+            const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
+                if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
+                     if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
+                     if (studentData.optionalSubject === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
+                }
+                
+                // Effective full marks check
+                const matchingRecord = resultsBySubject.find(r => 
+                    normalize(r.subject) === normalize(subjectInfo.name) && 
+                    r.className === studentData.className
+                );
+                const effectiveFullMarks = matchingRecord?.fullMarks ?? subjectInfo.fullMarks;
+                return effectiveFullMarks > 0;
+            });
 
+            const allFinalResults = processStudentResults(allStudentsInClass, resultsBySubject, allSubjectsForGroup);
             const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
 
             if (!finalResultForThisStudent) {
@@ -114,14 +136,6 @@ function MarksheetContent() {
                 return;
             }
 
-            const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
-                if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
-                     if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
-                     if (studentData.optionalSubject === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
-                }
-                return true;
-            });
-            
             setSubjects(subjectsForThisStudent);
             setProcessedResult(finalResultForThisStudent);
             setIsLoading(false);
@@ -207,7 +221,7 @@ function MarksheetContent() {
                         padding: 8mm !important;
                         border: none !important;
                         box-shadow: none !important;
-                        page-break-after: always;
+                        page-break-after: always !important;
                         overflow: hidden !important;
                         position: absolute;
                         top: 0;
@@ -341,6 +355,14 @@ function MarksheetContent() {
                                 {sortedSubjects.map((subject, index) => {
                                     const result = processedResult.subjectResults.get(subject.name);
                                     const isFail = result?.isPass === false;
+                                    
+                                    // Get effective full marks for the display row
+                                    const matchingRecord = resultsBySubject.find(r => 
+                                        normalize(r.subject) === normalize(subject.name) && 
+                                        r.className === student.className
+                                    );
+                                    const displayFullMarks = matchingRecord?.fullMarks ?? subject.fullMarks;
+
                                     return (
                                         <tr key={subject.code} className={cn("border-b border-black last:border-b-0", isFail ? "bg-red-50/30" : "")}>
                                             <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
@@ -349,7 +371,7 @@ function MarksheetContent() {
                                                 {studentOptionalSubject === subject.name && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
                                             </td>
                                             <td className="border-r border-black p-1 text-center text-gray-600">{subject.code}</td>
-                                            <td className="border-r border-black p-1 text-center font-medium">{subject.fullMarks}</td>
+                                            <td className="border-r border-black p-1 text-center font-medium">{displayFullMarks}</td>
                                             <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{result?.marks ?? '-'}</td>
                                             <td className={cn("border-r border-black p-1 text-center font-black text-[12px]", isFail ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
                                             <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
