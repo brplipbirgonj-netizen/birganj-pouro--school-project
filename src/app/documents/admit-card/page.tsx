@@ -13,7 +13,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { AdmitCard } from '@/components/AdmitCard';
-import { Printer, Loader2, ArrowLeft, User, Users, Info } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, User, Users, Info, IdCard } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
