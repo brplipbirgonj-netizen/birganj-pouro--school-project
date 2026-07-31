@@ -17,9 +17,9 @@ import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult,
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,6 +68,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
     const [savedResults, setSavedResults] = useState<ClassResult[]>([]);
+    const [listFullMarksInputs, setListFullMarksInputs] = useState<Record<string, string>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const groupMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'সাধারণ': 'সাধারণ' };
@@ -192,6 +193,20 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         }).catch(() => {});
     };
 
+    const handleUpdateFullMarksFromList = async (result: ClassResult, newVal: string) => {
+        const val = parseInt(newVal, 10);
+        if (isNaN(val) || !db || !user) return;
+        if (!isSubjectPermitted(result.className, result.subject)) {
+            toast({ variant: 'destructive', title: 'আপনার এই বিষয়ের পূর্ণমান পরিবর্তন করার অনুমতি নেই।' });
+            return;
+        }
+        try {
+            await saveClassResults(db, { ...result, fullMarks: val });
+            toast({ title: 'পূর্ণমান সফলভাবে আপডেট করা হয়েছে' });
+            updateSavedResults();
+        } catch (e) {}
+    }
+
     const handleDeleteResult = (result: ClassResult) => {
         if (!db || !result.id || !user) return;
         if (!isSubjectPermitted(result.className, result.subject)) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
@@ -239,7 +254,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end p-4 border rounded-lg bg-white/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50">
                 <div className="space-y-2">
                     <Label>পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
@@ -269,10 +284,6 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <SelectTrigger id="subject" className="bg-white"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger>
                         <SelectContent>{availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="full-marks">পূর্ণমান</Label>
-                    <Input id="full-marks" type="number" value={fullMarks || ''} onChange={(e) => setFullMarks(e.target.value === '' ? undefined : parseInt(e.target.value))} className="bg-white" />
                 </div>
                 <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject || !examName} className="w-full">{isLoadingStudents ? 'লোড হচ্ছে...' : 'লোড করুন'}</Button>
             </div>
@@ -324,13 +335,40 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <AccordionContent className="p-0 border-t">
                                     <Table>
                                         <TableHeader className="bg-muted/30">
-                                            <TableRow><TableHead className="pl-4">বিষয়ের নাম</TableHead><TableHead>শাখা</TableHead><TableHead className="text-right pr-4">কার্যক্রম</TableHead></TableRow>
+                                            <TableRow>
+                                                <TableHead className="pl-4">বিষয়ের নাম</TableHead>
+                                                <TableHead>শাখা</TableHead>
+                                                <TableHead className="w-40 text-center">পূর্ণমান</TableHead>
+                                                <TableHead className="text-right pr-4">কার্যক্রম</TableHead>
+                                            </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {groupedResults[ck].map((res, i) => (
-                                                <TableRow key={i} className={cn("h-12", !isSubjectPermitted(res.className, res.subject) && "opacity-50 grayscale")}>
+                                            {groupedResults[ck].map((res, i) => {
+                                                const resId = res.id || `${res.className}-${res.subject}-${res.group}`;
+                                                return (
+                                                <TableRow key={i} className={cn("h-14", !isSubjectPermitted(res.className, res.subject) && "opacity-50 grayscale")}>
                                                     <TableCell className="font-black pl-4 text-primary">{res.subject}</TableCell>
                                                     <TableCell>{groupMap[res.group || ''] || 'সাধারণ'}</TableCell>
+                                                    <TableCell className="text-center p-1">
+                                                        <div className="flex items-center gap-2 justify-center">
+                                                            <Input 
+                                                                type="number" 
+                                                                value={listFullMarksInputs[resId] !== undefined ? listFullMarksInputs[resId] : res.fullMarks}
+                                                                onChange={(e) => setListFullMarksInputs(prev => ({ ...prev, [resId]: e.target.value }))}
+                                                                className="h-9 w-20 text-center font-bold bg-white" 
+                                                                disabled={!isSubjectPermitted(ck, res.subject)} 
+                                                            />
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="icon" 
+                                                                className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 border-emerald-200"
+                                                                disabled={!isSubjectPermitted(ck, res.subject) || listFullMarksInputs[resId] === undefined}
+                                                                onClick={() => handleUpdateFullMarksFromList(res, listFullMarksInputs[resId])}
+                                                            >
+                                                                <Save className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
                                                     <TableCell className="text-right pr-4">
                                                         <div className="flex justify-end gap-2">
                                                             <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50 border-blue-100" onClick={() => handleEditClick(res)} disabled={!isSubjectPermitted(ck, res.subject)}><FilePen className="h-4 w-4" /></Button>
@@ -347,7 +385,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
-                                            ))}
+                                            )})}
                                         </TableBody>
                                     </Table>
                                 </AccordionContent>
