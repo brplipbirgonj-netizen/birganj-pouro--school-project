@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, FilePlus, IdCard, FileText, GraduationCap } from 'lucide-react';
+import { ArrowRight, FilePlus, IdCard, FileText, FileBadge } from 'lucide-react';
 
 export default function DocumentsPage() {
   return (
@@ -44,13 +44,13 @@ export default function DocumentsPage() {
             <Card className="border-2 border-emerald-100 hover:border-emerald-300 transition-all shadow-md">
                 <CardHeader className="bg-emerald-50">
                     <CardTitle className="flex items-center gap-2 text-emerald-800">
-                        <GraduationCap className="h-6 w-6" /> প্রশংসাপত্র (Testimonial)
+                        <FileBadge className="h-6 w-6" /> প্রত্যয়ন পত্র (Testimonial)
                     </CardTitle>
-                    <CardDescription>অধ্যয়নরত বা উত্তীর্ণ শিক্ষার্থীদের জন্য</CardDescription>
+                    <CardDescription>অধ্যয়নরত শিক্ষার্থীদের জন্য প্রত্যয়ন পত্র</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
                    <p className="text-sm text-muted-foreground leading-relaxed">
-                        শিক্ষার্থীর জন্য প্রফেশনাল প্রশংসাপত্র বা প্রত্যয়ন পত্র তৈরি করুন। লাইভ এডিট সুবিধা সহ।
+                        শিক্ষার্থীর জন্য প্রফেশনাল প্রত্যয়ন পত্র তৈরি করুন। লাইভ প্রিভিউ ও কাস্টম বিবরণ এডিট সুবিধা সহ।
                    </p>
                 </CardContent>
                  <CardFooter>
