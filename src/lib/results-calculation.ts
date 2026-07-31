@@ -110,10 +110,6 @@ export function processStudentResults(
                     return studentClassNum < 9 || recordGroupNormalized === studentGroupNormalized || !recordGroupNormalized || recordGroupNormalized === 'none';
                 });
             }
-            
-            // Skip this subject for calculation if NO marks exist for ANY student (it's a placeholder/config record)
-            const hasAnyMarks = classResult?.results.some(r => r.written !== undefined || r.mcq !== undefined || r.practical !== undefined);
-            if (!hasAnyMarks) return;
 
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
@@ -124,11 +120,10 @@ export function processStudentResults(
             const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
             
             const passMark = Math.ceil(fullMarks * 0.33);
-            const isMarkEntered = written !== undefined || mcq !== undefined || practical !== undefined;
-            const isPassSubject = isMarkEntered && obtainedMarks >= passMark;
+            const isPassSubject = obtainedMarks >= passMark;
             
             const percentageForGrade = (obtainedMarks / fullMarks) * 100;
-            const { grade, point } = getGradePoint(isPassSubject ? percentageForGrade : 0);
+            const { grade, point } = getGradePoint(percentageForGrade);
             
             totalMarks += obtainedMarks;
             totalPossibleMarks += fullMarks;
@@ -151,7 +146,12 @@ export function processStudentResults(
 
         subjectsForStudent.forEach(subjectInfo => {
             const result = subjectResults.get(subjectInfo.name);
-            if (!result) return;
+            if (!result) {
+                // If a subject was expected but not found at all, it's a fail in original logic
+                failedInCompulsoryCount++;
+                compulsorySubjectsCount++;
+                return;
+            }
     
             if (subjectInfo.name === optionalSubjectName) {
                 if (result.isPass && result.point > 2.0) {
