@@ -17,7 +17,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { Staff } from '@/lib/staff-data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const classNamesMap: { [key: string]: string } = {
@@ -208,20 +207,25 @@ function TCTemplate({ student, schoolInfo, formData }: any) {
                     আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="font-black border-b-2 border-black border-dotted px-2">{formData.conduct}</span>। পড়াশোনার অগ্রগতি ও ফলাফল <span className="font-black border-b-2 border-black border-dotted px-2">{formData.status}</span>।
                 </p>
                 <p>বিদ্যালয় ত্যাগের কারণ: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.reason}</span>। বিদ্যালয়ের পাওনা সংক্রান্ত অবস্থা: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.dues}</span>।</p>
-                <p className="italic text-emerald-900 pt-4 text-center font-black">আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।</p>
             </div>
 
-            <footer className="absolute bottom-16 left-0 right-0 pt-20 flex justify-around items-end px-4 mb-8">
-                <div className="text-center">
-                    <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+            <footer className="absolute bottom-16 left-0 right-0 z-10 px-10">
+                <div className="text-center mb-16">
+                    <p className="italic text-emerald-950 text-2xl font-black">
+                        আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
+                    </p>
                 </div>
-                <div className="text-center">
-                    <div className="w-48 border-t border-black pt-1 font-bold">
-                        <p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
+                <div className="flex justify-around items-end">
+                    <div className="text-center">
+                        <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="w-48 border-t border-black pt-1 font-bold">
+                            <p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
+                        </div>
                     </div>
                 </div>
             </footer>
         </div>
     );
 }
-

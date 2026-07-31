@@ -261,21 +261,23 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear }: an
                 <p>
                     আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>।
                 </p>
-
-                <p className="italic text-emerald-950 pt-4 text-center text-2xl font-black">
-                    আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
-                </p>
             </div>
 
-            <footer className="relative z-10 pt-16 flex justify-around items-end print-footer mt-auto pb-12">
-                <div className="text-center">
-                    <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+            <footer className="absolute bottom-16 left-0 right-0 z-10 px-12">
+                <div className="text-center mb-16">
+                    <p className="italic text-emerald-950 text-2xl font-black">
+                        আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
+                    </p>
                 </div>
-                <div className="text-center">
-                    <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+                <div className="flex justify-around items-end">
+                    <div className="text-center">
+                        <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+                    </div>
                 </div>
             </footer>
         </div>
     );
 }
-
