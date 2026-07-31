@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -240,18 +239,52 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end p-4 border rounded-lg bg-white/50">
-                <div className="space-y-2"><Label>পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label htmlFor="class">শ্রেণি</Label><Select value={className} onValueChange={(v) => { setClassName(v); setGroup(''); setSubject(''); }}><SelectTrigger id="class" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-                {showGroupSelector && (<div className="space-y-2"><Label htmlFor="group">গ্রুপ</Label><Select value={group} onValueChange={setGroup} required><SelectTrigger id="group" className="bg-white"><SelectValue placeholder="গ্রুপ নির্বাচন" /></SelectTrigger><SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
-                <div className="space-y-2"><Label htmlFor="subject">বিষয়</Label><Select value={subject} onValueChange={setSubject} disabled={!className || (showGroupSelector && !group)}><SelectTrigger id="subject" className="bg-white"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger><SelectContent>{availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label htmlFor="full-marks">পূর্ণমান</Label><Input id="full-marks" type="number" value={fullMarks || ''} onChange={(e) => setFullMarks(e.target.value === '' ? undefined : parseInt(e.target.value))} className="bg-white" /></div>
+                <div className="space-y-2">
+                    <Label>পরীক্ষা</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="class">শ্রেণি</Label>
+                    <Select value={className} onValueChange={(v) => { setClassName(v); setGroup(''); setSubject(''); }}>
+                        <SelectTrigger id="class" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                        <SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent>
+                    </Select>
+                </div>
+                {showGroupSelector && (
+                    <div className="space-y-2">
+                        <Label htmlFor="group">গ্রুপ</Label>
+                        <Select value={group} onValueChange={setGroup} required>
+                            <SelectTrigger id="group" className="bg-white"><SelectValue placeholder="গ্রুপ নির্বাচন" /></SelectTrigger>
+                            <SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent>
+                        </Select>
+                    </div>
+                )}
+                <div className="space-y-2">
+                    <Label htmlFor="subject">বিষয়</Label>
+                    <Select value={subject} onValueChange={setSubject} disabled={!className || (showGroupSelector && !group)}>
+                        <SelectTrigger id="subject" className="bg-white"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger>
+                        <SelectContent>{availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="full-marks">পূর্ণমান</Label>
+                    <Input id="full-marks" type="number" value={fullMarks || ''} onChange={(e) => setFullMarks(e.target.value === '' ? undefined : parseInt(e.target.value))} className="bg-white" />
+                </div>
                 <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject || !examName} className="w-full">{isLoadingStudents ? 'লোড হচ্ছে...' : 'লোড করুন'}</Button>
             </div>
+            
             {studentsForClass.length > 0 && (
                 <Card className="overflow-hidden border-2">
                     <CardHeader className="bg-muted/30 p-3 flex flex-row justify-between items-center space-y-0 border-b">
                          <div className="flex items-center gap-2">{!canEditCurrent && <Badge variant="destructive">পারমিশন নেই</Badge>} <span className="font-bold text-sm">{subject} ({studentsForClass.length.toLocaleString('bn-BD')} জন)</span></div>
-                         <div className="flex gap-2"><Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা</Button><Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!canEditCurrent} className="h-8 bg-white"><FileUp className="mr-2 h-4 w-4" /> আপলোড</Button><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" /></div>
+                         <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা</Button>
+                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!canEditCurrent} className="h-8 bg-white"><FileUp className="mr-2 h-4 w-4" /> আপলোড</Button>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
+                        </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="max-h-[500px] overflow-auto">
@@ -276,6 +309,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </CardContent>
                 </Card>
             )}
+
             {savedResults.length > 0 && (
                 <div className="space-y-4">
                     <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2"><CheckCircle2 className="h-6 w-6" /> সংরক্ষিত নম্বরের তালিকা</h3>
@@ -334,7 +368,9 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [processedResults, setProcessedResults] = useState<StudentProcessedResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => { if (db && user) getExams(db, selectedYear).then(setExams); }, [db, selectedYear, user]);
+    useEffect(() => { 
+        if (db && user) getExams(db, selectedYear).then(setExams); 
+    }, [db, selectedYear, user]);
 
     const handleViewResults = async () => {
         if (!examName || !className || !db || !user) { toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' }); return; }
@@ -357,14 +393,24 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
             subs.forEach(s => {
                 const sr = res.subjectResults.get(s.name);
                 const isEng = s.name.includes('ইংরেজি');
-                if (!isEng) { row[`${s.name} (লিখিত)`] = sr?.written ?? '-'; row[`${s.name} (MCQ)`] = sr?.mcq ?? '-'; if (s.practical) row[`${s.name} (ব্যবহারিক)`] = sr?.practical ?? '-'; }
-                row[`${s.name} (প্রাপ্ত)`] = sr?.marks ?? '-'; row[`${s.name} (গ্রেড)`] = sr?.grade ?? '-'; row[`${s.name} (পয়েন্ট)`] = sr?.point ?? '-';
+                if (!isEng) { 
+                    row[`${s.name} (লিখিত)`] = sr?.written ?? '-'; 
+                    row[`${s.name} (MCQ)`] = sr?.mcq ?? '-'; 
+                    if (s.practical) row[`${s.name} (ব্যবহারিক)`] = sr?.practical ?? '-'; 
+                }
+                row[`${s.name} (প্রাপ্ত)`] = sr?.marks ?? '-'; 
+                row[`${s.name} (গ্রেড)`] = sr?.grade ?? '-'; 
+                row[`${s.name} (পয়েন্ট)`] = sr?.point ?? '-';
             });
-            row['মোট নম্বর'] = res.totalMarks; row['জি.পি.এ'] = res.gpa.toFixed(2); row['গ্রেড'] = res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`; row['মেধাস্থান'] = res.isPass ? (res.meritPosition || '-') : 'ফেল';
+            row['মোট নম্বর'] = res.totalMarks; 
+            row['জি.পি.এ'] = res.gpa.toFixed(2); 
+            row['গ্রেড'] = res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`; 
+            row['মেধাস্থান'] = res.isPass ? (res.meritPosition || '-') : 'ফেল';
             data.push(row);
         });
         const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Result Sheet");
+        const wb = XLSX.utils.book_new(); 
+        XLSX.utils.book_append_sheet(wb, ws, "Result Sheet");
         XLSX.writeFile(wb, `${examName}_${classNamesMap[className]}_Result.xlsx`);
         toast({ title: 'Excel ডাউনলোড সম্পন্ন হয়েছে' });
     };
@@ -382,12 +428,33 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
-                <div className="space-y-2"><Label className="font-bold">পরীক্ষা</Label><Select value={examName} onValueChange={setExamsName => setExamName(setExamsName)}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label className="font-bold">শ্রেণি</Label><Select value={className} onValueChange={c => { setClassName(c); setGroupFilter('all'); setProcessedResults([]); }}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-                {parseInt(className) >= 9 && (<div className="space-y-2"><Label className="font-bold">শাখা</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger className="bg-white"><SelectValue placeholder="সকল শাখা" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
+                <div className="space-y-2">
+                    <Label className="font-bold">পরীক্ষা</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold">শ্রেণি</Label>
+                    <Select value={className} onValueChange={c => { setClassName(c); setGroupFilter('all'); setProcessedResults([]); }}>
+                        <SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                        <SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent>
+                    </Select>
+                </div>
+                {parseInt(className) >= 9 && (
+                    <div className="space-y-2">
+                        <Label className="font-bold">শাখা</Label>
+                        <Select value={groupFilter} onValueChange={setGroupFilter}>
+                            <SelectTrigger className="bg-white"><SelectValue placeholder="সকল শাখা" /></SelectTrigger>
+                            <SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent>
+                        </Select>
+                    </div>
+                )}
                 <Button onClick={handleViewResults} disabled={isLoading || !examName || !className} className="lg:col-span-2 shadow-md h-10 font-black">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'ফলাফল দেখুন'}</Button>
                 <Button onClick={handleDownloadExcel} disabled={processedResults.length === 0} variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 h-10 font-black"><FileSpreadsheet className="h-4 w-4 mr-2" /> Excel</Button>
             </div>
+
             {Object.keys(groupedData).map(gk => {
                 const results = groupedData[gk];
                 const subs = getSubjects(className, gk === 'all' ? undefined : gk).filter(s => s.isExamSubject !== false);
@@ -397,26 +464,33 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <h3 className="font-black text-primary text-sm">শাখা: {groupNamesMap[gk] || gk}</h3>
                             <Badge variant="secondary" className="font-black">মোট: {results.length.toLocaleString('bn-BD')} জন</Badge>
                         </div>
-                        <div className="table-container border-2 border-primary/20 max-h-[600px] overflow-auto relative">
+                        <div className="table-container border-2 border-primary/20 relative">
                             <Table className="min-w-max border-collapse">
-                                <TableHeader className="sticky top-0 bg-white z-40 shadow-sm border-b-2 border-primary/20">
+                                <TableHeader className="z-40">
                                     <TableRow className="h-8">
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-primary/20 sticky left-0 z-50 w-12 text-[10px] p-0 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">রোল</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-primary/20 sticky left-12 z-50 min-w-[140px] text-[10px] p-0 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">শিক্ষার্থীর নাম</TableHead>
-                                        {subs.map(s => <TableHead key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="text-center border-x border-b border-primary/10 font-black py-0 text-[10px] bg-slate-50">{s.name}</TableHead>)}
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0">মোট</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0">GPA</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0">গ্রেড</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0">মেধা</TableHead>
-                                        <TableHead rowSpan={2} className="text-center no-print border-l border-primary/20 text-[10px] bg-white p-0">মার্ক</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-primary/20 sticky left-0 top-0 z-50 w-12 text-[10px] p-0 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">রোল</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-primary/20 sticky left-12 top-0 z-50 min-w-[140px] text-[10px] p-0 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">শিক্ষার্থীর নাম</TableHead>
+                                        {subs.map(s => <TableHead key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="text-center border-x border-b border-primary/10 font-black py-0 text-[10px] bg-slate-50 sticky top-0 z-30">{s.name}</TableHead>)}
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[120px] z-30">মোট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[80px] z-30">GPA</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-[40px] z-30">গ্রেড</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-primary/20 text-[10px] bg-white p-0 sticky top-0 right-0 z-30">মেধা</TableHead>
                                     </TableRow>
-                                    <TableRow className="h-7 bg-muted/20">
+                                    <TableRow className="h-7">
                                         {subs.map(s => {
                                             const isEng = s.name.includes('ইংরেজি');
                                             return (
                                                 <React.Fragment key={s.name}>
-                                                    {!isEng && (<><TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20">লিখিত</TableHead><TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20">MCQ</TableHead>{s.practical && <TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20">ব্যাব.</TableHead>}</>)}
-                                                    <TableHead className="text-[9px] text-center border-l border-primary/10 font-black bg-blue-100/50 p-0 text-blue-900">প্রাপ্ত</TableHead><TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20">গ্রেড</TableHead><TableHead className="text-[9px] text-center border-l border-r border-primary/10 font-bold p-0 bg-muted/20">পয়েন্ট</TableHead>
+                                                    {!isEng && (
+                                                        <>
+                                                            <TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20 sticky top-8 z-30">লিখিত</TableHead>
+                                                            <TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20 sticky top-8 z-30">MCQ</TableHead>
+                                                            {s.practical && <TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20 sticky top-8 z-30">ব্যাব.</TableHead>}
+                                                        </>
+                                                    )}
+                                                    <TableHead className="text-[9px] text-center border-l border-primary/10 font-black bg-blue-100/50 p-0 text-blue-900 sticky top-8 z-30">প্রাপ্ত</TableHead>
+                                                    <TableHead className="text-[9px] text-center border-l border-primary/10 font-bold p-0 bg-muted/20 sticky top-8 z-30">গ্রেড</TableHead>
+                                                    <TableHead className="text-[9px] text-center border-l border-r border-primary/10 font-bold p-0 bg-muted/20 sticky top-8 z-30">পয়েন্ট</TableHead>
                                                 </React.Fragment>
                                             )
                                         })}
@@ -428,25 +502,29 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             <TableCell className="text-center font-black sticky left-0 z-20 bg-white border-r border-primary/20 text-[11px] p-0 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="font-bold sticky left-12 z-20 bg-white border-r border-primary/20 text-[10px] p-0 px-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-[140px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                                                 {res.student.studentNameBn}
-                                                {gk === 'all' && res.student.group && <span className="block text-[8px] text-muted-foreground font-normal italic leading-none">{groupNamesMap[res.student.group] || res.student.group}</span>}
                                             </TableCell>
                                             {subs.map(s => {
                                                 const sr = res.subjectResults.get(s.name);
                                                 const isEng = s.name.includes('ইংরেজি');
                                                 return (
                                                     <React.Fragment key={s.name}>
-                                                        {!isEng && (<><TableCell className="text-center border-l border-primary/10 text-[10px] p-0">{sr?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell><TableCell className="text-center border-l border-primary/10 text-[10px] p-0">{sr?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>{s.practical && <TableCell className="text-center border-l border-primary/10 text-[10px] p-0">{sr?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}</>)}
+                                                        {!isEng && (
+                                                            <>
+                                                                <TableCell className="text-center border-l border-primary/10 text-[10px] p-0">{sr?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                                <TableCell className="text-center border-l border-primary/10 text-[10px] p-0">{sr?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                                {s.practical && <TableCell className="text-center border-l border-primary/10 text-[10px] p-0">{sr?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
+                                                            </>
+                                                        )}
                                                         <TableCell className="text-center border-l border-primary/10 font-black bg-blue-50/20 text-blue-900 text-[11px] p-0">{sr?.marks?.toLocaleString('bn-BD') ?? '-'}</TableCell>
                                                         <TableCell className={cn("text-center border-l border-primary/10 text-[9px] font-bold p-0", sr && !sr.isPass && "text-rose-600 bg-rose-50/30")}>{sr?.grade ?? '-'}</TableCell>
                                                         <TableCell className="text-center border-l border-r border-primary/10 text-[9px] p-0">{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <TableCell className="text-center font-black text-primary border-r border-primary/10 text-[10px] p-0">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="text-center font-black border-r border-primary/10 text-[10px] p-0">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0", !res.isPass && "text-rose-600 bg-rose-50/50")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0", !res.isPass && "text-rose-400 italic")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
-                                            <TableCell className="text-center no-print p-0"><Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank"><Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/10"><BookOpen className="h-4 w-4" /></Button></Link></TableCell>
+                                            <TableCell className="text-center font-black text-primary border-r border-primary/10 text-[10px] p-0 sticky right-[120px] bg-white z-10">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-[80px] bg-white z-10">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-[40px] bg-white z-10", !res.isPass && "text-rose-600 bg-rose-50/50")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r border-primary/10 text-[10px] p-0 sticky right-0 bg-white z-10", !res.isPass && "text-rose-400 italic")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -460,9 +538,21 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
 };
 
 const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
-    const { toast } = useToast(); const { selectedYear } = useAcademicYear(); const db = useFirestore(); const { user } = useAuth();
-    const [exams, setExams] = useState<Exam[]>([]); const [examName, setExamName] = useState(''); const [className, setClassName] = useState(''); const [groupFilter, setGroupFilter] = useState('all'); const [processedResults, setProcessedResults] = useState<StudentProcessedResult[]>([]); const [isLoading, setIsLoading] = useState(false);
-    useEffect(() => { if (db && user) getExams(db, selectedYear).then(setExams); }, [db, selectedYear, user]);
+    const { toast } = useToast();
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user } = useAuth();
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
+    const [className, setClassName] = useState('');
+    const [groupFilter, setGroupFilter] = useState('all');
+    const [processedResults, setProcessedResults] = useState<StudentProcessedResult[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => { 
+        if (db && user) getExams(db, selectedYear).then(setExams); 
+    }, [db, selectedYear, user]);
+
     const handleViewMeritList = async () => {
         if (!examName || !className || !db || !user) { toast({ variant: 'destructive', title: 'তথ্য দিন' }); return; }
         setIsLoading(true);
@@ -472,10 +562,18 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
         const classRes = allRes.filter(r => r.className === className);
         const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
         const results = processStudentResults(students, classRes, subs);
-        setProcessedResults(results.sort((a, b) => { if (a.isPass !== b.isPass) return a.isPass ? -1 : 1; if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks; return a.student.roll - b.student.roll; }));
+        setProcessedResults(results.sort((a, b) => { 
+            if (a.isPass !== b.isPass) return a.isPass ? -1 : 1; 
+            if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks; 
+            return a.student.roll - b.student.roll; 
+        }));
         setIsLoading(false);
     };
-    const handlePrint = () => { if (examName && className) window.open(`/results/merit-list?academicYear=${selectedYear}&examName=${examName}&className=${className}&group=${groupFilter}`, '_blank'); };
+
+    const handlePrint = () => { 
+        if (examName && className) window.open(`/results/merit-list?academicYear=${selectedYear}&examName=${examName}&className=${className}&group=${groupFilter}`, '_blank'); 
+    };
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
@@ -487,17 +585,34 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
             {processedResults.length > 0 && (
                 <div className="border-2 border-primary/10 rounded-xl bg-white shadow-lg overflow-hidden animate-in zoom-in-95 duration-500">
                     <div className="bg-primary/5 p-4 border-b flex justify-between items-center"><h3 className="text-lg font-black text-primary flex items-center gap-2"><Trophy className="h-5 w-5 text-amber-500" /> মেধা তালিকা: {classNamesMap[className]} শ্রেণি</h3><Badge variant="outline" className="font-black">মোট {processedResults.length.toLocaleString('bn-BD')} জন</Badge></div>
-                    <div className="overflow-x-auto"><Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="text-center font-black">মেধাস্থান</TableHead><TableHead className="text-center font-black">রোল</TableHead><TableHead className="font-black">শিক্ষার্থীর নাম</TableHead><TableHead className="text-center font-black">মোট নম্বর</TableHead><TableHead className="text-center font-black">জি.পি.এ</TableHead><TableHead className="text-center font-black">গ্রেড</TableHead><TableHead className="text-right font-black pr-6">ফলাফল</TableHead></TableRow></TableHeader><TableBody>{processedResults.map((res, index) => (
-                        <TableRow key={res.student.id} className={cn("h-12", res.isPass ? "hover:bg-accent/5" : "bg-rose-50/50")}>
-                            <TableCell className="text-center">{res.isPass ? <span className="font-black text-lg text-emerald-700">{(index + 1).toLocaleString('bn-BD')}</span> : '-'}</TableCell>
-                            <TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="font-black text-slate-800">{res.student.studentNameBn}</TableCell>
-                            <TableCell className="text-center font-bold text-primary">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-center font-black">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className={cn("text-center font-bold", !res.isPass && "text-rose-600")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
-                            <TableCell className="text-right pr-6"><Badge variant={res.isPass ? "default" : "destructive"} className="text-[10px] font-black">{res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}</Badge></TableCell>
-                        </TableRow>
-                    ))}</TableBody></Table></div>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-muted/50">
+                                <TableRow>
+                                    <TableHead className="text-center font-black">মেধাস্থান</TableHead>
+                                    <TableHead className="text-center font-black">রোল</TableHead>
+                                    <TableHead className="font-black">শিক্ষার্থীর নাম</TableHead>
+                                    <TableHead className="text-center font-black">মোট নম্বর</TableHead>
+                                    <TableHead className="text-center font-black">জি.পি.এ</TableHead>
+                                    <TableHead className="text-center font-black">গ্রেড</TableHead>
+                                    <TableHead className="text-right font-black pr-6">ফলাফল</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {processedResults.map((res, index) => (
+                                    <TableRow key={res.student.id} className={cn("h-12", res.isPass ? "hover:bg-accent/5" : "bg-rose-50/50")}>
+                                        <TableCell className="text-center">{res.isPass ? <span className="font-black text-lg text-emerald-700">{(index + 1).toLocaleString('bn-BD')}</span> : '-'}</TableCell>
+                                        <TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="font-black text-slate-800">{res.student.studentNameBn}</TableCell>
+                                        <TableCell className="text-center font-bold text-primary">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="text-center font-black">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className={cn("text-center font-bold", !res.isPass && "text-rose-600")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
+                                        <TableCell className="text-right pr-6"><Badge variant={res.isPass ? "default" : "destructive"} className="text-[10px] font-black">{res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}</Badge></TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             )}
         </div>
@@ -505,9 +620,22 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
 };
 
 const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
-    const { toast } = useToast(); const { selectedYear } = useAcademicYear(); const db = useFirestore(); const { user } = useAuth();
-    const [exams, setExams] = useState<Exam[]>([]); const [examName, setExamName] = useState(''); const [className, setClassName] = useState(''); const [group, setGroup] = useState(''); const [isLoading, setIsLoading] = useState(false); const [failedStudents, setFailedStudents] = useState<StudentProcessedResult[]>([]); const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    useEffect(() => { if (db && user) getExams(db, selectedYear).then(setExams); }, [db, selectedYear, user]);
+    const { toast } = useToast(); 
+    const { selectedYear } = useAcademicYear(); 
+    const db = useFirestore(); 
+    const { user } = useAuth();
+    const [exams, setExams] = useState<Exam[]>([]); 
+    const [examName, setExamName] = useState(''); 
+    const [className, setClassName] = useState(''); 
+    const [group, setGroup] = useState(''); 
+    const [isLoading, setIsLoading] = useState(false); 
+    const [failedStudents, setFailedStudents] = useState<StudentProcessedResult[]>([]); 
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    useEffect(() => { 
+        if (db && user) getExams(db, selectedYear).then(setExams); 
+    }, [db, selectedYear, user]);
+
     const handleViewFailed = async () => {
         if (!examName || !className || !db || !user) return;
         setIsLoading(true);
@@ -517,8 +645,10 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         const subs = getSubjects(className, group).filter(s => s.isExamSubject !== false);
         const results = processStudentResults(students, classRes, subs);
         setFailedStudents(results.filter(r => !r.isPass).sort((a,b) => a.student.roll - b.student.roll));
-        setSelectedIds(new Set()); setIsLoading(false);
+        setSelectedIds(new Set()); 
+        setIsLoading(false);
     };
+
     const handlePromote = async () => {
         if (!db || selectedIds.size === 0) return;
         setIsLoading(true);
@@ -528,9 +658,12 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const { id, createdAt, updatedAt, ...rest } = res.student;
             return addStudent(db, { ...rest, academicYear: nextYear, className: nextClass, roll: res.student.roll });
         });
-        await Promise.all(promPromises); toast({ title: "সফল", description: `${promPromises.length} জনকে উত্তীর্ণ করা হয়েছে।` });
-        setFailedStudents([]); setIsLoading(false);
+        await Promise.all(promPromises); 
+        toast({ title: "সফল", description: `${promPromises.length} জনকে উত্তীর্ণ করা হয়েছে।` });
+        setFailedStudents([]); 
+        setIsLoading(false);
     };
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
@@ -541,10 +674,45 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             </div>
             {failedStudents.length > 0 && (
                 <div className="space-y-4 animate-in fade-in duration-500">
-                    <div className="border-2 border-primary/10 rounded-md overflow-hidden bg-white"><Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="w-12 text-center"><Checkbox checked={selectedIds.size === failedStudents.length} onCheckedChange={(c) => setSelectedIds(c ? new Set(failedStudents.map(s => s.student.id)) : new Set())} /></TableHead><TableHead className="text-center font-black">রোল</TableHead><TableHead className="font-black">নাম</TableHead><TableHead className="text-center font-black">ফেল সংখ্যা</TableHead></TableRow></TableHeader><TableBody>{failedStudents.map(res => (
-                        <TableRow key={res.student.id} className="h-10 hover:bg-rose-50"><TableCell className="text-center"><Checkbox checked={selectedIds.has(res.student.id)} onCheckedChange={(c) => { const n = new Set(selectedIds); if (c) n.add(res.student.id); else n.delete(res.student.id); setSelectedIds(n); }} /></TableCell><TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell><TableCell className="font-bold">{res.student.studentNameBn}</TableCell><TableCell className="text-center text-rose-600 font-black">F{res.failedSubjectsCount}</TableCell></TableRow>
-                    ))}</TableBody></Table></div>
-                    <div className="flex justify-end"><AlertDialog><AlertDialogTrigger asChild><Button size="lg" disabled={selectedIds.size === 0} className="font-black shadow-lg">নির্বাচিতদের উত্তীর্ণ করুন ({selectedIds.size.toLocaleString('bn-BD')} জন)</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle><AlertDialogDescription>{selectedIds.size.toLocaleString('bn-BD')} জনকে পরের শ্রেণিতে উঠানো হবে।</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={handlePromote} className="bg-primary hover:bg-primary/90">উত্তীর্ণ করুন</AlertDialogAction></AlertDialogFooter></AlertDialog></div>
+                    <div className="border-2 border-primary/10 rounded-md overflow-hidden bg-white">
+                        <Table>
+                            <TableHeader className="bg-muted/50">
+                                <TableRow>
+                                    <TableHead className="w-12 text-center"><Checkbox checked={selectedIds.size === failedStudents.length} onCheckedChange={(c) => setSelectedIds(c ? new Set(failedStudents.map(s => s.student.id)) : new Set())} /></TableHead>
+                                    <TableHead className="text-center font-black">রোল</TableHead>
+                                    <TableHead className="font-black">নাম</TableHead>
+                                    <TableHead className="text-center font-black">ফেল সংখ্যা</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {failedStudents.map(res => (
+                                    <TableRow key={res.student.id} className="h-10 hover:bg-rose-50">
+                                        <TableCell className="text-center"><Checkbox checked={selectedIds.has(res.student.id)} onCheckedChange={(c) => { const n = new Set(selectedIds); if (c) n.add(res.student.id); else n.delete(res.student.id); setSelectedIds(n); }} /></TableCell>
+                                        <TableCell className="text-center font-bold">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="font-bold">{res.student.studentNameBn}</TableCell>
+                                        <TableCell className="text-center text-rose-600 font-black">F{res.failedSubjectsCount}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <div className="flex justify-end">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button size="lg" disabled={selectedIds.size === 0} className="font-black shadow-lg">নির্বাচিতদের উত্তীর্ণ করুন ({selectedIds.size.toLocaleString('bn-BD')} জন)</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                    <AlertDialogDescription>{selectedIds.size.toLocaleString('bn-BD')} জনকে পরের শ্রেণিতে উঠানো হবে।</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handlePromote} className="bg-primary hover:bg-primary/90">উত্তীর্ণ করুন</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                 </div>
             )}
         </div>
@@ -552,8 +720,16 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 };
 
 const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
-    const { toast } = useToast(); const { selectedYear } = useAcademicYear(); const db = useFirestore(); const { user } = useAuth();
-    const [examName, setExamName] = useState(''); const [className, setClassName] = useState(''); const [group, setGroup] = useState(''); const [isLoading, setIsLoading] = useState(false); const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast(); 
+    const { selectedYear } = useAcademicYear(); 
+    const db = useFirestore(); 
+    const { user } = useAuth();
+    const [examName, setExamName] = useState(''); 
+    const [className, setClassName] = useState(''); 
+    const [group, setGroup] = useState(''); 
+    const [isLoading, setIsLoading] = useState(false); 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file || !db || !examName || !className) return;
         setIsLoading(true); const reader = new FileReader();
@@ -586,19 +762,52 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
         };
         reader.readAsArrayBuffer(file);
     };
-    return (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-6 border-2 border-dashed border-primary/20 rounded-xl bg-white/50"><div className="space-y-2"><Label className="font-bold">পরীক্ষা</Label><Input value={examName} onChange={e => setExamName(e.target.value)} placeholder="উদা: বার্ষিক পরীক্ষা" className="bg-white" /></div><div className="space-y-2"><Label className="font-bold">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label className="font-bold">শাখা (৯ম-১০ম)</Label><Select value={group} onValueChange={setGroup} disabled={parseInt(className) < 9}><SelectTrigger className="bg-white"><SelectValue placeholder="সকল" /></SelectTrigger><SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div><Button onClick={() => fileInputRef.current?.click()} disabled={isLoading || !examName || !className} className="shadow-md h-12 font-black"><FileUp className="mr-2 h-5 w-5" /> {isLoading ? 'আপলোড হচ্ছে...' : 'Excel ফাইল আপলোড করুন'}</Button><input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" /></div>);
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-6 border-2 border-dashed border-primary/20 rounded-xl bg-white/50">
+            <div className="space-y-2"><Label className="font-bold">পরীক্ষা</Label><Input value={examName} onChange={e => setExamName(e.target.value)} placeholder="উদা: বার্ষিক পরীক্ষা" className="bg-white" /></div>
+            <div className="space-y-2"><Label className="font-bold">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label className="font-bold">শাখা (৯ম-১০ম)</Label><Select value={group} onValueChange={setGroup} disabled={parseInt(className) < 9}><SelectTrigger className="bg-white"><SelectValue placeholder="সকল" /></SelectTrigger><SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={isLoading || !examName || !className} className="shadow-md h-12 font-black"><FileUp className="mr-2 h-5 w-5" /> {isLoading ? 'আপলোড হচ্ছে...' : 'Excel ফাইল আপলোড করুন'}</Button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
+        </div>
+    );
 };
 
 export default function ResultsPage() {
-    const [isClient, setIsClient] = useState(false); const [allStudents, setAllStudents] = useState<Student[]>([]); const [isLoading, setIsLoading] = useState(true);
-    const db = useFirestore(); const { selectedYear } = useAcademicYear(); const { user, hasPermission } = useAuth();
+    const [isClient, setIsClient] = useState(false); 
+    const [allStudents, setAllStudents] = useState<Student[]>([]); 
+    const [isLoading, setIsLoading] = useState(true);
+    const db = useFirestore(); 
+    const { selectedYear } = useAcademicYear(); 
+    const { user, hasPermission } = useAuth();
     const canViewRes = hasPermission('manage:results') || hasPermission('input:results');
+
     useEffect(() => {
-        setIsClient(true); if (!db || !user) return;
-        const unsubscribe = onSnapshot(query(collection(db, "students")), (snap) => { setAllStudents(snap.docs.map(studentFromDoc)); setIsLoading(false); }, (err) => { if (err.code !== 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' })); setIsLoading(false); });
+        setIsClient(true); 
+        if (!db || !user) return;
+        const unsubscribe = onSnapshot(query(collection(db, "students")), (snap) => { 
+            setAllStudents(snap.docs.map(studentFromDoc)); 
+            setIsLoading(false); 
+        }, (err) => { 
+            if (err.code !== 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' })); 
+            setIsLoading(false); 
+        });
         return () => unsubscribe();
     }, [db, user]);
-    if (isClient && !canViewRes && !hasPermission('view:merit-list') && user?.role !== 'admin') return (<div className="flex min-h-screen w-full flex-col bg-violet-50"><Header /><main className="flex flex-1 items-center justify-center p-4"><Card className="p-8 text-center border-2 border-primary/20"><AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" /><h2 className="text-xl font-bold">প্রবেশাধিকার সংরক্ষিত</h2></Card></main></div>);
+
+    if (isClient && !canViewRes && !hasPermission('view:merit-list') && user?.role !== 'admin') return (
+        <div className="flex min-h-screen w-full flex-col bg-violet-50">
+            <Header />
+            <main className="flex flex-1 items-center justify-center p-4">
+                <Card className="p-8 text-center border-2 border-primary/20">
+                    <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                    <h2 className="text-xl font-bold">প্রবেশাধিকার সংরক্ষিত</h2>
+                </Card>
+            </main>
+        </div>
+    );
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50 font-kalpurush">
             <Header />
@@ -636,8 +845,13 @@ export default function ResultsPage() {
                             </Tabs>
                         ) : (
                             <div className="space-y-4">
-                                <div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground"><div className="inline-flex items-center justify-center rounded-sm bg-background shadow-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div><div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div></div>
-                                <div className="p-4 border rounded-lg"><Skeleton className="h-64 w-full" /></div>
+                                <div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                                    <div className="inline-flex items-center justify-center rounded-sm bg-background shadow-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
+                                    <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
+                                    <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
+                                    <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
+                                </div>
+                                <div className="p-4 border rounded-lg"><Skeleton className="h-24 w-full" /></div>
                             </div>
                         )}
                     </CardContent>
@@ -646,4 +860,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
