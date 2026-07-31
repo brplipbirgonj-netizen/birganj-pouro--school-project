@@ -17,7 +17,7 @@ import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, CheckCircle2, XCircle, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Phone } from 'lucide-react';
+import { Search, CheckCircle2, XCircle, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Phone, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,133 +54,126 @@ const groupMapBn: Record<string, string> = {
 
 // Heatmap Component
 const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendance[], year: string, holidays: string[] }) => {
-    const start = startOfYear(new Date(parseInt(year), 0, 1));
-    const end = endOfYear(new Date(parseInt(year), 11, 31));
-    const allDays = eachDayOfInterval({ start, end });
-
-    // Group days by week (Sunday to Saturday)
-    const weeks: Date[][] = [];
-    let currentWeek: Date[] = [];
-
-    // Padding for first week if it doesn't start on Sunday
-    const firstDayDay = start.getDay();
-    for (let i = 0; i < firstDayDay; i++) {
-        currentWeek.push(new Date(0)); // Placeholder
-    }
-
-    allDays.forEach(day => {
-        currentWeek.push(day);
-        if (currentWeek.length === 7) {
-            weeks.push(currentWeek);
-            currentWeek = [];
-        }
-    });
-    if (currentWeek.length > 0) {
-        while (currentWeek.length < 7) currentWeek.push(new Date(0));
-        weeks.push(currentWeek);
-    }
+    const monthIndices = Array.from({ length: 12 }, (_, i) => i);
 
     return (
-        <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-primary/20">
-            <div className="flex flex-col gap-2 min-w-[1000px]">
-                {/* Month Labels */}
-                <div className="flex gap-1 mb-1">
-                    <div className="w-10 shrink-0" />
-                    <div className="flex flex-1 gap-1">
-                        {BENGALI_MONTHS.map(m => (
-                            <div key={m} className="flex-1 text-[12px] text-primary font-black text-center">{m}</div>
-                        ))}
-                    </div>
-                </div>
-                
-                <div className="flex gap-2">
-                    {/* Day Labels */}
-                    <div className="flex flex-col justify-between w-10 shrink-0 text-[11px] text-muted-foreground font-black py-1 h-[190px]">
-                        <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span><span>শনি</span>
-                    </div>
+        <div className="w-full overflow-x-auto pb-10 scrollbar-thin scrollbar-thumb-primary/30 bg-slate-50/50 p-6 rounded-2xl border-2 border-dashed border-primary/20">
+            <div className="flex gap-8 min-w-max p-2">
+                {monthIndices.map(monthIdx => {
+                    const monthStart = new Date(parseInt(year), monthIdx, 1);
+                    const monthEnd = new Date(parseInt(year), monthIdx + 1, 0);
+                    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
                     
-                    {/* Grid */}
-                    <div className="flex flex-1 gap-1">
-                        {weeks.map((week, wIdx) => {
-                            // Check if this week contains a month boundary for the vertical border
-                            let hasMonthEnd = false;
-                            const validDays = week.filter(d => d.getTime() !== 0);
-                            if (validDays.length > 0) {
-                                const lastDay = validDays[validDays.length - 1];
-                                const nextWeek = weeks[wIdx + 1];
-                                if (nextWeek) {
-                                    const nextValidDays = nextWeek.filter(d => d.getTime() !== 0);
-                                    if (nextValidDays.length > 0 && nextValidDays[0].getMonth() !== lastDay.getMonth()) {
-                                        hasMonthEnd = true;
-                                    }
-                                }
-                            }
+                    // Organize days into weeks (Sunday to Saturday)
+                    const weeks: (Date | null)[][] = [Array(7).fill(null)];
+                    let currentWeekIdx = 0;
+                    
+                    daysInMonth.forEach(day => {
+                        const dayOfWeek = day.getDay();
+                        // If it's Sunday and the current week already has some data, move to next week
+                        if (dayOfWeek === 0 && weeks[currentWeekIdx].some(d => d !== null)) {
+                            currentWeekIdx++;
+                            weeks[currentWeekIdx] = Array(7).fill(null);
+                        }
+                        weeks[currentWeekIdx][dayOfWeek] = day;
+                    });
 
-                            return (
-                                <div 
-                                    key={wIdx} 
-                                    className={cn(
-                                        "flex flex-col gap-1 flex-1 pb-1",
-                                        hasMonthEnd && "border-r-2 border-primary/30 pr-1"
-                                    )}
-                                >
-                                    {week.map((day, dIdx) => {
-                                        if (day.getTime() === 0) return <div key={dIdx} className="w-full h-6 bg-transparent" />;
-                                        
-                                        const dateStr = format(day, 'yyyy-MM-dd');
-                                        const record = records.find(r => r.date === dateStr);
-                                        const holiday = holidays.includes(dateStr);
-                                        const isWeekend = day.getDay() === 5 || day.getDay() === 6;
+                    // Ensure at least 6 weeks are shown for uniform sizing
+                    while (weeks.length < 6) {
+                        weeks.push(Array(7).fill(null));
+                    }
 
-                                        let colorClass = "bg-slate-100";
-                                        let statusText = "রেকর্ড নেই";
-                                        
-                                        if (holiday || isWeekend) {
-                                            colorClass = "bg-yellow-400 shadow-sm";
-                                            statusText = isWeekend ? "সাপ্তাহিক ছুটি" : "সরকারি ছুটি";
-                                        }
-
-                                        if (record) {
-                                            const att = record.attendance.find(a => !!a);
-                                            if (att?.status === 'present') {
-                                                colorClass = "bg-green-600 shadow-md scale-105 z-10";
-                                                statusText = "উপস্থিত";
-                                            } else if (att?.status === 'absent') {
-                                                colorClass = "bg-red-600 shadow-md scale-105 z-10";
-                                                statusText = "অনুপস্থিত";
-                                            }
-                                        }
-
-                                        return (
-                                            <TooltipProvider key={dIdx}>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <div className={cn(
-                                                            "w-full h-6 rounded-md transition-all hover:ring-2 hover:ring-primary cursor-pointer border border-black/5", 
-                                                            colorClass
-                                                        )} />
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p className="text-sm font-black">{format(day, 'PPP', { locale: bn })}</p>
-                                                        <p className="text-xs font-bold">{statusText}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        );
-                                    })}
+                    return (
+                        <div 
+                            key={monthIdx} 
+                            className="flex flex-col border-[4px] border-black rounded-xl p-5 bg-white shadow-[10px_10px_0px_rgba(0,0,0,0.1)] hover:translate-y-[-5px] transition-all duration-300"
+                        >
+                            <div className="text-center font-black text-xl mb-5 text-primary border-b-[4px] border-black pb-2 uppercase tracking-widest bg-primary/5 -mx-5 -mt-5 rounded-t-lg pt-3">
+                                {BENGALI_MONTHS[monthIdx]}
+                            </div>
+                            <div className="flex gap-4">
+                                {/* Weekday labels inside each month box for better recognition */}
+                                <div className="flex flex-col justify-between text-[11px] font-black text-muted-foreground py-1 h-[228px] shrink-0 border-r-2 border-dashed border-slate-200 pr-2">
+                                    <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span><span>শনি</span>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                                
+                                <div className="flex gap-2.5">
+                                    {weeks.map((week, wIdx) => (
+                                        <div key={wIdx} className="flex flex-col gap-2.5">
+                                            {week.map((day, dIdx) => {
+                                                if (!day) return <div key={dIdx} className="w-8 h-8 bg-slate-50/30 rounded-md border border-dashed border-slate-100" />;
+                                                
+                                                const dateStr = format(day, 'yyyy-MM-dd');
+                                                const record = records.find(r => r.date === dateStr);
+                                                const holiday = holidays.includes(dateStr);
+                                                const isWeekend = day.getDay() === 5 || day.getDay() === 6;
+
+                                                let colorClass = "bg-slate-100 hover:bg-slate-200";
+                                                let statusText = "রেকর্ড নেই";
+                                                
+                                                if (holiday || isWeekend) {
+                                                    colorClass = "bg-yellow-400 shadow-sm hover:bg-yellow-500 ring-1 ring-yellow-500/20";
+                                                    statusText = isWeekend ? "সাপ্তাহিক ছুটি" : "সরকারি ছুটি";
+                                                }
+
+                                                if (record) {
+                                                    const att = record.attendance.find(a => !!a);
+                                                    if (att?.status === 'present') {
+                                                        colorClass = "bg-green-600 shadow-md scale-110 z-10 hover:bg-green-700 ring-2 ring-green-600/30";
+                                                        statusText = "উপস্থিত";
+                                                    } else if (att?.status === 'absent') {
+                                                        colorClass = "bg-red-600 shadow-md scale-110 z-10 hover:bg-red-700 ring-2 ring-red-600/30";
+                                                        statusText = "অনুপস্থিত";
+                                                    }
+                                                }
+
+                                                return (
+                                                    <TooltipProvider key={dIdx}>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className={cn(
+                                                                    "w-8 h-8 rounded-md transition-all cursor-pointer border border-black/5", 
+                                                                    colorClass
+                                                                )} />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="font-kalpurush">
+                                                                <p className="text-sm font-black">{format(day, 'PPP', { locale: bn })}</p>
+                                                                <p className="text-xs font-bold">{statusText}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
+            
             {/* Heatmap Legend */}
-            <div className="mt-8 flex flex-wrap items-center gap-6 text-[12px] font-black text-slate-700 bg-white p-4 rounded-lg border shadow-sm">
-                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-green-600 rounded-md shadow-sm" /> উপস্থিত</div>
-                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-red-600 rounded-md shadow-sm" /> অনুপস্থিত</div>
-                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-yellow-400 rounded-md shadow-sm" /> সরকারি/সাপ্তাহিক ছুটি</div>
-                <div className="flex items-center gap-2"><div className="w-5 h-5 bg-slate-100 rounded-md border" /> রেকর্ড নেই</div>
-                <div className="ml-auto text-muted-foreground italic font-medium">* প্রতিটি মাসের শেষে খাড়া বর্ডার দেওয়া হয়েছে।</div>
+            <div className="mt-10 flex flex-wrap items-center gap-8 text-sm font-black text-slate-700 bg-white p-5 rounded-xl border-4 border-black shadow-lg">
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-green-600 rounded-md shadow-md ring-2 ring-green-600/30" /> 
+                    <span>উপস্থিত</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-red-600 rounded-md shadow-md ring-2 ring-red-600/30" /> 
+                    <span>অনুপস্থিত</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-yellow-400 rounded-md shadow-sm ring-2 ring-yellow-400/30" /> 
+                    <span>সরকারি/সাপ্তাহিক ছুটি</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 bg-slate-100 rounded-md border border-black/10" /> 
+                    <span>রেকর্ড নেই</span>
+                </div>
+                <div className="ml-auto text-muted-foreground italic font-bold">
+                    * প্রতিটি মাসের জন্য আলাদা কালো বর্ডার দেওয়া হয়েছে।
+                </div>
             </div>
         </div>
     );
@@ -330,7 +323,14 @@ function StudentProfileSearchContent() {
     const attendancePercentage = attendanceStats.total > 0 ? (attendanceStats.present / attendanceStats.total) * 100 : 0;
 
     if (!isMounted || authLoading) {
-        return <div className="flex min-h-screen items-center justify-center">লোড হচ্ছে...</div>;
+        return (
+            <div className="flex min-h-screen w-full flex-col">
+                <Header />
+                <main className="flex flex-1 items-center justify-center">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                </main>
+            </div>
+        );
     }
 
     return (
@@ -677,3 +677,4 @@ export default function StudentProfileSearchPage() {
         </Suspense>
     );
 }
+
