@@ -74,6 +74,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const canUploadMarks = hasPermission('upload:marks');
 
     useEffect(() => {
         if (!db || !user) return;
@@ -160,6 +161,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!db || !user || !className || !subject || !examName) { toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ" }); return; }
         if (!isSubjectPermitted(className, subject)) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
+        if (!canUploadMarks) { toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'এক্সেল ফাইল আপলোড করার অনুমতি নেই।' }); return; }
+
         const file = event.target.files?.[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -229,11 +232,13 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <span className="font-bold text-sm text-primary">{subject} ({studentsForClass.length.toLocaleString('bn-BD')} জন)</span>
                             <Badge variant="outline" className="bg-white font-black text-xs px-3">পূর্ণমান: {fullMarks.toLocaleString('bn-BD')}</Badge>
                          </div>
-                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা</Button>
-                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 bg-white"><FileUp className="mr-2 h-4 w-4" /> আপলোড</Button>
-                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
-                        </div>
+                         {canUploadMarks && (
+                             <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা</Button>
+                                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 bg-white"><FileUp className="mr-2 h-4 w-4" /> আপলোড</Button>
+                                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
+                            </div>
+                         )}
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="max-h-[500px] overflow-auto">
@@ -872,15 +877,21 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { toast } = useToast(); 
     const { selectedYear } = useAcademicYear(); 
     const db = useFirestore(); 
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const [examName, setExamName] = useState(''); 
     const [className, setClassName] = useState(''); 
     const [group, setGroup] = useState(''); 
     const [isLoading, setIsLoading] = useState(false); 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const canUploadMarks = hasPermission('upload:marks');
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file || !db || !examName || !className) return;
+        if (!canUploadMarks) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'এক্সেল ফাইল আপলোড করার অনুমতি নেই।' });
+            return;
+        }
         setIsLoading(true); const reader = new FileReader();
         reader.onload = async (ev) => {
             try {
@@ -933,6 +944,7 @@ export default function ResultsPage() {
     
     const canViewRes = hasPermission('manage:results') || hasPermission('input:results');
     const canManageFullMarks = hasPermission('manage:full-marks') || hasPermission('manage:results');
+    const canUploadMarks = hasPermission('upload:marks');
 
     useEffect(() => {
         setIsClient(true); 
@@ -977,7 +989,7 @@ export default function ResultsPage() {
                                     {canViewRes && <TabsTrigger value="sheet" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">ফলাফল শিট</TabsTrigger>}
                                     {hasPermission('view:merit-list') && <TabsTrigger value="merit" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">মেধা তালিকা</TabsTrigger>}
                                     {hasPermission('promote:students') && <TabsTrigger value="special-promotion" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিশেষ পাশ</TabsTrigger>}
-                                    {canViewRes && <TabsTrigger value="upload" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">Excel আপলোড</TabsTrigger>}
+                                    {canUploadMarks && <TabsTrigger value="upload" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">Excel আপলোড</TabsTrigger>}
                                 </TabsList>
                                 <TabsContent value="management" className="mt-4 animate-in fade-in duration-500">
                                     <MarkManagementTab allStudents={allStudents} />

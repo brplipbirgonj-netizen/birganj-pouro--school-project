@@ -6,6 +6,7 @@ export const availablePermissions = [
   
   { id: 'view:students', label: 'শিক্ষার্থী তালিকা দেখুন' },
   { id: 'manage:students', label: 'শিক্ষার্থী ম্যানেজ করুন (যোগ, এডিট, ডিলিট)' },
+  { id: 'upload:students', label: 'এক্সেল দিয়ে শিক্ষার্থী আপলোড (ভর্তি)' },
   { id: 'view:student-profile', label: 'শিক্ষার্থী প্রোফাইল সার্চ করুন' },
 
   { id: 'view:staff', label: 'শিক্ষক ও কর্মচারী তালিকা দেখুন' },
@@ -18,6 +19,7 @@ export const availablePermissions = [
   { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
   { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
   { id: 'manage:full-marks', label: 'বিষয় ও পূর্ণমান ব্যবস্থাপনা' },
+  { id: 'upload:marks', label: 'এক্সেল দিয়ে ফলাফল আপলোড' },
   { id: 'view:merit-list', label: 'মেধা তালিকা দেখুন' },
   { id: 'promote:students', label: 'শিক্ষার্থী প্রমোশন ও বিশেষ পাশ' },
   

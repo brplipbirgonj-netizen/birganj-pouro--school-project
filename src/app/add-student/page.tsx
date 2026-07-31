@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 const initialStudentState: NewStudentData = {
   roll: undefined,
@@ -63,6 +64,7 @@ export default function AddStudentPage() {
     const { toast } = useToast();
     const { selectedYear, availableYears } = useAcademicYear();
     const db = useFirestore();
+    const { hasPermission } = useAuth();
     
     const [currentStep, setCurrentStep] = useState(1);
     const [student, setStudent] = useState<NewStudentData>(initialStudentState);
@@ -70,6 +72,8 @@ export default function AddStudentPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [optionalSubjects, setOptionalSubjects] = useState<Subject[]>([]);
     const [isClient, setIsClient] = useState(false);
+
+    const canUploadStudents = hasPermission('upload:students');
 
     useEffect(() => {
         setIsClient(true);
@@ -239,6 +243,10 @@ export default function AddStudentPage() {
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!db) return;
+        if (!canUploadStudents) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'আপনার এক্সেল ফাইল আপলোড করার অনুমতি নেই।' });
+            return;
+        }
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -472,17 +480,19 @@ export default function AddStudentPage() {
                     <CardTitle className="text-2xl font-bold text-primary">নতুন শিক্ষার্থী ভর্তি</CardTitle>
                     <CardDescription>ফর্মটি ৪টি ধাপে পূরণ করুন</CardDescription>
                 </div>
-                <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end no-print">
-                    <Button variant="outline" onClick={handleDownloadSample} className="h-9">
-                        <Download className="mr-2 h-4 w-4" />
-                        নমুনা ফাইল
-                    </Button>
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="h-9">
-                        <FileUp className="mr-2 h-4 w-4" />
-                        Excel আপলোড
-                    </Button>
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
-                </div>
+                {canUploadStudents && (
+                    <div className="flex items-center flex-wrap gap-2 justify-start sm:justify-end no-print">
+                        <Button variant="outline" onClick={handleDownloadSample} className="h-9">
+                            <Download className="mr-2 h-4 w-4" />
+                            নমুনা ফাইল
+                        </Button>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="h-9">
+                            <FileUp className="mr-2 h-4 w-4" />
+                            Excel আপলোড
+                        </Button>
+                        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
+                    </div>
+                )}
             </div>
 
             {/* Progress Wizard */}
@@ -495,7 +505,7 @@ export default function AddStudentPage() {
                                 "h-8 w-8 rounded-full flex items-center justify-center border-2 transition-all duration-500",
                                 currentStep >= step.id ? "bg-primary border-primary text-white scale-110 shadow-md" : "bg-white border-muted-foreground/30 text-muted-foreground"
                             )}>
-                                {currentStep > step.id ? <CheckCircle2 className="h-5 w-5" /> : <step.icon className="h-4 w-4" />}
+                                {currentWeekIdx > step.id ? <CheckCircle2 className="h-5 w-5" /> : <step.icon className="h-4 w-4" />}
                             </div>
                             <span className={cn(
                                 "text-[10px] sm:text-xs mt-2 font-bold transition-colors",
