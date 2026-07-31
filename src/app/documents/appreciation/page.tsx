@@ -45,7 +45,7 @@ export default function AppreciationGeneratorPage() {
   const [isFetchingResults, setIsFetchingResults] = useState(false);
 
   const [formData, setFormData] = useState({
-    smarak: `বিপৌউবি/প্রশংসা/${new Date().getFullYear()}/`,
+    smarak: `বিপৌউবি/প্রসংসা/${new Date().getFullYear()}/`,
     passingYear: selectedYear,
     gpa: '৫.০০',
     meritPosition: '',
@@ -303,7 +303,7 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 </div>
             </div>
 
-            <div className="flex justify-between font-bold text-sm mb-12 relative z-10 px-4">
+            <div className="flex justify-between font-bold text-sm mb-8 relative z-10 px-4">
                 <span>স্মারক নং: {formData.smarak}</span>
                 <span>তারিখ: {toBengaliNumber(formData.issueDate)} ইং</span>
             </div>
@@ -314,11 +314,12 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 </div>
             )}
 
-            <div className="relative z-10 text-center mb-16">
+            <div className="relative z-10 text-center mb-10">
                 <h2 className="inline-block text-4xl font-black border-b-4 border-blue-900 pb-2 px-16 uppercase tracking-widest text-blue-950">প্রশংসাপত্র</h2>
             </div>
 
-            <div className="relative z-10 text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900">
+            {/* Main Body with padding bottom to prevent overlap with footer */}
+            <div className="relative z-10 text-justify leading-[2.2] text-xl font-semibold space-y-6 px-6 text-slate-900 pb-[220px]">
                 <p className="indent-20">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
@@ -338,18 +339,19 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 </p>
             </div>
 
-            <footer className="absolute bottom-16 left-0 right-0 z-10 px-16">
-                <div className="text-center mb-16">
-                    <p className="italic text-blue-950 text-2xl font-black">
+            {/* Footer with fixed height and position */}
+            <footer className="absolute bottom-16 left-0 right-0 z-10 px-16 bg-white">
+                <div className="text-center mb-10">
+                    <p className="italic text-blue-950 text-2xl font-black leading-relaxed">
                         আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
                     </p>
                 </div>
-                <div className="flex justify-between items-end">
+                <div className="flex justify-between items-end pt-12">
                     <div className="text-center">
                         <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                     </div>
                     <div className="text-center">
-                        <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">
+                        <div className="w-64 border-t-2 border-black pt-2 font-black text-lg text-gray-800">
                             প্রধান শিক্ষকের স্বাক্ষর ও সিল
                         </div>
                     </div>
