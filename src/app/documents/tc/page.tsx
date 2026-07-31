@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -18,6 +18,7 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Staff } from '@/lib/staff-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
@@ -34,6 +35,7 @@ export default function TCGeneratorPage() {
   const { selectedYear } = useAcademicYear();
   const { schoolInfo } = useSchoolInfo();
 
+  const [isClient, setIsClient] = useState(false);
   const [className, setClassName] = useState<string>('6');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -51,7 +53,11 @@ export default function TCGeneratorPage() {
   });
 
   useEffect(() => {
-    if (!db || !className) return;
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!db || !className || !isClient) return;
 
     const fetchStudents = async () => {
       setIsLoadingStudents(true);
@@ -71,21 +77,32 @@ export default function TCGeneratorPage() {
       setIsLoadingStudents(false);
     };
     fetchStudents();
-  }, [db, className, selectedYear]);
+  }, [db, className, selectedYear, isClient]);
 
   useEffect(() => {
-    if (!db) return;
+    if (!db || !isClient) return;
     const fetchHeadmaster = async () => {
       const q = query(collection(db, 'staff'), where('isActive', '==', true), where('designation', 'in', ['প্রধান শিক্ষক', 'প্রধান শিক্ষক (ভারপ্রাপ্ত)']));
       const snap = await getDocs(q);
       if (!snap.empty) setHeadmaster({ id: snap.docs[0].id, ...snap.docs[0].data() } as Staff);
     };
     fetchHeadmaster();
-  }, [db]);
+  }, [db, isClient]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  if (!isClient) {
+    return (
+        <div className="flex min-h-screen w-full flex-col bg-slate-100">
+            <Header />
+            <main className="p-8">
+                <Skeleton className="h-64 w-full rounded-xl" />
+            </main>
+        </div>
+    );
+  }
 
   const studentDob = selectedStudent?.dob ? toBengaliNumber(format(new Date(selectedStudent.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
@@ -105,7 +122,7 @@ export default function TCGeneratorPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Form Column */}
+                {/* Form Column - Left */}
                 <Card className="shadow-lg border-2">
                     <CardHeader className="bg-amber-50 border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -151,7 +168,7 @@ export default function TCGeneratorPage() {
                     </CardContent>
                 </Card>
 
-                {/* Preview Column */}
+                {/* Preview Column - Right */}
                 <div className="sticky top-24">
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4)
@@ -160,7 +177,7 @@ export default function TCGeneratorPage() {
                         {selectedStudent ? (
                             <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} studentDob={studentDob} headmaster={headmaster} />
                         ) : (
-                            <div className="w-[210mm] h-[297mm] bg-white flex items-center justify-center"><p>শিক্ষার্থী নির্বাচন করুন</p></div>
+                            <div className="w-[210mm] h-[297mm] bg-white flex flex-col items-center justify-center text-muted-foreground italic"><Info className="h-12 w-12 mb-4 opacity-10" /><p>শিক্ষার্থী নির্বাচন করুন</p></div>
                         )}
                     </div>
                 </div>
@@ -194,7 +211,7 @@ function TCTemplate({ student, schoolInfo, formData, studentDob, headmaster }: a
             <div className="flex-grow space-y-8 text-xl font-semibold leading-relaxed px-4 text-justify">
                 <p>এই মর্মে ছাড়পত্র প্রদান করা যাইতেছে যে, <span className="font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>।</p>
                 <p>তিনি এই বিদ্যালয়ে <span className="font-black px-2">{toBengaliNumber(student.academicYear)}</span> শিক্ষাবর্ষে <span className="font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে রোল নম্বর <span className="font-black px-2">{toBengaliNumber(student.roll)}</span> নিয়মানুগ শিক্ষার্থী হিসেবে অধ্যয়ন করিয়াছেন। তাহার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।</p>
-                <p>তাহার চরিত্র এবং নৈতিক আচরণ <span className="font-black border-b-2 border-black border-dotted px-2">{formData.conduct}</span>। পড়াশোনার অগ্রগতি ও ফলাফলের দিক থেকে তিনি <span className="font-black border-b-2 border-black border-dotted px-2">{formData.status}</span>।</p>
+                <p>তাহার চরিত্র এবং নৈতিক আচরণ <span className="font-black border-b-2 border-black border-dotted px-2">{formData.conduct}</span> ছিল। পড়াশোনার অগ্রগতি ও ফলাফলের দিক থেকে তিনি <span className="font-black border-b-2 border-black border-dotted px-2">{formData.status}</span>।</p>
                 <p>বিদ্যালয় ত্যাগের কারণ: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.reason}</span>। বিদ্যালয়ের পাওনা সংক্রান্ত অবস্থা: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.dues}</span>।</p>
                 <p className="italic text-emerald-900 pt-4">আমি তাহার ভবিষ্যৎ জীবনে সর্বাঙ্গীন কল্যাণ ও সাফল্য কামনা করি।</p>
             </div>

@@ -17,6 +17,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
@@ -33,6 +34,7 @@ export default function TestimonialGeneratorPage() {
   const { selectedYear } = useAcademicYear();
   const { schoolInfo } = useSchoolInfo();
 
+  const [isClient, setIsClient] = useState(false);
   const [className, setClassName] = useState<string>('6');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -47,7 +49,11 @@ export default function TestimonialGeneratorPage() {
   });
 
   useEffect(() => {
-    if (!db || !className) return;
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!db || !className || !isClient) return;
 
     const fetchStudents = async () => {
       setIsLoadingStudents(true);
@@ -74,15 +80,22 @@ export default function TestimonialGeneratorPage() {
     };
 
     fetchStudents();
-  }, [db, className, selectedYear]);
+  }, [db, className, selectedYear, isClient]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  if (!isClient) {
+    return (
+        <div className="flex min-h-screen w-full flex-col bg-slate-100">
+            <Header />
+            <main className="p-8">
+                <Skeleton className="h-64 w-full rounded-xl" />
+            </main>
+        </div>
+    );
+  }
 
   const studentDob = selectedStudent?.dob ? toBengaliNumber(format(new Date(selectedStudent.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
@@ -102,7 +115,7 @@ export default function TestimonialGeneratorPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Form Section */}
+                {/* Form Section - Left */}
                 <Card className="shadow-lg border-2">
                     <CardHeader className="bg-primary/5 border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -162,13 +175,13 @@ export default function TestimonialGeneratorPage() {
                             </div>
                         </div>
 
-                        <Button onClick={handlePrint} size="lg" className="w-full font-black shadow-lg" disabled={!selectedStudent}>
+                        <Button onClick={() => window.print()} size="lg" className="w-full font-black shadow-lg" disabled={!selectedStudent}>
                             <Printer className="mr-2 h-5 w-5" /> প্রিন্ট করুন
                         </Button>
                     </CardContent>
                 </Card>
 
-                {/* Preview Section */}
+                {/* Preview Section - Right */}
                 <div className="sticky top-24">
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
@@ -180,6 +193,7 @@ export default function TestimonialGeneratorPage() {
                                 schoolInfo={schoolInfo} 
                                 formData={formData} 
                                 studentDob={studentDob} 
+                                selectedYear={selectedYear}
                             />
                         ) : (
                             <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center bg-white text-muted-foreground gap-4">
@@ -201,6 +215,7 @@ export default function TestimonialGeneratorPage() {
                 schoolInfo={schoolInfo} 
                 formData={formData} 
                 studentDob={studentDob} 
+                selectedYear={selectedYear}
             />
         )}
       </div>
@@ -209,7 +224,7 @@ export default function TestimonialGeneratorPage() {
 }
 
 // Fixed Template Component for consistency between Preview and Print
-function TestimonialTemplate({ student, schoolInfo, formData, studentDob }: { student: Student, schoolInfo: any, formData: any, studentDob: string }) {
+function TestimonialTemplate({ student, schoolInfo, formData, studentDob, selectedYear }: any) {
     return (
         <div className="w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-12 box-border border-8 border-double border-emerald-900 overflow-hidden font-kalpurush">
             {/* Header */}

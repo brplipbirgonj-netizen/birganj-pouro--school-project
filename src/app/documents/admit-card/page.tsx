@@ -17,6 +17,7 @@ import { Printer, Loader2, ArrowLeft, User, Users, Info, IdCard } from 'lucide-r
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
@@ -26,6 +27,7 @@ const AdmitCardGeneratorPage = () => {
     const { schoolInfo } = useSchoolInfo();
     const { selectedYear } = useAcademicYear();
 
+    const [isClient, setIsClient] = useState(false);
     const [exams, setExams] = useState<Exam[]>([]);
     const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
     const [selectedClass, setSelectedClass] = useState<string>('');
@@ -35,17 +37,21 @@ const AdmitCardGeneratorPage = () => {
     const [isFetchingExams, setIsFetchingExams] = useState(true);
 
     useEffect(() => {
-        if (!db) return;
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (!db || !isClient) return;
         setIsFetchingExams(true);
         getExams(db, selectedYear).then(data => {
             setExams(data);
             if (data.length > 0) setSelectedExam(data[0]);
             setIsFetchingExams(false);
         }).catch(() => setIsFetchingExams(false));
-    }, [db, selectedYear]);
+    }, [db, selectedYear, isClient]);
 
     useEffect(() => {
-        if (!db) return;
+        if (!db || !isClient) return;
         const studentsQuery = query(collection(db, "students"), where("academicYear", "==", selectedYear));
         const unsubscribe = onSnapshot(studentsQuery, (querySnapshot) => {
             setAllStudents(querySnapshot.docs.map(studentFromDoc));
@@ -55,7 +61,7 @@ const AdmitCardGeneratorPage = () => {
             }
         });
         return () => unsubscribe();
-    }, [db, selectedYear]);
+    }, [db, selectedYear, isClient]);
 
     const availableStudents = useMemo(() => {
         if (!selectedClass) return [];
@@ -79,6 +85,17 @@ const AdmitCardGeneratorPage = () => {
         return groups;
     }, [availableStudents]);
 
+    if (!isClient) {
+        return (
+            <div className="flex min-h-screen w-full flex-col bg-slate-100">
+                <Header />
+                <main className="p-8">
+                    <Skeleton className="h-64 w-full rounded-xl" />
+                </main>
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
             <Header />
@@ -95,7 +112,7 @@ const AdmitCardGeneratorPage = () => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                        {/* Form Column */}
+                        {/* Form Column - Left */}
                         <Card className="shadow-lg border-2">
                             <CardHeader className="bg-primary/5 border-b">
                                 <CardTitle className="text-lg">প্যারামিটার ও সিলেকশন</CardTitle>
@@ -160,7 +177,7 @@ const AdmitCardGeneratorPage = () => {
                             </CardContent>
                         </Card>
 
-                        {/* Preview Column */}
+                        {/* Preview Column - Right */}
                         <div className="sticky top-24">
                             <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
                                 <Info className="h-4 w-4" /> লাইভ প্রিভিউ (একটি নমুনা)
