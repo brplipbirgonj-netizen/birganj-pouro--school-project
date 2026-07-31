@@ -583,6 +583,7 @@ function ProfileSettings() {
     
     const [displayPhoto, setDisplayPhoto] = useState<string | null>(null);
     const [displayName, setDisplayName] = useState<string | null>(null);
+    const [displayDesignation, setDisplayDesignation] = useState<string | null>(null);
 
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -601,9 +602,11 @@ function ProfileSettings() {
                     const staffData = snapshot.docs[0].data();
                     setDisplayPhoto(staffData.photoUrl);
                     setDisplayName(staffData.nameBn);
+                    setDisplayDesignation(staffData.designation);
                 } else {
                     setDisplayPhoto(user.photoUrl || null);
                     setDisplayName(user.displayName || null);
+                    setDisplayDesignation('শিক্ষক');
                 }
             }, (error) => {
                 if (error.code === 'permission-denied') return;
@@ -611,6 +614,7 @@ function ProfileSettings() {
         } else {
             setDisplayPhoto(user.photoUrl || null);
             setDisplayName(user.displayName || 'Admin');
+            setDisplayDesignation('সিস্টেম এডমিনিস্ট্রেটর');
         }
 
         return () => {
@@ -645,7 +649,7 @@ function ProfileSettings() {
                         </Avatar>
                         <div className="space-y-1 text-center sm:text-left">
                             <h2 className="text-2xl font-black text-slate-800">{displayName || 'ব্যবহারকারী'}</h2>
-                            <p className="font-bold text-primary">{user?.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'सहকারী শিক্ষক'}</p>
+                            <p className="font-bold text-primary">{displayDesignation || (user?.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'শিক্ষক')}</p>
                             <p className="text-sm text-muted-foreground">{user?.email}</p>
                             <div className="pt-3"><Badge variant="outline" className="font-black bg-muted/50 border-none px-4">আইডি: {user?.uid.slice(0, 8)}</Badge></div>
                         </div>
