@@ -84,20 +84,19 @@ const AttendanceSheet = ({
         }
 
         checkExistingData();
-    }, [classId, todayStr, selectedYear, db, user]);
+    }, [classId, todayStr, selectedYear, db, user, currentAttendance.size, onStatusChange]);
 
     const handleSaveAttendance = () => {
         if (!db || !user) return;
         
-        if (!isAdmin) {
-            if (isWeekend) {
-                toast({ variant: "destructive", title: "আজ সাপ্তাহিক ছুটি।" });
-                return;
-            }
-            if (activeHoliday) {
-                toast({ variant: "destructive", title: `আজ ${activeHoliday.description}।` });
-                return;
-            }
+        // Strict blocking: Even admins shouldn't take regular attendance on holidays
+        if (isWeekend) {
+            toast({ variant: "destructive", title: "আজ সাপ্তাহিক ছুটি। হাজিরা গ্রহণ সম্ভব নয়।" });
+            return;
+        }
+        if (activeHoliday) {
+            toast({ variant: "destructive", title: `আজ ${activeHoliday.description}। হাজিরা বন্ধ রয়েছে।` });
+            return;
         }
 
         // Logic Change: If student is not clicked, mark as absent automatically
@@ -128,11 +127,12 @@ const AttendanceSheet = ({
         return <p className="text-center p-8 italic">লোড হচ্ছে...</p>
     }
 
-    if (isWeekend && !isAdmin) {
+    // UI Block for holidays and weekends (For everyone)
+    if (isWeekend) {
         return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">আজ সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>
     }
 
-    if (activeHoliday && !isAdmin) {
+    if (activeHoliday) {
         return <p className="text-center text-amber-700 font-bold p-12 bg-amber-50 rounded-lg border-2 border-dashed border-amber-200">আজ {activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
     }
     

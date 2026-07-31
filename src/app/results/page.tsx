@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -11,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { Student, NewStudentData, addStudent, studentFromDoc } from '@/lib/student-data';
+import { Student, studentFromDoc, addStudent } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
@@ -21,7 +20,7 @@ import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Print
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -358,26 +357,26 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <h3 className="font-black text-primary text-sm">শাখা: {groupNamesMap[gk] || gk}</h3>
                             <Badge variant="outline" className="text-[10px]">মোট: {results.length.toLocaleString('bn-BD')}</Badge>
                         </div>
-                        <div className="table-container border-2 border-primary/20">
+                        <div className="table-container border-2 border-primary/20 max-h-[600px] overflow-auto">
                             <Table className="min-w-max border-collapse">
                                 <TableHeader className="sticky top-0 bg-white z-40">
                                     <TableRow className="h-8">
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-b-2 sticky left-0 z-50 w-12 text-[11px]">রোল</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-b-2 sticky left-12 z-50 min-w-[120px] text-[11px]">শিক্ষার্থীর নাম</TableHead>
-                                        {subs.map(s => <TableHead key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="text-center border-x border-b font-black py-0.5 text-[10px] bg-slate-50">{s.name}</TableHead>)}
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px]">মোট</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px]">GPA</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px]">গ্রেড</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px]">মেধা</TableHead>
-                                        <TableHead rowSpan={2} className="text-center no-print border-l border-b-2 text-[10px]">মার্কশিট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-b-2 sticky left-0 z-50 w-12 text-[11px] p-1">রোল</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r border-b-2 sticky left-12 z-50 min-w-[120px] text-[11px] p-1">শিক্ষার্থীর নাম</TableHead>
+                                        {subs.map(s => <TableHead key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="text-center border-x border-b font-black py-0.5 text-[10px] bg-slate-50 sticky top-0">{s.name}</TableHead>)}
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px] sticky top-0 bg-white">মোট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px] sticky top-0 bg-white">GPA</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px] sticky top-0 bg-white">গ্রেড</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l border-b-2 text-[10px] sticky top-0 bg-white">মেধা</TableHead>
+                                        <TableHead rowSpan={2} className="text-center no-print border-l border-b-2 text-[10px] sticky top-0 bg-white">মার্কশিট</TableHead>
                                     </TableRow>
                                     <TableRow className="h-7 bg-muted/20">
                                         {subs.map(s => {
                                             const isEng = s.name.includes('ইংরেজি');
                                             return (
                                                 <React.Fragment key={s.name}>
-                                                    {!isEng && (<><TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0">লিখিত</TableHead><TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0">MCQ</TableHead>{s.practical && <TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0">ব্যবহারিক</TableHead>}</>)}
-                                                    <TableHead className="text-[9px] text-center border-l border-b-2 font-black bg-blue-50/50 p-0">প্রাপ্ত</TableHead><TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0">গ্রেড</TableHead><TableHead className="text-[9px] text-center border-l border-r border-b-2 font-bold p-0">পয়েন্ট</TableHead>
+                                                    {!isEng && (<><TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0 sticky top-8 bg-muted/20">লিখিত</TableHead><TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0 sticky top-8 bg-muted/20">MCQ</TableHead>{s.practical && <TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0 sticky top-8 bg-muted/20">ব্যবহারিক</TableHead>}</>)}
+                                                    <TableHead className="text-[9px] text-center border-l border-b-2 font-black bg-blue-50/50 p-0 sticky top-8">প্রাপ্ত</TableHead><TableHead className="text-[9px] text-center border-l border-b-2 font-bold p-0 sticky top-8 bg-muted/20">গ্রেড</TableHead><TableHead className="text-[9px] text-center border-l border-r border-b-2 font-bold p-0 sticky top-8 bg-muted/20">পয়েন্ট</TableHead>
                                                 </React.Fragment>
                                             )
                                         })}
@@ -592,4 +591,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
