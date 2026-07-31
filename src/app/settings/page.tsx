@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -172,7 +173,7 @@ function SchoolInfoSettings() {
                     <div className="flex items-center gap-6">
                         <div className="w-32 h-32 rounded-xl border-4 border-white shadow-xl bg-muted overflow-hidden shrink-0">
                             {logoPreview ? (
-                                <Image src={logoPreview} alt="School Logo" width={128} height={128} className="object-contain w-full h-full" />
+                                Image src={logoPreview} alt="School Logo" width={128} height={128} className="object-contain w-full h-full" />
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full gap-1 text-center text-muted-foreground">
                                     <Upload className="h-8 w-8" />
@@ -375,7 +376,6 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto font-kalpurush">
                 <DialogHeader><DialogTitle>পারমিশন সেটিংস - {user.email}</DialogTitle></DialogHeader>
                 <div className="py-4 space-y-8">
-                    {/* General Permissions */}
                     <div className="space-y-4">
                         <h3 className="font-black text-sm text-primary uppercase tracking-wider">সাধারণ পারমিশন</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -390,7 +390,6 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
 
                     <Separator />
 
-                    {/* Mark Entry Permissions Section */}
                     <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <h3 className="font-black text-sm text-emerald-700 uppercase tracking-wider">শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন</h3>
@@ -426,7 +425,6 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
                             })}
                         </div>
                         
-                        {/* Summary of selected marks permissions */}
                         <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-dashed">
                             <p className="text-[10px] font-black text-muted-foreground mb-2">অনুমোদিত বিষয়সমূহ: ({toBengaliNumber(totalApprovedSubjects)})</p>
                             {Object.keys(marksPermissions).length > 0 ? (
@@ -509,6 +507,7 @@ function UserManagementSettings() {
                                 <TableHead>নাম ও ইমেইল</TableHead>
                                 <TableHead>রোল (Role)</TableHead>
                                 <TableHead>অবস্থা</TableHead>
+                                <TableHead>সবশেষ ব্যবহার</TableHead>
                                 <TableHead className="text-right">একশন</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -535,6 +534,11 @@ function UserManagementSettings() {
                                         </TableCell>
                                         <TableCell>
                                             {u.isOnline ? <Badge className="bg-green-500 h-5 text-[10px]">অনলাইন</Badge> : <span className="text-[10px] text-muted-foreground">অফলাইন</span>}
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="text-[10px] font-medium">
+                                                {u.lastLoginAt ? format(u.lastLoginAt, 'PP p', { locale: bn }) : 'কখনো নয়'}
+                                            </p>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
@@ -709,7 +713,6 @@ function BackupAndExportSettings() {
             } else {
                 const wb = XLSX.utils.book_new();
                 for (const sheetName in fullData) {
-                    // Excel cell text limit is 32,767 characters. 
                     const sanitizedData = fullData[sheetName].map((row: any) => {
                         const newRow = { ...row };
                         for (const key in newRow) {
@@ -720,7 +723,7 @@ function BackupAndExportSettings() {
                         return newRow;
                     });
                     const ws = XLSX.utils.json_to_sheet(sanitizedData);
-                    XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31)); // sheet names limited to 31 chars
+                    XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31)); 
                 }
                 XLSX.writeFile(wb, `${fileName}.xlsx`);
             }
@@ -821,7 +824,6 @@ export default function SettingsPage() {
             <Header />
             <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-40">
                 
-                {/* Sidebar Navigation */}
                 <aside className="w-full md:w-72 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0">
                     <h2 className="text-3xl font-black mb-8 px-4 hidden md:block text-slate-900 tracking-tight">সেটিংস</h2>
                     <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
@@ -846,7 +848,6 @@ export default function SettingsPage() {
                     </div>
                 </aside>
 
-                {/* Content Area */}
                 <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
                     <div className="p-6 sm:p-10 lg:p-14 flex-1">
                         {activeSection === 'profile' && <ProfileSettings />}
@@ -862,3 +863,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+
