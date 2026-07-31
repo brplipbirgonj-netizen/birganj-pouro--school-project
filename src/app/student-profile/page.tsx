@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage } from '@/lib/student-data';
+import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -389,7 +389,7 @@ function StudentProfileSearchContent() {
                             </div>
                             <div className="w-24 h-24 border-2 border-black p-1 bg-white flex items-center justify-center overflow-hidden">
                                 <Image 
-                                    src={studentData.photoUrl || getStudentPlaceholderImage(studentData.gender)} 
+                                    src={sanitizePhotoUrl(studentData.photoUrl, studentData.gender) || getStudentPlaceholderImage(studentData.gender)} 
                                     alt="Student" 
                                     width={96} 
                                     height={96} 
@@ -524,7 +524,7 @@ function StudentProfileSearchContent() {
                                         <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full border-4 border-primary/20 p-1 shadow-lg">
                                             <div className="relative h-full w-full rounded-full overflow-hidden bg-muted">
                                                 <Image 
-                                                    src={studentData.photoUrl || getStudentPlaceholderImage(studentData.gender)} 
+                                                    src={sanitizePhotoUrl(studentData.photoUrl, studentData.gender) || getStudentPlaceholderImage(studentData.gender)} 
                                                     alt={studentData.studentNameBn} 
                                                     fill 
                                                     className="object-cover" 

@@ -55,7 +55,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage } from '@/lib/student-data';
+import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { StudentFeeDialog } from './StudentFeeDialog';
 import { cn } from '@/lib/utils';
 
@@ -396,7 +396,7 @@ export function Header() {
                   <DialogHeader>
                       <div className="flex items-center gap-4 mb-4">
                           <Avatar className="h-16 w-16 border-2 border-primary/20">
-                              <AvatarImage src={selectedStudent?.photoUrl || (selectedStudent ? getStudentPlaceholderImage(selectedStudent.gender) : undefined)} />
+                              <AvatarImage src={sanitizePhotoUrl(selectedStudent?.photoUrl, selectedStudent?.gender) || (selectedStudent ? getStudentPlaceholderImage(selectedStudent.gender) : undefined)} />
                               <AvatarFallback>{selectedStudent?.studentNameBn?.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
@@ -565,7 +565,7 @@ export function Header() {
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <Avatar className="h-8 w-8">
-                                                            <AvatarImage src={s.photoUrl || getStudentPlaceholderImage(s.gender)} />
+                                                            <AvatarImage src={sanitizePhotoUrl(s.photoUrl, s.gender) || getStudentPlaceholderImage(s.gender)} />
                                                             <AvatarFallback>{s.studentNameBn?.charAt(0)}</AvatarFallback>
                                                         </Avatar>
                                                         <div>

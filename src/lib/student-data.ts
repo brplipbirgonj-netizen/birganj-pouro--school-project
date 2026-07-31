@@ -74,9 +74,29 @@ export const isFemale = (g: string | undefined | null) => {
     return gl === 'female' || gl === 'মহিলা' || gl === 'ছাত্রী' || gl === 'girl' || gl === 'f';
 };
 
+/**
+ * Returns a specific face-based placeholder image URL
+ */
 export const getStudentPlaceholderImage = (gender?: string) => {
-    if (isFemale(gender)) return 'https://picsum.photos/seed/student-female/200/200';
-    return 'https://picsum.photos/seed/student-male/200/200';
+    if (isFemale(gender)) return 'https://picsum.photos/seed/student-female-face/200/200';
+    return 'https://picsum.photos/seed/student-male-face/200/200';
+};
+
+/**
+ * Sanitizes the photoUrl. If it's an old random placeholder (like a staircase),
+ * it returns empty so the UI can use the correct gender-based face.
+ */
+export const sanitizePhotoUrl = (url: string | undefined | null, gender?: string): string => {
+    if (!url) return '';
+    
+    // Check if it's an old random picsum URL (like https://picsum.photos/seed/1/200/200)
+    // We want to skip URLs that use numeric seeds as they are often irrelevant images
+    const oldPicsumRegex = /picsum\.photos\/seed\/\d+/;
+    if (oldPicsumRegex.test(url)) {
+        return '';
+    }
+
+    return url;
 };
 
 // To handle data from Firestore
@@ -92,9 +112,13 @@ export const studentFromDoc = (doc: DocumentData): Student => {
       generatedId = `${year}${classNum}${studentSerial}`;
     }
 
+    // Sanitize the photo URL from existing database records
+    const photoUrl = sanitizePhotoUrl(data.photoUrl, data.gender);
+
     return {
         id: doc.id,
         ...data,
+        photoUrl,
         generatedId,
         dob: data.dob instanceof Timestamp ? data.dob.toDate() : data.dob,
         createdAt: data.createdAt,

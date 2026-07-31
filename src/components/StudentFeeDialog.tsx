@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Student } from '@/lib/student-data';
+import { Student, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { getFeeCollectionsForStudent, FeeCollection, FeeBreakdown } from '@/lib/fees-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
@@ -394,7 +394,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                         {isLoading || !student ? (
                             <Skeleton className="h-20 w-20 rounded-lg" />
                         ) : (
-                             student.photoUrl && <Image src={student.photoUrl} alt="Student photo" width={80} height={80} className="rounded-lg border object-cover shadow-sm" />
+                             student.photoUrl && <Image src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} alt="Student photo" width={80} height={80} className="rounded-lg border object-cover shadow-sm" />
                         )}
                         <div className="flex-1 text-center md:text-left space-y-1">
                             <DialogTitle className="text-xl sm:text-2xl font-bold">বেতন আদায়ের তথ্য</DialogTitle>

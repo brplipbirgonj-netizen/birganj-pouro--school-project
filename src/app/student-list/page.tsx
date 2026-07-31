@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPlaceholderImage } from '@/lib/student-data';
+import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { Eye, FilePen, Trash2, LayoutGrid, List, UserRound, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
@@ -371,7 +371,7 @@ function StudentListContent() {
                                             <div className="relative mb-3">
                                                 <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-sm"></div>
                                                 <Image
-                                                    src={student.photoUrl || getStudentPlaceholderImage(student.gender)}
+                                                    src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)}
                                                     alt={student.studentNameBn}
                                                     width={80}
                                                     height={80}
@@ -442,7 +442,7 @@ function StudentListContent() {
                                     <TableCell>{(index + 1).toLocaleString('bn-BD')}</TableCell>
                                     <TableCell>
                                       <Image
-                                        src={student.photoUrl || getStudentPlaceholderImage(student.gender)}
+                                        src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)}
                                         alt={student.studentNameBn}
                                         width={40}
                                         height={40}
@@ -519,7 +519,7 @@ function StudentListContent() {
              {studentToView && (
                 <>
                     <DialogHeader className="flex-row items-center gap-4">
-                        <Image src={studentToView.photoUrl || getStudentPlaceholderImage(studentToView.gender)} alt={studentToView.studentNameBn} width={80} height={80} className="rounded-lg object-cover" data-ai-hint={isFemale(studentToView.gender) ? "girl face" : "boy face"} />
+                        <Image src={sanitizePhotoUrl(studentToView.photoUrl, studentToView.gender) || getStudentPlaceholderImage(studentToView.gender)} alt={studentToView.studentNameBn} width={80} height={80} className="rounded-lg object-cover" data-ai-hint={isFemale(studentToView.gender) ? "girl face" : "boy face"} />
                         <div>
                             <DialogTitle className="text-2xl mb-1">{studentToView.studentNameBn}</DialogTitle>
                             <DialogDescription>

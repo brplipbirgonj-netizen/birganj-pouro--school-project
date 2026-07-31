@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Student, isFemale, getStudentPlaceholderImage } from '@/lib/student-data';
+import { Student, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { SchoolInfo } from '@/lib/school-info';
 
 interface AdmitCardProps {
@@ -72,7 +72,7 @@ export const AdmitCard = ({ student, schoolInfo, examName }: AdmitCardProps) => 
                     </div>
                     <div className="w-[85px] h-[100px] border-2 border-black p-0.5 bg-white shrink-0 ml-2">
                         <Image 
-                            src={student.photoUrl || getStudentPlaceholderImage(student.gender)} 
+                            src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} 
                             alt="Photo" 
                             width={85} 
                             height={100} 
@@ -100,7 +100,7 @@ export const AdmitCard = ({ student, schoolInfo, examName }: AdmitCardProps) => 
                         <p className="font-black text-[10px]">শ্রেণি শিক্ষকের স্বাক্ষর</p>
                     </div>
                     <div className="text-center w-32 border-t-2 border-black pt-1">
-                        <p className="font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর</p>
+                        <p className="font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
                     </div>
                 </div>
             </footer>

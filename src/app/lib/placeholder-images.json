@@ -2,20 +2,20 @@
   "placeholderImages": [
     {
       "id": "default-male-student",
-      "description": "Default portrait for male students",
-      "imageUrl": "https://picsum.photos/seed/student-male/200/200",
+      "description": "Professional portrait for male students",
+      "imageUrl": "https://picsum.photos/seed/student-male-face/200/200",
       "imageHint": "boy face"
     },
     {
       "id": "default-female-student",
-      "description": "Default portrait for female students",
-      "imageUrl": "https://picsum.photos/seed/student-female/200/200",
+      "description": "Professional portrait for female students",
+      "imageUrl": "https://picsum.photos/seed/student-female-face/200/200",
       "imageHint": "girl face"
     },
     {
       "id": "default-staff",
       "description": "Default placeholder for staff photos",
-      "imageUrl": "https://picsum.photos/seed/staff/200/200",
+      "imageUrl": "https://picsum.photos/seed/staff-member/200/200",
       "imageHint": "teacher profile"
     }
   ]
