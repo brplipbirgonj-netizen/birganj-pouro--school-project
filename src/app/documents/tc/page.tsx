@@ -36,17 +36,16 @@ export default function TCGeneratorPage() {
   const { schoolInfo } = useSchoolInfo();
 
   const [isClient, setIsClient] = useState(false);
-  const [className, setClassName] = useState<string>('6');
+  const [className, setClassName] = useState<string>('10');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [headmaster, setHeadmaster] = useState<Staff | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-  // Form Fields for Live Edit
   const [formData, setFormData] = useState({
     smarakNo: `বিপৌউবি/ছাড়পত্র/${new Date().getFullYear()}/`,
     reason: 'অভিভাবকের স্থানান্তর / পারিবারিক কারণ',
-    conduct: 'উত্তম ও সন্তোষজনক',
+    conduct: 'অত্যন্ত প্রশংসনীয় ও সন্তোষজনক',
     status: 'উত্তীর্ণ হয়ে পরবর্তী শ্রেণিতে ভর্তির যোগ্য',
     dues: 'বিদ্যালয়ের সকল দেনা-পাওনা পরিশোধিত',
     issueDate: format(new Date(), "d MMMM, yyyy", { locale: bn })
@@ -104,8 +103,6 @@ export default function TCGeneratorPage() {
     );
   }
 
-  const studentDob = selectedStudent?.dob ? toBengaliNumber(format(new Date(selectedStudent.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
       <Header />
@@ -122,7 +119,6 @@ export default function TCGeneratorPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Form Column - Left */}
                 <Card className="shadow-lg border-2">
                     <CardHeader className="bg-amber-50 border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -134,7 +130,7 @@ export default function TCGeneratorPage() {
                             <div className="space-y-2">
                                 <Label className="font-bold">শ্রেণি</Label>
                                 <Select value={className} onValueChange={setClassName}>
-                                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
                                     <SelectContent>
                                         {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
                                     </SelectContent>
@@ -168,14 +164,13 @@ export default function TCGeneratorPage() {
                     </CardContent>
                 </Card>
 
-                {/* Preview Column - Right */}
                 <div className="sticky top-24">
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4)
                     </h3>
                     <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.65] sm:scale-[0.75] lg:scale-[0.8] xl:scale-100">
                         {selectedStudent ? (
-                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} studentDob={studentDob} headmaster={headmaster} />
+                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} headmaster={headmaster} />
                         ) : (
                             <div className="w-[210mm] h-[297mm] bg-white flex flex-col items-center justify-center text-muted-foreground italic"><Info className="h-12 w-12 mb-4 opacity-10" /><p>শিক্ষার্থী নির্বাচন করুন</p></div>
                         )}
@@ -186,13 +181,15 @@ export default function TCGeneratorPage() {
       </main>
 
       <div className="hidden print:block printable-area">
-        {selectedStudent && <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} studentDob={studentDob} headmaster={headmaster} />}
+        {selectedStudent && <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} headmaster={headmaster} />}
       </div>
     </div>
   );
 }
 
-function TCTemplate({ student, schoolInfo, formData, studentDob, headmaster }: any) {
+function TCTemplate({ student, schoolInfo, formData, headmaster }: any) {
+    const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
+
     return (
         <div className="w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-10 box-border border-8 border-double border-emerald-800 font-kalpurush">
             <div className="text-center border-b-2 border-emerald-800 pb-3 mb-6 flex justify-between items-center px-4">
@@ -204,16 +201,25 @@ function TCTemplate({ student, schoolInfo, formData, studentDob, headmaster }: a
                 <div className="w-20 h-20 border border-gray-300 p-0.5">{student.photoUrl && <Image src={student.photoUrl} alt="Student" width={80} height={80} className="object-cover w-full h-full" />}</div>
             </div>
 
-            <div className="text-center mb-8"><span className="inline-block bg-emerald-800 text-white text-xl font-bold px-10 py-1.5 rounded-full border-2 border-emerald-900">ছাড়পত্র (TC)</span></div>
+            <div className="text-center mb-8"><span className="inline-block bg-emerald-800 text-white text-xl font-bold px-10 py-1.5 rounded-full border-2 border-emerald-900 shadow-sm">ছাড়পত্র (TC)</span></div>
 
             <div className="flex justify-between font-bold text-sm mb-10 px-4"><span>স্মারক নং: {formData.smarakNo}</span><span>তারিখ: {toBengaliNumber(formData.issueDate)} ইং</span></div>
 
-            <div className="flex-grow space-y-8 text-xl font-semibold leading-relaxed px-4 text-justify">
-                <p>এই মর্মে ছাড়পত্র প্রদান করা যাইতেছে যে, <span className="font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>।</p>
-                <p>তিনি এই বিদ্যালয়ে <span className="font-black px-2">{toBengaliNumber(student.academicYear)}</span> শিক্ষাবর্ষে <span className="font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে রোল নম্বর <span className="font-black px-2">{toBengaliNumber(student.roll)}</span> নিয়মানুগ শিক্ষার্থী হিসেবে অধ্যয়ন করিয়াছেন। তাহার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।</p>
-                <p>তাহার চরিত্র এবং নৈতিক আচরণ <span className="font-black border-b-2 border-black border-dotted px-2">{formData.conduct}</span> ছিল। পড়াশোনার অগ্রগতি ও ফলাফলের দিক থেকে তিনি <span className="font-black border-b-2 border-black border-dotted px-2">{formData.status}</span>।</p>
+            <div className="flex-grow space-y-6 text-xl font-semibold leading-relaxed px-4 text-justify">
+                <p className="indent-16">
+                    এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, 
+                    পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
+                    মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>, 
+                    গ্রাম: <span className="border-b-2 border-black border-dotted px-2">{student.permanentVillage || student.presentVillage || 'বিবিধ'}</span>।
+                </p>
+                <p>
+                    সে অত্র বিদ্যালয়ে <span className="font-black px-2">{toBengaliNumber(student.academicYear)}</span> শিক্ষাবর্ষে <span className="font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে (রোল নম্বর: <span className="font-black px-2">{toBengaliNumber(student.roll)}</span>) নিয়মিত শিক্ষার্থী হিসেবে অধ্যয়ন সম্পন্ন করেছে। বিদ্যালয়ের রেকর্ড অনুযায়ী তার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।
+                </p>
+                <p>
+                    আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="font-black border-b-2 border-black border-dotted px-2">{formData.conduct}</span>। পড়াশোনার অগ্রগতি ও ফলাফল <span className="font-black border-b-2 border-black border-dotted px-2">{formData.status}</span>।
+                </p>
                 <p>বিদ্যালয় ত্যাগের কারণ: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.reason}</span>। বিদ্যালয়ের পাওনা সংক্রান্ত অবস্থা: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.dues}</span>।</p>
-                <p className="italic text-emerald-900 pt-4">আমি তাহার ভবিষ্যৎ জীবনে সর্বাঙ্গীন কল্যাণ ও সাফল্য কামনা করি।</p>
+                <p className="italic text-emerald-900 pt-4 text-center font-black">আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।</p>
             </div>
 
             <footer className="pt-20 flex justify-between items-end px-4 mb-8">

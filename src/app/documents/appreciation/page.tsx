@@ -40,13 +40,12 @@ export default function AppreciationGeneratorPage() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-  // Editable Fields for Appreciation (প্রশংসাপত্র)
   const [formData, setFormData] = useState({
     smarak: `বিপৌউবি/প্রশংসা/${new Date().getFullYear()}/`,
     passingYear: selectedYear,
     gpa: '৫.০০',
     conduct: 'অত্যন্ত প্রশংসনীয় ও সন্তোষজনক',
-    extraContent: 'সে একজন নিয়মিত ও ভদ্র শিক্ষার্থী ছিল। বিদ্যালয়ের সহ-শিক্ষা কার্যক্রমে তার অংশগ্রহণ ছিল স্বতস্ফূর্ত।',
+    extraContent: 'সে বিদ্যালয়ের যাবতীয় সহ-শিক্ষা কার্যক্রমে সক্রিয় ও স্বতঃস্ফূর্তভাবে অংশগ্রহণ করেছে।',
     issueDate: format(new Date(), "d MMMM, yyyy", { locale: bn })
   });
 
@@ -96,8 +95,6 @@ export default function AppreciationGeneratorPage() {
     );
   }
 
-  const studentDob = selectedStudent?.dob ? toBengaliNumber(format(new Date(selectedStudent.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
       <Header />
@@ -114,7 +111,6 @@ export default function AppreciationGeneratorPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Form Section - Left */}
                 <Card className="shadow-lg border-2">
                     <CardHeader className="bg-blue-50 border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -175,7 +171,7 @@ export default function AppreciationGeneratorPage() {
                             <div className="space-y-2">
                                 <Label className="font-bold">অতিরিক্ত তথ্য (ঐচ্ছিক)</Label>
                                 <textarea 
-                                    className="w-full min-h-[100px] p-3 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 outline-none"
+                                    className="w-full min-h-[80px] p-3 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 outline-none"
                                     value={formData.extraContent}
                                     onChange={(e) => handleFieldChange('extraContent', e.target.value)}
                                 />
@@ -188,7 +184,6 @@ export default function AppreciationGeneratorPage() {
                     </CardContent>
                 </Card>
 
-                {/* Preview Section - Right */}
                 <div className="sticky top-24">
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
@@ -199,7 +194,6 @@ export default function AppreciationGeneratorPage() {
                                 student={selectedStudent} 
                                 schoolInfo={schoolInfo} 
                                 formData={formData} 
-                                studentDob={studentDob} 
                             />
                         ) : (
                             <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center bg-white text-muted-foreground gap-4">
@@ -213,14 +207,12 @@ export default function AppreciationGeneratorPage() {
         </div>
       </main>
 
-      {/* Actual Printable Area */}
       <div className="hidden print:block printable-area">
         {selectedStudent && (
             <AppreciationTemplate 
                 student={selectedStudent} 
                 schoolInfo={schoolInfo} 
                 formData={formData} 
-                studentDob={studentDob} 
             />
         )}
       </div>
@@ -228,17 +220,16 @@ export default function AppreciationGeneratorPage() {
   );
 }
 
-function AppreciationTemplate({ student, schoolInfo, formData, studentDob }: any) {
+function AppreciationTemplate({ student, schoolInfo, formData }: any) {
+    const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
+
     return (
         <div className="w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-12 box-border border-[10px] border-double border-blue-900 overflow-hidden font-kalpurush">
-            
-            {/* Corner Decorations */}
             <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-blue-900 rounded-tl-xl opacity-20"></div>
             <div className="absolute top-4 right-4 w-20 h-20 border-t-4 border-r-4 border-blue-900 rounded-tr-xl opacity-20"></div>
             <div className="absolute bottom-4 left-4 w-20 h-20 border-b-4 border-l-4 border-blue-900 rounded-bl-xl opacity-20"></div>
             <div className="absolute bottom-4 right-4 w-20 h-20 border-b-4 border-r-4 border-blue-900 rounded-br-xl opacity-20"></div>
 
-            {/* Header Section */}
             <div className="text-center border-b-4 border-blue-900 pb-4 mb-6 relative z-10 flex justify-between items-center px-4">
                 <div className="w-24 h-24 relative">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}
@@ -264,7 +255,6 @@ function AppreciationTemplate({ student, schoolInfo, formData, studentDob }: any
                 <span>তারিখ: {toBengaliNumber(formData.issueDate)} ইং</span>
             </div>
 
-            {/* Watermark */}
             {schoolInfo.logoUrl && (
                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-[0.03]">
                     <Image src={schoolInfo.logoUrl} alt="Watermark" width={600} height={600} />
@@ -277,24 +267,25 @@ function AppreciationTemplate({ student, schoolInfo, formData, studentDob }: any
 
             <div className="relative z-10 flex-grow text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900">
                 <p className="indent-20">
-                    এই মর্মে অত্যন্ত আনন্দের সাথে প্রশংসাপত্র প্রদান করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
+                    এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
                     মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>, 
                     গ্রাম: <span className="border-b-2 border-black border-dotted px-2">{student.presentVillage || student.permanentVillage || 'বিবিধ'}</span>, 
+                    ডাকঘর: <span className="border-b-2 border-black border-dotted px-2">{student.presentPostOffice || student.permanentPostOffice || 'বিবিধ'}</span>, 
                     উপজেলা: <span className="border-b-2 border-black border-dotted px-2">{student.presentUpazila || 'বীরগঞ্জ'}</span>, 
                     জেলা: <span className="border-b-2 border-black border-dotted px-2">{student.presentDistrict || 'দিনাজপুর'}</span>।
                 </p>
 
                 <p>
-                    সে অত্র বিদ্যালয়ে <span className="text-2xl font-black px-2">{toBengaliNumber(formData.passingYear)}</span> শিক্ষাবর্ষে <span className="text-2xl font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে রোল নম্বর <span className="font-black px-2">{toBengaliNumber(student.roll)}</span> নিয়মানুগ শিক্ষার্থী হিসেবে সফলতার সাথে অধ্যয়ন সম্পন্ন করেছে। বিদ্যালয়ের রেকর্ড অনুযায়ী তার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।
+                    সে অত্র বিদ্যালয়ে <span className="text-2xl font-black px-2">{toBengaliNumber(formData.passingYear)}</span> শিক্ষাবর্ষে <span className="text-2xl font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে (রোল নম্বর: <span className="font-black px-2">{toBengaliNumber(student.roll)}</span>) নিয়মিত শিক্ষার্থী হিসেবে সফলতার সাথে অধ্যয়ন সম্পন্ন করেছে। বিদ্যালয়ের রেকর্ড অনুযায়ী তার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।
                 </p>
 
                 <p>
-                    অত্র বিদ্যালয়ে অধ্যয়নকালীন সময়ে তার অর্জিত GPA <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোন প্রকার রাষ্ট্রবিরোধী বা শৃঙ্খলা পরিপন্থী কাজের সাথে জড়িত ছিল না। তার স্বভাব এবং চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
+                    অত্র বিদ্যালয়ে অধ্যয়নকালীন মেধা তালিকায় তার অর্জিত GPA: <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
                 </p>
 
                 <p className="italic text-blue-950 pt-6 text-center text-2xl font-black">
-                    আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের উত্তরোত্তর সর্বাঙ্গীণ উন্নতি কামনা করি।
+                    আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
                 </p>
             </div>
 

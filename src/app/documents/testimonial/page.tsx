@@ -35,16 +35,14 @@ export default function TestimonialGeneratorPage() {
   const { schoolInfo } = useSchoolInfo();
 
   const [isClient, setIsClient] = useState(false);
-  const [className, setClassName] = useState<string>('6');
+  const [className, setClassName] = useState<string>('10');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-  // Editable Fields for Testimonial (প্রত্যয়ন পত্র)
   const [formData, setFormData] = useState({
     smarak: `বিপৌউবি/প্রত্যয়ন/${new Date().getFullYear()}/`,
-    conduct: 'উত্তম ও সন্তোষজনক',
-    content: 'সে অত্র বিদ্যালয়ে অধ্যয়নকালে কোনো রাষ্ট্রবিরোধী বা আইন শৃঙ্খলা পরিপন্থী কাজের সাথে জড়িত ছিল না। সে বিদ্যালয়ের সকল নিয়ম-কানুন মেনে চলত।',
+    conduct: 'অত্যন্ত প্রশংসনীয় ও সন্তোষজনক',
     issueDate: format(new Date(), "d MMMM, yyyy", { locale: bn })
   });
 
@@ -94,8 +92,6 @@ export default function TestimonialGeneratorPage() {
     );
   }
 
-  const studentDob = selectedStudent?.dob ? toBengaliNumber(format(new Date(selectedStudent.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
       <Header />
@@ -112,7 +108,6 @@ export default function TestimonialGeneratorPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Form Section - Left */}
                 <Card className="shadow-lg border-2">
                     <CardHeader className="bg-primary/5 border-b">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -160,15 +155,7 @@ export default function TestimonialGeneratorPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="font-bold">আচরণ ও চরিত্র</Label>
-                                <Input value={formData.conduct} onChange={(e) => handleFieldChange('conduct', e.target.value)} placeholder="উদা: উত্তম ও সন্তোষজনক" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">বিবরণ (অতিরিক্ত)</Label>
-                                <textarea 
-                                    className="w-full min-h-[100px] p-3 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 outline-none"
-                                    value={formData.content}
-                                    onChange={(e) => handleFieldChange('content', e.target.value)}
-                                />
+                                <Input value={formData.conduct} onChange={(e) => handleFieldChange('conduct', e.target.value)} placeholder="উদা: অত্যন্ত প্রশংসনীয় ও সন্তোষজনক" />
                             </div>
                         </div>
 
@@ -178,7 +165,6 @@ export default function TestimonialGeneratorPage() {
                     </CardContent>
                 </Card>
 
-                {/* Preview Section - Right */}
                 <div className="sticky top-24">
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
@@ -189,7 +175,6 @@ export default function TestimonialGeneratorPage() {
                                 student={selectedStudent} 
                                 schoolInfo={schoolInfo} 
                                 formData={formData} 
-                                studentDob={studentDob} 
                                 selectedYear={selectedYear}
                             />
                         ) : (
@@ -204,14 +189,12 @@ export default function TestimonialGeneratorPage() {
         </div>
       </main>
 
-      {/* Actual Printable Component */}
       <div className="hidden print:block printable-area">
         {selectedStudent && (
             <TestimonialTemplate 
                 student={selectedStudent} 
                 schoolInfo={schoolInfo} 
                 formData={formData} 
-                studentDob={studentDob} 
                 selectedYear={selectedYear}
             />
         )}
@@ -220,10 +203,11 @@ export default function TestimonialGeneratorPage() {
   );
 }
 
-function TestimonialTemplate({ student, schoolInfo, formData, studentDob, selectedYear }: any) {
+function TestimonialTemplate({ student, schoolInfo, formData, selectedYear }: any) {
+    const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
+    
     return (
         <div className="w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-12 box-border border-8 border-double border-emerald-900 overflow-hidden font-kalpurush">
-            {/* Header Section */}
             <div className="text-center border-b-4 border-emerald-900 pb-4 mb-6 relative z-10 flex justify-between items-center px-4">
                 <div className="w-24 h-24 relative">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}
@@ -249,7 +233,6 @@ function TestimonialTemplate({ student, schoolInfo, formData, studentDob, select
                 <span>তারিখ: {toBengaliNumber(formData.issueDate)} ইং</span>
             </div>
 
-            {/* Watermark */}
             {schoolInfo.logoUrl && (
                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-5">
                     <Image src={schoolInfo.logoUrl} alt="Watermark" width={500} height={500} />
@@ -260,29 +243,27 @@ function TestimonialTemplate({ student, schoolInfo, formData, studentDob, select
                 <h2 className="inline-block text-3xl font-black border-b-4 border-black pb-2 px-12 uppercase tracking-widest">প্রত্যয়ন পত্র</h2>
             </div>
 
-            <div className="relative z-10 flex-grow text-justify leading-[2.5] text-xl font-semibold space-y-8 px-4">
+            <div className="relative z-10 flex-grow text-justify leading-[2.5] text-xl font-semibold space-y-8 px-4 text-slate-900">
                 <p className="indent-16">
-                    এই মর্মে প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, 
+                    এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
                     মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>, 
-                    গ্রাম: <span className="border-b-2 border-black border-dotted px-2">{student.presentVillage || student.permanentVillage || 'বিবিধ'}</span>, 
-                    ডাকঘর: <span className="border-b-2 border-black border-dotted px-2">{student.presentPostOffice || student.permanentPostOffice || 'বিবিধ'}</span>, 
-                    উপজেলা: <span className="border-b-2 border-black border-dotted px-2">{student.presentUpazila || student.permanentUpazila || 'বীরগঞ্জ'}</span>, 
-                    জেলা: <span className="border-b-2 border-black border-dotted px-2">{student.presentDistrict || student.permanentDistrict || 'দিনাজপুর'}</span>।
+                    গ্রাম: <span className="border-b-2 border-black border-dotted px-2">{student.permanentVillage || student.presentVillage || 'বিবিধ'}</span>, 
+                    ডাকঘর: <span className="border-b-2 border-black border-dotted px-2">{student.permanentPostOffice || student.presentPostOffice || 'বিবিধ'}</span>, 
+                    উপজেলা: <span className="border-b-2 border-black border-dotted px-2">{student.permanentUpazila || student.presentUpazila || 'বীরগঞ্জ'}</span>, 
+                    জেলা: <span className="border-b-2 border-black border-dotted px-2">{student.permanentDistrict || student.presentDistrict || 'দিনাজপুর'}</span>।
                 </p>
 
                 <p>
-                    সে অত্র বিদ্যালয়ে <span className="text-2xl font-black px-2">{toBengaliNumber(selectedYear)}</span> শিক্ষাবর্ষে <span className="text-2xl font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে অধ্যয়নরত। 
-                    বিদ্যালয়ের ভর্তি রেজিস্টার অনুযায়ী তাহার রোল নম্বর <span className="font-black px-2">{toBengaliNumber(student.roll)}</span> এবং জন্ম তারিখ <span className="font-black px-2">{studentDob}</span>।
+                    সে অত্র বিদ্যালয়ে <span className="text-2xl font-black px-2">{toBengaliNumber(selectedYear)}</span> শিক্ষাবর্ষে <span className="text-2xl font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে (রোল নম্বর: <span className="font-black px-2">{toBengaliNumber(student.roll)}</span>) নিয়মিত শিক্ষার্থী হিসেবে অধ্যয়নরত আছে। বিদ্যালয়ের রেকর্ড অনুযায়ী তার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।
                 </p>
 
                 <p>
-                    তাহার স্বভাব এবং চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। 
-                    {formData.content}
+                    আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>।
                 </p>
 
-                <p className="italic text-emerald-950 pt-4">
-                    আমি তাহার ভবিষ্যৎ জীবনের সর্বাঙ্গীন কল্যাণ ও সাফল্য কামনা করি।
+                <p className="italic text-emerald-950 pt-4 text-center text-2xl font-black">
+                    আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
                 </p>
             </div>
 
