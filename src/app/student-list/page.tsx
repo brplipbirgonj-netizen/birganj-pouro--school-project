@@ -478,34 +478,33 @@ function StudentListContent() {
                                         {canManageStudents && (
                                             <>
                                                 <Link href={`/edit-student/${student.id}`}>
-                                                <Button variant="outline" size="icon" asChild>
-                                                    <span className="cursor-pointer">
-                                                    <FilePen className="h-4 w-4" />
-                                                    </span>
-                                                </Button>
+                                                    <Button variant="outline" size="icon" asChild>
+                                                        <span className="cursor-pointer">
+                                                            <FilePen className="h-4 w-4" />
+                                                        </span>
+                                                    </Button>
                                                 </Link>
                                                 <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="destructive" size="icon">
-                                                    <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        এই কাজটি ফিরিয়ে আনা যাবে না। এটি তালিকা থেকে স্থায়ীভাবে শিক্ষার্থীকে মুছে ফেলবে।
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteStudent(student.id)}>
-                                                        ডিলিট করুন
-                                                    </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                                </AlertDialog>
-                                            </>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="destructive" size="icon">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                এই কাজটি ফিরিয়ে আনা যাবে না। এটি তালিকা থেকে স্থায়ীভাবে শিক্ষার্থীকে মুছে ফেলবে।
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteStudent(student.id)}>
+                                                                ডিলিট করুন
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialog>
+                                                </>
                                         )}
                                       </div>
                                     </TableCell>
