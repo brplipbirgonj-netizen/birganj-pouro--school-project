@@ -503,8 +503,9 @@ function StudentListContent() {
                                                                 ডিলিট করুন
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
-                                                    </AlertDialog>
-                                                </>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </>
                                         )}
                                       </div>
                                     </TableCell>
