@@ -92,7 +92,6 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                 {BENGALI_MONTHS[monthIdx]}
                             </div>
                             <div className="flex gap-2">
-                                {/* Fixed width/height grid for labels to ensure alignment */}
                                 <div className="grid grid-rows-7 gap-1 shrink-0">
                                     {dayLabels.map(label => (
                                         <div key={label} className="h-5 flex items-center text-[9px] font-black text-muted-foreground border-r-2 border-dashed border-slate-200 pr-1">
@@ -136,7 +135,7 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className={cn(
-                                                                    "w-5 h-5 rounded-sm transition-all cursor-pointer border border-black/5 flex items-center justify-center text-[7px] font-black text-white", 
+                                                                    "w-5 h-5 rounded-sm transition-all cursor-pointer border border-black/5 flex items-center justify-center text-[7px] font-black text-black", 
                                                                     colorClass
                                                                 )}>
                                                                     {toBengaliNumber(day.getDate())}
