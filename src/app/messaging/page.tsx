@@ -17,7 +17,7 @@ import { Student, studentFromDoc } from '@/lib/student-data';
 import { useToast } from '@/hooks/use-toast';
 import { 
     MessageSquare, Send, Users, History, Clock, Trash2, Phone, 
-    FileText, Check, Search, Sparkles, MessageCircle, AlertCircle, MessageSquareDashed
+    FileText, Check, Search, Sparkles, MessageCircle, AlertCircle, MessageSquareDashed, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { logMessage, getMessageLogs, MessageLog, deleteMessageLog, updateMessageNote } from '@/lib/messaging-data';
@@ -54,7 +54,7 @@ export default function MessagingPage() {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
 
     const [isClient, setIsClient] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -67,10 +67,11 @@ export default function MessagingPage() {
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
 
     const [logSearchQuery, setLogSearchQuery] = useState('');
-    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-    const [tempNote, setTempNote] = useState('');
 
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
+    const canSendMessages = hasPermission('send:messaging');
+    const canManageMessages = hasPermission('manage:messaging');
 
     const fetchLogs = useCallback(async () => {
         if (!db || !user) return;
@@ -130,6 +131,10 @@ export default function MessagingPage() {
 
     // Send direct mobile SMS via device protocol
     const handleSendDirectSMS = (mobiles: string | string[], content: string) => {
+        if (!canSendMessages) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই', description: 'আপনার মেসেজ পাঠানোর অনুমতি নেই।' });
+            return;
+        }
         const numbers = Array.isArray(mobiles) ? mobiles : [mobiles];
         const cleanNumbers = numbers
             .map(num => num.replace(/[^\d+]/g, ''))
@@ -158,6 +163,7 @@ export default function MessagingPage() {
 
     // Send WhatsApp Direct Message
     const handleSendWhatsApp = (mobile: string, content: string) => {
+        if (!canSendMessages) return;
         if (!mobile) {
             toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
             return;
@@ -172,6 +178,7 @@ export default function MessagingPage() {
     };
 
     const handleMakeCall = async (student: Student) => {
+        if (!canSendMessages) return;
         const mobile = student.guardianMobile || student.studentMobile || '';
         const cleanNumber = mobile.replace(/[^\d+]/g, '');
         if (!cleanNumber) {
@@ -199,6 +206,10 @@ export default function MessagingPage() {
 
     const handleLogAndSimulateMessage = async (type: 'all' | 'class' | 'individual' | 'absent', recipientsCount: number) => {
         if (!db || !user) return;
+        if (!canSendMessages) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই' });
+            return;
+        }
         if (!messageContent.trim()) {
             toast({ variant: 'destructive', title: 'মেসেজ লিখুন' });
             return;
@@ -281,24 +292,15 @@ export default function MessagingPage() {
 
     const handleDeleteLog = async (id: string) => {
         if (!db || !user) return;
+        if (!canManageMessages) {
+            toast({ variant: 'destructive', title: 'পারমিশন নেই' });
+            return;
+        }
         try {
             await deleteMessageLog(db, id);
             toast({ title: 'লগ মুছে ফেলা হয়েছে' });
             fetchLogs();
         } catch (e) {}
-    };
-
-    const handleSaveNote = async (id: string, customNote?: string) => {
-        if (!db || !user) return;
-        const noteToSave = customNote !== undefined ? customNote : tempNote;
-        try {
-            await updateMessageNote(db, id, noteToSave);
-            toast({ title: 'তথ্য সংরক্ষিত হয়েছে' });
-            setEditingNoteId(null);
-            fetchLogs();
-        } catch (e) {
-            toast({ variant: 'destructive', title: 'তথ্য সেভ করা যায়নি' });
-        }
     };
 
     const handleTabChange = (val: string) => {
@@ -336,7 +338,8 @@ export default function MessagingPage() {
                 <CardDescription>শিক্ষার্থী ও অভিভাবকদের কাছে সরাসরি মেসেজ পাঠান, WhatsApp করুন বা কল দিন</CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="bulk" onValueChange={handleTabChange}>
+                {canSendMessages ? (
+                  <Tabs defaultValue="bulk" onValueChange={handleTabChange}>
                   <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="bulk" className="font-bold">সকলকে</TabsTrigger>
                     <TabsTrigger value="class" className="font-bold">শ্রেণিভিত্তিক</TabsTrigger>
@@ -597,6 +600,13 @@ export default function MessagingPage() {
                     </TabsContent>
                   </div>
                 </Tabs>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 bg-muted/10 rounded-xl border-2 border-dashed border-red-200">
+                      <ShieldAlert className="h-12 w-12 text-red-500 mb-4 opacity-30" />
+                      <p className="text-lg font-bold text-red-700">মেসেজ পাঠানোর অনুমতি নেই</p>
+                      <p className="text-sm text-muted-foreground mt-2">আপনার অ্যাকাউন্টে 'মেসেজ পাঠানো' পারমিশনটি নেই।</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -641,7 +651,8 @@ export default function MessagingPage() {
 
                       <div className="flex justify-between items-center border-t pt-2 text-[10px] text-muted-foreground">
                         <span>প্রেরক: {log.senderName || 'Admin'}</span>
-                        <AlertDialog>
+                        {canManageMessages && (
+                          <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-700">
                               <Trash2 className="h-3 w-3" />
@@ -658,6 +669,7 @@ export default function MessagingPage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                        )}
                       </div>
                     </div>
                   ))

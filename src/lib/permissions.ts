@@ -29,7 +29,8 @@ export const availablePermissions = [
   { id: 'view:routines', label: 'রুটিন দেখুন' },
   { id: 'manage:routines', label: 'রুটিন ম্যানেজ করুন' },
 
-  { id: 'manage:messaging', label: 'মেসেজ পাঠানো ও ম্যানেজ করুন' },
+  { id: 'send:messaging', label: 'মেসেজ পাঠানো' },
+  { id: 'manage:messaging', label: 'মেসেজ ম্যানেজ করুন' },
 
   { id: 'manage:settings', label: 'সেটিংস ম্যানেজ করুন' },
 ];
@@ -51,6 +52,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:collection-report',
     'view:routines',
     'manage:documents',
+    'send:messaging',
     'manage:messaging'
   ],
 };

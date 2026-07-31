@@ -94,8 +94,8 @@ service cloud.firestore {
 
     match /messageLogs/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:messaging');
-      allow delete: if isAdmin();
+      allow create: if isAdmin() || hasPermission('send:messaging');
+      allow update, delete: if isAdmin() || hasPermission('manage:messaging');
     }
 
     match /feeCollections/{id} {

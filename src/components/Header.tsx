@@ -186,7 +186,7 @@ export function Header() {
     { label: '', icon: Search, type: 'search', permission: 'view:students' },
     { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: ['manage:results', 'input:results'] },
     { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
-    { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: 'manage:messaging' },
+    { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: ['send:messaging', 'manage:messaging'] },
     { label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines' },
   ];
 
@@ -304,7 +304,7 @@ export function Header() {
                           ফলাফল
                         </Link>
                       )}
-                      {hasPermission('manage:messaging') && (
+                      {(hasPermission('send:messaging') || hasPermission('manage:messaging')) && (
                         <Link
                           href="/messaging"
                           className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-lime-100 text-lime-800 hover:bg-lime-200"
