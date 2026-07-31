@@ -8,10 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-    Trash2, Upload, Circle, Info, Database, Cloud, ShieldCheck, 
-    Calculator, Clock, Loader2, ChevronRight, User, School, 
+    Trash2, Upload, Info, Database, Calculator, Clock, Loader2, ChevronRight, User, School, 
     Calendar, Users, HardDriveDownload, Monitor, ShieldAlert,
-    FileSpreadsheet, FileJson, CheckCircle2, Download
+    FileSpreadsheet, FileJson, Download
 } from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
@@ -23,27 +22,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, FirestoreError, doc, updateDoc, where, limit, getDocs, setDoc } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { User as SystemUser, userFromDoc, UserRole } from '@/lib/user';
-import { updateUserPermissions, deleteUserRecord, updateUserRole } from '@/lib/user-management';
+import { updateUserPermissions, updateUserRole } from '@/lib/user-management';
 import { changePassword } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { availablePermissions, defaultPermissions } from '@/lib/permissions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Staff, staffFromDoc } from '@/lib/staff-data';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSubjects } from '@/lib/subjects';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import * as XLSX from 'xlsx';
+
+// --- Utility Functions ---
+const toBengaliNumber = (str: string | number) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
 
 // --- Sub Components ---
 
@@ -97,7 +98,7 @@ function SystemUsageInfo() {
 }
 
 function SchoolInfoSettings() {
-    const { schoolInfo, updateSchoolInfo, isLoading } = useSchoolInfo();
+    const { schoolInfo, updateSchoolInfo } = useSchoolInfo();
     const { toast } = useToast();
     const [info, setInfo] = useState(schoolInfo);
     const [logoPreview, setLogoPreview] = useState<string | null>(schoolInfo.logoUrl);
