@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, FilePlus, IdCard, FileText, FileBadge } from 'lucide-react';
+import { ArrowRight, FilePlus, IdCard, FileText, FileBadge, Award } from 'lucide-react';
 
 export default function DocumentsPage() {
   return (
@@ -44,9 +44,9 @@ export default function DocumentsPage() {
             <Card className="border-2 border-emerald-100 hover:border-emerald-300 transition-all shadow-md">
                 <CardHeader className="bg-emerald-50">
                     <CardTitle className="flex items-center gap-2 text-emerald-800">
-                        <FileBadge className="h-6 w-6" /> প্রত্যয়ন পত্র (Testimonial)
+                        <FileBadge className="h-6 w-6" /> প্রত্যয়ন পত্র
                     </CardTitle>
-                    <CardDescription>অধ্যয়নরত শিক্ষার্থীদের জন্য প্রত্যয়ন পত্র</CardDescription>
+                    <CardDescription>অধ্যয়নরত শিক্ষার্থীদের জন্য সনদ</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
                    <p className="text-sm text-muted-foreground leading-relaxed">
@@ -56,6 +56,29 @@ export default function DocumentsPage() {
                  <CardFooter>
                     <Link href="/documents/testimonial" className="w-full">
                         <Button className="w-full bg-emerald-700 hover:bg-emerald-800 font-bold">
+                            জেনারেট করুন
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            </Card>
+
+            {/* Appreciation Card */}
+            <Card className="border-2 border-blue-100 hover:border-blue-300 transition-all shadow-md">
+                <CardHeader className="bg-blue-50">
+                    <CardTitle className="flex items-center gap-2 text-blue-800">
+                        <Award className="h-6 w-6" /> প্রশংসাপত্র
+                    </CardTitle>
+                    <CardDescription>শিক্ষার্থীদের জন্য চারিত্রিক সনদ</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                        শিক্ষার্থীদের উজ্জ্বল ভবিষ্যৎ ও ভালো চরিত্রের প্রশংসাসূচক প্রফেশনাল প্রশংসাপত্র তৈরি করুন।
+                   </p>
+                </CardContent>
+                 <CardFooter>
+                    <Link href="/documents/appreciation" className="w-full">
+                        <Button className="w-full bg-blue-700 hover:bg-blue-800 font-bold">
                             জেনারেট করুন
                             <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
