@@ -32,7 +32,6 @@ export default function TestimonialPage() {
     const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
 
     const [student, setStudent] = useState<Student | null>(null);
-    const [headmaster, setHeadmaster] = useState<Staff | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -42,21 +41,8 @@ export default function TestimonialPage() {
             setIsLoading(true);
             
             try {
-                const [studentData, staffSnapshot] = await Promise.all([
-                    getStudentById(db, studentId),
-                    getDocs(query(
-                        collection(db, 'staff'),
-                        where('isActive', '==', true),
-                        where('designation', 'in', ['প্রধান শিক্ষক', 'প্রধান শিক্ষক (ভারপ্রাপ্ত)'])
-                    ))
-                ]);
-                
+                const studentData = await getStudentById(db, studentId);
                 setStudent(studentData || null);
-
-                if (!staffSnapshot.empty) {
-                    const hmDoc = staffSnapshot.docs[0];
-                    setHeadmaster({ id: hmDoc.id, ...hmDoc.data() } as Staff);
-                }
             } catch (e) {
                 console.error(e);
             }
@@ -179,9 +165,8 @@ export default function TestimonialPage() {
                 <div className="print-footer pb-8 z-10 text-right mt-auto">
                     <div className="inline-block text-center">
                         <div className="w-72 border-t-2 border-black pt-1">
-                            <p className="font-black text-lg mb-0.5">{headmaster?.nameBn || '[প্রধান শিক্ষকের নাম]'}</p>
-                            <p className="font-bold text-gray-700 text-md">{headmaster?.designation || 'প্রধান শিক্ষক'}</p>
-                            <p className="font-bold text-gray-700 text-md">{schoolInfo.name}</p>
+                            <p className="font-black text-lg mb-0.5">{schoolInfo.name}</p>
+                            <p className="font-bold text-gray-700 text-md">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
                         </div>
                     </div>
                 </div>

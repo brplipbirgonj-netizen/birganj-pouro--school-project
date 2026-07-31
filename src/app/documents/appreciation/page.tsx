@@ -42,7 +42,6 @@ export default function AppreciationGeneratorPage() {
   const [className, setClassName] = useState<string>('10');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [headmaster, setHeadmaster] = useState<Staff | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isFetchingResults, setIsFetchingResults] = useState(false);
 
@@ -130,17 +129,6 @@ export default function AppreciationGeneratorPage() {
 
     fetchResults();
   }, [db, selectedStudent, selectedYear, isClient]);
-
-  // Fetch Headmaster
-  useEffect(() => {
-    if (!db || !isClient) return;
-    const fetchHeadmaster = async () => {
-      const q = query(collection(db, 'staff'), where('isActive', '==', true), where('designation', 'in', ['প্রধান শিক্ষক', 'প্রধান শিক্ষক (ভারপ্রাপ্ত)']));
-      const snap = await getDocs(q);
-      if (!snap.empty) setHeadmaster({ id: snap.docs[0].id, ...snap.docs[0].data() } as Staff);
-    };
-    fetchHeadmaster();
-  }, [db, isClient]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -261,7 +249,6 @@ export default function AppreciationGeneratorPage() {
                                 student={selectedStudent} 
                                 schoolInfo={schoolInfo} 
                                 formData={formData}
-                                headmaster={headmaster}
                             />
                         ) : (
                             <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center bg-white text-muted-foreground gap-4">
@@ -281,7 +268,6 @@ export default function AppreciationGeneratorPage() {
                 student={selectedStudent} 
                 schoolInfo={schoolInfo} 
                 formData={formData} 
-                headmaster={headmaster}
             />
         )}
       </div>
@@ -289,7 +275,7 @@ export default function AppreciationGeneratorPage() {
   );
 }
 
-function AppreciationTemplate({ student, schoolInfo, formData, headmaster }: any) {
+function AppreciationTemplate({ student, schoolInfo, formData }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
@@ -364,7 +350,7 @@ function AppreciationTemplate({ student, schoolInfo, formData, headmaster }: any
                 </div>
                 <div className="text-center">
                     <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">
-                        <p className="mb-1">{headmaster?.nameBn || schoolInfo.name}</p>
+                        <p className="mb-1">{schoolInfo.name}</p>
                         <p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
                     </div>
                 </div>

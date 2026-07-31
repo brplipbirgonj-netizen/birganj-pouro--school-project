@@ -32,7 +32,6 @@ export default function TransferCertificatePage() {
   const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
 
   const [student, setStudent] = useState<Student | null>(null);
-  const [headmaster, setHeadmaster] = useState<Staff | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Form parameters from URL
@@ -49,21 +48,8 @@ export default function TransferCertificatePage() {
       setIsLoading(true);
 
       try {
-        const [studentData, staffSnapshot] = await Promise.all([
-          getStudentById(db, studentId),
-          getDocs(query(
-            collection(db, 'staff'),
-            where('isActive', '==', true),
-            where('designation', 'in', ['প্রধান শিক্ষক', 'প্রধান শিক্ষক (ভারপ্রাপ্ত)'])
-          ))
-        ]);
-
+        const studentData = await getStudentById(db, studentId);
         setStudent(studentData || null);
-
-        if (!staffSnapshot.empty) {
-          const hmDoc = staffSnapshot.docs[0];
-          setHeadmaster({ id: hmDoc.id, ...hmDoc.data() } as Staff);
-        }
       } catch (e) {
         console.error(e);
       }
