@@ -56,15 +56,17 @@ const groupMapBn: Record<string, string> = {
 // Heatmap Component
 const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendance[], year: string, holidays: string[] }) => {
     const monthIndices = Array.from({ length: 12 }, (_, i) => i);
+    const dayLabels = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
 
     return (
         <div className="w-full overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-primary/30">
-            <div className="flex gap-8 min-w-max p-2">
+            <div className="flex gap-6 min-w-max p-2">
                 {monthIndices.map(monthIdx => {
                     const monthStart = new Date(parseInt(year), monthIdx, 1);
                     const monthEnd = new Date(parseInt(year), monthIdx + 1, 0);
                     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
                     
+                    // Create weeks grid (up to 6 weeks)
                     const weeks: (Date | null)[][] = [Array(7).fill(null)];
                     let currentWeekIdx = 0;
                     
@@ -84,31 +86,36 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                     return (
                         <div 
                             key={monthIdx} 
-                            className="flex flex-col border-[4px] border-black rounded-xl p-4 bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]"
+                            className="flex flex-col border-[4px] border-black rounded-xl p-3 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] h-fit"
                         >
-                            <div className="text-center font-black text-lg mb-3 text-primary border-b-[4px] border-black pb-1 bg-primary/5 -mx-4 -mt-4 rounded-t-lg pt-1">
+                            <div className="text-center font-black text-base mb-2 text-primary border-b-[3px] border-black pb-1 bg-primary/5 -mx-3 -mt-3 rounded-t-lg pt-1">
                                 {BENGALI_MONTHS[monthIdx]}
                             </div>
                             <div className="flex gap-2">
-                                <div className="flex flex-col justify-between text-[11px] font-black text-muted-foreground py-1 h-[180px] shrink-0 border-r-2 border-dashed border-slate-200 pr-1.5">
-                                    <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span><span>শনি</span>
+                                {/* Fixed width/height grid for labels to ensure alignment */}
+                                <div className="grid grid-rows-7 gap-1 shrink-0">
+                                    {dayLabels.map(label => (
+                                        <div key={label} className="h-5 flex items-center text-[9px] font-black text-muted-foreground border-r-2 border-dashed border-slate-200 pr-1">
+                                            {label}
+                                        </div>
+                                    ))}
                                 </div>
                                 
-                                <div className="flex gap-1.5">
+                                <div className="flex gap-1">
                                     {weeks.map((week, wIdx) => (
-                                        <div key={wIdx} className="flex flex-col gap-1.5">
+                                        <div key={wIdx} className="grid grid-rows-7 gap-1">
                                             {week.map((day, dIdx) => {
-                                                if (!day) return <div key={dIdx} className="w-6 h-6 bg-slate-50/30 rounded-md border border-dashed border-slate-100" />;
+                                                if (!day) return <div key={dIdx} className="w-5 h-5 bg-slate-50/20 rounded-sm border border-dashed border-slate-100" />;
                                                 
                                                 const dateStr = format(day, 'yyyy-MM-dd');
                                                 const record = records.find(r => r.date === dateStr);
-                                                const holiday = holidays.includes(dateStr);
+                                                const isHolidayDay = holidays.includes(dateStr);
                                                 const isWeekend = day.getDay() === 5 || day.getDay() === 6;
 
                                                 let colorClass = "bg-slate-100 hover:bg-slate-200";
                                                 let statusText = "রেকর্ড নেই";
                                                 
-                                                if (holiday || isWeekend) {
+                                                if (isHolidayDay || isWeekend) {
                                                     colorClass = "bg-yellow-400 shadow-sm hover:bg-yellow-500 ring-1 ring-yellow-500/20";
                                                     statusText = isWeekend ? "সাপ্তাহিক ছুটি" : "সরকারি ছুটি";
                                                 }
@@ -116,10 +123,10 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                                 if (record) {
                                                     const att = record.attendance.find(a => !!a);
                                                     if (att?.status === 'present') {
-                                                        colorClass = "bg-green-600 shadow-md scale-105 z-10 hover:bg-green-700 ring-2 ring-green-600/30";
+                                                        colorClass = "bg-green-600 shadow-md hover:bg-green-700 ring-2 ring-green-600/30";
                                                         statusText = "উপস্থিত";
                                                     } else if (att?.status === 'absent') {
-                                                        colorClass = "bg-red-600 shadow-md scale-105 z-10 hover:bg-red-700 ring-2 ring-red-600/30";
+                                                        colorClass = "bg-red-600 shadow-md hover:bg-red-700 ring-2 ring-red-600/30";
                                                         statusText = "অনুপস্থিত";
                                                     }
                                                 }
@@ -129,9 +136,11 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className={cn(
-                                                                    "w-6 h-6 rounded-md transition-all cursor-pointer border border-black/5", 
+                                                                    "w-5 h-5 rounded-sm transition-all cursor-pointer border border-black/5 flex items-center justify-center text-[7px] font-black text-white", 
                                                                     colorClass
-                                                                )} />
+                                                                )}>
+                                                                    {toBengaliNumber(day.getDate())}
+                                                                </div>
                                                             </TooltipTrigger>
                                                             <TooltipContent className="font-kalpurush">
                                                                 <p className="text-sm font-black">{format(day, 'PPP', { locale: bn })}</p>
@@ -150,18 +159,18 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                 })}
             </div>
             
-            <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-black text-slate-700 bg-white p-3 rounded-lg border-2 border-black">
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-black text-slate-700 bg-white p-2 rounded-lg border-2 border-black max-w-fit">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 bg-green-600 rounded-md shadow-sm" /> <span>উপস্থিত</span>
+                    <div className="w-4 h-4 bg-green-600 rounded-sm shadow-sm" /> <span>উপস্থিত</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 bg-red-600 rounded-md shadow-sm" /> <span>অনুপস্থিত</span>
+                    <div className="w-4 h-4 bg-red-600 rounded-sm shadow-sm" /> <span>অনুপস্থিত</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 bg-yellow-400 rounded-md shadow-sm" /> <span>ছুটি</span>
+                    <div className="w-4 h-4 bg-yellow-400 rounded-sm shadow-sm" /> <span>ছুটি</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 bg-slate-100 rounded-md border" /> <span>রেকর্ড নেই</span>
+                    <div className="w-4 h-4 bg-slate-100 rounded-sm border" /> <span>রেকর্ড নেই</span>
                 </div>
             </div>
         </div>
@@ -590,11 +599,16 @@ function StudentProfileSearchContent() {
                                                         const isPaid = paidMonths.includes(month);
                                                         return (
                                                             <div key={month} className={cn(
-                                                                "flex flex-col items-center justify-center w-16 p-1 rounded-md border-2 text-[10px] font-black",
-                                                                isPaid ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-400 opacity-60"
+                                                                "flex flex-col items-center justify-center w-20 p-1.5 rounded-md border-2 text-[10px] font-black transition-all",
+                                                                isPaid ? "bg-emerald-50 border-emerald-400 text-emerald-800 shadow-sm" : "bg-rose-50 border-rose-200 text-rose-600 opacity-70"
                                                             )}>
-                                                                <span>{month}</span>
-                                                                <span>{isPaid ? 'OK' : '-'}</span>
+                                                                <span className="leading-tight mb-1">{month}</span>
+                                                                <Badge variant="outline" className={cn(
+                                                                    "h-4 text-[7px] font-black px-1.5 border-none",
+                                                                    isPaid ? "bg-emerald-600 text-white" : "bg-rose-500 text-white"
+                                                                )}>
+                                                                    {isPaid ? 'পরিশোধিত' : 'বকেয়া'}
+                                                                </Badge>
                                                             </div>
                                                         );
                                                     })}
