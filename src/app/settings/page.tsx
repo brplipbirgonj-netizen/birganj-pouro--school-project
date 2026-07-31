@@ -330,6 +330,123 @@ function HolidaySettings() {
     );
 }
 
+function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { user: SystemUser, open: boolean, onOpenChange: (open: boolean) => void, onPermissionsUpdate: () => void }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [permissions, setPermissions] = useState<Set<string>>(new Set());
+    const [marksPermissions, setMarksPermissions] = useState<Record<string, string[]>>({});
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+
+    useEffect(() => {
+        if (user) {
+            setPermissions(new Set(user.permissions?.length ? user.permissions : (defaultPermissions[user.role] || [])));
+            setMarksPermissions(user.marksPermissions || {});
+        }
+    }, [user]);
+
+    const handleSave = async () => {
+        await updateUserPermissions(db!, user.uid, Array.from(permissions), marksPermissions);
+        toast({ title: 'পারমিশন আপডেট হয়েছে' });
+        onPermissionsUpdate(); onOpenChange(false);
+    };
+
+    const toggleSubject = (cls: string, sub: string) => {
+        setMarksPermissions(prev => {
+            const next = { ...prev };
+            const currentSubs = next[cls] || [];
+            if (currentSubs.includes(sub)) {
+                next[cls] = currentSubs.filter(s => s !== sub);
+            } else {
+                next[cls] = [...currentSubs, sub];
+            }
+            if (next[cls].length === 0) delete next[cls];
+            return next;
+        });
+    };
+
+    const availableSubjects = getSubjects(selectedClass);
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto font-kalpurush">
+                <DialogHeader><DialogTitle>পারমিশন সেটিংস - {user.email}</DialogTitle></DialogHeader>
+                <div className="py-4 space-y-8">
+                    {/* General Permissions */}
+                    <div className="space-y-4">
+                        <h3 className="font-black text-sm text-primary uppercase tracking-wider">সাধারণ পারমিশন</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {availablePermissions.map(p => (
+                                <div key={p.id} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/20">
+                                    <Checkbox checked={permissions.has(p.id)} onCheckedChange={c => { const n = new Set(permissions); if (c) n.add(p.id); else n.delete(p.id); setPermissions(n); }} />
+                                    <Label className="text-xs font-bold leading-none cursor-pointer">{p.label}</Label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Mark Entry Permissions Section */}
+                    <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <h3 className="font-black text-sm text-emerald-700 uppercase tracking-wider">শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন</h3>
+                            <div className="flex items-center gap-2">
+                                <Label className="text-[10px] font-black uppercase">শ্রেণি নির্বাচন:</Label>
+                                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                    <SelectTrigger className="h-7 w-24 text-[10px] font-bold bg-white"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(classNamesMap).map(([id, label]) => (
+                                            <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {availableSubjects.map(s => {
+                                const isChecked = marksPermissions[selectedClass]?.includes(s.name);
+                                return (
+                                    <div key={s.name} className={cn(
+                                        "flex items-center gap-2 p-2 border rounded-lg transition-colors",
+                                        isChecked ? "bg-emerald-50 border-emerald-300" : "bg-muted/10 border-transparent"
+                                    )}>
+                                        <Checkbox 
+                                            id={`sub-${selectedClass}-${s.name}`}
+                                            checked={isChecked} 
+                                            onCheckedChange={() => toggleSubject(selectedClass, s.name)} 
+                                        />
+                                        <Label htmlFor={`sub-${selectedClass}-${s.name}`} className="text-[11px] font-bold leading-none cursor-pointer">{s.name}</Label>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        {/* Summary of selected marks permissions */}
+                        {Object.keys(marksPermissions).length > 0 && (
+                            <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-dashed">
+                                <p className="text-[10px] font-black text-muted-foreground mb-2">অনুমোদিত বিষয়সমূহ:</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {Object.entries(marksPermissions).map(([cls, subs]) => (
+                                        subs.map(sub => (
+                                            <Badge key={`${cls}-${sub}`} variant="secondary" className="text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                                                {classNamesMap[cls] || cls} - {sub}
+                                            </Badge>
+                                        ))
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t">
+                    <Button onClick={handleSave} className="w-full font-black h-12 shadow-xl">সবগুলো পারমিশন সেভ করুন</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function UserManagementSettings() {
     const db = useFirestore();
     const { toast } = useToast();
@@ -450,123 +567,6 @@ function UserManagementSettings() {
             </CardContent>
             {selectedUser && <PermissionDialog user={selectedUser} open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen} onPermissionsUpdate={() => {}} />}
         </Card>
-    );
-}
-
-function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { user: SystemUser, open: boolean, onOpenChange: (open: boolean) => void, onPermissionsUpdate: () => void }) {
-    const db = useFirestore();
-    const { toast } = useToast();
-    const [permissions, setPermissions] = useState<Set<string>>(new Set());
-    const [marksPermissions, setMarksPermissions] = useState<Record<string, string[]>>({});
-    const [selectedClass, setSelectedClass] = useState<string>('6');
-
-    useEffect(() => {
-        if (user) {
-            setPermissions(new Set(user.permissions?.length ? user.permissions : (defaultPermissions[user.role] || [])));
-            setMarksPermissions(user.marksPermissions || {});
-        }
-    }, [user]);
-
-    const handleSave = async () => {
-        await updateUserPermissions(db!, user.uid, Array.from(permissions), marksPermissions);
-        toast({ title: 'পারমিশন আপডেট হয়েছে' });
-        onPermissionsUpdate(); onOpenChange(false);
-    };
-
-    const toggleSubject = (cls: string, sub: string) => {
-        setMarksPermissions(prev => {
-            const next = { ...prev };
-            const currentSubs = next[cls] || [];
-            if (currentSubs.includes(sub)) {
-                next[cls] = currentSubs.filter(s => s !== sub);
-            } else {
-                next[cls] = [...currentSubs, sub];
-            }
-            if (next[cls].length === 0) delete next[cls];
-            return next;
-        });
-    };
-
-    const availableSubjects = getSubjects(selectedClass);
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto font-kalpurush">
-                <DialogHeader><DialogTitle>পারমিশন সেটিংস - {user.email}</DialogTitle></DialogHeader>
-                <div className="py-4 space-y-8">
-                    {/* General Permissions */}
-                    <div className="space-y-4">
-                        <h3 className="font-black text-sm text-primary uppercase tracking-wider">সাধারণ পারমিশন</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {availablePermissions.map(p => (
-                                <div key={p.id} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/20">
-                                    <Checkbox checked={permissions.has(p.id)} onCheckedChange={c => { const n = new Set(permissions); if (c) n.add(p.id); else n.delete(p.id); setPermissions(n); }} />
-                                    <Label className="text-xs font-bold leading-none cursor-pointer">{p.label}</Label>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* RESTORED: Mark Entry Permissions Section */}
-                    <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <h3 className="font-black text-sm text-emerald-700 uppercase tracking-wider">শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন</h3>
-                            <div className="flex items-center gap-2">
-                                <Label className="text-[10px] font-black uppercase">শ্রেণি নির্বাচন:</Label>
-                                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                                    <SelectTrigger className="h-7 w-24 text-[10px] font-bold bg-white"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {Object.entries(classNamesMap).map(([id, label]) => (
-                                            <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            {availableSubjects.map(s => {
-                                const isChecked = marksPermissions[selectedClass]?.includes(s.name);
-                                return (
-                                    <div key={s.name} className={cn(
-                                        "flex items-center gap-2 p-2 border rounded-lg transition-colors",
-                                        isChecked ? "bg-emerald-50 border-emerald-300" : "bg-muted/10 border-transparent"
-                                    )}>
-                                        <Checkbox 
-                                            id={`sub-${selectedClass}-${s.name}`}
-                                            checked={isChecked} 
-                                            onCheckedChange={() => toggleSubject(selectedClass, s.name)} 
-                                        />
-                                        <Label htmlFor={`sub-${selectedClass}-${s.name}`} className="text-[11px] font-bold leading-none cursor-pointer">{s.name}</Label>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        
-                        {/* Summary of selected marks permissions */}
-                        {Object.keys(marksPermissions).length > 0 && (
-                            <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-dashed">
-                                <p className="text-[10px] font-black text-muted-foreground mb-2">অনুমোদিত বিষয়সমূহ:</p>
-                                <div className="flex flex-wrap gap-1">
-                                    {Object.entries(marksPermissions).map(([cls, subs]) => (
-                                        subs.map(sub => (
-                                            <Badge key={`${cls}-${sub}`} variant="secondary" className="text-[9px] font-bold bg-emerald-100 text-emerald-800">
-                                                {classNamesMap[cls] || cls} - {sub}
-                                            </Badge>
-                                        ))
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t">
-                    <Button onClick={handleSave} className="w-full font-black h-12 shadow-xl">সবগুলো পারমিশন সেভ করুন</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     );
 }
 
@@ -819,119 +819,3 @@ export default function SettingsPage() {
     );
 }
 
-function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { user: SystemUser, open: boolean, onOpenChange: (open: boolean) => void, onPermissionsUpdate: () => void }) {
-    const db = useFirestore();
-    const { toast } = useToast();
-    const [permissions, setPermissions] = useState<Set<string>>(new Set());
-    const [marksPermissions, setMarksPermissions] = useState<Record<string, string[]>>({});
-    const [selectedClass, setSelectedClass] = useState<string>('6');
-
-    useEffect(() => {
-        if (user) {
-            setPermissions(new Set(user.permissions?.length ? user.permissions : (defaultPermissions[user.role] || [])));
-            setMarksPermissions(user.marksPermissions || {});
-        }
-    }, [user]);
-
-    const handleSave = async () => {
-        await updateUserPermissions(db!, user.uid, Array.from(permissions), marksPermissions);
-        toast({ title: 'পারমিশন আপডেট হয়েছে' });
-        onPermissionsUpdate(); onOpenChange(false);
-    };
-
-    const toggleSubject = (cls: string, sub: string) => {
-        setMarksPermissions(prev => {
-            const next = { ...prev };
-            const currentSubs = next[cls] || [];
-            if (currentSubs.includes(sub)) {
-                next[cls] = currentSubs.filter(s => s !== sub);
-            } else {
-                next[cls] = [...currentSubs, sub];
-            }
-            if (next[cls].length === 0) delete next[cls];
-            return next;
-        });
-    };
-
-    const availableSubjects = getSubjects(selectedClass);
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto font-kalpurush">
-                <DialogHeader><DialogTitle>পারমিশন সেটিংস - {user.email}</DialogTitle></DialogHeader>
-                <div className="py-4 space-y-8">
-                    {/* General Permissions */}
-                    <div className="space-y-4">
-                        <h3 className="font-black text-sm text-primary uppercase tracking-wider">সাধারণ পারমিশন</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {availablePermissions.map(p => (
-                                <div key={p.id} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/20">
-                                    <Checkbox checked={permissions.has(p.id)} onCheckedChange={c => { const n = new Set(permissions); if (c) n.add(p.id); else n.delete(p.id); setPermissions(n); }} />
-                                    <Label className="text-xs font-bold leading-none cursor-pointer">{p.label}</Label>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* RESTORED: Mark Entry Permissions Section */}
-                    <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <h3 className="font-black text-sm text-emerald-700 uppercase tracking-wider">শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন</h3>
-                            <div className="flex items-center gap-2">
-                                <Label className="text-[10px] font-black uppercase">শ্রেণি নির্বাচন:</Label>
-                                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                                    <SelectTrigger className="h-7 w-24 text-[10px] font-bold bg-white"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {Object.entries(classNamesMap).map(([id, label]) => (
-                                            <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            {availableSubjects.map(s => {
-                                const isChecked = marksPermissions[selectedClass]?.includes(s.name);
-                                return (
-                                    <div key={s.name} className={cn(
-                                        "flex items-center gap-2 p-2 border rounded-lg transition-colors",
-                                        isChecked ? "bg-emerald-50 border-emerald-300" : "bg-muted/10 border-transparent"
-                                    )}>
-                                        <Checkbox 
-                                            id={`sub-${selectedClass}-${s.name}`}
-                                            checked={isChecked} 
-                                            onCheckedChange={() => toggleSubject(selectedClass, s.name)} 
-                                        />
-                                        <Label htmlFor={`sub-${selectedClass}-${s.name}`} className="text-[11px] font-bold leading-none cursor-pointer">{s.name}</Label>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        
-                        {/* Summary of selected marks permissions */}
-                        {Object.keys(marksPermissions).length > 0 && (
-                            <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-dashed">
-                                <p className="text-[10px] font-black text-muted-foreground mb-2">অনুমোদিত বিষয়সমূহ:</p>
-                                <div className="flex flex-wrap gap-1">
-                                    {Object.entries(marksPermissions).map(([cls, subs]) => (
-                                        subs.map(sub => (
-                                            <Badge key={`${cls}-${sub}`} variant="secondary" className="text-[9px] font-bold bg-emerald-100 text-emerald-800">
-                                                {classNamesMap[cls] || cls} - {sub}
-                                            </Badge>
-                                        ))
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t">
-                    <Button onClick={handleSave} className="w-full font-black h-12 shadow-xl">সবগুলো পারমিশন সেভ করুন</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
