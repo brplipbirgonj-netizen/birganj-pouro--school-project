@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -89,15 +90,15 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                 {BENGALI_MONTHS[monthIdx]}
                             </div>
                             <div className="flex gap-2">
-                                <div className="flex flex-col justify-between text-[12px] font-black text-muted-foreground py-1 h-[220px] shrink-0 border-r-2 border-dashed border-slate-200 pr-1.5">
+                                <div className="flex flex-col justify-between text-[11px] font-black text-muted-foreground py-1 h-[180px] shrink-0 border-r-2 border-dashed border-slate-200 pr-1.5">
                                     <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span><span>শনি</span>
                                 </div>
                                 
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5">
                                     {weeks.map((week, wIdx) => (
-                                        <div key={wIdx} className="flex flex-col gap-2">
+                                        <div key={wIdx} className="flex flex-col gap-1.5">
                                             {week.map((day, dIdx) => {
-                                                if (!day) return <div key={dIdx} className="w-7 h-7 bg-slate-50/30 rounded-md border border-dashed border-slate-100" />;
+                                                if (!day) return <div key={dIdx} className="w-6 h-6 bg-slate-50/30 rounded-md border border-dashed border-slate-100" />;
                                                 
                                                 const dateStr = format(day, 'yyyy-MM-dd');
                                                 const record = records.find(r => r.date === dateStr);
@@ -128,7 +129,7 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className={cn(
-                                                                    "w-7 h-7 rounded-md transition-all cursor-pointer border border-black/5", 
+                                                                    "w-6 h-6 rounded-md transition-all cursor-pointer border border-black/5", 
                                                                     colorClass
                                                                 )} />
                                                             </TooltipTrigger>
@@ -186,6 +187,8 @@ function StudentProfileSearchContent() {
     const [attendanceRecords, setAttendanceRecords] = useState<DailyAttendance[]>([]);
     const [holidays, setHolidays] = useState<string[]>([]);
     const [paidMonths, setPaidMonths] = useState<string[]>([]);
+    const [feeHistory, setFeeHistory] = useState<FeeCollection[]>([]);
+    const [activeProfileTab, setActiveProfileTab] = useState('details');
 
     useEffect(() => {
         setIsMounted(true);
@@ -276,6 +279,8 @@ function StudentProfileSearchContent() {
             );
             const feeSnap = await getDocs(feeQuery);
             const feeRecords = feeSnap.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null);
+            setFeeHistory(feeRecords.sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime()));
+            
             const monthsPaid = new Set<string>();
             feeRecords.forEach(record => {
                 BENGALI_MONTHS.forEach(m => {
@@ -285,6 +290,7 @@ function StudentProfileSearchContent() {
             setPaidMonths(Array.from(monthsPaid));
 
             setShowProfile(true);
+            setActiveProfileTab('details');
         } catch (error: any) {
             console.error("Search Error:", error);
             toast({ variant: 'destructive', title: 'অনুসন্ধান ব্যর্থ হয়েছে' });
@@ -500,7 +506,7 @@ function StudentProfileSearchContent() {
                     
                     {studentData && (
                         <div className="flex flex-col h-full overflow-hidden">
-                            {/* TOP SECTION: Information (Compact & Scrollless) */}
+                            {/* TOP SECTION: Information (Fixed at top) */}
                             <div className="flex-shrink-0 bg-white border-b-2 border-slate-200 p-4 sm:p-6 overflow-hidden">
                                 <div className="flex flex-col sm:flex-row gap-6 items-start">
                                     {/* Left: Photo & Action */}
@@ -530,7 +536,7 @@ function StudentProfileSearchContent() {
                                             </p>
                                         </div>
 
-                                        <Tabs defaultValue="details" className="w-full">
+                                        <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
                                             <TabsList className="grid w-full grid-cols-3 h-10 bg-muted/30 p-1 mb-4">
                                                 <TabsTrigger value="details" className="font-bold text-xs"><Info className="h-3.5 w-3.5 mr-1" /> ব্যক্তিগত তথ্য</TabsTrigger>
                                                 <TabsTrigger value="attendance_stats" className="font-bold text-xs"><CalendarCheck className="h-3.5 w-3.5 mr-1" /> হাজিরা রিপোর্ট</TabsTrigger>
@@ -599,21 +605,64 @@ function StudentProfileSearchContent() {
                                 </div>
                             </div>
 
-                            {/* BOTTOM SECTION: Attendance Heatmap (Large & Scrollable) */}
+                            {/* BOTTOM SECTION: Main Scrollable Content */}
                             <div className="flex-1 overflow-y-auto bg-slate-100/50 p-4 sm:p-8">
                                 <div className="max-w-full space-y-6">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                            <LayoutGrid className="h-5 w-5 text-primary" /> বার্ষিক অ্যাটেন্ডেন্স ক্যালেন্ডার
-                                        </h3>
-                                        <Badge variant="outline" className="font-black bg-white border-primary/20 text-primary">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</Badge>
-                                    </div>
-                                    
-                                    <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
-                                    
-                                    <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg text-sm text-blue-900 font-bold italic shadow-sm">
-                                        <p className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> হাজিরা ক্যালেন্ডারে যে কোনো তারিখের ওপর মাউস রাখলে বিস্তারিত তথ্য দেখা যাবে।</p>
-                                    </div>
+                                    {activeProfileTab === 'fees_stats' ? (
+                                        <div className="space-y-6 animate-in fade-in duration-500">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                                    <Banknote className="h-5 w-5 text-primary" /> ফি আদায়ের বিস্তারিত বিবরণ
+                                                </h3>
+                                                <Badge variant="outline" className="font-black bg-white border-primary/20 text-primary">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</Badge>
+                                            </div>
+                                            <div className="border-[4px] border-black rounded-xl overflow-hidden bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
+                                                <Table>
+                                                    <TableHeader className="bg-primary/5">
+                                                        <TableRow className="border-b-[4px] border-black">
+                                                            <TableHead className="font-black text-black">তারিখ</TableHead>
+                                                            <TableHead className="font-black text-black">বিবরণ</TableHead>
+                                                            <TableHead className="font-black text-black text-right">পরিমাণ</TableHead>
+                                                            <TableHead className="font-black text-black">আদায়কারী</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {feeHistory.length === 0 ? (
+                                                            <TableRow>
+                                                                <TableCell colSpan={4} className="text-center py-10 font-bold text-muted-foreground italic">
+                                                                    কোনো লেনদেনের তথ্য পাওয়া যায়নি।
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ) : (
+                                                            feeHistory.map((fee) => (
+                                                                <TableRow key={fee.id} className="border-b-2 border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                                                                    <TableCell className="font-bold text-xs whitespace-nowrap">{format(fee.collectionDate, 'dd/MM/yyyy', { locale: bn })}</TableCell>
+                                                                    <TableCell className="font-black text-sm">{fee.description}</TableCell>
+                                                                    <TableCell className="font-black text-right text-emerald-700 text-lg">{toBengaliNumber(fee.totalAmount)} ৳</TableCell>
+                                                                    <TableCell className="text-[10px] font-bold text-muted-foreground">{fee.collectorName || '-'}</TableCell>
+                                                                </TableRow>
+                                                            ))
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-6 animate-in fade-in duration-500">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                                    <LayoutGrid className="h-5 w-5 text-primary" /> বার্ষিক অ্যাটেন্ডেন্স ক্যালেন্ডার
+                                                </h3>
+                                                <Badge variant="outline" className="font-black bg-white border-primary/20 text-primary">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</Badge>
+                                            </div>
+                                            
+                                            <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
+                                            
+                                            <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg text-sm text-blue-900 font-bold italic shadow-sm">
+                                                <p className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> হাজিরা ক্যালেন্ডারে যে কোনো তারিখের ওপর মাউস রাখলে বিস্তারিত তথ্য দেখা যাবে।</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
