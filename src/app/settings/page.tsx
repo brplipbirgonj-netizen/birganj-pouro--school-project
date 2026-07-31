@@ -27,7 +27,7 @@ import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDocs } from 
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { User as SystemUser, userFromDoc, UserRole } from '@/lib/user';
-import { updateUserPermissions, updateUserRole } from '@/lib/user-management';
+import { updateUserPermissions, updateUserRole, deleteUserRecord } from '@/lib/user-management';
 import { changePassword } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -356,6 +356,16 @@ function UserManagementSettings() {
         toast({ title: 'রোল আপডেট হয়েছে' });
     };
 
+    const handleDeleteUser = async (uid: string) => {
+        if (!db) return;
+        try {
+            await deleteUserRecord(db, uid);
+            toast({ title: 'ব্যবহারকারী মুছে ফেলা হয়েছে' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ইউজার মোছা সম্ভব হয়নি।' });
+        }
+    };
+
     return (
         <Card className="border-none shadow-none">
             <CardHeader className="px-0 pt-0">
@@ -398,7 +408,32 @@ function UserManagementSettings() {
                                             {u.isOnline ? <Badge className="bg-green-500 h-5 text-[10px]">অনলাইন</Badge> : <span className="text-[10px] text-muted-foreground">অফলাইন</span>}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" className="h-8 px-4 font-bold" onClick={() => { setSelectedUser(u); setIsPermissionDialogOpen(true); }} disabled={u.role === 'admin'}>পারমিশন</Button>
+                                            <div className="flex justify-end gap-2">
+                                                <Button variant="outline" size="sm" className="h-8 px-4 font-bold" onClick={() => { setSelectedUser(u); setIsPermissionDialogOpen(true); }} disabled={u.role === 'admin'}>পারমিশন</Button>
+                                                {!isMe && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>ব্যবহারকারী মুছুন</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    আপনি কি নিশ্চিতভাবে {u.email} ইউজারটিকে সিস্টেম থেকে মুছে ফেলতে চান? এই কাজটি আর ফিরিয়ে আনা যাবে না।
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteUser(u.uid)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                                    মুছে ফেলুন
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 );
