@@ -203,18 +203,12 @@ export default function TransferCertificatePage() {
           </div>
 
           <div className="text-center">
-            {headmaster?.signatureUrl ? (
-              <div className="h-12 flex justify-center items-center">
-                <Image src={headmaster.signatureUrl} alt="Headmaster Signature" width={100} height={40} className="object-contain" />
-              </div>
-            ) : (
-              <div className="h-12"></div>
-            )}
+            <div className="h-12"></div>
             <p className="border-t border-black font-bold text-sm px-8 pt-1">
               প্রধান শিক্ষকের স্বাক্ষর ও সিল
             </p>
             <p className="text-xs text-muted-foreground font-semibold">
-              {headmaster ? headmaster.nameBn : 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'}
+              {schoolInfo.name}
             </p>
           </div>
         </div>

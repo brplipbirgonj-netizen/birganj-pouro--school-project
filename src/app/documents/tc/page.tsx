@@ -12,7 +12,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, Loader2, ArrowLeft, FileText, Info } from 'lucide-react';
+import { Printer, ArrowLeft, FileText, Info } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -222,9 +222,16 @@ function TCTemplate({ student, schoolInfo, formData, headmaster }: any) {
                 <p className="italic text-emerald-900 pt-4 text-center font-black">আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।</p>
             </div>
 
-            <footer className="pt-20 flex justify-between items-end px-4 mb-8">
-                <div className="text-center w-48 border-t border-black pt-1 font-bold">শ্রেণি শিক্ষকের স্বাক্ষর</div>
-                <div className="text-center w-48 border-t border-black pt-1 font-bold"><p className="mb-1">{headmaster?.nameBn || schoolInfo.name}</p><p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p></div>
+            <footer className="absolute bottom-16 left-0 right-0 pt-20 flex justify-around items-end px-4 mb-8">
+                <div className="text-center">
+                    <div className="w-48 border-t border-black pt-1 font-bold">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                </div>
+                <div className="text-center">
+                    <div className="w-48 border-t border-black pt-1 font-bold">
+                        <p className="mb-1">{schoolInfo.name}</p>
+                        <p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
+                    </div>
+                </div>
             </footer>
         </div>
     );

@@ -15,7 +15,7 @@ import { getSubjects } from '@/lib/subjects';
 import { processStudentResults } from '@/lib/results-calculation';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, ArrowLeft, Award, Info, FileBadge, Loader2 } from 'lucide-react';
+import { Printer, ArrowLeft, Award, Info, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -97,12 +97,10 @@ export default function AppreciationGeneratorPage() {
     const fetchResults = async () => {
         setIsFetchingResults(true);
         try {
-            // Find all results for this class to calculate merit
             const allRes = await getAllResults(db, selectedYear);
             const classRes = allRes.filter(r => r.className === selectedStudent.className);
             const subs = getSubjects(selectedStudent.className, selectedStudent.group).filter(s => s.isExamSubject !== false);
             
-            // We need all students in this class for proper merit calculation
             const q = query(
                 collection(db, 'students'),
                 where('className', '==', selectedStudent.className),
@@ -336,7 +334,7 @@ function AppreciationTemplate({ student, schoolInfo, formData, headmaster }: any
                 <h2 className="inline-block text-4xl font-black border-b-4 border-blue-900 pb-2 px-16 uppercase tracking-widest text-blue-950">প্রশংসাপত্র</h2>
             </div>
 
-            <div className="relative z-10 flex-grow text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900 pb-32">
+            <div className="relative z-10 text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900">
                 <p className="indent-20">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
@@ -360,7 +358,7 @@ function AppreciationTemplate({ student, schoolInfo, formData, headmaster }: any
                 </p>
             </div>
 
-            <footer className="relative z-10 flex justify-between items-end mt-auto pb-12 px-8">
+            <footer className="absolute bottom-16 left-0 right-0 z-10 flex justify-between items-end px-16">
                 <div className="text-center">
                     <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                 </div>
@@ -374,4 +372,3 @@ function AppreciationTemplate({ student, schoolInfo, formData, headmaster }: any
         </div>
     );
 }
-
