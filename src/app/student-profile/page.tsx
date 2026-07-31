@@ -303,7 +303,7 @@ function StudentProfileSearchContent() {
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-indigo-50">
+        <div className="flex min-h-screen w-full flex-col bg-indigo-50 font-kalpurush">
             <div className="no-print w-full flex flex-col">
                 <Header />
                 <main className="flex flex-1 flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-80">
@@ -343,8 +343,8 @@ function StudentProfileSearchContent() {
 
             {/* Dedicated Printable Area (Hidden on screen) */}
             {studentData && (
-                <div className="hidden print:block printable-area">
-                    <div className="flex flex-col h-full text-black">
+                <div className="hidden print:block printable-area font-kalpurush">
+                    <div className="flex flex-col h-full text-black p-8">
                         {/* School Header */}
                         <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-8 printable-header">
                             {schoolInfo.logoUrl && (
@@ -359,7 +359,7 @@ function StudentProfileSearchContent() {
                                     <h2 className="text-xl font-black uppercase tracking-widest">শিক্ষার্থী প্রোফাইল রিপোর্ট</h2>
                                 </div>
                             </div>
-                            <div className="w-24 h-24 border-2 border-black p-1 bg-white">
+                            <div className="w-24 h-24 border-2 border-black p-1 bg-white flex items-center justify-center overflow-hidden">
                                 {studentData.photoUrl ? (
                                     <Image src={studentData.photoUrl} alt="Student" width={96} height={96} className="object-cover w-full h-full" />
                                 ) : (
@@ -377,7 +377,7 @@ function StudentProfileSearchContent() {
                                 <div className="grid grid-cols-2 gap-y-3 text-lg font-semibold">
                                     <div className="flex">
                                         <span className="w-40 text-gray-600">শিক্ষার্থী আইডি</span>
-                                        <span className="font-bold">: {studentData.generatedId}</span>
+                                        <span className="font-bold">: {toBengaliNumber(studentData.generatedId || '')}</span>
                                     </div>
                                     <div className="flex">
                                         <span className="w-40 text-gray-600">পূর্ণ নাম</span>
@@ -401,7 +401,7 @@ function StudentProfileSearchContent() {
                                     </div>
                                     <div className="flex">
                                         <span className="w-40 text-gray-600">জন্ম তারিখ</span>
-                                        <span className="font-bold">: {studentData.dob ? format(new Date(studentData.dob), 'dd/MM/yyyy') : '-'}</span>
+                                        <span className="font-bold">: {studentData.dob ? format(new Date(studentData.dob), 'dd/MM/yyyy', { locale: bn }) : '-'}</span>
                                     </div>
                                     <div className="flex">
                                         <span className="w-40 text-gray-600">ধর্ম ও লিঙ্গ</span>
@@ -412,27 +412,27 @@ function StudentProfileSearchContent() {
 
                             {/* Attendance & Fees Stats */}
                             <section className="grid grid-cols-2 gap-8">
-                                <div>
-                                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2">
-                                        <CalendarCheck className="h-5 w-5" /> হাজিরা রিপোর্ট
+                                <div className="border-2 border-emerald-100 p-4 rounded-lg bg-emerald-50/10">
+                                    <h3 className="text-xl font-black border-b-2 border-emerald-800 pb-1 mb-4 flex items-center gap-2">
+                                        <CalendarCheck className="h-5 w-5 text-emerald-800" /> হাজিরা রিপোর্ট
                                     </h3>
                                     <div className="space-y-2 text-lg font-bold">
                                         <div className="flex justify-between"><span>মোট কার্যদিবস</span> <span>{toBengaliNumber(attendanceStats.total)} দিন</span></div>
                                         <div className="flex justify-between text-emerald-700"><span>উপস্থিত</span> <span>{toBengaliNumber(attendanceStats.present)} দিন</span></div>
                                         <div className="flex justify-between text-rose-700"><span>অনুপস্থিত</span> <span>{toBengaliNumber(attendanceStats.absent)} দিন</span></div>
-                                        <div className="flex justify-between border-t pt-2 text-blue-800"><span>উপস্থিতির হার</span> <span>{toBengaliNumber(attendancePercentage.toFixed(1))}%</span></div>
+                                        <div className="flex justify-between border-t pt-2 text-blue-800 border-emerald-800"><span>উপস্থিতির হার</span> <span>{toBengaliNumber(attendancePercentage.toFixed(1))}%</span></div>
                                     </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2">
-                                        <Banknote className="h-5 w-5" /> বেতন পরিশোধের অবস্থা
+                                <div className="border-2 border-amber-100 p-4 rounded-lg bg-amber-50/10">
+                                    <h3 className="text-xl font-black border-b-2 border-amber-800 pb-1 mb-4 flex items-center gap-2">
+                                        <Banknote className="h-5 w-5 text-amber-800" /> বেতন পরিশোধের অবস্থা
                                     </h3>
                                     <div className="grid grid-cols-4 gap-2">
                                         {BENGALI_MONTHS.map(m => {
                                             const isPaid = paidMonths.includes(m);
                                             return (
                                                 <div key={m} className={cn(
-                                                    "p-1 text-[9px] text-center border rounded flex flex-col items-center justify-center min-h-[40px] font-black",
+                                                    "p-1 text-[9px] text-center border rounded flex flex-col items-center justify-center min-h-[42px] font-black",
                                                     isPaid ? "border-emerald-700 text-emerald-800 bg-emerald-50" : "border-rose-300 text-rose-700 bg-rose-50"
                                                 )}>
                                                     <span className="leading-tight">{m}</span>
@@ -452,8 +452,8 @@ function StudentProfileSearchContent() {
                                 <div className="grid grid-cols-2 gap-8 text-lg font-bold">
                                     <div>
                                         <p className="text-sm text-gray-500 uppercase tracking-tighter">বর্তমান ঠিকানা</p>
-                                        <p>{studentData.presentVillage}, {studentData.presentUnion}</p>
-                                        <p>{studentData.presentUpazila}, {studentData.presentDistrict}</p>
+                                        <p>{studentData.presentVillage || '-'}, {studentData.presentUnion || '-'}</p>
+                                        <p>{studentData.presentUpazila || '-'}, {studentData.presentDistrict || '-'}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 uppercase tracking-tighter">মোবাইল নম্বর</p>
@@ -476,13 +476,16 @@ function StudentProfileSearchContent() {
                                 <div className="border-t-2 border-black pt-1 font-black text-sm">প্রধান শিক্ষকের স্বাক্ষর</div>
                             </div>
                         </footer>
+                        <div className="text-center text-[10px] text-gray-400 italic mt-4">
+                            রিপোর্ট তৈরির তারিখ: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Management System
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Main Screen Dialog */}
             <Dialog open={showProfile} onOpenChange={setShowProfile}>
-                <DialogContent className="sm:max-w-5xl max-h-[95vh] overflow-y-auto p-0 no-print">
+                <DialogContent className="sm:max-w-5xl max-h-[95vh] overflow-y-auto p-0 no-print font-kalpurush">
                     <DialogHeader className="sr-only">
                         <DialogTitle>শিক্ষার্থী প্রোফাইল</DialogTitle>
                         <DialogDescription>বিস্তারিত তথ্য, হাজিরা ও বেতন রিপোর্ট</DialogDescription>
@@ -512,8 +515,8 @@ function StudentProfileSearchContent() {
                                     </div>
                                 </div>
                                 <div className="absolute top-4 right-4 flex gap-2">
-                                    <Button variant="secondary" size="sm" className="bg-white/80 backdrop-blur-sm" onClick={() => window.print()}>
-                                        <Printer className="h-4 w-4 mr-2" /> প্রিন্ট
+                                    <Button variant="secondary" size="sm" className="bg-white/80 backdrop-blur-sm shadow-lg font-black" onClick={() => window.print()}>
+                                        <Printer className="h-4 w-4 mr-2" /> প্রিন্ট করুন
                                     </Button>
                                 </div>
                             </div>
@@ -539,7 +542,7 @@ function StudentProfileSearchContent() {
                                             <Card className="border-none shadow-sm bg-indigo-50/50">
                                                 <CardHeader className="pb-2"><CardTitle className="text-lg font-bold text-indigo-900">ব্যক্তিগত তথ্য</CardTitle></CardHeader>
                                                 <CardContent className="space-y-2 text-sm">
-                                                    <div className="flex justify-between border-b py-1"><span>শিক্ষার্থী আইডি:</span> <span className="font-bold">{studentData.generatedId}</span></div>
+                                                    <div className="flex justify-between border-b py-1"><span>শিক্ষার্থী আইডি:</span> <span className="font-bold">{toBengaliNumber(studentData.generatedId || '')}</span></div>
                                                     <div className="flex justify-between border-b py-1"><span>নাম (ইংরেজি):</span> <span className="font-bold">{studentData.studentNameEn || '-'}</span></div>
                                                     <div className="flex justify-between border-b py-1"><span>জন্ম তারিখ:</span> <span className="font-bold">{studentData.dob ? format(new Date(studentData.dob), 'dd MMMM yyyy', { locale: bn }) : '-'}</span></div>
                                                     <div className="flex justify-between border-b py-1"><span>লিঙ্গ:</span> <span className="font-bold">{studentData.gender === 'male' ? 'ছাত্র' : 'ছাত্রী'}</span></div>
@@ -563,20 +566,20 @@ function StudentProfileSearchContent() {
                                         <Card className="border-none shadow-sm bg-white">
                                             <CardHeader>
                                                 <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                                    <CalendarCheck className="h-5 w-5 text-emerald-600" /> হাজিরা পরিসংখ্যান ({selectedYear.toLocaleString('bn-BD')})
+                                                    <CalendarCheck className="h-5 w-5 text-emerald-600" /> হাজিরা পরিসংখ্যান ({toBengaliNumber(selectedYear)})
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className="space-y-8">
                                                 <div className="grid grid-cols-3 gap-4 text-center">
-                                                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 shadow-sm">
                                                         <p className="text-sm font-bold text-emerald-700">উপস্থিতি</p>
                                                         <p className="text-2xl font-black">{toBengaliNumber(attendanceStats.present)} দিন</p>
                                                     </div>
-                                                    <div className="p-4 bg-rose-50 rounded-xl border border-rose-100">
+                                                    <div className="p-4 bg-rose-50 rounded-xl border border-rose-100 shadow-sm">
                                                         <p className="text-sm font-bold text-rose-700">অনুপস্থিতি</p>
                                                         <p className="text-2xl font-black">{toBengaliNumber(attendanceStats.absent)} দিন</p>
                                                     </div>
-                                                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                                                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 shadow-sm">
                                                         <p className="text-sm font-bold text-blue-700">উপস্থিতির হার</p>
                                                         <p className="text-2xl font-black">{toBengaliNumber(attendancePercentage.toFixed(1))}%</p>
                                                     </div>
