@@ -10,14 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
+import { getAllResults } from '@/lib/results-data';
+import { getSubjects } from '@/lib/subjects';
+import { processStudentResults } from '@/lib/results-calculation';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, ArrowLeft, Award, Info, FileBadge } from 'lucide-react';
+import { Printer, ArrowLeft, Award, Info, FileBadge, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Staff } from '@/lib/staff-data';
 
 const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
@@ -38,12 +42,15 @@ export default function AppreciationGeneratorPage() {
   const [className, setClassName] = useState<string>('10');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [headmaster, setHeadmaster] = useState<Staff | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isFetchingResults, setIsFetchingResults] = useState(false);
 
   const [formData, setFormData] = useState({
     smarak: `বিপৌউবি/প্রশংসা/${new Date().getFullYear()}/`,
     passingYear: selectedYear,
     gpa: '৫.০০',
+    meritPosition: '',
     conduct: 'অত্যন্ত প্রশংসনীয় ও সন্তোষজনক',
     extraContent: 'সে বিদ্যালয়ের যাবতীয় সহ-শিক্ষা কার্যক্রমে সক্রিয় ও স্বতঃস্ফূর্তভাবে অংশগ্রহণ করেছে।',
     issueDate: format(new Date(), "d MMMM, yyyy", { locale: bn })
@@ -68,8 +75,11 @@ export default function AppreciationGeneratorPage() {
         const list = snap.docs.map(studentFromDoc);
         list.sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
         setStudents(list);
-        if (list.length > 0) setSelectedStudent(list[0]);
-        else setSelectedStudent(null);
+        if (list.length > 0) {
+            setSelectedStudent(list[0]);
+        } else {
+            setSelectedStudent(null);
+        }
       } catch (e) {
         console.error('Error fetching students:', e);
       } finally {
@@ -79,6 +89,60 @@ export default function AppreciationGeneratorPage() {
 
     fetchStudents();
   }, [db, className, selectedYear, isClient]);
+
+  // Fetch Merit/GPA when student is selected
+  useEffect(() => {
+    if (!db || !selectedStudent || !isClient) return;
+
+    const fetchResults = async () => {
+        setIsFetchingResults(true);
+        try {
+            // Find all results for this class to calculate merit
+            const allRes = await getAllResults(db, selectedYear);
+            const classRes = allRes.filter(r => r.className === selectedStudent.className);
+            const subs = getSubjects(selectedStudent.className, selectedStudent.group).filter(s => s.isExamSubject !== false);
+            
+            // We need all students in this class for proper merit calculation
+            const q = query(
+                collection(db, 'students'),
+                where('className', '==', selectedStudent.className),
+                where('academicYear', '==', selectedYear)
+            );
+            const studentSnap = await getDocs(q);
+            const classStudents = studentSnap.docs.map(studentFromDoc);
+            
+            const processed = processStudentResults(classStudents, classRes, subs);
+            const studentResult = processed.find(r => r.student.id === selectedStudent.id);
+
+            if (studentResult) {
+                setFormData(prev => ({
+                    ...prev,
+                    gpa: studentResult.gpa.toFixed(2),
+                    meritPosition: studentResult.meritPosition ? String(studentResult.meritPosition) : ''
+                }));
+            } else {
+                setFormData(prev => ({ ...prev, gpa: '৫.০০', meritPosition: '' }));
+            }
+        } catch (e) {
+            console.error("Result fetch error:", e);
+        } finally {
+            setIsFetchingResults(false);
+        }
+    };
+
+    fetchResults();
+  }, [db, selectedStudent, selectedYear, isClient]);
+
+  // Fetch Headmaster
+  useEffect(() => {
+    if (!db || !isClient) return;
+    const fetchHeadmaster = async () => {
+      const q = query(collection(db, 'staff'), where('isActive', '==', true), where('designation', 'in', ['প্রধান শিক্ষক', 'প্রধান শিক্ষক (ভারপ্রাপ্ত)']));
+      const snap = await getDocs(q);
+      if (!snap.empty) setHeadmaster({ id: snap.docs[0].id, ...snap.docs[0].data() } as Staff);
+    };
+    fetchHeadmaster();
+  }, [db, isClient]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -159,9 +223,14 @@ export default function AppreciationGeneratorPage() {
                                     <Label className="font-bold">পাসের বছর</Label>
                                     <Input value={formData.passingYear} onChange={(e) => handleFieldChange('passingYear', e.target.value)} />
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-2 relative">
                                     <Label className="font-bold">GPA / ফলাফল</Label>
                                     <Input value={formData.gpa} onChange={(e) => handleFieldChange('gpa', e.target.value)} />
+                                    {isFetchingResults && <Loader2 className="h-4 w-4 animate-spin absolute right-2 bottom-3 text-primary" />}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">মেধাক্রম (ঐচ্ছিক)</Label>
+                                    <Input value={formData.meritPosition} onChange={(e) => handleFieldChange('meritPosition', e.target.value)} placeholder="উদা: ১" />
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -188,12 +257,13 @@ export default function AppreciationGeneratorPage() {
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
                     </h3>
-                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.6] sm:scale-[0.7] lg:scale-[0.75] xl:scale-[0.9]">
+                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.55] sm:scale-[0.65] lg:scale-[0.7] xl:scale-[0.85]">
                         {selectedStudent ? (
                             <AppreciationTemplate 
                                 student={selectedStudent} 
                                 schoolInfo={schoolInfo} 
-                                formData={formData} 
+                                formData={formData}
+                                headmaster={headmaster}
                             />
                         ) : (
                             <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center bg-white text-muted-foreground gap-4">
@@ -213,6 +283,7 @@ export default function AppreciationGeneratorPage() {
                 student={selectedStudent} 
                 schoolInfo={schoolInfo} 
                 formData={formData} 
+                headmaster={headmaster}
             />
         )}
       </div>
@@ -220,7 +291,7 @@ export default function AppreciationGeneratorPage() {
   );
 }
 
-function AppreciationTemplate({ student, schoolInfo, formData }: any) {
+function AppreciationTemplate({ student, schoolInfo, formData, headmaster }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
@@ -265,7 +336,7 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 <h2 className="inline-block text-4xl font-black border-b-4 border-blue-900 pb-2 px-16 uppercase tracking-widest text-blue-950">প্রশংসাপত্র</h2>
             </div>
 
-            <div className="relative z-10 flex-grow text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900">
+            <div className="relative z-10 flex-grow text-justify leading-[2.5] text-xl font-semibold space-y-8 px-6 text-slate-900 pb-32">
                 <p className="indent-20">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
@@ -281,7 +352,7 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 </p>
 
                 <p>
-                    অত্র বিদ্যালয়ে অধ্যয়নকালীন মেধা তালিকায় তার অর্জিত GPA: <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
+                    অত্র বিদ্যালয়ে অধ্যয়নকালীন মেধা তালিকায় {formData.meritPosition && <>(মেধাক্রম: <span className="font-black px-1">{toBengaliNumber(formData.meritPosition)}</span>)</>} তার অর্জিত GPA: <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
                 </p>
 
                 <p className="italic text-blue-950 pt-6 text-center text-2xl font-black">
@@ -289,14 +360,18 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 </p>
             </div>
 
-            <footer className="relative z-10 pt-20 flex justify-between items-end print-footer mt-auto pb-12 px-8">
+            <footer className="relative z-10 flex justify-between items-end mt-auto pb-12 px-8">
                 <div className="text-center">
                     <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                 </div>
                 <div className="text-center">
-                    <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">প্রধান শিক্ষকের স্বাক্ষর</div>
+                    <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">
+                        <p className="mb-1">{headmaster?.nameBn || schoolInfo.name}</p>
+                        <p className="text-sm">প্রধান শিক্ষকের স্বাক্ষর ও সিল</p>
+                    </div>
                 </div>
             </footer>
         </div>
     );
 }
+
