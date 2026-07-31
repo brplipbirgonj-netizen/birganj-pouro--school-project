@@ -173,7 +173,7 @@ function SchoolInfoSettings() {
                     <div className="flex items-center gap-6">
                         <div className="w-32 h-32 rounded-xl border-4 border-white shadow-xl bg-muted overflow-hidden shrink-0">
                             {logoPreview ? (
-                                Image src={logoPreview} alt="School Logo" width={128} height={128} className="object-contain w-full h-full" />
+                                <Image src={logoPreview} alt="School Logo" width={128} height={128} className="object-contain w-full h-full" />
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full gap-1 text-center text-muted-foreground">
                                     <Upload className="h-8 w-8" />
@@ -289,7 +289,10 @@ function HolidaySettings() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader><AlertDialogTitle>রিসেট করতে চান?</AlertDialogTitle><AlertDialogDescription>এটি বর্তমান তালিকা মুছে ডিফল্ট ছুটিতে রিসেট করবে।</AlertDialogDescription></AlertDialogHeader>
-                                    <AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={handleResetHolidays}>নিশ্চিত করুন</AlertDialogAction></AlertDialogFooter>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleResetHolidays}>নিশ্চিত করুন</AlertDialogAction>
+                                    </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
