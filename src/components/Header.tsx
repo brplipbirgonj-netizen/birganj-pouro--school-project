@@ -23,6 +23,7 @@ import {
   FileBadge,
   PieChart,
   IdCard,
+  UserCheck
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -257,6 +258,15 @@ export function Header() {
                         >
                           <LayoutDashboard className="h-5 w-5" />
                           ড্যাসবোর্ড
+                        </Link>
+                      )}
+                      {hasPermission('manage:admissions') && (
+                        <Link
+                          href="/admissions-management"
+                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-indigo-100 text-indigo-800 hover:bg-indigo-200 font-bold"
+                        >
+                          <UserCheck className="h-5 w-5" />
+                          ভর্তি আবেদনসমূহ
                         </Link>
                       )}
                       {hasPermission('view:student-profile') && (

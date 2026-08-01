@@ -9,6 +9,8 @@ export const availablePermissions = [
   { id: 'upload:students', label: 'এক্সেল দিয়ে শিক্ষার্থী আপলোড (ভর্তি)' },
   { id: 'view:student-profile', label: 'শিক্ষার্থী প্রোফাইল সার্চ করুন' },
 
+  { id: 'manage:admissions', label: 'অনলাইন ভর্তি আবেদন ম্যানেজ করুন' },
+
   { id: 'view:staff', label: 'শিক্ষক ও কর্মচারী তালিকা দেখুন' },
   { id: 'manage:staff', label: 'শিক্ষক ও কর্মচারী ম্যানেজ করুন' },
   { id: 'manage:staff-attendance', label: 'স্টাফ হাজিরা ও ছুটি ম্যানেজ (ইনপুট)' },
@@ -44,6 +46,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:dashboard',
     'view:students',
     'view:student-profile',
+    'manage:admissions',
     'view:staff',
     'manage:staff-attendance',
     'view:staff-attendance-report',

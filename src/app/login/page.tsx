@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { signIn, signUp } from '@/lib/auth';
 import type { UserRole } from '@/lib/user';
 import { useAuth } from '@/hooks/useAuth';
+import Link from 'next/link';
+import { UserPlus } from 'lucide-react';
 
 function AuthFormFields({ email, password, setEmail, setPassword }: {
     email: string;
@@ -93,7 +94,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-4 font-kalpurush">
             <div className="mb-8 flex flex-col items-center gap-4 text-center">
                 {isSchoolInfoLoading ? (
                     <>
@@ -106,50 +107,65 @@ export default function LoginPage() {
                             <Image
                                 src={schoolInfo.logoUrl}
                                 alt="School Logo"
-                                width={80}
-                                height={80}
-                                className="rounded-full object-contain"
+                                width={100}
+                                height={100}
+                                className="rounded-full object-contain bg-white p-1 shadow-lg"
                             />
                         )}
-                        <h1 className="text-2xl font-bold text-primary">{schoolInfo.name}</h1>
+                        <h1 className="text-3xl font-black text-primary">{schoolInfo.name}</h1>
+                        <p className="text-muted-foreground font-bold italic">কেন্দ্রীয় ডিজিটাল ম্যানেজমেন্ট পোর্টাল</p>
                     </>
                 )}
             </div>
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardDescription>লগইন বা সাইন আপ করুন</CardDescription>
+            
+            <Card className="w-full max-w-md shadow-2xl border-none">
+                <CardHeader className="bg-primary/5 border-b text-center">
+                    <CardTitle className="text-xl">প্রবেশ করুন</CardTitle>
+                    <CardDescription className="font-bold">সিস্টেম ব্যবহারের জন্য আপনার ক্রেডেনশিয়াল দিন</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     <Tabs defaultValue="teacher-login">
-                        <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-                            <TabsTrigger value="teacher-login">শিক্ষক লগইন</TabsTrigger>
-                            <TabsTrigger value="admin-login">এডমিন লগইন</TabsTrigger>
-                            <TabsTrigger value="signup">সাইন আপ</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-3 bg-muted p-1">
+                            <TabsTrigger value="teacher-login" className="font-bold text-xs">শিক্ষক</TabsTrigger>
+                            <TabsTrigger value="admin-login" className="font-bold text-xs">এডমিন</TabsTrigger>
+                            <TabsTrigger value="signup" className="font-bold text-xs">নিবন্ধন</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="teacher-login">
                             <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'teacher'); }} className="space-y-4 pt-4">
                                 <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'শিক্ষক হিসেবে লগইন'}</Button>
+                                <Button type="submit" className="w-full h-11 font-black" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'লগইন করুন'}</Button>
                             </form>
                         </TabsContent>
                         
                         <TabsContent value="admin-login">
                            <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'admin'); }} className="space-y-4 pt-4">
                                 <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'এডমিন হিসেবে লগইন'}</Button>
+                                <Button type="submit" className="w-full h-11 font-black" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'এডমিন লগইন'}</Button>
                             </form>
                         </TabsContent>
                         
                         <TabsContent value="signup">
                             <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signUp', 'teacher'); }} className="space-y-4 pt-4">
                                 <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'সাইন আপ'}</Button>
+                                <Button type="submit" className="w-full h-11 font-black" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'অ্যাকাউন্ট তৈরি করুন'}</Button>
                             </form>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
             </Card>
+
+            <div className="mt-8 w-full max-w-md">
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-300"></span></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-indigo-50 px-2 text-muted-foreground font-black">নতুন শিক্ষার্থী হলে</span></div>
+                </div>
+                <Link href="/admission" className="mt-4 block">
+                    <Button variant="outline" className="w-full h-14 border-primary text-primary hover:bg-primary/5 font-black text-lg shadow-sm">
+                        <UserPlus className="mr-2 h-6 w-6" /> অনলাইন ভর্তি আবেদন
+                    </Button>
+                </Link>
+            </div>
         </div>
     );
 }
