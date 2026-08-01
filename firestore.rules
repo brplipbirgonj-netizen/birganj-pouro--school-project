@@ -133,5 +133,5 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
   }
-  // Index deployment trigger: 2025-05-22
+  // Index deployment trigger: 2026-02-25
 }

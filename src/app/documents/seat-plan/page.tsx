@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { Printer, ArrowLeft, Grid3X3, Plus, Trash2, Info, Loader2 } from 'lucide-react';
@@ -61,16 +62,20 @@ export default function SeatPlanGeneratorPage() {
         if (!db || !selectedClass || !isMounted) return;
         setIsLoading(true);
         try {
+            // FIX: Remove orderBy to avoid index requirement, sort locally in JavaScript
             const q = query(
                 collection(db, 'students'),
                 where('academicYear', '==', selectedYear),
-                where('className', '==', selectedClass),
-                orderBy('roll')
+                where('className', '==', selectedClass)
             );
             const snap = await getDocs(q);
-            setStudents(snap.docs.map(studentFromDoc));
+            const docs = snap.docs.map(studentFromDoc);
+            
+            // Local sort by roll number
+            const sortedDocs = docs.sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+            setStudents(sortedDocs);
         } catch (e) {
-            console.error(e);
+            console.error("Fetch Students Error:", e);
         } finally {
             setIsLoading(false);
         }
