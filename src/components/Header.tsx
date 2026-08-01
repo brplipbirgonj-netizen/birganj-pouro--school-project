@@ -76,6 +76,7 @@ export function Header() {
   
   const [displayPhoto, setDisplayPhoto] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [displayDesignation, setDisplayDesignation] = useState<string | null>(null);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,6 +99,7 @@ export function Header() {
     if (!user || !db) {
         setDisplayPhoto(null);
         setDisplayName(null);
+        setDisplayDesignation(null);
         return;
     }
 
@@ -110,9 +112,11 @@ export function Header() {
           const staffData = snapshot.docs[0].data();
           setDisplayPhoto(staffData.photoUrl);
           setDisplayName(staffData.nameBn);
+          setDisplayDesignation(staffData.designation);
         } else {
           setDisplayPhoto(null);
           setDisplayName(user.displayName || null);
+          setDisplayDesignation('শিক্ষক');
         }
       }, (error) => {
           if (error.code === 'permission-denied') return;
@@ -120,6 +124,7 @@ export function Header() {
     } else {
       setDisplayPhoto(user.photoUrl || null);
       setDisplayName(user.displayName || 'Admin');
+      setDisplayDesignation('সিস্টেম এডমিনিস্ট্রেটর');
     }
 
     return () => {
@@ -389,6 +394,25 @@ export function Header() {
                       )}
                     </div>
                   </nav>
+                  
+                  {/* Logout and User Info Footer for Sidebar */}
+                  <div className="p-4 border-t bg-muted/30 space-y-3">
+                    <Button 
+                      variant="destructive" 
+                      className="w-full font-black shadow-md h-11" 
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      লগ আউট
+                    </Button>
+                    <div className="text-center space-y-0.5">
+                      <p className="text-sm font-black text-slate-800">{displayName || 'অজানা ব্যবহারকারী'}</p>
+                      <p className="text-[10px] font-bold text-primary italic">
+                        {displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="p-4 border-t bg-muted/20 text-center text-[10px] text-muted-foreground">
                     <p>© ২০২৬ {schoolInfo.name}।</p>
                     <p>সর্বস্বত্ব সংরক্ষিত।</p>
@@ -544,7 +568,7 @@ export function Header() {
               <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col">
-                      <span>{displayName || 'Admin'}</span>
+                      <span className="font-black">{displayName || 'ব্যবহারকারী'}</span>
                       <span className="text-xs font-normal text-muted-foreground">{user.email}</span>
                     </div>
                   </DropdownMenuLabel>
@@ -554,10 +578,19 @@ export function Header() {
                       <span>প্রোফাইল সেটিংস</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-700">
                       <LogOut className="mr-2 h-4 w-4" />
-                      <span>লগ আউট</span>
+                      <span className="font-bold">লগ আউট</span>
                   </DropdownMenuItem>
+                  
+                  {/* Info below logout in Dropdown */}
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5 text-center">
+                    <p className="text-[10px] font-black text-slate-800 leading-tight">{displayName}</p>
+                    <p className="text-[9px] font-bold text-primary italic opacity-70">
+                      {displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
+                    </p>
+                  </div>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
