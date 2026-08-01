@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -17,7 +17,7 @@ import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, FirestoreError } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,6 +66,72 @@ const periodTimes = [
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম',
+};
+
+// Scrolling Notice Ticker Component
+const NoticeTicker = () => {
+    const db = useFirestore();
+    const { user } = useAuth();
+    const [latestNotice, setLatestNotice] = useState<Notice | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        
+        const q = query(collection(db, 'notices'), orderBy('date', 'desc'), limit(1));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            if (!snapshot.empty) {
+                const data = snapshot.docs[0].data();
+                setLatestNotice({
+                    id: snapshot.docs[0].id,
+                    ...data,
+                    date: data.date?.toDate() || new Date(),
+                } as Notice);
+            } else {
+                setLatestNotice(null);
+            }
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [db, user]);
+
+    if (isLoading) return <Skeleton className="h-10 w-full mb-4 rounded-none" />;
+    if (!latestNotice) return null;
+
+    return (
+        <div className="w-full bg-slate-900 text-white h-10 flex items-center overflow-hidden border-b-2 border-primary shadow-lg sticky top-16 md:top-24 z-40 font-kalpurush">
+            <div className="bg-destructive px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-[5px_0_10px_rgba(0,0,0,0.5)]">
+                <Megaphone className="h-4 w-4 animate-bounce" />
+                <span className="font-black text-sm whitespace-nowrap">জরুরি নোটিশ:</span>
+            </div>
+            <div className="flex-1 relative overflow-hidden h-full flex items-center">
+                <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-20">
+                    <span className="font-bold text-sm tracking-wide">
+                        <span className="text-amber-400">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
+                    </span>
+                    {/* Repeated text for seamless scrolling */}
+                    <span className="font-bold text-sm tracking-wide">
+                        <span className="text-amber-400">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
+                    </span>
+                </div>
+            </div>
+            <style jsx>{`
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .animate-marquee {
+                    animation: marquee 30s linear infinite;
+                    display: inline-flex;
+                    width: max-content;
+                }
+                .animate-marquee:hover {
+                    animation-play-state: paused;
+                }
+            `}</style>
+        </div>
+    );
 };
 
 const TeachersOnLeaveCard = () => {
@@ -826,6 +892,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-sky-100">
       <Header />
+      <NoticeTicker />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
           {/* Total Students Card */}
