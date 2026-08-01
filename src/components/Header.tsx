@@ -60,7 +60,6 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger, 
   DialogDescription, 
   DialogFooter 
 } from '@/components/ui/dialog';
@@ -352,27 +351,33 @@ export function Header() {
         
         <div className="flex items-center gap-2 sm:gap-4">
           {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white cursor-pointer shadow-md">
-                  <AvatarImage src={displayPhoto || undefined} />
-                  <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 font-kalpurush">
-                  <DropdownMenuLabel>
-                    <p className="font-black">{displayName || 'ব্যবহারকারী'}</p>
-                    <p className="text-xs font-normal text-muted-foreground truncate">{user.email}</p>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer font-bold">
-                      <Settings className="mr-2 h-4 w-4" /> সেটিংস
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 font-bold">
-                      <LogOut className="mr-2 h-4 w-4" /> লগ আউট
-                  </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex flex-col items-end text-right">
+                <span className="text-sm font-black text-white leading-tight">{displayName || 'ব্যবহারকারী'}</span>
+                <span className="text-[10px] font-bold text-white/80 leading-tight">{displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'শিক্ষক')}</span>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white cursor-pointer shadow-md">
+                    <AvatarImage src={displayPhoto || undefined} />
+                    <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 font-kalpurush">
+                    <DropdownMenuLabel>
+                      <p className="font-black">{displayName || 'ব্যবহারকারী'}</p>
+                      <p className="text-xs font-normal text-muted-foreground truncate">{user.email}</p>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer font-bold">
+                        <Settings className="mr-2 h-4 w-4" /> সেটিংস
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 font-bold">
+                        <LogOut className="mr-2 h-4 w-4" /> লগ আউট
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             <Link href="/login"><Button variant="secondary">লগইন</Button></Link>
           )}
