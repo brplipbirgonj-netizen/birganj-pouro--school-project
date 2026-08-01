@@ -1,53 +1,62 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Helper Functions ---
+    // --- হেল্পার ফাংশনসমূহ ---
     
     function isAuthed() {
       return request.auth != null;
     }
 
-    // Safely check for admin role (short-circuits if not authed)
-    function isAdmin() {
-      return isAuthed() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // ইউজারের ডাটা সংগ্রহের নিরাপদ পদ্ধতি
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Safely check for specific permission (short-circuits if not authed)
+    // এডমিন রোল চেক করা
+    function isAdmin() {
+      return isAuthed() && getUserData().role == 'admin';
+    }
+
+    // নির্দিষ্ট পারমিশন আছে কিনা চেক করা (এডমিনদের সব পারমিশন ডিফল্টভাবে থাকে)
     function hasPermission(permission) {
       return isAuthed() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-        permission in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('permissions', [])
+        getUserData().role == 'admin' || 
+        (permission in getUserData().get('permissions', []))
       );
     }
 
-    // --- Rules for Collections ---
+    // --- কালেকশন ভিত্তিক রুলস ---
 
-    // 1. Admission Applications (Must be public for create)
+    // ১. অনলাইন ভর্তি আবেদন (এটি পাবলিক হতে হবে যাতে যে কেউ আবেদন করতে পারে)
     match /admissionApplications/{id} {
-      // Public creation allowed for anyone to apply online
+      // যে কেউ নতুন আবেদন জমা দিতে পারবে
       allow create: if true;
-      // Reading/Managing is restricted to staff with permission
+      // আবেদন পড়া বা ম্যানেজ করার ক্ষমতা শুধুমাত্র অনুমোদিত স্টাফদের থাকবে
       allow read, write: if isAuthed() && hasPermission('manage:admissions');
     }
 
-    // 2. School Info
+    // ২. স্কুল তথ্য
     match /school/info {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // 3. User Profiles
+    // ৩. ইউজার প্রোফাইল
     match /users/{userId} {
-      allow get, update: if isAuthed() && request.auth.uid == userId;
+      allow get: if isAuthed() && (request.auth.uid == userId || isAdmin());
       allow list: if isAdmin();
-      allow create: if isAuthed();
+      allow create: if isAuthed() && request.auth.uid == userId;
+      
+      // ইউজার যাতে নিজের রোল নিজে বাড়াতে না পারে তার নিরাপত্তা
+      allow update: if isAdmin() || (
+        isAuthed() && request.auth.uid == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
+      );
       allow delete: if isAdmin();
     }
 
-    // 4. Academic & Management Collections
+    // ৪. একাডেমিক ও ম্যানেজমেন্ট কালেকশন
     match /classRoutines/{id} {
       allow read: if isAuthed();
       allow write: if hasPermission('manage:routines');
@@ -55,7 +64,7 @@ service cloud.firestore {
 
     match /proxyClasses/{id} {
       allow read: if isAuthed();
-      allow create, update, delete, write: if hasPermission('manage:routines');
+      allow write: if hasPermission('manage:routines');
     }
 
     match /notices/{id} {
@@ -121,7 +130,5 @@ service cloud.firestore {
       allow write: if hasPermission('manage:transactions');
       allow delete: if isAdmin();
     }
-    
-    // Deployment Version: 2024-05-22T10:45:00Z - Critical Fix for Public Submission
   }
 }
