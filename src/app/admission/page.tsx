@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap, Loader2, Printer, FileText, Check } from 'lucide-react';
+import { Upload, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap, Loader2, Printer, FileText, Check, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { saveAdmissionApplication, NewAdmissionData } from '@/lib/admission-data';
 import { useFirestore } from '@/firebase';
@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 const initialStudentState: NewAdmissionData = {
   className: '',
@@ -41,6 +42,7 @@ const initialStudentState: NewAdmissionData = {
   motherNid: '',
   guardianMobile: '',
   studentMobile: '',
+  previousSchool: '',
   presentVillage: '',
   presentUnion: '',
   presentPostOffice: '',
@@ -71,14 +73,20 @@ export default function AdmissionPortalPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [confirmReview, setConfirmReview] = useState(false);
-    const [applicationId, setApplicationId] = useState('');
+    const [errors, setErrors] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    const handleInputChange = (field: keyof NewAdmissionData, value: string | Date | undefined) => {
+    const handleInputChange = (field: keyof NewAdmissionData, value: any) => {
         setStudent(prev => ({...prev, [field]: value}));
+        // Remove from error set if value is provided
+        if (value && errors.has(field)) {
+            const nextErrors = new Set(errors);
+            nextErrors.delete(field);
+            setErrors(nextErrors);
+        }
     };
 
     const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,6 +107,51 @@ export default function AdmissionPortalPage() {
         reader.readAsDataURL(file);
     };
 
+    const isStepValid = () => {
+        const missingFields = new Set<string>();
+        if (currentStep === 1) {
+            if (!student.className) missingFields.add('className');
+            if (!student.previousSchool) missingFields.add('previousSchool');
+        } else if (currentStep === 2) {
+            if (!student.studentNameBn) missingFields.add('studentNameBn');
+            if (!student.dob) missingFields.add('dob');
+            if (!student.gender) missingFields.add('gender');
+            if (!student.religion) missingFields.add('religion');
+            if (!student.photoUrl) missingFields.add('photoUrl');
+        } else if (currentStep === 3) {
+            if (!student.fatherNameBn) missingFields.add('fatherNameBn');
+            if (!student.motherNameBn) missingFields.add('motherNameBn');
+            if (!student.guardianMobile) missingFields.add('guardianMobile');
+        } else if (currentStep === 4) {
+            if (!student.presentVillage) missingFields.add('presentVillage');
+            if (!student.presentUpazila) missingFields.add('presentUpazila');
+            if (!student.presentDistrict) missingFields.add('presentDistrict');
+        }
+
+        if (missingFields.size > 0) {
+            setErrors(missingFields);
+            toast({
+                variant: 'destructive',
+                title: 'তথ্য অসম্পূর্ণ',
+                description: 'অনুগ্রহ করে সকল লাল চিহ্নিত ঘরগুলো পূরণ করুন।'
+            });
+            return false;
+        }
+        return true;
+    };
+
+    const nextStep = () => {
+        if (isStepValid()) {
+            setCurrentStep(prev => Math.min(prev + 1, 5));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+    
+    const prevStep = () => {
+        setCurrentStep(prev => Math.max(prev - 1, 1));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     const handleSameAddress = (checked: boolean | string) => {
         if (checked) {
             setStudent(prev => ({
@@ -115,8 +168,8 @@ export default function AdmissionPortalPage() {
                 permanentVillage: '',
                 permanentUnion: '',
                 permanentPostOffice: '',
-                permanentUpazila: '',
-                permanentDistrict: '',
+                permanentUpazila: 'বীরগঞ্জ',
+                permanentDistrict: 'দিনাজপুর',
             }));
         }
     };
@@ -125,12 +178,6 @@ export default function AdmissionPortalPage() {
         event.preventDefault();
         if (!db) return;
 
-        if (!student.photoUrl) {
-            toast({ variant: "destructive", title: "ছবি আবশ্যক" });
-            setCurrentStep(2);
-            return;
-        }
-
         if (!confirmReview) {
             toast({ variant: "destructive", title: "নিশ্চিতকরণ আবশ্যক", description: "তথ্য যাচাই করে নিচের বক্সে টিক দিন।" });
             return;
@@ -138,10 +185,7 @@ export default function AdmissionPortalPage() {
 
         setIsLoading(true);
         try {
-            const result = await saveAdmissionApplication(db, student);
-            // Assuming saveAdmissionApplication or the result has applicationId
-            // If it returns a doc, we can extract from the data
-            // For now let's just mark success
+            await saveAdmissionApplication(db, student);
             setIsSuccess(true);
             toast({ title: "আবেদন জমা হয়েছে", description: "আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।" });
         } catch (error) {
@@ -151,13 +195,7 @@ export default function AdmissionPortalPage() {
         }
     };
 
-    if (!isMounted) {
-        return (
-            <div className="min-h-screen bg-indigo-50 flex items-center justify-center font-kalpurush">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            </div>
-        );
-    }
+    if (!isMounted) return null;
 
     if (isSuccess) {
         return (
@@ -172,7 +210,7 @@ export default function AdmissionPortalPage() {
                     <CardDescription className="text-lg font-bold">আপনার অনলাইন ভর্তির আবেদনটি আমাদের কাছে পৌঁছেছে।</CardDescription>
                     <div className="mt-8 space-y-6">
                         <p className="text-sm text-muted-foreground bg-emerald-50 p-4 rounded-lg border border-emerald-100">
-                            আপনার আবেদনটি প্রিন্ট করে অথবা আইডি নম্বরটি সংরক্ষণ করে রাখুন। বিদ্যালয় কর্তৃপক্ষ আপনার তথ্য যাচাই করে দ্রুত মোবাইল নম্বরে যোগাযোগ করবে।
+                            নিচের বাটনটি ক্লিক করে আবেদনপত্রটি প্রিন্ট বা ডাউনলোড করে সংরক্ষণ করুন। বিদ্যালয় কর্তৃপক্ষ আপনার তথ্য যাচাই করে দ্রুত যোগাযোগ করবে।
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4">
                             <Button className="flex-1 h-14 text-xl font-black shadow-xl" onClick={() => window.print()}>
@@ -182,8 +220,6 @@ export default function AdmissionPortalPage() {
                         </div>
                     </div>
                 </Card>
-
-                {/* Printable Content for Success State */}
                 <div className="hidden print:block printable-area w-full">
                    <PrintableApplication student={student} schoolInfo={schoolInfo} />
                 </div>
@@ -191,16 +227,13 @@ export default function AdmissionPortalPage() {
         );
     }
 
-    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
-    const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
-
   return (
     <div className="min-h-screen bg-indigo-50 font-kalpurush pb-20 no-print">
       <header className="bg-primary p-6 text-white text-center shadow-lg border-b-4 border-black/10">
           <div className="max-w-4xl mx-auto flex flex-col items-center gap-4">
               {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="rounded-full bg-white p-1" />}
               <h1 className="text-2xl sm:text-3xl font-black">{schoolInfo.name}</h1>
-              <p className="text-sm font-bold opacity-90">অনলাইন ভর্তি আবেদন পোর্টাল</p>
+              <p className="text-sm font-bold opacity-90">অনলাইন ভর্তি আবেদন পোর্টাল - {toBengaliNumber(student.academicYear)}</p>
           </div>
       </header>
 
@@ -228,9 +261,9 @@ export default function AdmissionPortalPage() {
                             <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><GraduationCap className="h-6 w-6" /> ১. প্রাতিষ্ঠানিক তথ্য</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label className="font-bold">ভর্তির শ্রেণি</Label>
+                                    <Label className={cn("font-bold", errors.has('className') && "text-red-600")}>ভর্তির শ্রেণি *</Label>
                                     <Select value={student.className} onValueChange={v => handleInputChange('className', v)}>
-                                        <SelectTrigger className="h-12"><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
+                                        <SelectTrigger className={cn("h-12", errors.has('className') && "border-red-500")}><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
                                         <SelectContent>
                                             {Object.entries(classNamesMap).map(([id, label]) => (
                                                 <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
@@ -239,8 +272,13 @@ export default function AdmissionPortalPage() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold">শিক্ষাবর্ষ</Label>
-                                    <Input value={student.academicYear} disabled className="h-12 bg-muted font-bold" />
+                                    <Label className={cn("font-bold", errors.has('previousSchool') && "text-red-600")}>পূর্ববর্তী বিদ্যালয়ের নাম *</Label>
+                                    <Input 
+                                        className={cn("h-12", errors.has('previousSchool') && "border-red-500")} 
+                                        value={student.previousSchool} 
+                                        onChange={e => handleInputChange('previousSchool', e.target.value)} 
+                                        placeholder="আপনার আগের স্কুলের নাম দিন"
+                                    />
                                 </div>
                                 {(student.className === '9' || student.className === '10') && (
                                     <>
@@ -278,25 +316,25 @@ export default function AdmissionPortalPage() {
                             <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><User className="h-6 w-6" /> ২. শিক্ষার্থীর ব্যক্তিগত তথ্য</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label className="font-bold">নাম (বাংলা)</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} required />
+                                    <Label className={cn("font-bold", errors.has('studentNameBn') && "text-red-600")}>নাম (বাংলা) *</Label>
+                                    <Input className={cn("h-12", errors.has('studentNameBn') && "border-red-500")} value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} required />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">নাম (ইংরেজি)</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} />
+                                    <Input className="h-12 uppercase" value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold">জন্ম তারিখ</Label>
+                                    <Label className={cn("font-bold", errors.has('dob') && "text-red-600")}>জন্ম তারিখ *</Label>
                                     <DatePicker value={student.dob} onChange={d => handleInputChange('dob', d)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">জন্ম নিবন্ধন নম্বর</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.birthRegNo} onChange={e => handleInputChange('birthRegNo', e.target.value)} />
+                                    <Input className="h-12" value={student.birthRegNo} onChange={e => handleInputChange('birthRegNo', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold">লিঙ্গ</Label>
+                                    <Label className={cn("font-bold", errors.has('gender') && "text-red-600")}>লিঙ্গ *</Label>
                                     <Select value={student.gender} onValueChange={v => handleInputChange('gender', v)}>
-                                        <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className={cn("h-12", errors.has('gender') && "border-red-500")}><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="male">পুরুষ</SelectItem>
                                             <SelectItem value="female">মহিলা</SelectItem>
@@ -305,9 +343,9 @@ export default function AdmissionPortalPage() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold">ধর্ম</Label>
+                                    <Label className={cn("font-bold", errors.has('religion') && "text-red-600")}>ধর্ম *</Label>
                                     <Select value={student.religion} onValueChange={v => handleInputChange('religion', v)}>
-                                        <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className={cn("h-12", errors.has('religion') && "border-red-500")}><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="islam">ইসলাম</SelectItem>
                                             <SelectItem value="hinduism">হিন্দু</SelectItem>
@@ -318,8 +356,8 @@ export default function AdmissionPortalPage() {
                                     </Select>
                                 </div>
                                 <div className="sm:col-span-2 space-y-2">
-                                    <Label className="font-bold">ছবি</Label>
-                                    <div className="flex items-center gap-4 border p-4 rounded-lg bg-slate-50 border-dashed border-primary/30">
+                                    <Label className={cn("font-bold", errors.has('photoUrl') && "text-red-600")}>ছবি *</Label>
+                                    <div className={cn("flex items-center gap-4 border p-4 rounded-lg bg-slate-50 border-dashed", errors.has('photoUrl') ? "border-red-500 bg-red-50" : "border-primary/30")}>
                                         <div className="h-24 w-24 rounded border bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
                                             {photoPreview ? <Image src={photoPreview} alt="Preview" width={96} height={96} className="object-cover h-full" /> : <Upload className="text-muted-foreground" />}
                                         </div>
@@ -343,44 +381,44 @@ export default function AdmissionPortalPage() {
                             <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><Users className="h-6 w-6" /> ৩. অভিভাবকের তথ্য</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label className="font-bold">পিতার নাম (বাংলা)</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} required />
+                                    <Label className={cn("font-bold", errors.has('fatherNameBn') && "text-red-600")}>পিতার নাম (বাংলা) *</Label>
+                                    <Input className={cn("h-12", errors.has('fatherNameBn') && "border-red-500")} value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">পিতার নাম (ইংরেজি)</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.fatherNameEn} onChange={e => handleInputChange('fatherNameEn', e.target.value)} />
+                                    <Input className="h-12 uppercase" value={student.fatherNameEn} onChange={e => handleInputChange('fatherNameEn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">পিতার NID নম্বর</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.fatherNid} onChange={e => handleInputChange('fatherNid', e.target.value)} />
+                                    <Input className="h-12" value={student.fatherNid} onChange={e => handleInputChange('fatherNid', e.target.value)} />
                                 </div>
                                 <div className="hidden sm:block"></div>
                                 
                                 <Separator className="sm:col-span-2 my-2" />
 
                                 <div className="space-y-2">
-                                    <Label className="font-bold">মাতার নাম (বাংলা)</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} required />
+                                    <Label className={cn("font-bold", errors.has('motherNameBn') && "text-red-600")}>মাতার নাম (বাংলা) *</Label>
+                                    <Input className={cn("h-12", errors.has('motherNameBn') && "border-red-500")} value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">মাতার নাম (ইংরেজি)</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.motherNameEn} onChange={e => handleInputChange('motherNameEn', e.target.value)} />
+                                    <Input className="h-12 uppercase" value={student.motherNameEn} onChange={e => handleInputChange('motherNameEn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">মাতার NID নম্বর</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} value={student.motherNid} onChange={e => handleInputChange('motherNid', e.target.value)} />
+                                    <Input className="h-12" value={student.motherNid} onChange={e => handleInputChange('motherNid', e.target.value)} />
                                 </div>
                                 <div className="hidden sm:block"></div>
 
                                 <Separator className="sm:col-span-2 my-2" />
 
                                 <div className="space-y-2">
-                                    <Label className="font-bold text-red-600">অভিভাবকের মোবাইল নম্বর</Label>
-                                    <Input className={cn("h-12 border-red-200", inputFocusClasses)} type="tel" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} required />
+                                    <Label className={cn("font-bold text-red-600", errors.has('guardianMobile') && "text-red-700 underline")}>অভিভাবকের মোবাইল নম্বর *</Label>
+                                    <Input className={cn("h-12 border-red-200", errors.has('guardianMobile') && "border-red-500 bg-red-50")} type="tel" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">শিক্ষার্থীর মোবাইল (যদি থাকে)</Label>
-                                    <Input className={cn("h-12", inputFocusClasses)} type="tel" value={student.studentMobile} onChange={e => handleInputChange('studentMobile', e.target.value)} />
+                                    <Input className="h-12" type="tel" value={student.studentMobile} onChange={e => handleInputChange('studentMobile', e.target.value)} />
                                 </div>
                             </div>
                             <div className="flex gap-4 mt-6">
@@ -399,25 +437,25 @@ export default function AdmissionPortalPage() {
                                 <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-primary pl-2">বর্তমান ঠিকানা</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label className="font-bold">গ্রাম/মহল্লা</Label>
-                                        <Input className={cn("h-12", inputFocusClasses)} value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
+                                        <Label className={cn("font-bold", errors.has('presentVillage') && "text-red-600")}>গ্রাম/মহল্লা *</Label>
+                                        <Input className={cn("h-12", errors.has('presentVillage') && "border-red-500")} value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
-                                        <Input className={cn("h-12", inputFocusClasses)} value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} />
+                                        <Input className="h-12" value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ডাকঘর</Label>
-                                        <Input className={cn("h-12", inputFocusClasses)} value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} />
+                                        <Input className="h-12" value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label className="font-bold">উপজেলা</Label>
-                                            <Input className={cn("h-12", inputFocusClasses)} value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
+                                            <Label className={cn("font-bold", errors.has('presentUpazila') && "text-red-600")}>উপজেলা *</Label>
+                                            <Input className={cn("h-12", errors.has('presentUpazila') && "border-red-500")} value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="font-bold">জেলা</Label>
-                                            <Input className={cn("h-12", inputFocusClasses)} value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} />
+                                            <Label className={cn("font-bold", errors.has('presentDistrict') && "text-red-600")}>জেলা *</Label>
+                                            <Input className={cn("h-12", errors.has('presentDistrict') && "border-red-500")} value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} />
                                         </div>
                                     </div>
                                 </div>
@@ -434,24 +472,24 @@ export default function AdmissionPortalPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label className="font-bold">গ্রাম/মহল্লা</Label>
-                                        <Input className={cn("h-12", inputFocusClasses)} value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} />
+                                        <Input className="h-12" value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
-                                        <Input className={cn("h-12", inputFocusClasses)} value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} />
+                                        <Input className="h-12" value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ডাকঘর</Label>
-                                        <Input className={cn("h-12", inputFocusClasses)} value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} />
+                                        <Input className="h-12" value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className="font-bold">উপজেলা</Label>
-                                            <Input className={cn("h-12", inputFocusClasses)} value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} />
+                                            <Input className="h-12" value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="font-bold">জেলা</Label>
-                                            <Input className={cn("h-12", inputFocusClasses)} value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} />
+                                            <Input className="h-12" value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} />
                                         </div>
                                     </div>
                                 </div>
@@ -464,7 +502,7 @@ export default function AdmissionPortalPage() {
                         </div>
                     )}
 
-                    {/* Step 5: Review & Submit (Draft) */}
+                    {/* Step 5: Review & Submit */}
                     {currentStep === 5 && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
                             <div className="flex items-center justify-between border-b pb-4">
@@ -481,10 +519,12 @@ export default function AdmissionPortalPage() {
                                         <h4 className="text-2xl font-black text-slate-800">{student.studentNameBn || 'নাম প্রদান করা হয়নি'}</h4>
                                         <p className="text-sm font-bold text-primary">{classNamesMap[student.className] || 'শ্রেণি'} শ্রেণিতে ভর্তির আবেদন - {toBengaliNumber(student.academicYear)}</p>
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm font-medium">
-                                            <p className="border-b pb-1"><span className="text-muted-foreground">লিঙ্গ:</span> {student.gender === 'male' ? 'পুরুষ' : 'মহিলা'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">পূর্ববর্তী স্কুল:</span> {student.previousSchool || '-'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">লিঙ্গ:</span> {student.gender === 'male' ? 'পুরুষ' : student.gender === 'female' ? 'মহিলা' : 'অন্যান্য'}</p>
                                             <p className="border-b pb-1"><span className="text-muted-foreground">ধর্ম:</span> {student.religion || '-'}</p>
                                             <p className="border-b pb-1"><span className="text-muted-foreground">জন্ম তারিখ:</span> {student.dob ? format(student.dob, 'dd/MM/yyyy') : '-'}</p>
                                             <p className="border-b pb-1"><span className="text-muted-foreground">বিভাগ:</span> {student.group || 'সাধারণ'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">নিবন্ধন নং:</span> {student.birthRegNo || '-'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -494,6 +534,7 @@ export default function AdmissionPortalPage() {
                                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-primary pl-2">অভিভাবকের তথ্য</p>
                                         <div className="space-y-2 text-sm">
                                             <p className="flex justify-between border-b pb-1"><span>পিতার নাম:</span> <span className="font-bold">{student.fatherNameBn}</span></p>
+                                            <p className="flex justify-between border-b pb-1"><span>পিতার এনআইডি:</span> <span className="font-bold">{student.fatherNid || '-'}</span></p>
                                             <p className="flex justify-between border-b pb-1"><span>মাতার নাম:</span> <span className="font-bold">{student.motherNameBn}</span></p>
                                             <p className="flex justify-between border-b pb-1"><span>মোবাইল:</span> <span className="font-bold text-emerald-700">{student.guardianMobile}</span></p>
                                         </div>
@@ -501,8 +542,10 @@ export default function AdmissionPortalPage() {
                                     <div className="space-y-3">
                                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-emerald-500 pl-2">ঠিকানা</p>
                                         <div className="space-y-1 text-sm font-medium">
-                                            <p>{student.presentVillage}, {student.presentUnion}</p>
-                                            <p>{student.presentPostOffice}, {student.presentUpazila}, {student.presentDistrict}</p>
+                                            <p className="font-bold text-xs text-muted-foreground">বর্তমান ঠিকানা:</p>
+                                            <p className="mb-2">{student.presentVillage}, {student.presentUnion}, {student.presentPostOffice}, {student.presentUpazila}, {student.presentDistrict}</p>
+                                            <p className="font-bold text-xs text-muted-foreground">স্থায়ী ঠিকানা:</p>
+                                            <p>{student.permanentVillage || student.presentVillage}, {student.permanentUnion || student.presentUnion}, {student.permanentPostOffice || student.presentPostOffice}, {student.permanentUpazila || student.presentUpazila}, {student.permanentDistrict || student.presentDistrict}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -521,14 +564,14 @@ export default function AdmissionPortalPage() {
                             </div>
 
                             <div className="flex gap-4 mt-8">
-                                <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> এডিট করুন</Button>
+                                <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> সংশোধন করুন</Button>
                                 <Button 
                                     type="submit" 
                                     disabled={isLoading || !confirmReview} 
                                     className="h-12 flex-1 font-black shadow-xl bg-primary hover:bg-primary/90 text-white text-lg"
                                 >
                                     {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />} 
-                                    তথ্য চূড়ান্ত ও সাবমিট করুন
+                                    তথ্য চূড়ান্ত ও জমা দিন
                                 </Button>
                             </div>
                         </div>
@@ -565,26 +608,27 @@ function PrintableApplication({ student, schoolInfo }: { student: NewAdmissionDa
                 <section className="space-y-4">
                     <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">১. প্রাতিষ্ঠানিক ও ব্যক্তিগত তথ্য</h3>
                     <div className="grid grid-cols-2 gap-y-3 font-semibold">
-                        <div className="flex"><span className="w-40">ভর্তির শ্রেণি</span><span>: {classNamesMap[student.className]} শ্রেণি</span></div>
-                        <div className="flex"><span className="w-40">বিভাগ/শাখা</span><span>: {student.group || 'প্রযোজ্য নয়'}</span></div>
-                        <div className="flex"><span className="w-40">শিক্ষার্থীর নাম (বাংলা)</span><span className="font-black">: {student.studentNameBn}</span></div>
-                        <div className="flex"><span className="w-40">নাম (ইংরেজি)</span><span className="uppercase">: {student.studentNameEn || '-'}</span></div>
-                        <div className="flex"><span className="w-40">জন্ম তারিখ</span><span>: {dob}</span></div>
-                        <div className="flex"><span className="w-40">জন্ম নিবন্ধন নম্বর</span><span>: {toBengaliNumber(student.birthRegNo || '')}</span></div>
-                        <div className="flex"><span className="w-40">লিঙ্গ</span><span>: {student.gender === 'male' ? 'পুরুষ' : 'মহিলা'}</span></div>
-                        <div className="flex"><span className="w-40">ধর্ম</span><span>: {student.religion}</span></div>
+                        <div className="flex"><span className="w-44">ভর্তির শ্রেণি</span><span>: {classNamesMap[student.className]} শ্রেণি</span></div>
+                        <div className="flex"><span className="w-44">বিভাগ/শাখা</span><span>: {student.group || 'প্রযোজ্য নয়'}</span></div>
+                        <div className="flex"><span className="w-44">পূর্ববর্তী বিদ্যালয়</span><span>: {student.previousSchool || 'প্রযোজ্য নয়'}</span></div>
+                        <div className="flex"><span className="w-44">শিক্ষার্থীর নাম (বাংলা)</span><span className="font-black">: {student.studentNameBn}</span></div>
+                        <div className="flex"><span className="w-44">নাম (ইংরেজি)</span><span className="uppercase">: {student.studentNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-44">জন্ম তারিখ</span><span>: {dob}</span></div>
+                        <div className="flex"><span className="w-44">জন্ম নিবন্ধন নম্বর</span><span>: {toBengaliNumber(student.birthRegNo || '')}</span></div>
+                        <div className="flex"><span className="w-44">লিঙ্গ</span><span>: {student.gender === 'male' ? 'পুরুষ' : student.gender === 'female' ? 'মহিলা' : 'অন্যান্য'}</span></div>
+                        <div className="flex"><span className="w-44">ধর্ম</span><span>: {student.religion}</span></div>
                     </div>
                 </section>
 
                 <section className="space-y-4">
                     <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">২. পিতা ও মাতার তথ্য</h3>
                     <div className="grid grid-cols-2 gap-y-3 font-semibold">
-                        <div className="flex"><span className="w-40">পিতার নাম (বাংলা)</span><span>: {student.fatherNameBn}</span></div>
-                        <div className="flex"><span className="w-40">পিতার নাম (ইংরেজি)</span><span className="uppercase">: {student.fatherNameEn || '-'}</span></div>
-                        <div className="flex"><span className="w-40">মাতার নাম (বাংলা)</span><span>: {student.motherNameBn}</span></div>
-                        <div className="flex"><span className="w-40">মাতার নাম (ইংরেজি)</span><span className="uppercase">: {student.motherNameEn || '-'}</span></div>
-                        <div className="flex"><span className="w-40">পিতার এনআইডি</span><span>: {toBengaliNumber(student.fatherNid || '')}</span></div>
-                        <div className="flex"><span className="w-40">মাতার এনআইডি</span><span>: {toBengaliNumber(student.motherNid || '')}</span></div>
+                        <div className="flex"><span className="w-44">পিতার নাম (বাংলা)</span><span>: {student.fatherNameBn}</span></div>
+                        <div className="flex"><span className="w-44">পিতার নাম (ইংরেজি)</span><span className="uppercase">: {student.fatherNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-44">মাতার নাম (বাংলা)</span><span>: {student.motherNameBn}</span></div>
+                        <div className="flex"><span className="w-44">মাতার নাম (ইংরেজি)</span><span className="uppercase">: {student.motherNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-44">পিতার এনআইডি</span><span>: {toBengaliNumber(student.fatherNid || '')}</span></div>
+                        <div className="flex"><span className="w-44">মাতার এনআইডি</span><span>: {toBengaliNumber(student.motherNid || '')}</span></div>
                     </div>
                 </section>
 
@@ -594,14 +638,16 @@ function PrintableApplication({ student, schoolInfo }: { student: NewAdmissionDa
                         <div>
                             <p className="text-sm font-black underline mb-1 uppercase text-gray-600">বর্তমান ঠিকানা</p>
                             <p>গ্রাম: {student.presentVillage}, ইউনিয়ন: {student.presentUnion}</p>
-                            <p>উপজেলা: {student.presentUpazila}, জেলা: {student.presentDistrict}</p>
+                            <p>ডাকঘর: {student.presentPostOffice}, উপজেলা: {student.presentUpazila}</p>
+                            <p>জেলা: {student.presentDistrict}</p>
                         </div>
                         <div>
                             <p className="text-sm font-black underline mb-1 uppercase text-gray-600">স্থায়ী ঠিকানা</p>
-                            <p>গ্রাম: {student.permanentVillage}, ইউনিয়ন: {student.permanentUnion}</p>
-                            <p>উপজেলা: {student.permanentUpazila}, জেলা: {student.permanentDistrict}</p>
+                            <p>গ্রাম: {student.permanentVillage || student.presentVillage}</p>
+                            <p>ডাকঘর: {student.permanentPostOffice || student.presentPostOffice}</p>
+                            <p>জেলা: {student.permanentDistrict || student.presentDistrict}</p>
                         </div>
-                        <div className="col-span-2 flex items-center gap-2 text-xl font-black text-primary">
+                        <div className="col-span-2 flex items-center gap-2 text-xl font-black text-primary pt-4">
                             <span>মোবাইল নম্বর: {toBengaliNumber(student.guardianMobile)}</span>
                         </div>
                     </div>
@@ -622,8 +668,4 @@ function PrintableApplication({ student, schoolInfo }: { student: NewAdmissionDa
             </footer>
         </div>
     );
-}
-
-function Badge({ children, variant, className }: any) {
-    return <span className={cn("px-2 py-0.5 rounded text-[10px] uppercase tracking-wider", variant === 'secondary' ? "bg-muted text-muted-foreground" : "bg-primary text-white", className)}>{children}</span>
 }

@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "user": {
@@ -43,10 +42,11 @@
         "className": { "type": "string" },
         "academicYear": { "type": "string" },
         "studentNameBn": { "type": "string" },
+        "previousSchool": { "type": "string" },
         "guardianMobile": { "type": "string" },
         "photoUrl": { "type": "string" }
       },
-      "required": ["studentNameBn", "className", "academicYear", "guardianMobile", "photoUrl"]
+      "required": ["studentNameBn", "className", "academicYear", "guardianMobile", "photoUrl", "previousSchool"]
     }
   },
   "auth": {

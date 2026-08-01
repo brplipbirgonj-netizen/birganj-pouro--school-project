@@ -1,4 +1,3 @@
-
 'use client';
 /**
  * @fileOverview Admission application data services.
@@ -31,6 +30,7 @@ export interface AdmissionApplication extends Omit<NewStudentData, 'roll'> {
   status: 'pending' | 'approved' | 'rejected';
   appliedAt: Date;
   applicationId: string;
+  previousSchool: string;
 }
 
 export type NewAdmissionData = Omit<AdmissionApplication, 'id' | 'status' | 'appliedAt' | 'applicationId'>;
