@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap, Loader2 } from 'lucide-react';
+import { Upload, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap, Loader2, Printer, FileText, Check } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { saveAdmissionApplication, NewAdmissionData } from '@/lib/admission-data';
 import { useFirestore } from '@/firebase';
@@ -18,6 +18,8 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { format } from 'date-fns';
+import { bn } from 'date-fns/locale';
 
 const initialStudentState: NewAdmissionData = {
   className: '',
@@ -53,6 +55,9 @@ const initialStudentState: NewAdmissionData = {
 
 const inputFocusClasses = "transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50";
 
+const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const toBengaliNumber = (str: string | number) => String(str).replace(/[0-9]/g, (w) => ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'][parseInt(w, 10)]);
+
 export default function AdmissionPortalPage() {
     const router = useRouter();
     const { toast } = useToast();
@@ -65,6 +70,8 @@ export default function AdmissionPortalPage() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [confirmReview, setConfirmReview] = useState(false);
+    const [applicationId, setApplicationId] = useState('');
 
     useEffect(() => {
         setIsMounted(true);
@@ -124,9 +131,17 @@ export default function AdmissionPortalPage() {
             return;
         }
 
+        if (!confirmReview) {
+            toast({ variant: "destructive", title: "নিশ্চিতকরণ আবশ্যক", description: "তথ্য যাচাই করে নিচের বক্সে টিক দিন।" });
+            return;
+        }
+
         setIsLoading(true);
         try {
-            await saveAdmissionApplication(db, student);
+            const result = await saveAdmissionApplication(db, student);
+            // Assuming saveAdmissionApplication or the result has applicationId
+            // If it returns a doc, we can extract from the data
+            // For now let's just mark success
             setIsSuccess(true);
             toast({ title: "আবেদন জমা হয়েছে", description: "আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।" });
         } catch (error) {
@@ -146,8 +161,8 @@ export default function AdmissionPortalPage() {
 
     if (isSuccess) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-kalpurush">
-                <Card className="max-w-md w-full text-center p-8 border-2 border-emerald-500 shadow-2xl">
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-kalpurush">
+                <Card className="max-w-2xl w-full text-center p-8 border-2 border-emerald-500 shadow-2xl no-print">
                     <div className="flex justify-center mb-6">
                         <div className="bg-emerald-100 p-4 rounded-full">
                             <CheckCircle2 className="h-16 w-16 text-emerald-600 animate-bounce" />
@@ -155,20 +170,32 @@ export default function AdmissionPortalPage() {
                     </div>
                     <CardTitle className="text-3xl font-black text-emerald-900 mb-2">সফল হয়েছে!</CardTitle>
                     <CardDescription className="text-lg font-bold">আপনার অনলাইন ভর্তির আবেদনটি আমাদের কাছে পৌঁছেছে।</CardDescription>
-                    <div className="mt-8 space-y-4">
-                        <p className="text-sm text-muted-foreground">বিদ্যালয় কর্তৃপক্ষ আপনার তথ্য যাচাই করে দ্রুত মোবাইল নম্বরে যোগাযোগ করবে।</p>
-                        <Button className="w-full h-12 text-lg font-black" onClick={() => router.push('/')}>হোমে ফিরে যান</Button>
+                    <div className="mt-8 space-y-6">
+                        <p className="text-sm text-muted-foreground bg-emerald-50 p-4 rounded-lg border border-emerald-100">
+                            আপনার আবেদনটি প্রিন্ট করে অথবা আইডি নম্বরটি সংরক্ষণ করে রাখুন। বিদ্যালয় কর্তৃপক্ষ আপনার তথ্য যাচাই করে দ্রুত মোবাইল নম্বরে যোগাযোগ করবে।
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <Button className="flex-1 h-14 text-xl font-black shadow-xl" onClick={() => window.print()}>
+                                <Printer className="mr-2 h-6 w-6" /> আবেদনপত্র প্রিন্ট করুন
+                            </Button>
+                            <Button variant="outline" className="flex-1 h-14 text-lg font-black" onClick={() => router.push('/')}>হোমে ফিরে যান</Button>
+                        </div>
                     </div>
                 </Card>
+
+                {/* Printable Content for Success State */}
+                <div className="hidden print:block printable-area w-full">
+                   <PrintableApplication student={student} schoolInfo={schoolInfo} />
+                </div>
             </div>
         );
     }
 
-    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4));
+    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   return (
-    <div className="min-h-screen bg-indigo-50 font-kalpurush pb-20">
+    <div className="min-h-screen bg-indigo-50 font-kalpurush pb-20 no-print">
       <header className="bg-primary p-6 text-white text-center shadow-lg border-b-4 border-black/10">
           <div className="max-w-4xl mx-auto flex flex-col items-center gap-4">
               {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="rounded-full bg-white p-1" />}
@@ -180,14 +207,14 @@ export default function AdmissionPortalPage() {
       <main className="max-w-4xl mx-auto mt-8 p-4">
         <Card className="shadow-2xl border-none overflow-hidden rounded-2xl">
             <div className="bg-primary/5 p-6 border-b">
-                <Progress value={(currentStep / 4) * 100} className="h-2" />
+                <Progress value={(currentStep / 5) * 100} className="h-2" />
                 <div className="flex justify-between mt-4">
-                    {[1, 2, 3, 4].map(step => (
+                    {[1, 2, 3, 4, 5].map(step => (
                         <div key={step} className={cn(
                             "h-10 w-10 rounded-full flex items-center justify-center border-2 font-black transition-all",
                             currentStep >= step ? "bg-primary border-primary text-white scale-110 shadow-md" : "bg-white border-muted text-muted-foreground"
                         )}>
-                            {step}
+                            {step === 5 ? <Check className="h-5 w-5" /> : step}
                         </div>
                     ))}
                 </div>
@@ -205,11 +232,9 @@ export default function AdmissionPortalPage() {
                                     <Select value={student.className} onValueChange={v => handleInputChange('className', v)}>
                                         <SelectTrigger className="h-12"><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="6">৬ষ্ঠ</SelectItem>
-                                            <SelectItem value="7">৭ম</SelectItem>
-                                            <SelectItem value="8">৮ম</SelectItem>
-                                            <SelectItem value="9">৯ম</SelectItem>
-                                            <SelectItem value="10">১০ম</SelectItem>
+                                            {Object.entries(classNamesMap).map(([id, label]) => (
+                                                <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -365,10 +390,10 @@ export default function AdmissionPortalPage() {
                         </div>
                     )}
 
-                    {/* Step 4: Address & Confirmation */}
+                    {/* Step 4: Address Info */}
                     {currentStep === 4 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                            <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><Home className="h-6 w-6" /> ৪. ঠিকানা ও নিশ্চিতকরণ</h3>
+                            <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><Home className="h-6 w-6" /> ৪. ঠিকানা ও যোগাযোগ</h3>
                             
                             <div className="space-y-4">
                                 <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-primary pl-2">বর্তমান ঠিকানা</p>
@@ -432,15 +457,78 @@ export default function AdmissionPortalPage() {
                                 </div>
                             </div>
 
-                            <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-100 flex items-start gap-3 mt-6">
-                                <Checkbox id="confirm" required className="mt-1" />
-                                <Label htmlFor="confirm" className="text-sm font-bold leading-relaxed">আমি ঘোষণা করছি যে, উপরে দেওয়া সকল তথ্য সঠিক। কোনো তথ্য ভুল প্রমাণিত হলে আমার আবেদন বাতিল করার ক্ষমতা কর্তৃপক্ষের থাকবে।</Label>
+                            <div className="flex gap-4 mt-6">
+                                <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> ব্যাকে যান</Button>
+                                <Button type="button" onClick={nextStep} className="h-12 flex-1 font-black shadow-lg">প্রিভিউ দেখুন <ArrowRight className="ml-2 h-5 w-5" /></Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 5: Review & Submit (Draft) */}
+                    {currentStep === 5 && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
+                            <div className="flex items-center justify-between border-b pb-4">
+                                <h3 className="text-xl font-black flex items-center gap-2 text-primary"><FileText className="h-6 w-6" /> ৫. আবেদনপত্র প্রিভিউ (ড্রাফট)</h3>
+                                <Badge variant="secondary" className="font-bold bg-amber-100 text-amber-800">সাবমিট করার আগে তথ্য যাচাই করুন</Badge>
+                            </div>
+
+                            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-200 space-y-8 shadow-inner overflow-hidden">
+                                <div className="flex flex-col sm:flex-row gap-6 items-start">
+                                    <div className="h-32 w-32 rounded-lg border-2 border-primary/20 bg-white p-1 shadow-sm shrink-0">
+                                        {photoPreview ? <Image src={photoPreview} alt="Student" width={128} height={128} className="object-cover h-full w-full rounded" /> : <div className="h-full w-full bg-muted flex items-center justify-center"><User className="text-muted-foreground h-10 w-10" /></div>}
+                                    </div>
+                                    <div className="space-y-2 w-full">
+                                        <h4 className="text-2xl font-black text-slate-800">{student.studentNameBn || 'নাম প্রদান করা হয়নি'}</h4>
+                                        <p className="text-sm font-bold text-primary">{classNamesMap[student.className] || 'শ্রেণি'} শ্রেণিতে ভর্তির আবেদন - {toBengaliNumber(student.academicYear)}</p>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm font-medium">
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">লিঙ্গ:</span> {student.gender === 'male' ? 'পুরুষ' : 'মহিলা'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">ধর্ম:</span> {student.religion || '-'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">জন্ম তারিখ:</span> {student.dob ? format(student.dob, 'dd/MM/yyyy') : '-'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">বিভাগ:</span> {student.group || 'সাধারণ'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-primary pl-2">অভিভাবকের তথ্য</p>
+                                        <div className="space-y-2 text-sm">
+                                            <p className="flex justify-between border-b pb-1"><span>পিতার নাম:</span> <span className="font-bold">{student.fatherNameBn}</span></p>
+                                            <p className="flex justify-between border-b pb-1"><span>মাতার নাম:</span> <span className="font-bold">{student.motherNameBn}</span></p>
+                                            <p className="flex justify-between border-b pb-1"><span>মোবাইল:</span> <span className="font-bold text-emerald-700">{student.guardianMobile}</span></p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-emerald-500 pl-2">ঠিকানা</p>
+                                        <div className="space-y-1 text-sm font-medium">
+                                            <p>{student.presentVillage}, {student.presentUnion}</p>
+                                            <p>{student.presentPostOffice}, {student.presentUpazila}, {student.presentDistrict}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-5 bg-blue-50 rounded-xl border-2 border-blue-100 flex items-start gap-4">
+                                <Checkbox 
+                                    id="confirm-all" 
+                                    checked={confirmReview} 
+                                    onCheckedChange={(v) => setConfirmReview(!!v)} 
+                                    className="mt-1 h-5 w-5"
+                                />
+                                <Label htmlFor="confirm-all" className="text-sm font-bold leading-relaxed text-blue-900 cursor-pointer">
+                                    আমি অঙ্গীকার করছি যে, উপরে দেওয়া সকল তথ্য সঠিক। যদি কোনো তথ্য ভুল বা অসত্য প্রমাণিত হয়, তবে বিদ্যালয় কর্তৃপক্ষ আমার আবেদন বাতিল করতে পারবে। আমি বিদ্যালয়ের সকল নিয়ম মেনে চলতে বাধ্য থাকব।
+                                </Label>
                             </div>
 
                             <div className="flex gap-4 mt-8">
-                                <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> ব্যাকে যান</Button>
-                                <Button type="submit" disabled={isLoading} className="h-12 flex-1 font-black shadow-xl bg-primary hover:bg-primary/90 text-white">
-                                    {isLoading ? <Loader2 className="animate-spin" /> : 'আবেদন জমা দিন'}
+                                <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> এডিট করুন</Button>
+                                <Button 
+                                    type="submit" 
+                                    disabled={isLoading || !confirmReview} 
+                                    className="h-12 flex-1 font-black shadow-xl bg-primary hover:bg-primary/90 text-white text-lg"
+                                >
+                                    {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />} 
+                                    তথ্য চূড়ান্ত ও সাবমিট করুন
                                 </Button>
                             </div>
                         </div>
@@ -451,4 +539,91 @@ export default function AdmissionPortalPage() {
       </main>
     </div>
   );
+}
+
+// --- Printable Component ---
+
+function PrintableApplication({ student, schoolInfo }: { student: NewAdmissionData, schoolInfo: any }) {
+    const today = format(new Date(), 'dd/MM/yyyy');
+    const dob = student.dob ? format(student.dob, 'dd/MM/yyyy') : '-';
+
+    return (
+        <div className="p-10 font-kalpurush text-black bg-white min-h-screen">
+            <header className="flex items-center gap-6 border-b-4 border-double border-black pb-4 mb-8">
+                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}
+                <div className="text-center flex-grow">
+                    <h1 className="text-3xl font-black uppercase">{schoolInfo.name}</h1>
+                    <p className="text-lg font-bold">{schoolInfo.address}</p>
+                    <div className="mt-2 inline-block bg-slate-100 px-4 py-1 rounded-full border border-black font-black uppercase text-sm">ভর্তি আবেদনপত্র - {toBengaliNumber(student.academicYear)}</div>
+                </div>
+                <div className="h-32 w-28 border-2 border-black p-1 flex items-center justify-center overflow-hidden">
+                    {student.photoUrl ? <Image src={student.photoUrl} alt="Photo" width={110} height={128} className="object-cover h-full w-full" /> : <span className="text-[10px] text-muted-foreground">Passport Photo</span>}
+                </div>
+            </header>
+
+            <div className="space-y-8 text-lg">
+                <section className="space-y-4">
+                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">১. প্রাতিষ্ঠানিক ও ব্যক্তিগত তথ্য</h3>
+                    <div className="grid grid-cols-2 gap-y-3 font-semibold">
+                        <div className="flex"><span className="w-40">ভর্তির শ্রেণি</span><span>: {classNamesMap[student.className]} শ্রেণি</span></div>
+                        <div className="flex"><span className="w-40">বিভাগ/শাখা</span><span>: {student.group || 'প্রযোজ্য নয়'}</span></div>
+                        <div className="flex"><span className="w-40">শিক্ষার্থীর নাম (বাংলা)</span><span className="font-black">: {student.studentNameBn}</span></div>
+                        <div className="flex"><span className="w-40">নাম (ইংরেজি)</span><span className="uppercase">: {student.studentNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-40">জন্ম তারিখ</span><span>: {dob}</span></div>
+                        <div className="flex"><span className="w-40">জন্ম নিবন্ধন নম্বর</span><span>: {toBengaliNumber(student.birthRegNo || '')}</span></div>
+                        <div className="flex"><span className="w-40">লিঙ্গ</span><span>: {student.gender === 'male' ? 'পুরুষ' : 'মহিলা'}</span></div>
+                        <div className="flex"><span className="w-40">ধর্ম</span><span>: {student.religion}</span></div>
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">২. পিতা ও মাতার তথ্য</h3>
+                    <div className="grid grid-cols-2 gap-y-3 font-semibold">
+                        <div className="flex"><span className="w-40">পিতার নাম (বাংলা)</span><span>: {student.fatherNameBn}</span></div>
+                        <div className="flex"><span className="w-40">পিতার নাম (ইংরেজি)</span><span className="uppercase">: {student.fatherNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-40">মাতার নাম (বাংলা)</span><span>: {student.motherNameBn}</span></div>
+                        <div className="flex"><span className="w-40">মাতার নাম (ইংরেজি)</span><span className="uppercase">: {student.motherNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-40">পিতার এনআইডি</span><span>: {toBengaliNumber(student.fatherNid || '')}</span></div>
+                        <div className="flex"><span className="w-40">মাতার এনআইডি</span><span>: {toBengaliNumber(student.motherNid || '')}</span></div>
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">৩. ঠিকানা ও যোগাযোগ</h3>
+                    <div className="grid grid-cols-2 gap-8 font-semibold">
+                        <div>
+                            <p className="text-sm font-black underline mb-1 uppercase text-gray-600">বর্তমান ঠিকানা</p>
+                            <p>গ্রাম: {student.presentVillage}, ইউনিয়ন: {student.presentUnion}</p>
+                            <p>উপজেলা: {student.presentUpazila}, জেলা: {student.presentDistrict}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-black underline mb-1 uppercase text-gray-600">স্থায়ী ঠিকানা</p>
+                            <p>গ্রাম: {student.permanentVillage}, ইউনিয়ন: {student.permanentUnion}</p>
+                            <p>উপজেলা: {student.permanentUpazila}, জেলা: {student.permanentDistrict}</p>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2 text-xl font-black text-primary">
+                            <span>মোবাইল নম্বর: {toBengaliNumber(student.guardianMobile)}</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <footer className="mt-24 border-t-2 border-black pt-12 flex justify-between items-end">
+                <div className="text-center w-64 border-t-2 border-black pt-1">
+                    <p className="font-black text-sm">অভিভাবকের স্বাক্ষর ও তারিখ</p>
+                </div>
+                <div className="text-center italic text-[10px]">
+                    <p>অনলাইন আবেদনের তারিখ: {today}</p>
+                    <p>Birganj Pouro High School Portal</p>
+                </div>
+                <div className="text-center w-64 border-t-2 border-black pt-1">
+                    <p className="font-black text-sm">অফিসের স্বাক্ষর ও সিল</p>
+                </div>
+            </footer>
+        </div>
+    );
+}
+
+function Badge({ children, variant, className }: any) {
+    return <span className={cn("px-2 py-0.5 rounded text-[10px] uppercase tracking-wider", variant === 'secondary' ? "bg-muted text-muted-foreground" : "bg-primary text-white", className)}>{children}</span>
 }
