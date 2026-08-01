@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -20,7 +21,7 @@ service cloud.firestore {
         getUserData().role == 'admin';
     }
 
-    // নির্দিষ্ট পারমিশন আছে কিনা চেক করা (এডমিনদের সব পারমিশন ডিফল্টভাবে থাকে)
+    // নির্দিষ্ট পারমিশন আছে কিনা চেক করা
     function hasPermission(permission) {
       return isAuthed() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -32,11 +33,9 @@ service cloud.firestore {
 
     // --- কালেকশন ভিত্তিক রুলস ---
 
-    // ১. অনলাইন ভর্তি আবেদন (এটি পাবলিক হতে হবে যাতে যে কেউ আবেদন করতে পারে)
+    // ১. অনলাইন ভর্তি আবেদন
     match /admissionApplications/{id} {
-      // যে কেউ নতুন আবেদন জমা দিতে পারবে
       allow create: if true;
-      // আবেদন পড়া বা ম্যানেজ করার ক্ষমতা শুধুমাত্র অনুমোদিত স্টাফদের থাকবে
       allow read, write: if isAuthed() && hasPermission('manage:admissions');
     }
 
@@ -52,7 +51,6 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isAuthed() && request.auth.uid == userId;
       
-      // ইউজার যাতে নিজের রোল নিজে বাড়াতে না পারে তার নিরাপত্তা
       allow update: if isAdmin() || (
         isAuthed() && request.auth.uid == userId &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
@@ -135,4 +133,5 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
   }
+  // Index deployment trigger: 2024-03-20
 }
