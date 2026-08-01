@@ -83,22 +83,22 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
           {value ? format(value, "PPP", { locale: bn }) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <div className="bg-primary text-primary-foreground p-4 rounded-t-lg">
+      <PopoverContent className="w-auto p-0 shadow-2xl">
+        <div className="bg-primary text-primary-foreground p-3 rounded-t-lg">
           <div 
-            className="text-sm cursor-pointer hover:underline"
+            className="text-xs cursor-pointer hover:underline"
             onClick={() => setView(view === 'years' ? 'days' : 'years')}
           >
             {format(headerDate, "yyyy", { locale: bn })}
           </div>
           <div 
-            className="text-2xl font-bold cursor-pointer hover:underline"
+            className="text-xl font-bold cursor-pointer hover:underline"
             onClick={() => setView(view === 'months' ? 'days' : 'months')}
           >
             {format(headerDate, "eeee, d MMMM", { locale: bn })}
           </div>
         </div>
-        <div className="p-3">
+        <div className="p-2">
           {view === 'days' ? (
               <DayPicker
                 mode="single"
@@ -116,18 +116,18 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                     caption_dropdowns: "flex gap-2 w-full justify-center",
                     dropdown_month: "relative w-full",
                     dropdown_year: "relative w-full",
-                    dropdown: "appearance-none w-full bg-background border border-input rounded-md px-3 py-1.5 text-sm",
+                    dropdown: "appearance-none w-full bg-background border border-input rounded-md px-3 py-1 text-xs",
                     vhidden: "hidden",
                     nav: "space-x-1 flex items-center",
                     nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
                     nav_button_previous: "absolute left-1",
                     nav_button_next: "absolute right-1",
-                    table: "w-full border-collapse space-y-1 mt-4",
+                    table: "w-full border-collapse space-y-0.5 mt-2",
                     head_row: "flex",
-                    head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                    row: "flex w-full mt-2",
-                    cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-                    day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+                    head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.7rem]",
+                    row: "flex w-full mt-1",
+                    cell: "h-8 w-8 text-center text-xs p-0 relative focus-within:relative focus-within:z-20",
+                    day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
                     day_selected: "bg-primary text-primary-foreground rounded-full hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                     day_today: "bg-accent text-accent-foreground rounded-full",
                     day_outside: "text-muted-foreground opacity-50",
@@ -149,9 +149,9 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                         value={value?.toString()}
                         onValueChange={(newValue) => handleChange(newValue)}
                         >
-                        <SelectTrigger className="h-9 truncate">{selected?.props.children}</SelectTrigger>
+                        <SelectTrigger className="h-8 text-xs truncate">{selected?.props.children}</SelectTrigger>
                         <SelectContent>
-                            <ScrollArea className="h-72">
+                            <ScrollArea className="h-48">
                             {options.map((option, i) => (
                                 <SelectItem
                                 key={`${option.props.value}-${i}`}
@@ -168,13 +168,13 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                 }}
               />
             ) : view === 'months' ? (
-              <ScrollArea className="h-[258px]">
-                <div className="grid grid-cols-3 gap-2">
+              <ScrollArea className="h-[200px]">
+                <div className="grid grid-cols-3 gap-1">
                   {months.map((monthName, index) => (
                     <Button
                       key={monthName}
                       variant={displayMonth.getMonth() === index ? "default" : "ghost"}
-                      className="w-full"
+                      className="w-full h-8 text-xs"
                       onClick={() => {
                         const newDate = new Date(displayMonth);
                         newDate.setMonth(index);
@@ -188,13 +188,13 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                 </div>
               </ScrollArea>
             ) : (
-              <ScrollArea className="h-[258px]">
-                <div className="grid grid-cols-3 gap-2">
+              <ScrollArea className="h-[200px]">
+                <div className="grid grid-cols-3 gap-1">
                   {years.map((year) => (
                     <Button
                       key={year}
                       variant={displayMonth.getFullYear() === year ? "default" : "ghost"}
-                      className="w-full"
+                      className="w-full h-8 text-xs"
                       onClick={() => {
                         const newDate = new Date(displayMonth);
                         newDate.setFullYear(year);
@@ -210,10 +210,10 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
             )
           }
         </div>
-        <div className="flex justify-end gap-2 p-3 border-t">
-          <Button variant="ghost" onClick={handleClear}>মুছুন</Button>
-          <Button variant="ghost" onClick={handleCancel}>বাতিল</Button>
-          <Button onClick={handleSet}>সেট</Button>
+        <div className="flex justify-end gap-2 p-2 border-t">
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={handleClear}>মুছুন</Button>
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={handleCancel}>বাতিল</Button>
+          <Button size="sm" className="h-8 text-xs px-4" onClick={handleSet}>সেট</Button>
         </div>
       </PopoverContent>
     </Popover>

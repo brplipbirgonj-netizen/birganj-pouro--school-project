@@ -597,79 +597,79 @@ function PrintableApplication({ student, schoolInfo }: { student: NewAdmissionDa
     const dob = student.dob ? format(student.dob, 'dd/MM/yyyy') : '-';
 
     return (
-        <div className="p-10 font-kalpurush text-black bg-white min-h-screen">
-            <header className="flex items-center gap-6 border-b-4 border-double border-black pb-4 mb-8">
-                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}
+        <div className="p-8 font-kalpurush text-black bg-white min-h-screen">
+            <header className="flex items-center gap-6 border-b-2 border-black pb-2 mb-4">
+                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={70} height={70} className="object-contain" />}
                 <div className="text-center flex-grow">
-                    <h1 className="text-3xl font-black uppercase">{schoolInfo.name}</h1>
-                    <p className="text-lg font-bold">{schoolInfo.address}</p>
-                    <div className="mt-2 inline-block bg-slate-100 px-4 py-1 rounded-full border border-black font-black uppercase text-sm">ভর্তি আবেদনপত্র - {toBengaliNumber(student.academicYear)}</div>
+                    <h1 className="text-2xl font-black uppercase">{schoolInfo.name}</h1>
+                    <p className="text-sm font-bold">{schoolInfo.address}</p>
+                    <div className="mt-1 inline-block bg-slate-100 px-3 py-0.5 rounded-full border border-black font-black uppercase text-xs">ভর্তি আবেদনপত্র - {toBengaliNumber(student.academicYear)}</div>
                 </div>
-                <div className="h-32 w-28 border-2 border-black p-1 flex items-center justify-center overflow-hidden">
-                    {student.photoUrl ? <Image src={student.photoUrl} alt="Photo" width={110} height={128} className="object-cover h-full w-full" /> : <span className="text-[10px] text-muted-foreground">Passport Photo</span>}
+                <div className="h-28 w-24 border-2 border-black p-0.5 flex items-center justify-center overflow-hidden">
+                    {student.photoUrl ? <Image src={student.photoUrl} alt="Photo" width={90} height={110} className="object-cover h-full w-full" /> : <span className="text-[10px] text-muted-foreground">Photo</span>}
                 </div>
             </header>
 
-            <div className="space-y-8 text-lg">
-                <section className="space-y-4">
-                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">১. প্রাতিষ্ঠানিক ও ব্যক্তিগত তথ্য</h3>
-                    <div className="grid grid-cols-2 gap-y-3 font-semibold">
-                        <div className="flex"><span className="w-44">ভর্তির শ্রেণি</span><span>: {classNamesMap[student.className]} শ্রেণি</span></div>
-                        <div className="flex"><span className="w-44">বিভাগ/শাখা</span><span>: {student.group || 'প্রযোজ্য নয়'}</span></div>
-                        <div className="flex"><span className="w-44">পূর্ববর্তী বিদ্যালয়</span><span>: {student.previousSchool || 'প্রযোজ্য নয়'}</span></div>
-                        <div className="flex"><span className="w-44">শিক্ষার্থীর নাম (বাংলা)</span><span className="font-black">: {student.studentNameBn}</span></div>
-                        <div className="flex"><span className="w-44">নাম (ইংরেজি)</span><span className="uppercase">: {student.studentNameEn || '-'}</span></div>
-                        <div className="flex"><span className="w-44">জন্ম তারিখ</span><span>: {dob}</span></div>
-                        <div className="flex"><span className="w-44">জন্ম নিবন্ধন নম্বর</span><span>: {toBengaliNumber(student.birthRegNo || '')}</span></div>
-                        <div className="flex"><span className="w-44">লিঙ্গ</span><span>: {student.gender === 'male' ? 'পুরুষ' : student.gender === 'female' ? 'মহিলা' : 'অন্যান্য'}</span></div>
-                        <div className="flex"><span className="w-44">ধর্ম</span><span>: {student.religion}</span></div>
+            <div className="space-y-4 text-sm">
+                <section className="space-y-2">
+                    <h3 className="text-lg font-black border-b border-black pb-0.5 mb-2">১. প্রাতিষ্ঠানিক ও ব্যক্তিগত তথ্য</h3>
+                    <div className="grid grid-cols-2 gap-y-1.5 font-semibold">
+                        <div className="flex"><span className="w-36">ভর্তির শ্রেণি</span><span>: {classNamesMap[student.className]} শ্রেণি</span></div>
+                        <div className="flex"><span className="w-36">বিভাগ/শাখা</span><span>: {student.group || 'প্রযোজ্য নয়'}</span></div>
+                        <div className="flex"><span className="w-36">পূর্ববর্তী বিদ্যালয়</span><span>: {student.previousSchool || 'প্রযোজ্য নয়'}</span></div>
+                        <div className="flex"><span className="w-36">শিক্ষার্থীর নাম (বাংলা)</span><span className="font-black">: {student.studentNameBn}</span></div>
+                        <div className="flex"><span className="w-36">নাম (ইংরেজি)</span><span className="uppercase">: {student.studentNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-36">জন্ম তারিখ</span><span>: {dob}</span></div>
+                        <div className="flex"><span className="w-36">জন্ম নিবন্ধন নম্বর</span><span>: {toBengaliNumber(student.birthRegNo || '')}</span></div>
+                        <div className="flex"><span className="w-36">লিঙ্গ</span><span>: {student.gender === 'male' ? 'পুরুষ' : student.gender === 'female' ? 'মহিলা' : 'অন্যান্য'}</span></div>
+                        <div className="flex"><span className="w-36">ধর্ম</span><span>: {student.religion}</span></div>
                     </div>
                 </section>
 
-                <section className="space-y-4">
-                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">২. পিতা ও মাতার তথ্য</h3>
-                    <div className="grid grid-cols-2 gap-y-3 font-semibold">
-                        <div className="flex"><span className="w-44">পিতার নাম (বাংলা)</span><span>: {student.fatherNameBn}</span></div>
-                        <div className="flex"><span className="w-44">পিতার নাম (ইংরেজি)</span><span className="uppercase">: {student.fatherNameEn || '-'}</span></div>
-                        <div className="flex"><span className="w-44">মাতার নাম (বাংলা)</span><span>: {student.motherNameBn}</span></div>
-                        <div className="flex"><span className="w-44">মাতার নাম (ইংরেজি)</span><span className="uppercase">: {student.motherNameEn || '-'}</span></div>
-                        <div className="flex"><span className="w-44">পিতার এনআইডি</span><span>: {toBengaliNumber(student.fatherNid || '')}</span></div>
-                        <div className="flex"><span className="w-44">মাতার এনআইডি</span><span>: {toBengaliNumber(student.motherNid || '')}</span></div>
+                <section className="space-y-2">
+                    <h3 className="text-lg font-black border-b border-black pb-0.5 mb-2">২. পিতা ও মাতার তথ্য</h3>
+                    <div className="grid grid-cols-2 gap-y-1.5 font-semibold">
+                        <div className="flex"><span className="w-36">পিতার নাম (বাংলা)</span><span>: {student.fatherNameBn}</span></div>
+                        <div className="flex"><span className="w-36">পিতার নাম (ইংরেজি)</span><span className="uppercase">: {student.fatherNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-36">মাতার নাম (বাংলা)</span><span>: {student.motherNameBn}</span></div>
+                        <div className="flex"><span className="w-36">মাতার নাম (ইংরেজি)</span><span className="uppercase">: {student.motherNameEn || '-'}</span></div>
+                        <div className="flex"><span className="w-36">পিতার এনআইডি</span><span>: {toBengaliNumber(student.fatherNid || '')}</span></div>
+                        <div className="flex"><span className="w-36">মাতার এনআইডি</span><span>: {toBengaliNumber(student.motherNid || '')}</span></div>
                     </div>
                 </section>
 
-                <section className="space-y-4">
-                    <h3 className="text-xl font-black border-b-2 border-black pb-1 mb-4">৩. ঠিকানা ও যোগাযোগ</h3>
-                    <div className="grid grid-cols-2 gap-8 font-semibold">
+                <section className="space-y-2">
+                    <h3 className="text-lg font-black border-b border-black pb-0.5 mb-2">৩. ঠিকানা ও যোগাযোগ</h3>
+                    <div className="grid grid-cols-2 gap-4 font-semibold">
                         <div>
-                            <p className="text-sm font-black underline mb-1 uppercase text-gray-600">বর্তমান ঠিকানা</p>
+                            <p className="text-xs font-black underline mb-0.5 uppercase text-gray-600">বর্তমান ঠিকানা</p>
                             <p>গ্রাম: {student.presentVillage}, ইউনিয়ন: {student.presentUnion}</p>
                             <p>ডাকঘর: {student.presentPostOffice}, উপজেলা: {student.presentUpazila}</p>
                             <p>জেলা: {student.presentDistrict}</p>
                         </div>
                         <div>
-                            <p className="text-sm font-black underline mb-1 uppercase text-gray-600">স্থায়ী ঠিকানা</p>
+                            <p className="text-xs font-black underline mb-0.5 uppercase text-gray-600">স্থায়ী ঠিকানা</p>
                             <p>গ্রাম: {student.permanentVillage || student.presentVillage}</p>
                             <p>ডাকঘর: {student.permanentPostOffice || student.presentPostOffice}</p>
                             <p>জেলা: {student.permanentDistrict || student.presentDistrict}</p>
                         </div>
-                        <div className="col-span-2 flex items-center gap-2 text-xl font-black text-primary pt-4">
+                        <div className="col-span-2 flex items-center gap-2 text-lg font-black text-primary pt-2">
                             <span>মোবাইল নম্বর: {toBengaliNumber(student.guardianMobile)}</span>
                         </div>
                     </div>
                 </section>
             </div>
 
-            <footer className="mt-24 border-t-2 border-black pt-12 flex justify-between items-end">
-                <div className="text-center w-64 border-t-2 border-black pt-1">
-                    <p className="font-black text-sm">অভিভাবকের স্বাক্ষর ও তারিখ</p>
+            <footer className="mt-12 border-t border-black pt-6 flex justify-between items-end">
+                <div className="text-center w-56 border-t border-black pt-1">
+                    <p className="font-black text-xs">অভিভাবকের স্বাক্ষর ও তারিখ</p>
                 </div>
-                <div className="text-center italic text-[10px]">
+                <div className="text-center italic text-[8px]">
                     <p>আবেদনের তারিখ: {today}</p>
                     <p>Birganj Pouro High School Portal</p>
                 </div>
-                <div className="text-center w-64 border-t-2 border-black pt-1">
-                    <p className="font-black text-sm">অফিসের স্বাক্ষর ও সিল</p>
+                <div className="text-center w-56 border-t border-black pt-1">
+                    <p className="font-black text-xs">অফিসের স্বাক্ষর ও সিল</p>
                 </div>
             </footer>
         </div>
