@@ -9,26 +9,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Safely get user data
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Check if user document exists
-    function userExists() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    // Direct check for admin role or permission
+    // Direct check for admin role or permission without separate exists() for performance
     function isAdmin() {
-      return isAuthed() && userExists() && getUserData().role == 'admin';
+      return isAuthed() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Direct check for specific permission (admins have all permissions)
     function hasPermission(permission) {
-      return isAuthed() && userExists() && (
-        getUserData().role == 'admin' || 
-        permission in getUserData().get('permissions', [])
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isAuthed() && (
+        userData.role == 'admin' || 
+        permission in userData.get('permissions', [])
       );
     }
 
@@ -123,10 +115,11 @@ service cloud.firestore {
     match /admissionApplications/{id} {
       // Public creation allowed for anyone
       allow create: if true;
-      // Management permissions
-      allow read, update, delete: if isAuthed() && hasPermission('manage:admissions');
+      // Explicitly allow list and get for managers
+      allow read: if isAuthed() && hasPermission('manage:admissions');
+      allow update, delete: if isAuthed() && hasPermission('manage:admissions');
     }
     
-    // Trigger deployment: Refining helper functions and explicit permission hierarchy.
+    // Final Trigger deployment: Simplifying hasPermission and explicit admission rules.
   }
 }

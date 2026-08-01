@@ -202,35 +202,12 @@
         "studentId": { "type": "string" },
         "academicYear": { "type": "string" },
         "collectionDate": { "type": "string", "format": "date" },
-        "description": { "type": "string", "description": "A brief description of the collection, e.g., 'Tuition Fee for January & February'" },
+        "description": { "type": "string", "description": "A brief description of the collection." },
         "totalAmount": { "type": "number" },
-        "collectorName": { "type": "string", "description": "The name of the staff member who collected the fee." },
-        "collectorUid": { "type": "string", "description": "The UID of the staff member who collected the fee." },
-        "transactionIds": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "IDs of the associated entries in the main transactions/cashbook collection."
-        },
-        "breakdown": {
-          "type": "object",
-          "description": "A detailed breakdown of the fees collected in this transaction.",
-          "properties": {
-            "tuitionCurrent": { "type": "number" },
-            "tuitionAdvance": { "type": "number" },
-            "tuitionDue": { "type": "number" },
-            "tuitionFine": { "type": "number" },
-            "examFeeHalfYearly": { "type": "number" },
-            "examFeeAnnual": { "type": "number" },
-            "examFeePreNirbachoni": { "type": "number" },
-            "examFeeNirbachoni": { "type": "number" },
-            "sessionFee": { "type": "number" },
-            "admissionFee": { "type": "number" },
-            "scoutFee": { "type": "number" },
-            "developmentFee": { "type": "number" },
-            "libraryFee": { "type": "number" },
-            "tiffinFee": { "type": "number" }
-          }
-        }
+        "collectorName": { "type": "string" },
+        "collectorUid": { "type": "string" },
+        "transactionIds": { "type": "array", "items": { "type": "string" } },
+        "breakdown": { "type": "object" }
       },
       "required": ["studentId", "academicYear", "collectionDate", "totalAmount"]
     },
@@ -265,41 +242,15 @@
       "description": "An income or expense transaction record.",
       "type": "object",
       "properties": {
-        "date": {
-          "type": "string",
-          "format": "date"
-        },
-        "type": {
-          "type": "string",
-          "enum": [
-            "income",
-            "expense"
-          ]
-        },
-        "accountHead": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "amount": {
-          "type": "number"
-        },
-        "academicYear": {
-          "type": "string"
-        },
-        "feeCollectionId": {
-          "type": "string",
-          "description": "Optional ID linking this transaction to a specific fee collection event."
-        }
+        "date": { "type": "string", "format": "date" },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "accountHead": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "academicYear": { "type": "string" },
+        "feeCollectionId": { "type": "string" }
       },
-      "required": [
-        "date",
-        "type",
-        "accountHead",
-        "amount",
-        "academicYear"
-      ]
+      "required": ["date", "type", "accountHead", "amount", "academicYear"]
     },
     "classRoutine": {
       "title": "Class Routine",
@@ -309,15 +260,8 @@
         "academicYear": { "type": "string" },
         "className": { "type": "string" },
         "group": { "type": "string" },
-        "day": { 
-          "type": "string",
-          "enum": ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"] 
-        },
-        "periods": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "List of subjects for each period of the day."
-        }
+        "day": { "type": "string", "enum": ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"] },
+        "periods": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["academicYear", "className", "day", "periods"]
     },
@@ -358,13 +302,9 @@
       "description": "An examination event like Annual Exam, Half-yearly etc.",
       "type": "object",
       "properties": {
-        "name": { "type": "string", "description": "The name of the exam, e.g., 'বার্ষিক পরীক্ষা'." },
+        "name": { "type": "string" },
         "academicYear": { "type": "string" },
-        "classes": {
-          "type": "array",
-          "description": "List of classes this exam applies to.",
-          "items": { "type": "string" }
-        }
+        "classes": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["name", "academicYear"]
     },
@@ -377,7 +317,6 @@
         "content": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "priority": { "type": "string", "enum": ["normal", "important", "urgent"] },
-        "pdfUrl": { "type": "string", "description": "Optional data URI for an attached PDF file." },
         "senderName": { "type": "string" }
       },
       "required": ["title", "content", "date", "senderName"]
@@ -393,7 +332,6 @@
         "className": { "type": "string" },
         "academicYear": { "type": "string" },
         "group": { "type": "string" },
-        "optionalSubject": { "type": "string" },
         "studentNameBn": { "type": "string" },
         "studentNameEn": { "type": "string" },
         "dob": { "type": "string", "format": "date-time" },
@@ -402,23 +340,10 @@
         "religion": { "type": "string" },
         "photoUrl": { "type": "string" },
         "fatherNameBn": { "type": "string" },
-        "fatherNameEn": { "type": "string" },
-        "fatherNid": { "type": "string" },
         "motherNameBn": { "type": "string" },
-        "motherNameEn": { "type": "string" },
-        "motherNid": { "type": "string" },
         "guardianMobile": { "type": "string" },
-        "studentMobile": { "type": "string" },
         "presentVillage": { "type": "string" },
-        "presentUnion": { "type": "string" },
-        "presentPostOffice": { "type": "string" },
-        "presentUpazila": { "type": "string" },
-        "presentDistrict": { "type": "string" },
-        "permanentVillage": { "type": "string" },
-        "permanentUnion": { "type": "string" },
-        "permanentPostOffice": { "type": "string" },
-        "permanentUpazila": { "type": "string" },
-        "permanentDistrict": { "type": "string" }
+        "presentUpazila": { "type": "string" }
       },
       "required": ["studentNameBn", "className", "academicYear", "guardianMobile", "photoUrl"]
     }
@@ -429,7 +354,7 @@
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/user" },
-      "description": "Stores user profile information, including their role and online status."
+      "description": "Stores user profile information."
     },
     "/emailLogs/{id}": {
       "schema": { "$ref": "#/entities/emailLog" },
@@ -453,7 +378,7 @@
     },
     "/school/info": {
       "schema": { "$ref": "#/entities/schoolInfo" },
-      "description": "Stores general school information. This is a single document."
+      "description": "Stores general school information."
     },
     "/holidays/{holidayId}": {
       "schema": { "$ref": "#/entities/holiday" },
@@ -472,9 +397,7 @@
       "description": "Stores fee collection records for students."
     },
     "/transactions/{transactionId}": {
-      "schema": {
-        "$ref": "#/entities/transaction"
-      },
+      "schema": { "$ref": "#/entities/transaction" },
       "description": "Stores income and expense transaction records."
     },
     "/classRoutines/{routineId}": {

@@ -86,6 +86,7 @@ export const getAdmissionApplications = async (db: Firestore): Promise<Admission
                 operation: 'list',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
+            throw permissionError;
         }
         throw serverError;
     }
