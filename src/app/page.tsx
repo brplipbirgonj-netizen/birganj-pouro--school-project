@@ -100,7 +100,7 @@ const NoticeTicker = () => {
     if (!latestNotice) return null;
 
     return (
-        <div className="w-full bg-yellow-200 text-red-700 h-10 flex items-center overflow-hidden border-b-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
+        <div className="w-full bg-yellow-100 text-red-700 h-10 flex items-center overflow-hidden border-b-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
             <div className="bg-red-600 text-white px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-lg">
                 <Megaphone className="h-4 w-4 animate-bounce" />
                 <span className="font-black text-sm whitespace-nowrap">জরুরি নোটিশ:</span>
