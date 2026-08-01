@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2 } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -567,7 +567,7 @@ const LiveRoutineCard = () => {
                                         <TableHeader className="bg-muted/50">
                                             <TableRow>
                                                 <TableHead>সময়</TableHead>
-                                                <TableHead>শিক্ষক</TableHead>
+                                                <TableHead>শিক্ষকর</TableHead>
                                                 <TableHead>শ্রেণি</TableHead>
                                             </TableRow>
                                         </TableHeader>
