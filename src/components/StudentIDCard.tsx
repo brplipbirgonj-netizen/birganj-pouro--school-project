@@ -38,8 +38,8 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
         )}>
             {/* Header Section - Blue background with Wave */}
             <div className={cn(
-                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 pb-5 text-white shrink-0",
-                isPrint ? "h-[22mm]" : "h-[110px]"
+                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 pb-6 text-white shrink-0",
+                isPrint ? "h-[20mm]" : "h-[100px]"
             )}>
                 {schoolInfo.logoUrl && (
                     <div className={cn(
@@ -60,14 +60,6 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                     {schoolInfo.name}
                 </h1>
                 
-                {/* School Address - Positioned for maximum visibility */}
-                <p className={cn(
-                    "font-bold text-white text-center uppercase tracking-tighter mt-1 px-1 z-30 opacity-100",
-                    isPrint ? "text-[5.5px]" : "text-[9px]"
-                )}>
-                    Upazila: Birganj, Post: Birganj, Zila: Dinajpur
-                </p>
-                
                 {/* Wave effect at bottom of header */}
                 <div className="absolute -bottom-0.5 left-0 right-0 w-full overflow-hidden leading-none z-10">
                     <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="w-full h-8">
@@ -77,6 +69,14 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
             </div>
 
             <main className="relative z-20 flex-1 flex flex-col items-center pt-0 px-3">
+                {/* School Address - Moved to white section with black color for maximum visibility */}
+                <p className={cn(
+                    "font-black text-slate-800 text-center uppercase tracking-tighter -mt-3 mb-1.5 px-1",
+                    isPrint ? "text-[5.5px]" : "text-[9px]"
+                )}>
+                    Upazila: Birganj, Post: Birganj, Zila: Dinajpur
+                </p>
+
                 {/* Photo & QR Section - Side by side */}
                 <div className="flex items-center justify-between gap-2 w-full mb-1">
                     {/* Student Photo */}
