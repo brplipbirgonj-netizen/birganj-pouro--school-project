@@ -67,10 +67,11 @@ const IDCardGeneratorPage = () => {
         return availableStudents.length > 0 ? availableStudents[0] : null;
     }, [mode, selectedStudentId, availableStudents]);
 
+    // Changed chunk size to 6 for standard 54mm x 86mm vertical cards on A4 to avoid overlap
     const bulkStudentsGrouped = useMemo(() => {
         const groups: Student[][] = [];
-        for (let i = 0; i < availableStudents.length; i += 8) {
-            groups.push(availableStudents.slice(i, i + 8));
+        for (let i = 0; i < availableStudents.length; i += 6) {
+            groups.push(availableStudents.slice(i, i + 6));
         }
         return groups;
     }, [availableStudents]);
@@ -151,7 +152,7 @@ const IDCardGeneratorPage = () => {
                                         <Printer className="mr-2 h-5 w-5" /> প্রিন্ট করুন (A4)
                                     </Button>
                                     <p className="text-[10px] text-muted-foreground mt-4 italic text-center">
-                                        * এক পাতায় ৮টি আইডি কার্ড প্রিন্ট হবে। ব্রাউজার থেকে 'Background Graphics' অন রাখুন।
+                                        * এক পাতায় ৬টি আইডি কার্ড প্রিন্ট হবে। ব্রাউজার থেকে 'Background Graphics' অন রাখুন।
                                     </p>
                                 </div>
                             </CardContent>
@@ -189,9 +190,9 @@ const IDCardGeneratorPage = () => {
                     </div>
                 )}
                 {mode === 'bulk' && bulkStudentsGrouped.map((group, pageIdx) => (
-                    <div key={pageIdx} className="w-[210mm] h-[297mm] p-[10mm] grid grid-cols-2 grid-rows-4 gap-[5mm] box-border" style={{ pageBreakAfter: 'always' }}>
+                    <div key={pageIdx} className="w-[210mm] h-[297mm] p-[15mm] grid grid-cols-2 grid-rows-3 gap-[10mm] box-border justify-items-center content-center" style={{ pageBreakAfter: 'always' }}>
                         {group.map(student => (
-                            <div key={student.id} className="flex items-center justify-center border border-dashed border-slate-300 rounded-lg">
+                            <div key={student.id} className="flex items-center justify-center">
                                 <StudentIDCard student={student} schoolInfo={schoolInfo} isPrint />
                             </div>
                         ))}

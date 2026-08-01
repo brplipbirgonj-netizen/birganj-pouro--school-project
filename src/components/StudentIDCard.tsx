@@ -34,11 +34,17 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
             isPrint ? "w-[54mm] h-[86mm]" : "w-[260px] h-[410px] shadow-2xl rounded-xl"
         )}>
             {/* Design Header Background */}
-            <div className="absolute top-0 left-0 right-0 h-28 bg-primary clip-header-path"></div>
+            <div className={cn(
+                "absolute top-0 left-0 right-0 bg-primary clip-header-path",
+                isPrint ? "h-[32mm]" : "h-28"
+            )}></div>
             
             <header className="relative z-10 flex flex-col items-center pt-3 pb-1 text-white">
                 {schoolInfo.logoUrl && (
-                    <div className="w-10 h-10 bg-white rounded-full p-0.5 shadow-md mb-1">
+                    <div className={cn(
+                        "bg-white rounded-full p-0.5 shadow-md mb-1",
+                        isPrint ? "w-8 h-8" : "w-10 h-10"
+                    )}>
                         <Image src={schoolInfo.logoUrl} alt="Logo" width={40} height={40} className="object-contain w-full h-full rounded-full" />
                     </div>
                 )}
@@ -64,7 +70,7 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                     <div className="absolute -inset-1 bg-primary/10 rounded-lg blur-[2px]"></div>
                     <div className={cn(
                         "relative border-[1.5px] border-primary bg-white overflow-hidden rounded-md shadow-sm",
-                        isPrint ? "w-20 h-24" : "w-28 h-32"
+                        isPrint ? "w-18 h-22" : "w-28 h-32"
                     )}>
                         <Image 
                             src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} 
@@ -78,22 +84,25 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
 
                 {/* Identity Title */}
                 <div className="bg-primary text-white px-4 py-0.5 rounded-full mb-2 shadow-sm">
-                    <span className="text-[10px] font-black uppercase tracking-widest">পরিচয়পত্র</span>
+                    <span className={cn("font-black uppercase tracking-widest", isPrint ? "text-[8px]" : "text-[10px]")}>পরিচয়পত্র</span>
                 </div>
 
                 {/* Name Section */}
                 <div className="flex flex-col items-center mb-1.5 w-full">
-                    <h2 className={cn("font-black text-primary leading-tight text-center", isPrint ? "text-sm" : "text-lg")}>
+                    <h2 className={cn("font-black text-primary leading-tight text-center", isPrint ? "text-xs" : "text-lg")}>
                         {student.studentNameBn}
                     </h2>
-                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter text-center">
+                    <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center", isPrint ? "text-[6px]" : "text-[8px]")}>
                         {student.studentNameEn || '-'}
                     </p>
                 </div>
 
                 {/* Details Grid */}
                 <div className="w-full border-t border-slate-200 pt-2 space-y-0.5">
-                    <div className="grid grid-cols-[1.5fr_3fr] gap-x-1 text-[11px] font-bold leading-tight">
+                    <div className={cn(
+                        "grid grid-cols-[1.5fr_3fr] gap-x-1 font-bold leading-tight",
+                        isPrint ? "text-[9px]" : "text-[11px]"
+                    )}>
                         <span className="text-slate-500">শ্রেণি</span>
                         <span className="text-slate-900">: {classNamesMap[student.className] || student.className}</span>
                         
@@ -121,8 +130,8 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
 
             {/* Footer / Signature */}
             <footer className="relative z-10 pt-5 pb-2 flex flex-col items-center mt-auto">
-                <div className="w-24 border-t border-black mb-0.5"></div>
-                <p className="text-[9px] font-black text-slate-800">প্রধান শিক্ষকের স্বাক্ষর</p>
+                <div className={cn("border-t border-black mb-0.5", isPrint ? "w-16" : "w-24")}></div>
+                <p className={cn("font-black text-slate-800", isPrint ? "text-[7px]" : "text-[9px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
                 
                 {/* Bottom colored bar */}
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary"></div>
