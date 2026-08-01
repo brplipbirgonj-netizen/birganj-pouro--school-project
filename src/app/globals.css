@@ -68,16 +68,15 @@
       overflow: visible !important;
       margin: 0 !important;
       padding: 0 !important;
-      -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+      -webkit-print-color-adjust: exact !important;
     }
     
-    /* Force images to be visible and print correctly */
-    img {
-      -webkit-print-color-adjust: exact !important;
+    /* Robust image handling for print */
+    img, svg {
       print-color-adjust: exact !important;
+      -webkit-print-color-adjust: exact !important;
       display: block !important;
-      max-width: none !important;
       visibility: visible !important;
       opacity: 1 !important;
     }

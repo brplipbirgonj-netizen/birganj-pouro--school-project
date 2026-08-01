@@ -90,9 +90,13 @@ export const sanitizePhotoUrl = (url: string | undefined | null, gender?: string
     if (!url) return '';
     
     // Check if it's an old random picsum URL (e.g. picsum.photos/seed/1/200/200)
-    // We want to skip URLs that use simple numeric seeds as they are often irrelevant images
-    const oldPicsumRegex = /picsum\.photos\/seed\/\d+/;
-    if (oldPicsumRegex.test(url)) {
+    // Avoid URLs with generic seeds that aren't specific profiles
+    const genericSeeds = ['1', '2', '3', 'student', 'school', '123', 'abc'];
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const pathParts = urlObj.pathname.split('/');
+    const seed = pathParts[3]; // picsum.photos/seed/{seed}/width/height
+
+    if (genericSeeds.includes(seed)) {
         return '';
     }
 
