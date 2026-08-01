@@ -46,7 +46,14 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                         "bg-white rounded-full p-0.5 shadow-md mb-1",
                         isPrint ? "w-9 h-9" : "w-12 h-12"
                     )}>
-                        <Image src={schoolInfo.logoUrl} alt="Logo" width={48} height={48} className="object-contain w-full h-full rounded-full" />
+                        <Image 
+                            src={schoolInfo.logoUrl} 
+                            alt="Logo" 
+                            width={48} 
+                            height={48} 
+                            className="object-contain w-full h-full rounded-full"
+                            unoptimized
+                        />
                     </div>
                 )}
                 <div className="flex flex-col items-center px-1 text-center">
@@ -70,14 +77,14 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                 <div className="relative mb-2">
                     <div className={cn(
                         "relative border-[2px] border-primary bg-white overflow-hidden rounded-md shadow-md",
-                        isPrint ? "w-20 h-26" : "w-28 h-36"
+                        isPrint ? "w-20 h-28" : "w-28 h-36"
                     )}>
                         <Image 
                             src={sanitizedUrl || getStudentPlaceholderImage(student.gender)} 
-                            alt="Photo" 
+                            alt={student.studentNameBn} 
                             fill
-                            priority
                             className="object-cover" 
+                            unoptimized
                             data-ai-hint={isFemale(student.gender) ? "girl face" : "boy face"}
                         />
                     </div>

@@ -78,6 +78,8 @@
       print-color-adjust: exact !important;
       display: block !important;
       max-width: none !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     /* Hide everything on the page first */
