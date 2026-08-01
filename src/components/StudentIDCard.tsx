@@ -39,7 +39,7 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
             {/* Header Section with Curve */}
             <div className={cn(
                 "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 text-white",
-                isPrint ? "h-[28mm]" : "h-[130px]"
+                isPrint ? "h-[32mm]" : "h-[140px]"
             )}>
                 {schoolInfo.logoUrl && (
                     <div className={cn(
@@ -60,8 +60,9 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 )}>
                     {schoolInfo.name}
                 </h1>
+                {/* Address in White inside blue area */}
                 <p className={cn(
-                    "font-bold text-white/90 text-center uppercase tracking-tighter mt-0.5",
+                    "font-bold text-white/90 text-center uppercase tracking-tighter mt-0.5 px-2",
                     isPrint ? "text-[6px]" : "text-[9px]"
                 )}>
                     Upazila: Birganj, Post: Birganj, Zila: Dinajpur
@@ -104,7 +105,7 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                     </div>
                 </div>
 
-                {/* Student Name - Moved up since badge is removed */}
+                {/* Student Name */}
                 <div className="flex flex-col items-center mb-1 w-full mt-1">
                     <h2 className={cn("font-black text-[#2418ff] leading-none text-center", isPrint ? "text-[14px]" : "text-[22px]")}>
                         {student.studentNameBn}
@@ -114,7 +115,7 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                     </p>
                 </div>
 
-                {/* Detailed Information - Moved up and gap reduced */}
+                {/* Detailed Information */}
                 <div className="w-full border-t border-slate-100 pt-1 flex flex-col gap-0.5 font-black">
                     <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
                         <span className="w-20 print:w-16 text-slate-600">শ্রেণি ও রোল</span>
@@ -135,8 +136,8 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 </div>
             </main>
 
-            {/* Footer Signature Section - Now has more space */}
-            <footer className="relative z-10 pb-3 flex flex-col items-center mt-auto">
+            {/* Footer Signature Section - Shifted to Right */}
+            <footer className="relative z-10 pb-3 flex flex-col items-end pr-4 mt-auto">
                 <div className={cn("border-t-2 border-black mb-0.5", isPrint ? "w-24" : "w-44")}></div>
                 <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[14px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
             </footer>
