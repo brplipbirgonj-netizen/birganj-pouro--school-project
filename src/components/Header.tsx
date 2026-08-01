@@ -55,7 +55,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger, 
+  DialogDescription, 
+  DialogFooter 
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { StudentFeeDialog } from './StudentFeeDialog';
@@ -64,6 +72,12 @@ import { getExams, Exam } from '@/lib/exam-data';
 import { ScrollArea } from './ui/scroll-area';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
+
+const toBengaliNumber = (str: string | number) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -291,25 +305,31 @@ export function Header() {
                     </ScrollArea>
                   </div>
                   
-                  <div className="p-2 border-t bg-white shrink-0 mt-auto">
-                    <div className="flex items-center gap-2 mb-1.5 p-1 bg-muted/30 rounded-xl border">
-                        <Avatar className="h-7 w-7 border-2 border-white shadow-sm">
-                            <AvatarImage src={displayPhoto || undefined} />
-                            <AvatarFallback className="font-black text-[9px]">{displayName?.charAt(0) || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 overflow-hidden">
-                            <p className="text-[10px] font-black text-slate-900 truncate">{displayName || 'User'}</p>
-                            <p className="text-[7px] font-bold text-primary italic truncate">
-                                {displayDesignation || (user?.role === 'admin' ? 'এডমিন' : 'শিক্ষক')}
-                            </p>
+                  <div className="p-3 border-t bg-white shrink-0 mt-auto no-print">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <Avatar className="h-9 w-9 border-2 border-primary/10 shadow-sm shrink-0">
+                                <AvatarImage src={displayPhoto || undefined} />
+                                <AvatarFallback className="font-black text-[10px]">{displayName?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-[11px] font-black text-slate-900 truncate leading-tight">{displayName || 'ব্যবহারকারী'}</span>
+                                <span className="text-[9px] font-bold text-primary truncate leading-tight">{displayDesignation || 'শিক্ষক'}</span>
+                            </div>
                         </div>
+                        <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            className="h-8 px-3 font-black text-[10px] shrink-0 shadow-sm" 
+                            onClick={handleLogout}
+                        >
+                            <LogOut className="h-3 w-3 mr-1" />
+                            লগ আউট
+                        </Button>
                     </div>
-                    <Button variant="destructive" className="w-full font-black h-7 rounded-xl text-[10px]" onClick={handleLogout}>
-                      <LogOut className="mr-1 h-2.5 w-2.5" /> লগ আউট
-                    </Button>
-                    <div className="mt-1 text-center">
-                        <p className="text-[7px] font-black text-muted-foreground italic">
-                            {format(new Date(), 'PPP', { locale: bn })} | BPHS Portal
+                    <div className="text-center pt-1 border-t border-dashed">
+                        <p className="text-[9px] font-bold text-muted-foreground leading-relaxed">
+                            © {toBengaliNumber(selectedYear)} {schoolInfo.name}।<br/>সর্বস্বত্ব সংরক্ষিত।
                         </p>
                     </div>
                   </div>
