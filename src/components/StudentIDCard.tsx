@@ -79,12 +79,12 @@ School: ${schoolInfo.name}`;
             </header>
 
             <main className="relative z-10 flex-1 flex flex-col items-center pt-1 px-3">
-                {/* Photo & QR Section */}
-                <div className="flex items-start justify-center gap-3 w-full mb-1">
+                {/* Photo & QR Section - Improved sizing */}
+                <div className="flex items-center justify-center gap-4 w-full mb-2">
                     {/* Student Photo */}
                     <div className={cn(
                         "relative border-[2px] border-primary bg-white overflow-hidden rounded-md shadow-md flex items-center justify-center",
-                        isPrint ? "w-[20mm] h-[25mm]" : "w-24 h-32"
+                        isPrint ? "w-[22mm] h-[28mm]" : "w-28 h-36"
                     )}>
                         <img 
                             src={sanitizedUrl} 
@@ -94,14 +94,14 @@ School: ${schoolInfo.name}`;
                         />
                     </div>
 
-                    {/* QR Code Section */}
+                    {/* QR Code Section - Made larger as requested */}
                     <div className={cn(
-                        "flex flex-col items-center justify-center border-2 border-slate-100 p-1 rounded bg-slate-50 shadow-inner",
-                        isPrint ? "w-[12mm] h-[12mm]" : "w-[60px] h-[60px]"
+                        "flex flex-col items-center justify-center border-[2px] border-primary/20 p-1.5 rounded-lg bg-white shadow-sm",
+                        isPrint ? "w-[18mm] h-[18mm]" : "w-[80px] h-[80px]"
                     )}>
                         <QRCodeCanvas 
                             value={qrData}
-                            size={isPrint ? 40 : 52}
+                            size={isPrint ? 60 : 70}
                             level={"H"}
                             includeMargin={false}
                         />
@@ -109,50 +109,50 @@ School: ${schoolInfo.name}`;
                 </div>
 
                 {/* Identity Title */}
-                <div className="bg-primary text-white px-4 py-0.5 rounded-full mb-1 shadow-sm border border-white/20">
-                    <span className={cn("font-black uppercase tracking-widest", isPrint ? "text-[8px]" : "text-[12px]")}>পরিচয়পত্র</span>
+                <div className="bg-primary text-white px-6 py-0.5 rounded-full mb-2 shadow-sm border border-white/20">
+                    <span className={cn("font-black uppercase tracking-widest", isPrint ? "text-[9px]" : "text-[13px]")}>পরিচয়পত্র</span>
                 </div>
 
                 {/* Name Section */}
                 <div className="flex flex-col items-center mb-1 w-full">
-                    <h2 className={cn("font-black text-primary leading-tight text-center", isPrint ? "text-[11px]" : "text-lg")}>
+                    <h2 className={cn("font-black text-primary leading-tight text-center", isPrint ? "text-[12px]" : "text-xl")}>
                         {student.studentNameBn}
                     </h2>
-                    <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center", isPrint ? "text-[6px]" : "text-[10px]")}>
+                    <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center", isPrint ? "text-[7px]" : "text-[11px]")}>
                         {student.studentNameEn || '-'}
                     </p>
                 </div>
 
-                {/* Details Grid */}
-                <div className="w-full border-t border-slate-200 pt-1 flex flex-col gap-0.5">
-                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[8.5px]" : "text-[12px]")}>
+                {/* Details Grid - Optimized spacing to allow larger QR/Photo */}
+                <div className="w-full border-t-2 border-slate-200 pt-1.5 flex flex-col gap-1">
+                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[9px]" : "text-[13px]")}>
                         <span className="text-slate-500">শ্রেণি</span>
                         <span className="text-slate-900">: {classNamesMap[student.className] || student.className}</span>
                     </div>
 
                     {isHigherClass && student.group && (
-                        <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[8.5px]" : "text-[12px]")}>
+                        <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[9px]" : "text-[13px]")}>
                             <span className="text-slate-500">বিভাগ</span>
                             <span className="text-slate-900">: {groupMapBn[student.group.toLowerCase()] || student.group}</span>
                         </div>
                     )}
 
-                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[8.5px]" : "text-[12px]")}>
+                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[9px]" : "text-[13px]")}>
                         <span className="text-slate-500">রোল</span>
                         <span className="text-slate-900 font-black">: {toBengaliNumber(student.roll)}</span>
                     </div>
 
-                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[8.5px]" : "text-[12px]")}>
+                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[9px]" : "text-[13px]")}>
                         <span className="text-slate-500 text-primary">আইডি</span>
                         <span className="text-primary font-black">: {student.generatedId ? toBengaliNumber(student.generatedId) : '-'}</span>
                     </div>
 
-                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[8.5px]" : "text-[12px]")}>
+                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[9px]" : "text-[13px]")}>
                         <span className="text-slate-500">শিক্ষাবর্ষ</span>
                         <span className="text-slate-900">: {toBengaliNumber(student.academicYear)}</span>
                     </div>
 
-                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[8.5px]" : "text-[12px]")}>
+                    <div className={cn("flex justify-between items-baseline font-bold", isPrint ? "text-[9px]" : "text-[13px]")}>
                         <span className="text-slate-500">মোবাইল নং</span>
                         <span className="text-slate-900">: {toBengaliNumber(student.guardianMobile || '')}</span>
                     </div>
@@ -162,7 +162,7 @@ School: ${schoolInfo.name}`;
             {/* Footer / Signature */}
             <footer className="relative z-10 pt-2 pb-1 flex flex-col items-center mt-auto">
                 <div className={cn("border-t-[1.5px] border-black mb-0.5", isPrint ? "w-16" : "w-32")}></div>
-                <p className={cn("font-black text-slate-800", isPrint ? "text-[7px]" : "text-[11px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
+                <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[12px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
                 
                 {/* Bottom colored bar */}
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary"></div>
