@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2 } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -13,6 +13,7 @@ import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
 import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { getStaff } from '@/lib/staff-data';
+import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
@@ -157,6 +158,8 @@ const NoticeBoard = () => {
     const [notices, setNotices] = useState<Notice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const [aiTopic, setAiTopic] = useState('');
     const isAdmin = user?.role === 'admin';
 
     const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'] });
@@ -178,6 +181,29 @@ const NoticeBoard = () => {
             fetchNotices();
         }
     }, [user, fetchNotices]);
+
+    const handleAiGenerate = async () => {
+      if (!aiTopic.trim()) {
+        toast({ variant: 'destructive', title: 'বিষয় লিখুন', description: 'AI দিয়ে ড্রাফট করতে একটি বিষয় লিখুন।' });
+        return;
+      }
+
+      setIsAiLoading(true);
+      try {
+        const result = await generateNotice({ topic: aiTopic });
+        setNewNotice(prev => ({
+          ...prev,
+          title: result.title,
+          content: result.content
+        }));
+        toast({ title: 'AI ড্রাফট তৈরি হয়েছে', description: 'এখন আপনি এটি এডিট বা পাবলিশ করতে পারেন।' });
+        setAiTopic('');
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'AI ত্রুটি', description: 'দুঃখিত, এই মুহূর্তে ড্রাফট তৈরি করা সম্ভব হচ্ছে না।' });
+      } finally {
+        setIsAiLoading(false);
+      }
+    };
 
     const handleAddNotice = async () => {
         if (!db || !user) return;
@@ -223,41 +249,74 @@ const NoticeBoard = () => {
                         <DialogTrigger asChild>
                             <Button size="sm" variant="outline" className="h-8 bg-white"><Plus className="h-4 w-4" /></Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                            <DialogHeader><DialogTitle>নতুন নোটিশ তৈরি করুন</DialogTitle></DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>শিরোনাম / বিষয়</Label>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2">
+                                <FilePen className="h-5 w-5" /> নতুন নোটিশ তৈরি করুন
+                              </DialogTitle>
+                            </DialogHeader>
+                            
+                            <div className="space-y-6 py-4">
+                                {/* AI Writing Section */}
+                                <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3">
+                                  <div className="flex items-center gap-2 text-indigo-700 font-black text-sm uppercase tracking-wider">
+                                    <Sparkles className="h-4 w-4 animate-bounce" /> AI দিয়ে ড্রাফট করুন (অ্যাডভান্সড)
+                                  </div>
+                                  <div className="flex gap-2">
                                     <Input 
-                                        placeholder="উদা: শীতকালীন ছুটি সংক্রান্ত"
-                                        value={newNotice.title} 
-                                        onChange={e => setNewNotice({...newNotice, title: e.target.value})} 
+                                      placeholder="বিষয় লিখুন (উদা: শীতকালীন ছুটি)" 
+                                      value={aiTopic}
+                                      onChange={e => setAiTopic(e.target.value)}
+                                      className="bg-white border-indigo-200"
                                     />
+                                    <Button 
+                                      onClick={handleAiGenerate} 
+                                      disabled={isAiLoading}
+                                      className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
+                                    >
+                                      {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
+                                  <p className="text-[10px] text-indigo-600 font-bold italic">*** শুধু টপিকটি লিখুন, AI আপনার হয়ে একটি সুন্দর নোটিশ লিখে দেবে।</p>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>ধরণ</Label>
-                                    <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="normal">সাধারণ</SelectItem>
-                                            <SelectItem value="important">গুরুত্বপূর্ণ</SelectItem>
-                                            <SelectItem value="urgent">জরুরি</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                      <Label className="font-bold">শিরোনাম / বিষয়</Label>
+                                      <Input 
+                                          placeholder="উদা: শীতকালীন ছুটি সংক্রান্ত"
+                                          value={newNotice.title} 
+                                          onChange={e => setNewNotice({...newNotice, title: e.target.value})} 
+                                          className="font-bold"
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label className="font-bold">ধরণ (Priority)</Label>
+                                      <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
+                                          <SelectTrigger className="font-bold"><SelectValue /></SelectTrigger>
+                                          <SelectContent>
+                                              <SelectItem value="normal">সাধারণ (Normal)</SelectItem>
+                                              <SelectItem value="important">গুরুত্বপূর্ণ (Important)</SelectItem>
+                                              <SelectItem value="urgent">জরুরি (Urgent)</SelectItem>
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
                                 </div>
+
                                 <div className="space-y-2">
-                                    <Label>বিষয়বস্তু</Label>
+                                    <Label className="font-bold">বিস্তারিত বিষয়বস্তু</Label>
                                     <Textarea 
                                         placeholder="নোটিশের বিস্তারিত লিখুন..."
                                         value={newNotice.content} 
                                         onChange={e => setNewNotice({...newNotice, content: e.target.value})} 
-                                        className="min-h-[150px]" 
+                                        className="min-h-[180px] font-medium leading-relaxed" 
                                     />
                                 </div>
                             </div>
-                            <DialogFooter>
-                                <DialogClose asChild><Button variant="ghost">বাতিল</Button></DialogClose>
-                                <Button onClick={handleAddNotice}>প্রকাশ করুন</Button>
+
+                            <DialogFooter className="border-t pt-4">
+                                <DialogClose asChild><Button variant="ghost" className="font-bold">বাতিল</Button></DialogClose>
+                                <Button onClick={handleAddNotice} className="px-8 font-black shadow-lg">প্রকাশ করুন</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
