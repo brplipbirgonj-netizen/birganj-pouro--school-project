@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -100,13 +100,13 @@ const NoticeTicker = () => {
     if (!latestNotice) return null;
 
     return (
-        <div className="w-full bg-slate-900 text-white h-10 flex items-center overflow-hidden border-b-2 border-primary shadow-lg sticky top-16 md:top-24 z-40 font-kalpurush">
+        <div className="w-full bg-slate-900 text-white h-10 flex items-center overflow-hidden border-b-2 border-primary shadow-lg sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
             <div className="bg-destructive px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-[5px_0_10px_rgba(0,0,0,0.5)]">
                 <Megaphone className="h-4 w-4 animate-bounce" />
                 <span className="font-black text-sm whitespace-nowrap">জরুরি নোটিশ:</span>
             </div>
             <div className="flex-1 relative overflow-hidden h-full flex items-center">
-                <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-20">
+                <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-20 group-hover:pause-animation">
                     <span className="font-bold text-sm tracking-wide">
                         <span className="text-amber-400">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
                     </span>
@@ -122,11 +122,11 @@ const NoticeTicker = () => {
                     100% { transform: translateX(-50%); }
                 }
                 .animate-marquee {
-                    animation: marquee 30s linear infinite;
+                    animation: marquee 35s linear infinite;
                     display: inline-flex;
                     width: max-content;
                 }
-                .animate-marquee:hover {
+                .pause-animation {
                     animation-play-state: paused;
                 }
             `}</style>
@@ -310,83 +310,88 @@ const NoticeBoard = () => {
                     <Bell className="h-5 w-5 text-primary animate-pulse" />
                     <CardTitle className="text-lg">নোটিশ বোর্ড</CardTitle>
                 </div>
-                {isAdmin && (
-                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                        <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="h-8 bg-white"><Plus className="h-4 w-4" /></Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle className="flex items-center gap-2">
-                                <FilePen className="h-5 w-5" /> নতুন নোটিশ তৈরি করুন
-                              </DialogTitle>
-                            </DialogHeader>
-                            
-                            <div className="space-y-6 py-4">
-                                {/* AI Writing Section */}
-                                <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3">
-                                  <div className="flex items-center gap-2 text-indigo-700 font-black text-sm uppercase tracking-wider">
-                                    <Sparkles className="h-4 w-4 animate-bounce" /> AI দিয়ে ড্রাফট করুন (অ্যাডভান্সড)
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Input 
-                                      placeholder="বিষয় লিখুন (উদা: শীতকালীন ছুটি)" 
-                                      value={aiTopic}
-                                      onChange={e => setAiTopic(e.target.value)}
-                                      className="bg-white border-indigo-200"
-                                    />
-                                    <Button 
-                                      onClick={handleAiGenerate} 
-                                      disabled={isAiLoading}
-                                      className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
-                                    >
-                                      {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                    </Button>
-                                  </div>
-                                  <p className="text-[10px] text-indigo-600 font-bold italic">*** শুধু টপিকটি লিখুন, AI আপনার হয়ে একটি সুন্দর নোটিশ লিখে দেবে।</p>
+                <div className="flex items-center gap-2">
+                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={fetchNotices}>
+                        <RefreshCcw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                   </Button>
+                    {isAdmin && (
+                        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 bg-white"><Plus className="h-4 w-4" /></Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <FilePen className="h-5 w-5" /> নতুন নোটিশ তৈরি করুন
+                                </DialogTitle>
+                                </DialogHeader>
+                                
+                                <div className="space-y-6 py-4">
+                                    {/* AI Writing Section */}
+                                    <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3">
+                                    <div className="flex items-center gap-2 text-indigo-700 font-black text-sm uppercase tracking-wider">
+                                        <Sparkles className="h-4 w-4 animate-bounce" /> AI দিয়ে ড্রাফট করুন (অ্যাডভান্সড)
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Input 
+                                        placeholder="বিষয় লিখুন (উদা: শীতকালীন ছুটি)" 
+                                        value={aiTopic}
+                                        onChange={e => setAiTopic(e.target.value)}
+                                        className="bg-white border-indigo-200"
+                                        />
+                                        <Button 
+                                        onClick={handleAiGenerate} 
+                                        disabled={isAiLoading}
+                                        className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
+                                        >
+                                        {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                    <p className="text-[10px] text-indigo-600 font-bold italic">*** শুধু টপিকটি লিখুন, AI আপনার হয়ে একটি সুন্দর নোটিশ লিখে দেবে।</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">শিরোনাম / বিষয়</Label>
+                                        <Input 
+                                            placeholder="উদা: শীতকালীন ছুটি সংক্রান্ত"
+                                            value={newNotice.title} 
+                                            onChange={e => setNewNotice({...newNotice, title: e.target.value})} 
+                                            className="font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">ধরণ (Priority)</Label>
+                                        <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
+                                            <SelectTrigger className="font-bold"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="normal">সাধারণ (Normal)</SelectItem>
+                                                <SelectItem value="important">গুরুত্বপূর্ণ (Important)</SelectItem>
+                                                <SelectItem value="urgent">জরুরি (Urgent)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">বিস্তারিত বিষয়বস্তু</Label>
+                                        <Textarea 
+                                            placeholder="নোটিশের বিস্তারিত লিখুন..."
+                                            value={newNotice.content} 
+                                            onChange={e => setNewNotice({...newNotice, content: e.target.value})} 
+                                            className="min-h-[180px] font-medium leading-relaxed" 
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                      <Label className="font-bold">শিরোনাম / বিষয়</Label>
-                                      <Input 
-                                          placeholder="উদা: শীতকালীন ছুটি সংক্রান্ত"
-                                          value={newNotice.title} 
-                                          onChange={e => setNewNotice({...newNotice, title: e.target.value})} 
-                                          className="font-bold"
-                                      />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label className="font-bold">ধরণ (Priority)</Label>
-                                      <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
-                                          <SelectTrigger className="font-bold"><SelectValue /></SelectTrigger>
-                                          <SelectContent>
-                                              <SelectItem value="normal">সাধারণ (Normal)</SelectItem>
-                                              <SelectItem value="important">গুরুত্বপূর্ণ (Important)</SelectItem>
-                                              <SelectItem value="urgent">জরুরি (Urgent)</SelectItem>
-                                          </SelectContent>
-                                      </Select>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="font-bold">বিস্তারিত বিষয়বস্তু</Label>
-                                    <Textarea 
-                                        placeholder="নোটিশের বিস্তারিত লিখুন..."
-                                        value={newNotice.content} 
-                                        onChange={e => setNewNotice({...newNotice, content: e.target.value})} 
-                                        className="min-h-[180px] font-medium leading-relaxed" 
-                                    />
-                                </div>
-                            </div>
-
-                            <DialogFooter className="border-t pt-4">
-                                <DialogClose asChild><Button variant="ghost" className="font-bold">বাতিল</Button></DialogClose>
-                                <Button onClick={handleAddNotice} className="px-8 font-black shadow-lg">প্রকাশ করুন</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                )}
+                                <DialogFooter className="border-t pt-4">
+                                    <DialogClose asChild><Button variant="ghost" className="font-bold">বাতিল</Button></DialogClose>
+                                    <Button onClick={handleAddNotice} className="px-8 font-black shadow-lg">প্রকাশ করুন</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </div>
             </CardHeader>
             <CardContent className="p-4">
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin">
@@ -601,7 +606,7 @@ const LiveRoutineCard = () => {
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
                 </CardTitle>
-                 <Badge variant="outline" className="flex items-center gap-2 bg-white">
+                 <Badge variant="outline" className="flex items-center gap-2 bg-white shadow-sm">
                     <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -883,14 +888,15 @@ export default function Home() {
 
   if (authLoading || !user) {
     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-sky-100">
-          <p>লোড হচ্ছে...</p>
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-sky-100 font-kalpurush">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+          <p className="font-bold">লোড হচ্ছে...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-sky-100">
+    <div className="flex min-h-screen w-full flex-col bg-sky-100 font-kalpurush">
       <Header />
       <NoticeTicker />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">

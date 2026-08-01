@@ -12,7 +12,7 @@ import { getAdmissionApplications, approveAndEnrollStudent, deleteApplication, A
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, CheckCircle, XCircle, Trash2, Loader2, Phone, Calendar, UserPlus, Filter, MapPin, User, Users, GraduationCap, FileText, MessageCircle, MessageSquareDashed } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Trash2, Loader2, Phone, Calendar, UserPlus, Filter, MapPin, User, Users, GraduationCap, FileText, MessageCircle, MessageSquareDashed, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -46,18 +46,19 @@ export default function AdmissionsManagementPage() {
         setIsMounted(true);
     }, []);
 
-    const fetchApplications = useCallback(async () => {
+    const fetchApplications = useCallback(async (showToast = false) => {
         if (!db || !user || !canManageAdmissions) return;
         setIsLoading(true);
         try {
             const data = await getAdmissionApplications(db);
             setApplications(data);
+            if (showToast) toast({ title: 'আপডেট সম্পন্ন', description: 'নতুন আবেদনগুলো লোড করা হয়েছে।' });
         } catch (e) {
             console.error("Fetch Applications Error:", e);
         } finally {
             setIsLoading(false);
         }
-    }, [db, user, canManageAdmissions]);
+    }, [db, user, canManageAdmissions, toast]);
 
     useEffect(() => {
         if (isMounted && !authLoading) {
@@ -172,15 +173,27 @@ export default function AdmissionsManagementPage() {
                                 <CardTitle className="text-3xl font-black text-primary flex items-center gap-2"><UserPlus className="h-8 w-8" /> অনলাইন ভর্তি আবেদনসমূহ</CardTitle>
                                 <CardDescription>নতুন আবেদনগুলো যাচাই করে ভর্তি নিশ্চিত করুন</CardDescription>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Filter className="h-4 w-4 text-muted-foreground" />
-                                <Select value={filterClass} onValueChange={setFilterClass}>
-                                    <SelectTrigger className="w-40 bg-white shadow-sm font-bold"><SelectValue placeholder="শ্রেণি ফিল্টার" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">সকল আবেদন</SelectItem>
-                                        {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                            <div className="flex items-center gap-3">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="bg-white shadow-sm font-bold gap-2"
+                                    onClick={() => fetchApplications(true)}
+                                    disabled={isLoading}
+                                >
+                                    <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                                    রিফ্রেশ
+                                </Button>
+                                <div className="flex items-center gap-2 border-l pl-3">
+                                    <Filter className="h-4 w-4 text-muted-foreground" />
+                                    <Select value={filterClass} onValueChange={setFilterClass}>
+                                        <SelectTrigger className="w-40 bg-white shadow-sm font-bold"><SelectValue placeholder="শ্রেণি ফিল্টার" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">সকল আবেদন</SelectItem>
+                                            {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
                     </CardHeader>
