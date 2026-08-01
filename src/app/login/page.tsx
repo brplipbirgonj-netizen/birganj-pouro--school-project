@@ -121,7 +121,7 @@ export default function LoginPage() {
             <Card className="w-full max-w-md shadow-2xl border-none">
                 <CardHeader className="bg-primary/5 border-b text-center">
                     <CardTitle className="text-xl">প্রবেশ করুন</CardTitle>
-                    <CardDescription className="font-bold">সিস্টেম ব্যবহারের জন্য আপনার ক্রেডেনশিয়াল দিন</CardDescription>
+                    <CardDescription className="font-bold">সিস্টেম ব্যবহারের জন্য আপনার ইমেইল ও পাসওয়ার্ড দিন</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
                     <Tabs defaultValue="teacher-login">
