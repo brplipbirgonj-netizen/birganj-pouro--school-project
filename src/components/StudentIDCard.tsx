@@ -27,53 +27,53 @@ const groupMapBn: Record<string, string> = {
 
 export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentIDCardProps) => {
     const isHigherClass = parseInt(student.className) >= 9;
+    const sanitizedUrl = sanitizePhotoUrl(student.photoUrl, student.gender);
     
     return (
         <div className={cn(
-            "student-id-card font-kalpurush flex flex-col border-[1.5px] border-primary overflow-hidden bg-white relative",
+            "student-id-card font-kalpurush flex flex-col border-[2px] border-primary overflow-hidden bg-white relative box-border",
             isPrint ? "w-[54mm] h-[86mm]" : "w-[260px] h-[410px] shadow-2xl rounded-xl"
         )}>
             {/* Design Header Background */}
             <div className={cn(
                 "absolute top-0 left-0 right-0 bg-primary clip-header-path",
-                isPrint ? "h-[32mm]" : "h-28"
+                isPrint ? "h-[35mm]" : "h-32"
             )}></div>
             
             <header className="relative z-10 flex flex-col items-center pt-3 pb-1 text-white">
                 {schoolInfo.logoUrl && (
                     <div className={cn(
                         "bg-white rounded-full p-0.5 shadow-md mb-1",
-                        isPrint ? "w-8 h-8" : "w-10 h-10"
+                        isPrint ? "w-9 h-9" : "w-12 h-12"
                     )}>
-                        <Image src={schoolInfo.logoUrl} alt="Logo" width={40} height={40} className="object-contain w-full h-full rounded-full" />
+                        <Image src={schoolInfo.logoUrl} alt="Logo" width={48} height={48} className="object-contain w-full h-full rounded-full" />
                     </div>
                 )}
                 <div className="flex flex-col items-center px-1 text-center">
                     <h1 className={cn(
                         "font-black leading-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]",
-                        isPrint ? "text-[10px]" : "text-[14px]"
+                        isPrint ? "text-[11px]" : "text-[16px]"
                     )}>
                         {schoolInfo.name}
                     </h1>
                     <p className={cn(
                         "font-bold opacity-100 text-white/90",
-                        isPrint ? "text-[6px]" : "text-[8px]"
+                        isPrint ? "text-[7px]" : "text-[9px]"
                     )}>
                         {schoolInfo.address}
                     </p>
                 </div>
             </header>
 
-            <main className="relative z-10 flex-1 flex flex-col items-center pt-2 px-3">
+            <main className="relative z-10 flex-1 flex flex-col items-center pt-1.5 px-3">
                 {/* Photo Section */}
                 <div className="relative mb-2">
-                    <div className="absolute -inset-1 bg-primary/10 rounded-lg blur-[2px]"></div>
                     <div className={cn(
-                        "relative border-[1.5px] border-primary bg-white overflow-hidden rounded-md shadow-sm",
-                        isPrint ? "w-20 h-28" : "w-28 h-32"
+                        "relative border-[2px] border-primary bg-white overflow-hidden rounded-md shadow-md",
+                        isPrint ? "w-20 h-26" : "w-28 h-36"
                     )}>
                         <Image 
-                            src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} 
+                            src={sanitizedUrl || getStudentPlaceholderImage(student.gender)} 
                             alt="Photo" 
                             fill
                             priority
@@ -84,16 +84,16 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                 </div>
 
                 {/* Identity Title */}
-                <div className="bg-primary text-white px-4 py-0.5 rounded-full mb-2 shadow-sm">
-                    <span className={cn("font-black uppercase tracking-widest", isPrint ? "text-[8px]" : "text-[10px]")}>পরিচয়পত্র</span>
+                <div className="bg-primary text-white px-5 py-0.5 rounded-full mb-2 shadow-sm border border-white/20">
+                    <span className={cn("font-black uppercase tracking-widest", isPrint ? "text-[9px]" : "text-[12px]")}>পরিচয়পত্র</span>
                 </div>
 
                 {/* Name Section */}
-                <div className="flex flex-col items-center mb-1.5 w-full">
-                    <h2 className={cn("font-black text-primary leading-tight text-center", isPrint ? "text-xs" : "text-lg")}>
+                <div className="flex flex-col items-center mb-2 w-full">
+                    <h2 className={cn("font-black text-primary leading-tight text-center", isPrint ? "text-[13px]" : "text-xl")}>
                         {student.studentNameBn}
                     </h2>
-                    <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center", isPrint ? "text-[6px]" : "text-[8px]")}>
+                    <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center mt-0.5", isPrint ? "text-[7px]" : "text-[10px]")}>
                         {student.studentNameEn || '-'}
                     </p>
                 </div>
@@ -101,8 +101,8 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                 {/* Details Grid */}
                 <div className="w-full border-t border-slate-200 pt-2 space-y-0.5">
                     <div className={cn(
-                        "grid grid-cols-[1.5fr_3fr] gap-x-1 font-bold leading-tight",
-                        isPrint ? "text-[9px]" : "text-[11px]"
+                        "grid grid-cols-[1.8fr_3fr] gap-x-1 font-bold leading-tight items-baseline",
+                        isPrint ? "text-[10px]" : "text-[13px]"
                     )}>
                         <span className="text-slate-500">শ্রেণি</span>
                         <span className="text-slate-900">: {classNamesMap[student.className] || student.className}</span>
@@ -115,7 +115,7 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                         )}
 
                         <span className="text-slate-500">রোল</span>
-                        <span className="text-slate-900">: {toBengaliNumber(student.roll)}</span>
+                        <span className="text-slate-900 font-black">: {toBengaliNumber(student.roll)}</span>
                         
                         <span className="text-slate-500">আইডি</span>
                         <span className="text-slate-900 font-black text-primary">: {student.generatedId ? toBengaliNumber(student.generatedId) : '-'}</span>
@@ -123,24 +123,28 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                         <span className="text-slate-500">শিক্ষাবর্ষ</span>
                         <span className="text-slate-900">: {toBengaliNumber(student.academicYear)}</span>
 
-                        <span className="text-slate-500">মোবাইল</span>
+                        <span className="text-slate-500">মোবাইল নং</span>
                         <span className="text-slate-900">: {toBengaliNumber(student.guardianMobile || '')}</span>
                     </div>
                 </div>
             </main>
 
             {/* Footer / Signature */}
-            <footer className="relative z-10 pt-5 pb-2 flex flex-col items-center mt-auto">
-                <div className={cn("border-t border-black mb-0.5", isPrint ? "w-16" : "w-24")}></div>
-                <p className={cn("font-black text-slate-800", isPrint ? "text-[7px]" : "text-[9px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
+            <footer className="relative z-10 pt-4 pb-2 flex flex-col items-center mt-auto">
+                <div className={cn("border-t-[1.5px] border-black mb-0.5", isPrint ? "w-20" : "w-32")}></div>
+                <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[11px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
                 
                 {/* Bottom colored bar */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-primary"></div>
             </footer>
 
             <style jsx>{`
                 .clip-header-path {
                     clip-path: ellipse(120% 70% at 50% 0%);
+                }
+                .student-id-card {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
                 }
             `}</style>
         </div>

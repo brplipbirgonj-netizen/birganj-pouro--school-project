@@ -83,14 +83,14 @@ export const getStudentPlaceholderImage = (gender?: string) => {
 };
 
 /**
- * Sanitizes the photoUrl. If it's an old random placeholder (like a staircase),
+ * Sanitizes the photoUrl. If it's an old random placeholder (like a staircase or landscape),
  * it returns empty so the UI can use the correct gender-based face.
  */
 export const sanitizePhotoUrl = (url: string | undefined | null, gender?: string): string => {
     if (!url) return '';
     
-    // Check if it's an old random picsum URL (like https://picsum.photos/seed/1/200/200)
-    // We want to skip URLs that use numeric seeds as they are often irrelevant images
+    // Check if it's an old random picsum URL (e.g. picsum.photos/seed/1/200/200)
+    // We want to skip URLs that use simple numeric seeds as they are often irrelevant images
     const oldPicsumRegex = /picsum\.photos\/seed\/\d+/;
     if (oldPicsumRegex.test(url)) {
         return '';
