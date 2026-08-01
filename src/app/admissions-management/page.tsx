@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -28,6 +27,7 @@ export default function AdmissionsManagementPage() {
     const { user, hasPermission, loading: authLoading } = useAuth();
     const { toast } = useToast();
     
+    const [isMounted, setIsMounted] = useState(false);
     const [applications, setApplications] = useState<AdmissionApplication[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedApp, setSelectedUser] = useState<AdmissionApplication | null>(null);
@@ -37,6 +37,10 @@ export default function AdmissionsManagementPage() {
     const [filterClass, setFilterClass] = useState<string>('all');
 
     const canManageAdmissions = hasPermission('manage:admissions');
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const fetchApplications = useCallback(async () => {
         if (!db || !user || !canManageAdmissions) return;
@@ -51,12 +55,12 @@ export default function AdmissionsManagementPage() {
     }, [db, user, canManageAdmissions]);
 
     useEffect(() => {
-        if (!authLoading && db && user && canManageAdmissions) {
+        if (isMounted && !authLoading && db && user && canManageAdmissions) {
             fetchApplications();
-        } else if (!authLoading && (!user || !canManageAdmissions)) {
+        } else if (isMounted && !authLoading && (!user || !canManageAdmissions)) {
             setIsLoading(false);
         }
-    }, [db, user, authLoading, canManageAdmissions, fetchApplications]);
+    }, [db, user, authLoading, canManageAdmissions, fetchApplications, isMounted]);
 
     const filteredApps = useMemo(() => {
         if (filterClass === 'all') return applications;
@@ -89,7 +93,7 @@ export default function AdmissionsManagementPage() {
         } catch (e) {}
     };
 
-    if (authLoading) {
+    if (!isMounted || authLoading) {
         return (
             <div className="min-h-screen bg-slate-100 flex items-center justify-center font-kalpurush">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />

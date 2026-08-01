@@ -56,11 +56,16 @@ export default function AdmissionPortalPage() {
     const db = useFirestore();
     const { schoolInfo } = useSchoolInfo();
     
+    const [isMounted, setIsMounted] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [student, setStudent] = useState<NewAdmissionData>(initialStudentState);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const handleInputChange = (field: keyof NewAdmissionData, value: string | Date | undefined) => {
         setStudent(prev => ({...prev, [field]: value}));
@@ -100,6 +105,14 @@ export default function AdmissionPortalPage() {
             setIsLoading(false);
         }
     };
+
+    if (!isMounted) {
+        return (
+            <div className="min-h-screen bg-indigo-50 flex items-center justify-center font-kalpurush">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     if (isSuccess) {
         return (
