@@ -59,6 +59,7 @@ import { Input } from '@/components/ui/input';
 import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { StudentFeeDialog } from './StudentFeeDialog';
 import { cn } from '@/lib/utils';
+import { getExams, Exam } from '@/lib/exam-data';
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -72,6 +73,7 @@ export function Header() {
   const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
   const { user, loading: authLoading, hasPermission } = useAuth();
   const db = useFirestore();
+  
   const [displayPhoto, setDisplayPhoto] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
 
@@ -84,6 +86,9 @@ export function Header() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
   const [feeDialogOpen, setFeeDialogOpen] = useState(false);
+  
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [selectedExamForMarksheet, setSelectedExamForMarksheet] = useState<string>('বার্ষিক পরীক্ষা');
 
   useEffect(() => {
     setIsClient(true);
@@ -123,6 +128,20 @@ export function Header() {
       }
     };
   }, [user, db]);
+
+  // Fetch exams for marksheet selection
+  useEffect(() => {
+    if (db && selectedYear && user) {
+        getExams(db, selectedYear).then(data => {
+            setExams(data);
+            if (data.length > 0) {
+                const annual = data.find(e => e.name.includes('বার্ষিক'));
+                if (annual) setSelectedExamForMarksheet(annual.name);
+                else setSelectedExamForMarksheet(data[0].name);
+            }
+        });
+    }
+  }, [db, selectedYear, user]);
 
   const handleLogout = async () => {
     try {
@@ -402,82 +421,105 @@ export function Header() {
         
         <div className="flex items-center gap-2 sm:gap-4">
           <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                       <div className="flex items-center gap-4 mb-4">
-                          <Avatar className="h-16 w-16 border-2 border-primary/20">
+                          <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-sm">
                               <AvatarImage src={sanitizePhotoUrl(selectedStudent?.photoUrl, selectedStudent?.gender) || (selectedStudent ? getStudentPlaceholderImage(selectedStudent.gender) : undefined)} />
                               <AvatarFallback>{selectedStudent?.studentNameBn?.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                              <DialogTitle className="text-xl">{selectedStudent?.studentNameBn}</DialogTitle>
-                              <DialogDescription>
+                              <DialogTitle className="text-xl font-black">{selectedStudent?.studentNameBn}</DialogTitle>
+                              <DialogDescription className="font-bold">
                                   রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | {classNamesMap[selectedStudent?.className || ''] || selectedStudent?.className} শ্রেণি | শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}
                               </DialogDescription>
                           </div>
                       </div>
                   </DialogHeader>
-                  <div className="grid grid-cols-1 gap-3 py-4">
-                      <Button 
-                          variant="outline" 
-                          className="justify-start h-12 text-md font-medium bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900"
-                          onClick={() => {
-                              setActionsDialogOpen(false);
-                              router.push(`/student-list?class=${selectedStudent?.className}&studentId=${selectedStudent?.id}`);
-                          }}
-                      >
-                          <Users className="mr-3 h-5 w-5 text-rose-600" /> বিস্তারিত প্রোফাইল
-                      </Button>
-                      <Button 
-                          variant="outline" 
-                          className="justify-start h-12 text-md font-medium bg-teal-50 hover:bg-teal-100 border-teal-200 text-teal-900"
-                          onClick={() => {
-                              setActionsDialogOpen(false);
-                              setFeeDialogOpen(true);
-                          }}
-                      >
-                          <Banknote className="mr-3 h-5 w-5 text-teal-600" /> বেতন আদায় করুন
-                      </Button>
-                      <Button 
-                          variant="outline" 
-                          className="justify-start h-12 text-md font-medium bg-fuchsia-50 hover:bg-fuchsia-100 border-fuchsia-200 text-fuchsia-900"
-                          onClick={() => {
-                              setActionsDialogOpen(false);
-                              router.push(`/documents/admit-card/${selectedStudent?.id}`);
-                          }}
-                      >
-                          <IdCard className="mr-3 h-5 w-5 text-fuchsia-600" /> প্রবেশ পত্র (একক)
-                      </Button>
-                      <Button 
-                          variant="outline" 
-                          className="justify-start h-12 text-md font-medium bg-violet-50 hover:bg-violet-100 border-violet-200 text-violet-900"
-                          onClick={() => {
-                              setActionsDialogOpen(false);
-                              window.open(`/marksheet/${selectedStudent?.id}?academicYear=${selectedYear}`, '_blank');
-                          }}
-                      >
-                          <BookOpen className="mr-3 h-5 w-5 text-violet-600" /> ফলাফল (মার্কশিট)
-                      </Button>
-                      <Button 
-                          variant="outline" 
-                          className="justify-start h-12 text-md font-medium bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900"
-                          onClick={() => {
-                              setActionsDialogOpen(false);
-                              window.open(`/documents/testimonial/${selectedStudent?.id}`, '_blank');
-                          }}
-                      >
-                          <FileBadge className="mr-3 h-5 w-5 text-slate-600" /> প্রত্যয়ন পত্র
-                      </Button>
-                      <Button 
-                          variant="outline" 
-                          className="justify-start h-12 text-md font-medium bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
-                          onClick={() => {
-                              setActionsDialogOpen(false);
-                              router.push(`/student-profile?roll=${selectedStudent?.roll}&class=${selectedStudent?.className}`);
-                          }}
-                      >
-                          <PieChart className="mr-3 h-5 w-5 text-indigo-600" /> হাজিরা ও পরিসংখ্যান
-                      </Button>
+                  <div className="grid grid-cols-1 gap-3 py-2">
+                      <div className="p-4 bg-muted/30 rounded-lg space-y-3 mb-2 border-2 border-dashed border-primary/20">
+                          <Label className="font-black text-primary text-xs uppercase tracking-wider flex items-center gap-1">
+                              <BookMarked className="h-3 w-3" /> মার্কশিট এর জন্য পরীক্ষা নির্বাচন করুন:
+                          </Label>
+                          <Select value={selectedExamForMarksheet} onValueChange={setSelectedExamForMarksheet}>
+                              <SelectTrigger className="bg-white font-black"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                  {exams.map(e => <SelectItem key={e.id} value={e.name} className="font-bold">{e.name}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          <Button 
+                              variant="default" 
+                              className="w-full h-11 text-md font-black shadow-lg bg-violet-600 hover:bg-violet-700"
+                              onClick={() => {
+                                  window.open(`/marksheet/${selectedStudent?.id}?academicYear=${selectedYear}&examName=${encodeURIComponent(selectedExamForMarksheet)}`, '_blank');
+                              }}
+                          >
+                              <BookOpen className="mr-3 h-5 w-5" /> ফলাফল (মার্কশিট) দেখুন
+                          </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                          <Button 
+                              variant="outline" 
+                              className="justify-start h-12 text-xs font-bold bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900"
+                              onClick={() => {
+                                  setActionsDialogOpen(false);
+                                  router.push(`/student-list?class=${selectedStudent?.className}&studentId=${selectedStudent?.id}`);
+                              }}
+                          >
+                              <Users className="mr-2 h-4 w-4 text-rose-600" /> প্রোফাইল দেখুন
+                          </Button>
+                          <Button 
+                              variant="outline" 
+                              className="justify-start h-12 text-xs font-bold bg-teal-50 hover:bg-teal-100 border-teal-200 text-teal-900"
+                              onClick={() => {
+                                  setActionsDialogOpen(false);
+                                  setFeeDialogOpen(true);
+                              }}
+                          >
+                              <Banknote className="mr-2 h-4 w-4 text-teal-600" /> বেতন আদায়
+                          </Button>
+                          <Button 
+                              variant="outline" 
+                              className="justify-start h-12 text-xs font-bold bg-fuchsia-50 hover:bg-fuchsia-100 border-fuchsia-200 text-fuchsia-900"
+                              onClick={() => {
+                                  setActionsDialogOpen(false);
+                                  router.push(`/documents/admit-card/${selectedStudent?.id}`);
+                              }}
+                          >
+                              <IdCard className="mr-2 h-4 w-4 text-fuchsia-600" /> প্রবেশ পত্র
+                          </Button>
+                          <Button 
+                              variant="outline" 
+                              className="justify-start h-12 text-xs font-bold bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900"
+                              onClick={() => {
+                                  setActionsDialogOpen(false);
+                                  window.open(`/documents/testimonial/${selectedStudent?.id}`, '_blank');
+                              }}
+                          >
+                              <FileBadge className="mr-2 h-4 w-4 text-slate-600" /> প্রত্যয়ন পত্র
+                          </Button>
+                          <Button 
+                              variant="outline" 
+                              className="justify-start h-12 text-xs font-bold bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900"
+                              onClick={() => {
+                                  setActionsDialogOpen(false);
+                                  router.push(`/documents/tc/${selectedStudent?.id}`);
+                              }}
+                          >
+                              <FileText className="mr-2 h-4 w-4 text-amber-600" /> ছাড়পত্র (TC)
+                          </Button>
+                          <Button 
+                              variant="outline" 
+                              className="justify-start h-12 text-xs font-bold bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
+                              onClick={() => {
+                                  setActionsDialogOpen(false);
+                                  router.push(`/student-profile?roll=${selectedStudent?.roll}&class=${selectedStudent?.className}`);
+                              }}
+                          >
+                              <PieChart className="mr-2 h-4 w-4 text-indigo-600" /> হাজিরা রিপোর্ট
+                          </Button>
+                      </div>
                   </div>
               </DialogContent>
           </Dialog>
