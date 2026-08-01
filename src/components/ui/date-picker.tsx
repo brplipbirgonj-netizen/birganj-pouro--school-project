@@ -84,21 +84,21 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 shadow-2xl">
-        <div className="bg-primary text-primary-foreground p-3 rounded-t-lg">
+        <div className="bg-primary text-primary-foreground p-2 rounded-t-lg">
           <div 
-            className="text-xs cursor-pointer hover:underline"
+            className="text-[10px] cursor-pointer hover:underline opacity-80"
             onClick={() => setView(view === 'years' ? 'days' : 'years')}
           >
             {format(headerDate, "yyyy", { locale: bn })}
           </div>
           <div 
-            className="text-xl font-bold cursor-pointer hover:underline"
+            className="text-lg font-bold cursor-pointer hover:underline"
             onClick={() => setView(view === 'months' ? 'days' : 'months')}
           >
             {format(headerDate, "eeee, d MMMM", { locale: bn })}
           </div>
         </div>
-        <div className="p-2">
+        <div className="p-1.5">
           {view === 'days' ? (
               <DayPicker
                 mode="single"
@@ -151,7 +151,7 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                         >
                         <SelectTrigger className="h-8 text-xs truncate">{selected?.props.children}</SelectTrigger>
                         <SelectContent>
-                            <ScrollArea className="h-48">
+                            <ScrollArea className="h-40">
                             {options.map((option, i) => (
                                 <SelectItem
                                 key={`${option.props.value}-${i}`}
@@ -168,7 +168,7 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                 }}
               />
             ) : view === 'months' ? (
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[160px]">
                 <div className="grid grid-cols-3 gap-1">
                   {months.map((monthName, index) => (
                     <Button
@@ -188,7 +188,7 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                 </div>
               </ScrollArea>
             ) : (
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[160px]">
                 <div className="grid grid-cols-3 gap-1">
                   {years.map((year) => (
                     <Button
@@ -211,9 +211,9 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
           }
         </div>
         <div className="flex justify-end gap-2 p-2 border-t">
-          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={handleClear}>মুছুন</Button>
-          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={handleCancel}>বাতিল</Button>
-          <Button size="sm" className="h-8 text-xs px-4" onClick={handleSet}>সেট</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={handleClear}>মুছুন</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={handleCancel}>বাতিল</Button>
+          <Button size="sm" className="h-7 text-[10px] px-4" onClick={handleSet}>সেট</Button>
         </div>
       </PopoverContent>
     </Popover>
