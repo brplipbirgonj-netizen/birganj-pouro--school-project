@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, FilePlus, IdCard, FileText, FileBadge, Award } from 'lucide-react';
+import { ArrowRight, FilePlus, IdCard, FileText, FileBadge, Award, Grid3X3 } from 'lucide-react';
 
 export default function DocumentsPage() {
   return (
@@ -33,6 +33,29 @@ export default function DocumentsPage() {
                  <CardFooter>
                     <Link href="/documents/admit-card" className="w-full">
                         <Button className="w-full font-bold">
+                            জেনারেট করুন
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            </Card>
+
+            {/* Seat Plan Card */}
+            <Card className="border-2 border-indigo-100 hover:border-indigo-300 transition-all shadow-md">
+                <CardHeader className="bg-indigo-50">
+                    <CardTitle className="flex items-center gap-2 text-indigo-800">
+                        <Grid3X3 className="h-6 w-6" /> আসন বিন্যাস (Seat Plan)
+                    </CardTitle>
+                    <CardDescription>বেঞ্চে লাগানোর জন্য সিট লেবেল</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                        রোল নম্বর অনুযায়ী পরীক্ষার রুম এবং বেঞ্চের বিন্যাস স্বয়ংক্রিয়ভাবে তৈরি ও প্রিন্ট করার সুবিধা।
+                   </p>
+                </CardContent>
+                 <CardFooter>
+                    <Link href="/documents/seat-plan" className="w-full">
+                        <Button className="w-full bg-indigo-700 hover:bg-indigo-800 font-bold">
                             জেনারেট করুন
                             <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
