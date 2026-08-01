@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -11,7 +12,7 @@ import { Printer, Loader2, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, FirestoreError } from 'firebase/firestore';
+import { collection, onSnapshot, query, getDocs, where, limit, doc, getDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,7 +49,7 @@ function MarksheetContent() {
     const { schoolInfo } = useSchoolInfo();
 
     const [student, setStudent] = useState<Student | null>(null);
-    const [allStudents, setAllStudents] = useState<Student[]>([]);
+    const [allStudentsInClass, setAllStudentsInClass] = useState<Student[]>([]);
     const [resultsBySubject, setResultsBySubject] = useState<ClassResult[]>([]);
     const [processedResult, setProcessedResult] = useState<StudentProcessedResult | null>(null);
     const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -59,93 +60,73 @@ function MarksheetContent() {
     const displayExamName = examNameEnglishMap[rawExamName] || rawExamName;
 
     useEffect(() => {
-      if (!db || !user) return;
-      const studentsQuery = query(collection(db, "students"));
-      const unsubscribe = onSnapshot(studentsQuery, (querySnapshot) => {
-        const studentsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          dob: doc.data().dob?.toDate(),
-        })) as Student[];
-        setAllStudents(studentsData);
-      }, async (error: FirestoreError) => {
-          if (error.code === 'permission-denied') return;
-          const permissionError = new FirestorePermissionError({
-            path: 'students',
-            operation: 'list',
-          });
-          errorEmitter.emit('permission-error', permissionError);
-      });
-      return () => unsubscribe();
-    }, [db, user]);
+        const fetchAllData = async () => {
+            if (!db || !studentId) return;
 
-
-    useEffect(() => {
-        const processMarks = async () => {
-            if (!studentId || !academicYear || !db || !user || allStudents.length === 0) {
-                return;
-            }
-
-            const studentData = allStudents.find(s => s.id === studentId);
-            if (!studentData) {
-                setIsLoading(false);
-                return;
-            }
-            setStudent(studentData);
-
-            const allStudentsInClass = allStudents.filter(s => 
-                s.academicYear === academicYear && 
-                s.className === studentData.className &&
-                (studentData.className < '9' || !studentData.group || s.group === studentData.group)
-            );
-
-            if (allStudentsInClass.length === 0) {
-                setIsLoading(false);
-                return;
-            }
-            
-            const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
-            
-            const resultsPromises = allSubjectsForGroup
-                .map(subject => getResultsForClass(db, academicYear, rawExamName, studentData.className, subject.name, studentData.group || undefined));
-            
-            const fetchedResultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
-            setResultsBySubject(fetchedResultsBySubject);
-            
-            // Filter subjects list based on effective full marks (User logic: Only show subjects with Full Marks > 0)
-            const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
-                if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
-                     if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
-                     if (studentData.optionalSubject === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
+            setIsLoading(true);
+            try {
+                // 1. Fetch the specific student (Works for both public and private)
+                const studentDoc = await getDoc(doc(db, 'students', studentId));
+                if (!studentDoc.exists()) {
+                    setIsLoading(false);
+                    return;
                 }
-                
-                // Effective full marks check: If full marks is 0 or not found, hide it
-                const matchingRecord = fetchedResultsBySubject.find(r => 
-                    normalize(r.subject) === normalize(subjectInfo.name) && 
-                    r.className === studentData.className
+                const studentData = { id: studentDoc.id, ...studentDoc.data() } as Student;
+                setStudent(studentData);
+
+                // 2. Fetch all students in the same class (Needed for Merit calculation)
+                // Note: For public portal, merit will only work if the parent knows the credentials.
+                // We fetch all to calculate the rank locally.
+                const classQuery = query(
+                    collection(db, 'students'),
+                    where('academicYear', '==', academicYear),
+                    where('className', '==', studentData.className)
                 );
-                const effectiveFullMarks = matchingRecord?.fullMarks ?? subjectInfo.fullMarks;
-                return effectiveFullMarks > 0;
-            });
+                const classSnap = await getDocs(classQuery);
+                const studentsList = classSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+                setAllStudentsInClass(studentsList);
 
-            const allFinalResults = processStudentResults(allStudentsInClass, fetchedResultsBySubject, allSubjectsForGroup);
-            const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
+                // 3. Fetch results
+                const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
+                
+                const resultsPromises = allSubjectsForGroup
+                    .map(subject => getResultsForClass(db, academicYear, rawExamName, studentData.className, subject.name, studentData.group || undefined));
+                
+                const fetchedResultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
+                setResultsBySubject(fetchedResultsBySubject);
 
-            if (!finalResultForThisStudent) {
+                // 4. Filter subjects list based on effective full marks
+                const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
+                    if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
+                         if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
+                         if (studentData.optionalSubject === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
+                    }
+                    
+                    const matchingRecord = fetchedResultsBySubject.find(r => 
+                        normalize(r.subject) === normalize(subjectInfo.name) && 
+                        r.className === studentData.className
+                    );
+                    const effectiveFullMarks = matchingRecord?.fullMarks ?? subjectInfo.fullMarks;
+                    return effectiveFullMarks > 0;
+                });
+
+                // 5. Process results
+                const allFinalResults = processStudentResults(studentsList, fetchedResultsBySubject, allSubjectsForGroup);
+                const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
+
+                if (finalResultForThisStudent) {
+                    setSubjects(subjectsForThisStudent);
+                    setProcessedResult(finalResultForThisStudent);
+                }
+            } catch (e) {
+                console.error("Error fetching data for marksheet:", e);
+            } finally {
                 setIsLoading(false);
-                setProcessedResult(null);
-                return;
             }
+        };
 
-            setSubjects(subjectsForThisStudent);
-            setProcessedResult(finalResultForThisStudent);
-            setIsLoading(false);
-        }
-
-        setIsLoading(true);
-        processMarks();
-
-    }, [studentId, academicYear, rawExamName, db, user, allStudents]);
+        fetchAllData();
+    }, [db, studentId, academicYear, rawExamName]);
 
     
     const renderMeritPosition = (position?: number) => {
@@ -236,9 +217,7 @@ function MarksheetContent() {
             {/* Action Bar */}
             <div className="w-full max-w-[210mm] flex justify-between items-center mb-6 no-print bg-white p-4 rounded-lg shadow-sm border">
                 <div className="flex items-center gap-4">
-                    <Link href="/student-list">
-                        <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-                    </Link>
+                    <Button variant="outline" size="icon" onClick={() => window.history.back()}><ArrowLeft className="h-4 w-4" /></Button>
                     <div>
                         <h1 className="text-xl font-bold text-primary">Marksheet Preview</h1>
                         <p className="text-sm text-muted-foreground">{student.studentNameEn || student.studentNameBn}</p>
@@ -326,6 +305,9 @@ function MarksheetContent() {
                             <div className="font-bold text-gray-600 uppercase">Date of Birth</div><div>: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
                             <div className="font-bold text-gray-600 text-right uppercase">Religion</div><div>: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
                         </div>
+                        <div className="grid grid-cols-[1.5fr_4fr] gap-x-4 mt-1">
+                            <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId}</div>
+                        </div>
                     </section>
 
                     {/* Summary Bar */}
@@ -357,7 +339,6 @@ function MarksheetContent() {
                                     const result = processedResult.subjectResults.get(subject.name);
                                     const isFail = result?.isPass === false;
                                     
-                                    // Get effective full marks for the display row
                                     const matchingRecord = resultsBySubject.find(r => 
                                         normalize(r.subject) === normalize(subject.name) && 
                                         r.className === student.className

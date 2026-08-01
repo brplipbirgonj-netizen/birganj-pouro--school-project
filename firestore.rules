@@ -9,19 +9,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // ইউজারের ডাটা সংগ্রহের নিরাপদ পদ্ধতি
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // এডমিন রোল চেক করা
     function isAdmin() {
       return isAuthed() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         getUserData().role == 'admin';
     }
 
-    // নির্দিষ্ট পারমিশন আছে কিনা চেক করা
     function hasPermission(permission) {
       return isAuthed() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -40,7 +37,6 @@ service cloud.firestore {
     }
 
     // ২. স্কুল তথ্য ও গ্যালারি
-    // ড্যাশবোর্ডের সুবিধার জন্য এগুলোকে পাবলিক রিড এক্সেস দেওয়া হয়েছে
     match /school/info {
       allow read: if true;
       allow write: if isAdmin();
@@ -66,40 +62,41 @@ service cloud.firestore {
 
     // ৪. একাডেমিক ও ম্যানেজমেন্ট কালেকশন
     match /classRoutines/{id} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if hasPermission('manage:routines');
     }
 
     match /proxyClasses/{id} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if hasPermission('manage:routines');
     }
 
     match /notices/{id} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if hasPermission('manage:documents');
       allow delete: if isAdmin();
     }
 
     match /holidays/{id} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if hasPermission('manage:documents');
       allow delete: if isAdmin();
     }
     
     match /exams/{id} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /students/{id} {
-      allow read: if isAuthed();
+      // পাবলিক রেজাল্ট পোর্টালের জন্য রোল এবং আইডি দিয়ে সার্চ করার অনুমতি
+      allow read: if true; 
       allow write: if hasPermission('manage:students');
       allow delete: if isAdmin();
     }
     
     match /staff/{id} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if hasPermission('manage:staff');
       allow delete: if isAdmin();
     }
@@ -116,7 +113,8 @@ service cloud.firestore {
     }
     
     match /results/{id} {
-      allow read: if isAuthed();
+      // পাবলিক রেজাল্ট দেখার অনুমতি
+      allow read: if true;
       allow write: if hasPermission('input:results') || hasPermission('manage:results');
       allow delete: if isAdmin();
     }
