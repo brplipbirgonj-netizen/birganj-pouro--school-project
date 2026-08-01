@@ -62,6 +62,8 @@ import { StudentFeeDialog } from './StudentFeeDialog';
 import { cn } from '@/lib/utils';
 import { getExams, Exam } from '@/lib/exam-data';
 import { ScrollArea } from './ui/scroll-area';
+import { format } from 'date-fns';
+import { bn } from 'date-fns/locale';
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -229,7 +231,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-16 md:h-24 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
+      <header className="sticky top-0 z-40 flex h-16 md:h-24 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
         <div className="flex items-center gap-2">
           {user && (
             <>
@@ -239,24 +241,24 @@ export function Header() {
                     <Menu className="h-6 w-6" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col p-0 font-kalpurush h-full">
+                <SheetContent side="left" className="flex flex-col p-0 font-kalpurush h-full w-[260px]">
                   <SheetHeader className="p-3 border-b bg-primary/5 shrink-0">
                       <SheetTitle className="sr-only">Main Menu</SheetTitle>
                       <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
                     <Link href="/" className="flex items-center gap-2 text-base font-semibold text-foreground">
                       {isSchoolInfoLoading ? <Skeleton className="h-8 w-8 rounded-full" /> : (schoolInfo.logoUrl && (
-                        <div className="relative h-8 w-8">
+                        <div className="relative h-7 w-7">
                           <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
                         </div>
                       ))}
-                      <span className="font-black text-slate-900 truncate text-sm">{isSchoolInfoLoading ? <Skeleton className="h-5 w-24" /> : schoolInfo.name}</span>
+                      <span className="font-black text-slate-900 truncate text-xs">{isSchoolInfoLoading ? <Skeleton className="h-5 w-24" /> : schoolInfo.name}</span>
                     </Link>
                   </SheetHeader>
                   
-                  <div className="px-4 py-2 border-b bg-slate-50 shrink-0">
-                      <Label htmlFor="year-select" className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">শিক্ষাবর্ষ</Label>
+                  <div className="px-4 py-1.5 border-b bg-slate-50 shrink-0">
+                      <Label htmlFor="year-select" className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">শিক্ষাবর্ষ</Label>
                       <Select value={selectedYear} onValueChange={setSelectedYear}>
-                          <SelectTrigger id="year-select" className="mt-1 h-8 bg-white border-2 border-primary/10 font-black text-primary text-xs">
+                          <SelectTrigger id="year-select" className="mt-0.5 h-7 bg-white border-2 border-primary/10 font-black text-primary text-[11px] px-2">
                               <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -269,18 +271,18 @@ export function Header() {
 
                   <div className="flex-1 overflow-hidden">
                     <ScrollArea className="h-full">
-                        <nav className="grid gap-1.5 p-3">
+                        <nav className="grid gap-1 p-3">
                             {permittedMenuItems.map((item) => (
                                 <SheetClose asChild key={item.id}>
                                     <Link
                                         href={item.href}
                                         className={cn(
-                                            "flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all shadow-sm",
+                                            "flex items-center gap-2.5 px-3 py-2 rounded-xl border-2 transition-all shadow-sm",
                                             pathname === item.href ? "border-primary bg-primary text-white shadow-md" : cn(item.color, "hover:shadow-md")
                                         )}
                                     >
-                                        <item.icon className={cn("h-4 w-4 shrink-0", pathname === item.href ? "text-white" : "")} />
-                                        <span className="font-black text-xs">{item.label}</span>
+                                        <item.icon className={cn("h-3.5 w-3.5 shrink-0", pathname === item.href ? "text-white" : "")} />
+                                        <span className="font-black text-[11px]">{item.label}</span>
                                         <ChevronRight className={cn("ml-auto h-3 w-3 opacity-30", pathname === item.href ? "text-white opacity-100" : "")} />
                                     </Link>
                                 </SheetClose>
@@ -290,21 +292,26 @@ export function Header() {
                   </div>
                   
                   <div className="p-3 border-t bg-white shrink-0 mt-auto">
-                    <div className="flex items-center gap-2 mb-3 p-2 bg-muted/30 rounded-xl border">
-                        <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
+                    <div className="flex items-center gap-2 mb-2 p-1.5 bg-muted/30 rounded-xl border">
+                        <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
                             <AvatarImage src={displayPhoto || undefined} />
-                            <AvatarFallback className="font-black text-xs">{displayName?.charAt(0) || 'U'}</AvatarFallback>
+                            <AvatarFallback className="font-black text-[10px]">{displayName?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 overflow-hidden">
-                            <p className="text-xs font-black text-slate-900 truncate">{displayName || 'User'}</p>
-                            <p className="text-[9px] font-bold text-primary italic truncate">
+                            <p className="text-[11px] font-black text-slate-900 truncate">{displayName || 'User'}</p>
+                            <p className="text-[8px] font-bold text-primary italic truncate">
                                 {displayDesignation || (user?.role === 'admin' ? 'এডমিন' : 'শিক্ষক')}
                             </p>
                         </div>
                     </div>
-                    <Button variant="destructive" className="w-full font-black h-9 rounded-xl text-xs" onClick={handleLogout}>
-                      <LogOut className="mr-2 h-3.5 w-3.5" /> লগ আউট
+                    <Button variant="destructive" className="w-full font-black h-8 rounded-xl text-[11px]" onClick={handleLogout}>
+                      <LogOut className="mr-1.5 h-3 w-3" /> লগ আউট
                     </Button>
+                    <div className="mt-2 text-center">
+                        <p className="text-[8px] font-black text-muted-foreground italic">
+                            {format(new Date(), 'PPP', { locale: bn })} | BPHS Portal
+                        </p>
+                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
@@ -353,42 +360,19 @@ export function Header() {
       </header>
 
       {user && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] flex items-center justify-around font-kalpurush">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] flex items-center justify-around font-kalpurush">
           {permittedBottomNavItems.map((item, idx) => {
             const isActive = item.href ? pathname === item.href : false;
             if (item.type === 'search') {
                 return (
-                    <Dialog key="search" open={searchOpen} onOpenChange={handleSearchOpen}>
-                        <DialogTrigger asChild>
-                            <div className="relative -top-3">
-                                <Button className="h-14 w-14 rounded-full bg-white border-4 border-primary shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95">
-                                    <Search className="h-7 w-7 text-primary" />
-                                </Button>
-                            </div>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md font-kalpurush">
-                            <DialogHeader><DialogTitle className="text-xl font-black">শিক্ষার্থী খুঁজুন</DialogTitle></DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <Input placeholder="নাম বা রোল লিখুন..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus className="h-11 font-bold" />
-                                <ScrollArea className="max-h-[300px]">
-                                    <div className="space-y-2 pr-2">
-                                        {isSearching ? <div className="p-10 text-center"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></div> : filteredResults.map(s => (
-                                            <div key={s.id} className="flex items-center justify-between p-3 border-2 rounded-xl hover:bg-muted/50 cursor-pointer" onClick={() => handleStudentClick(s)}>
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar className="h-10 w-10 border"><AvatarImage src={sanitizePhotoUrl(s.photoUrl, s.gender) || getStudentPlaceholderImage(s.gender)} /></Avatar>
-                                                    <div>
-                                                        <p className="text-sm font-black">{s.studentNameBn}</p>
-                                                        <p className="text-[10px] font-bold text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | {classNamesMap[s.className]} শ্রেণি</p>
-                                                    </div>
-                                                </div>
-                                                <ChevronRight className="h-4 w-4 opacity-30" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                    <div key="search" className="relative -top-3">
+                        <Button 
+                            className="h-14 w-14 rounded-full bg-white border-4 border-primary shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95"
+                            onClick={() => handleSearchOpen(true)}
+                        >
+                            <Search className="h-7 w-7 text-primary" />
+                        </Button>
+                    </div>
                 )
             }
             return (
@@ -401,21 +385,102 @@ export function Header() {
         </nav>
       )}
 
+      {/* Student Search Dialog */}
+      <Dialog open={searchOpen} onOpenChange={handleSearchOpen}>
+          <DialogContent className="sm:max-w-md font-kalpurush p-0 border-none shadow-2xl overflow-hidden rounded-2xl">
+              <DialogHeader className="p-6 bg-primary text-white">
+                  <DialogTitle className="text-2xl font-black flex items-center gap-2"><Search className="h-6 w-6" /> শিক্ষার্থী খুঁজুন</DialogTitle>
+                  <DialogDescription className="text-white/80 font-bold">নাম, রোল বা আইডি দিয়ে শিক্ষার্থীর তথ্য বের করুন</DialogDescription>
+              </DialogHeader>
+              <div className="p-6 space-y-4">
+                  <Input 
+                      placeholder="এখানে লিখুন..." 
+                      value={searchQuery} 
+                      onChange={e => setSearchQuery(e.target.value)} 
+                      autoFocus 
+                      className="h-12 text-lg font-bold border-2 focus:ring-primary shadow-sm" 
+                  />
+                  <ScrollArea className="h-[350px] pr-2">
+                      <div className="space-y-2">
+                          {isSearching ? (
+                              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                  <Loader2 className="animate-spin h-8 w-8 text-primary" />
+                                  <p className="text-sm font-bold text-muted-foreground">ডাটাবেস অনুসন্ধান করা হচ্ছে...</p>
+                              </div>
+                          ) : filteredResults.length > 0 ? (
+                              filteredResults.map(s => (
+                                  <div 
+                                      key={s.id} 
+                                      className="group flex items-center justify-between p-3 border-2 border-slate-100 rounded-2xl hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all active:scale-[0.98]" 
+                                      onClick={() => handleStudentClick(s)}
+                                  >
+                                      <div className="flex items-center gap-3">
+                                          <Avatar className="h-11 w-11 border-2 border-white shadow-sm">
+                                              <AvatarImage src={sanitizePhotoUrl(s.photoUrl, s.gender) || getStudentPlaceholderImage(s.gender)} />
+                                          </Avatar>
+                                          <div>
+                                              <p className="text-sm font-black text-slate-800">{s.studentNameBn}</p>
+                                              <p className="text-[10px] font-bold text-muted-foreground">
+                                                  রোল: {s.roll.toLocaleString('bn-BD')} | {classNamesMap[s.className] || s.className} শ্রেণি
+                                              </p>
+                                          </div>
+                                      </div>
+                                      <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-primary transition-colors" />
+                                  </div>
+                              ))
+                          ) : searchQuery ? (
+                              <div className="text-center py-20 text-muted-foreground">
+                                  <p className="font-bold">দুঃখিত, কোনো মিল পাওয়া যায়নি।</p>
+                              </div>
+                          ) : (
+                              <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                                  <Users className="h-16 w-16" />
+                                  <p className="text-sm font-black uppercase mt-2">অনুসন্ধান করুন</p>
+                              </div>
+                          )}
+                      </div>
+                  </ScrollArea>
+              </div>
+          </DialogContent>
+      </Dialog>
+
+      {/* Student Quick Actions Dialog */}
       <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
-          <DialogContent className="font-kalpurush max-w-md">
-              <DialogHeader className="flex-row items-center gap-4">
-                  <Avatar className="h-16 w-16 border-2"><AvatarImage src={sanitizePhotoUrl(selectedStudent?.photoUrl, selectedStudent?.gender) || (selectedStudent ? getStudentPlaceholderImage(selectedStudent.gender) : undefined)} /></Avatar>
-                  <div>
-                      <DialogTitle className="text-xl font-black">{selectedStudent?.studentNameBn}</DialogTitle>
-                      <DialogDescription className="font-bold">রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | {classNamesMap[selectedStudent?.className || '']} শ্রেণি</DialogDescription>
+          <DialogContent className="font-kalpurush max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+              <DialogHeader className="p-6 bg-slate-50 border-b">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16 border-4 border-white shadow-md">
+                        <AvatarImage src={sanitizePhotoUrl(selectedStudent?.photoUrl, selectedStudent?.gender) || (selectedStudent ? getStudentPlaceholderImage(selectedStudent.gender) : undefined)} />
+                    </Avatar>
+                    <div>
+                        <DialogTitle className="text-xl font-black text-slate-800">{selectedStudent?.studentNameBn}</DialogTitle>
+                        <DialogDescription className="font-bold text-primary">
+                            রোল: {selectedStudent?.roll.toLocaleString('bn-BD')} | {classNamesMap[selectedStudent?.className || '']} শ্রেণি
+                        </DialogDescription>
+                    </div>
                   </div>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-3 py-4">
-                  <Button variant="outline" className="h-12 bg-rose-50" onClick={() => { setActionsDialogOpen(false); router.push(`/student-list?class=${selectedStudent?.className}&studentId=${selectedStudent?.id}`); }}>প্রোফাইল</Button>
-                  <Button variant="outline" className="h-12 bg-teal-50" onClick={() => { setActionsDialogOpen(false); setFeeDialogOpen(true); }}>বেতন আদায়</Button>
-                  <Button variant="outline" className="h-12 bg-blue-50" onClick={() => { setActionsDialogOpen(false); router.push(`/student-profile?roll=${selectedStudent?.roll}&class=${selectedStudent?.className}`); }}>হাজিরা রিপোর্ট</Button>
-                  <Button variant="outline" className="h-12 bg-slate-50" onClick={() => { setActionsDialogOpen(false); window.open(`/marksheet/${selectedStudent?.id}?academicYear=${selectedYear}&examName=${encodeURIComponent(selectedExamForMarksheet)}`, '_blank'); }}>মার্কশিট</Button>
+              <div className="grid grid-cols-2 gap-3 p-6 bg-white">
+                  <Button variant="outline" className="h-14 flex flex-col items-center justify-center gap-1 border-2 border-rose-100 hover:bg-rose-50 text-rose-700 font-black rounded-2xl shadow-sm" onClick={() => { setActionsDialogOpen(false); router.push(`/student-list?class=${selectedStudent?.className}&studentId=${selectedStudent?.id}`); }}>
+                    <Users className="h-5 w-5" />
+                    <span className="text-[10px]">প্রোফাইল</span>
+                  </Button>
+                  <Button variant="outline" className="h-14 flex flex-col items-center justify-center gap-1 border-2 border-teal-100 hover:bg-teal-50 text-teal-700 font-black rounded-2xl shadow-sm" onClick={() => { setActionsDialogOpen(false); setFeeDialogOpen(true); }}>
+                    <Banknote className="h-5 w-5" />
+                    <span className="text-[10px]">বেতন আদায়</span>
+                  </Button>
+                  <Button variant="outline" className="h-14 flex flex-col items-center justify-center gap-1 border-2 border-blue-100 hover:bg-blue-50 text-blue-700 font-black rounded-2xl shadow-sm" onClick={() => { setActionsDialogOpen(false); router.push(`/student-profile?roll=${selectedStudent?.roll}&class=${selectedStudent?.className}`); }}>
+                    <CalendarCheck className="h-5 w-5" />
+                    <span className="text-[10px]">হাজিরা রিপোর্ট</span>
+                  </Button>
+                  <Button variant="outline" className="h-14 flex flex-col items-center justify-center gap-1 border-2 border-violet-100 hover:bg-violet-50 text-violet-700 font-black rounded-2xl shadow-sm" onClick={() => { setActionsDialogOpen(false); window.open(`/marksheet/${selectedStudent?.id}?academicYear=${selectedYear}&examName=${encodeURIComponent(selectedExamForMarksheet)}`, '_blank'); }}>
+                    <FileBadge className="h-5 w-5" />
+                    <span className="text-[10px]">মার্কশিট</span>
+                  </Button>
               </div>
+              <DialogFooter className="p-4 bg-slate-50 border-t">
+                  <Button variant="ghost" className="w-full font-bold h-10" onClick={() => setActionsDialogOpen(false)}>বন্ধ করুন</Button>
+              </DialogFooter>
           </DialogContent>
       </Dialog>
 
