@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -689,9 +688,14 @@ const LiveRoutineCard = () => {
     return (
         <Card className="lg:col-span-2 shadow-md border-2 border-black">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
-                </CardTitle>
+                <div className="flex flex-col gap-1">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
+                    </CardTitle>
+                    <p className="text-[10px] font-bold text-muted-foreground pl-6">
+                        {format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn })}
+                    </p>
+                </div>
                  <Badge variant="outline" className="flex items-center gap-2 bg-white shadow-sm">
                     <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
