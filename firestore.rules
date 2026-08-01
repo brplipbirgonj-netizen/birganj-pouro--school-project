@@ -40,13 +40,14 @@ service cloud.firestore {
     }
 
     // ২. স্কুল তথ্য ও গ্যালারি
+    // ড্যাশবোর্ডের সুবিধার জন্য এগুলোকে পাবলিক রিড এক্সেস দেওয়া হয়েছে
     match /school/info {
       allow read: if true;
       allow write: if isAdmin();
     }
     
     match /school/gallery {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
