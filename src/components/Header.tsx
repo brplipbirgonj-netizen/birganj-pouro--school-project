@@ -23,7 +23,8 @@ import {
   FileBadge,
   PieChart,
   IdCard,
-  UserCheck
+  UserCheck,
+  ChevronRight
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState, useMemo } from 'react';
@@ -64,6 +66,23 @@ import { getExams, Exam } from '@/lib/exam-data';
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
 };
+
+// Global Menu Structure
+const mainMenuItems = [
+  { id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, href: '/', permission: 'view:dashboard', color: 'bg-sky-50 text-sky-700 border-sky-100' },
+  { id: 'admissions', label: 'ভর্তি আবেদনসমূহ', icon: UserCheck, href: '/admissions-management', permission: 'manage:admissions', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
+  { id: 'profile-search', label: 'শিক্ষার্থী প্রোফাইল', icon: UserSearch, href: '/student-profile', permission: 'view:student-profile', color: 'bg-blue-50 text-blue-700 border-blue-100' },
+  { id: 'add-student', label: 'নতুন শিক্ষার্থী যোগ', icon: UserPlus, href: '/add-student', permission: 'manage:students', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+  { id: 'student-list', label: 'শিক্ষার্থী তালিকা', icon: Users, href: '/student-list', permission: 'view:students', color: 'bg-rose-50 text-rose-700 border-rose-100' },
+  { id: 'attendance', label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance', color: 'bg-amber-50 text-amber-700 border-amber-100' },
+  { id: 'results', label: 'ফলাফল', icon: BookMarked, href: '/results', permission: ['manage:results', 'input:results'], color: 'bg-violet-50 text-violet-700 border-violet-100' },
+  { id: 'messaging', label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: ['send:messaging', 'manage:messaging'], color: 'bg-lime-50 text-lime-700 border-lime-100' },
+  { id: 'accounts', label: 'হিসাব শাখা', icon: Banknote, href: '/accounts', permission: 'view:accounts', color: 'bg-teal-50 text-teal-700 border-teal-100' },
+  { id: 'staff', label: 'শিক্ষক ও কর্মচারী', icon: Users2, href: '/staff', permission: 'view:staff', color: 'bg-orange-50 text-orange-700 border-orange-100' },
+  { id: 'documents', label: 'ডকুমেন্ট', icon: FileText, href: '/documents', permission: 'manage:documents', color: 'bg-slate-50 text-slate-700 border-slate-100' },
+  { id: 'routines', label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines', color: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100' },
+  { id: 'settings', label: 'সেটিং', icon: Settings, href: '/settings', permission: 'manage:settings', color: 'bg-gray-50 text-gray-700 border-gray-100' },
+];
 
 export function Header() {
   const [isClient, setIsClient] = useState(false);
@@ -203,6 +222,15 @@ export function Header() {
     setActionsDialogOpen(true);
   };
 
+  const permittedMenuItems = useMemo(() => {
+    return mainMenuItems.filter(item => {
+      if (Array.isArray(item.permission)) {
+        return item.permission.some(p => hasPermission(p));
+      }
+      return hasPermission(item.permission);
+    });
+  }, [user, hasPermission]);
+
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
     { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
@@ -240,8 +268,8 @@ export function Header() {
                     <span className="sr-only">Toggle navigation menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col p-0">
-                  <SheetHeader className="p-4 border-b bg-red-100">
+                <SheetContent side="left" className="flex flex-col p-0 font-kalpurush">
+                  <SheetHeader className="p-4 border-b bg-red-50">
                       <SheetTitle className="sr-only">Main Menu</SheetTitle>
                       <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
                     <Link
@@ -253,154 +281,52 @@ export function Header() {
                           <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="rounded-full object-contain" />
                         </div>
                       ))}
-                      <span className="">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
+                      <span className="font-black text-slate-900">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
                     </Link>
                   </SheetHeader>
-                  <div className="p-4 border-b bg-blue-100">
-                      <Label htmlFor="academic-year-select" className="text-sm font-medium text-muted-foreground">শিক্ষাবর্ষ</Label>
+                  <div className="p-4 border-b bg-blue-50/50">
+                      <Label htmlFor="academic-year-select" className="text-xs font-black uppercase text-muted-foreground tracking-widest">শিক্ষাবর্ষ নির্বাচন</Label>
                       {availableYears.length > 0 ? (
                           <Select value={selectedYear} onValueChange={setSelectedYear}>
-                              <SelectTrigger id="academic-year-select" className="mt-1">
+                              <SelectTrigger id="academic-year-select" className="mt-1.5 h-11 bg-white border-2 border-primary/10 font-black text-primary">
                                   <SelectValue placeholder="" />
                               </SelectTrigger>
                               <SelectContent>
                                   {availableYears.map(year => (
-                                      <SelectItem key={year} value={year}>{year.toLocaleString('bn-BD')}</SelectItem>
+                                      <SelectItem key={year} value={year} className="font-bold">{year.toLocaleString('bn-BD')}</SelectItem>
                                   ))}
                               </SelectContent>
                           </Select>
                       ) : (
-                          <div className="mt-1 h-10 w-full animate-pulse rounded-md bg-muted" />
+                          <div className="mt-1.5 h-11 w-full animate-pulse rounded-md bg-muted" />
                       )}
                   </div>
-                  <nav className="flex-1 overflow-y-auto">
-                    <div className="grid gap-1 p-2 text-base font-medium">
-                      {hasPermission('view:dashboard') && (
-                        <Link
-                          href="/"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-sky-100 text-sky-800 hover:bg-sky-200"
-                        >
-                          <LayoutDashboard className="h-5 w-5" />
-                          ড্যাসবোর্ড
-                        </Link>
-                      )}
-                      {hasPermission('manage:admissions') && (
-                        <Link
-                          href="/admissions-management"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-indigo-100 text-indigo-800 hover:bg-indigo-200 font-bold"
-                        >
-                          <UserCheck className="h-5 w-5" />
-                          ভর্তি আবেদনসমূহ
-                        </Link>
-                      )}
-                      {hasPermission('view:student-profile') && (
-                        <Link
-                          href="/student-profile"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
-                        >
-                          <UserSearch className="h-5 w-5" />
-                          শিক্ষার্থী প্রোফাইল
-                        </Link>
-                      )}
-                      {hasPermission('manage:students') && (
-                        <Link
-                          href="/add-student"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                        >
-                          <UserPlus className="h-5 w-5" />
-                          নতুন শিক্ষার্থী যোগ
-                        </Link>
-                      )}
-                      {hasPermission('view:students') && (
-                        <Link
-                          href="/student-list"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-rose-100 text-rose-800 hover:bg-rose-200"
-                        >
-                          <Users className="h-5 w-5" />
-                          শিক্ষার্থী তালিকা
-                        </Link>
-                      )}
-                      {hasPermission('manage:attendance') && (
-                        <Link
-                          href="/attendance"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-amber-100 text-amber-800 hover:bg-amber-200"
-                        >
-                          <CalendarCheck className="h-5 w-5" />
-                          হাজিরা
-                        </Link>
-                      )}
-                      {(hasPermission('manage:results') || hasPermission('input:results')) && (
-                        <Link
-                          href="/results"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-violet-100 text-violet-800 hover:bg-violet-200"
-                        >
-                          < BookMarked className="h-5 w-5" />
-                          ফলাফল
-                        </Link>
-                      )}
-                      {(hasPermission('send:messaging') || hasPermission('manage:messaging')) && (
-                        <Link
-                          href="/messaging"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-lime-100 text-lime-800 hover:bg-lime-200"
-                        >
-                          <MessageSquare className="h-5 w-5" />
-                          মেসেজ
-                        </Link>
-                      )}
-                      {hasPermission('view:accounts') && (
-                        <Link
-                          href="/accounts"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-teal-100 text-teal-800 hover:bg-teal-200"
-                        >
-                          <Banknote className="h-5 w-5" />
-                          হিসাব শাখা
-                        </Link>
-                      )}
-                      {hasPermission('view:staff') && (
-                        <Link
-                          href="/staff"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-orange-100 text-orange-800 hover:bg-orange-200"
-                        >
-                          <Users2 className="h-5 w-5" />
-                          শিক্ষক ও কর্মচারী
-                        </Link>
-                      )}
-                      {hasPermission('manage:documents') && (
-                        <Link
-                          href="/documents"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-slate-100 text-slate-800 hover:bg-slate-200"
-                        >
-                          <FileText className="h-5 w-5" />
-                          ডকুমেন্ট
-                        </Link>
-                      )}
-                      {hasPermission('view:routines') && (
-                        <Link
-                          href="/routines"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200"
-                        >
-                          <CalendarClock className="h-5 w-5" />
-                          রুটিন
-                        </Link>
-                      )}
-                      {hasPermission('manage:settings') && (
-                        <Link
-                          href="/settings"
-                          className="flex items-center gap-3 rounded-lg border px-3 py-2 transition-all bg-gray-100 text-gray-800 hover:bg-gray-200"
-                        >
-                          <Settings className="h-5 w-5" />
-                          সেটিং
-                        </Link>
-                      )}
+                  <nav className="flex-1 overflow-y-auto bg-slate-50/50">
+                    <div className="grid gap-2 p-4">
+                      {permittedMenuItems.map((item) => (
+                        <SheetClose asChild key={item.id}>
+                          <Link
+                            href={item.href}
+                            className={cn(
+                              "flex items-center gap-4 px-4 py-3.5 rounded-xl border-2 transition-all group hover:scale-[1.02] shadow-sm",
+                              pathname === item.href ? "border-primary bg-primary text-white shadow-md ring-2 ring-primary/20" : cn(item.color, "hover:shadow-md")
+                            )}
+                          >
+                            <item.icon className={cn("h-5 w-5 shrink-0", pathname === item.href ? "text-white" : "")} />
+                            <span className="font-black text-sm">{item.label}</span>
+                            <ChevronRight className={cn("ml-auto h-4 w-4 opacity-30 group-hover:opacity-100", pathname === item.href ? "text-white opacity-100" : "")} />
+                          </Link>
+                        </SheetClose>
+                      ))}
                     </div>
                   </nav>
                   
-                  {/* Sidebar User Profile Section (Enhanced outside the button) */}
-                  <div className="p-4 border-t bg-muted/40 mt-auto">
-                    <div className="flex items-center gap-3 mb-4 p-2 bg-white rounded-xl shadow-sm border border-primary/10">
-                        <Avatar className="h-10 w-10 border-2 border-primary/20">
+                  {/* Sidebar User Profile Section */}
+                  <div className="p-4 border-t bg-white mt-auto">
+                    <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-2xl border border-primary/5">
+                        <Avatar className="h-12 w-12 border-2 border-white shadow-md">
                             <AvatarImage src={displayPhoto || undefined} />
-                            <AvatarFallback>{displayName?.charAt(0) || 'U'}</AvatarFallback>
+                            <AvatarFallback className="font-black">{displayName?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 overflow-hidden text-left">
                             <p className="text-sm font-black text-slate-900 truncate">{displayName || 'ব্যবহারকারী'}</p>
@@ -411,17 +337,17 @@ export function Header() {
                     </div>
                     <Button 
                       variant="destructive" 
-                      className="w-full font-black shadow-md h-11" 
+                      className="w-full font-black shadow-lg h-12 rounded-xl text-md" 
                       onClick={handleLogout}
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className="mr-2 h-5 w-5" />
                       লগ আউট
                     </Button>
                   </div>
 
-                  <div className="p-4 border-t bg-muted/20 text-center text-[10px] text-muted-foreground">
+                  <div className="p-3 border-t bg-muted/10 text-center text-[10px] text-muted-foreground font-bold">
                     <p>© ২০২৬ {schoolInfo.name}।</p>
-                    <p>সর্বস্বত্ব সংরক্ষিত।</p>
+                    <p>কেন্দ্রীয় শিক্ষা ব্যবস্থাপনা পোর্টাল</p>
                   </div>
                 </SheetContent>
               </Sheet>
@@ -450,7 +376,7 @@ export function Header() {
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Main Top Bar User Info (Always Visible on Desktop/Tablet) */}
+          {/* Main Top Bar User Info */}
           {user && (
             <div className="hidden lg:flex flex-col items-end text-right mr-1 leading-tight select-none">
               <span className="text-[13px] font-black text-white drop-shadow-sm">{displayName || 'User'}</span>
@@ -459,7 +385,7 @@ export function Header() {
           )}
 
           <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
-              <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto font-kalpurush">
                   <DialogHeader>
                       <div className="flex items-center gap-4 mb-4">
                           <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-sm">
@@ -574,12 +500,12 @@ export function Header() {
           {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white cursor-pointer">
+                <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white cursor-pointer shadow-md">
                   <AvatarImage src={displayPhoto || undefined} alt={user.email || 'user'} />
                   <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 font-kalpurush">
                   <DropdownMenuLabel>
                     <div className="flex flex-col">
                       <span className="font-black">{displayName || 'ব্যবহারকারী'}</span>
@@ -587,17 +513,16 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer font-bold">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>প্রোফাইল সেটিংস</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-700">
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-700 font-bold">
                       <LogOut className="mr-2 h-4 w-4" />
-                      <span className="font-bold">লগ আউট</span>
+                      <span>লগ আউট</span>
                   </DropdownMenuItem>
                   
-                  {/* Detailed profile footer inside dropdown */}
                   <DropdownMenuSeparator />
                   <div className="px-2 py-1.5 text-center bg-muted/20 rounded-b-md">
                     <p className="text-[10px] font-black text-slate-800 leading-tight">{displayName}</p>
@@ -617,7 +542,7 @@ export function Header() {
 
       {user && (
         <nav 
-          className="fixed bottom-0 left-0 right-0 z-50 h-16 md:h-14 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] w-full max-w-full overflow-visible box-border"
+          className="fixed bottom-0 left-0 right-0 z-50 h-16 md:h-14 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] w-full max-w-full overflow-visible box-border font-kalpurush"
           style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${permittedBottomNavItems.length}, 1fr)`,
@@ -639,46 +564,51 @@ export function Header() {
                                 </button>
                             </div>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-[425px] font-kalpurush">
                             <DialogHeader>
-                                <DialogTitle>শিক্ষার্থী খুঁজুন</DialogTitle>
+                                <DialogTitle className="text-xl font-black">শিক্ষার্থী খুঁজুন</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
-                                <input 
+                                <Input 
                                     placeholder="নাম বা রোল লিখে খুঁজুন..." 
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     autoFocus
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                                    className="h-11 font-bold bg-muted/10 border-2"
                                 />
                                 <div className="space-y-2">
                                     {isSearching ? (
-                                        <p className="text-center text-sm text-muted-foreground py-4">ডাটা লোড হচ্ছে...</p>
+                                        <div className="flex flex-col items-center py-8 gap-2">
+                                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                            <p className="text-sm text-muted-foreground font-bold">ডাটা লোড হচ্ছে...</p>
+                                        </div>
                                     ) : filteredResults.length > 0 ? (
-                                        <div className="max-h-[300px] overflow-y-auto pr-2">
+                                        <div className="max-h-[350px] overflow-y-auto pr-2 space-y-2">
                                             {filteredResults.map(s => (
                                                 <div 
                                                     key={s.id} 
-                                                    className="flex items-center justify-between p-3 border rounded-md hover:bg-muted cursor-pointer transition-colors mb-2 last:mb-0"
+                                                    className="flex items-center justify-between p-3 border-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-all active:scale-95"
                                                     onClick={() => handleStudentClick(s)}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <Avatar className="h-8 w-8">
+                                                        <Avatar className="h-10 w-10 border shadow-sm">
                                                             <AvatarImage src={sanitizePhotoUrl(s.photoUrl, s.gender) || getStudentPlaceholderImage(s.gender)} />
                                                             <AvatarFallback>{s.studentNameBn?.charAt(0)}</AvatarFallback>
                                                         </Avatar>
                                                         <div>
-                                                            <p className="text-sm font-bold">{s.studentNameBn}</p>
-                                                            <p className="text-[10px] text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | {classNamesMap[s.className] || s.className} শ্রেণি</p>
+                                                            <p className="text-sm font-black text-slate-800">{s.studentNameBn}</p>
+                                                            <p className="text-[10px] font-bold text-muted-foreground">রোল: {s.roll.toLocaleString('bn-BD')} | {classNamesMap[s.className] || s.className} শ্রেণি</p>
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-4 w-4 rotate-180" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><ChevronRight className="h-5 w-5" /></Button>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : searchQuery.trim() ? (
-                                        <p className="text-center text-sm text-muted-foreground py-4">কোনো তথ্য পাওয়া যায়নি।</p>
-                                    ) : null}
+                                        <p className="text-center text-sm text-muted-foreground py-8 font-bold italic">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>
+                                    ) : (
+                                        <p className="text-center text-[10px] text-muted-foreground font-bold italic py-4 uppercase tracking-widest">ফলাফল এখানে প্রদর্শিত হবে</p>
+                                    )}
                                 </div>
                             </div>
                         </DialogContent>
@@ -693,8 +623,8 @@ export function Header() {
                         onClick={() => router.back()} 
                         className="flex flex-col items-center justify-center gap-0.5 transition-colors text-primary-foreground/70 hover:text-white min-w-0 h-full w-full px-0 select-none"
                     >
-                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                        <span className="text-[7px] sm:text-[9px] font-bold uppercase truncate w-full text-center px-0.5">{item.label}</span>
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase truncate w-full text-center px-0.5">{item.label}</span>
                     </button>
                 )
             }
@@ -705,8 +635,11 @@ export function Header() {
                   "flex flex-col items-center justify-center gap-0.5 transition-colors h-full w-full",
                   isActive ? "text-white" : "text-primary-foreground/70 hover:text-white"
                 )}>
-                  <item.icon className={cn("h-4 w-4 sm:h-5 sm:w-5 shrink-0", isActive && "scale-110")} />
-                  <span className="text-[7px] sm:text-[9px] font-bold uppercase truncate w-full text-center px-0.5">
+                  <item.icon className={cn("h-5 w-5 shrink-0", isActive && "scale-110 shadow-lg")} />
+                  <span className={cn(
+                      "text-[8px] sm:text-[10px] font-black uppercase truncate w-full text-center px-0.5",
+                      isActive && "underline decoration-white decoration-2 underline-offset-2"
+                  )}>
                     {item.label}
                   </span>
                 </div>
