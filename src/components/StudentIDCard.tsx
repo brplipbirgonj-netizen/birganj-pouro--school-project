@@ -38,8 +38,8 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
         )}>
             {/* Header Section with Curve */}
             <div className={cn(
-                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 text-white",
-                isPrint ? "h-[32mm]" : "h-[140px]"
+                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 pb-8 text-white",
+                isPrint ? "h-[34mm]" : "h-[150px]"
             )}>
                 {schoolInfo.logoUrl && (
                     <div className={cn(
@@ -53,24 +53,24 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                         />
                     </div>
                 )}
-                {/* School Name in Yellow for contrast */}
+                {/* School Name in Yellow */}
                 <h1 className={cn(
                     "font-black text-center leading-tight text-yellow-300 drop-shadow-md px-2",
                     isPrint ? "text-[11px]" : "text-[18px]"
                 )}>
                     {schoolInfo.name}
                 </h1>
-                {/* Address in White inside blue area */}
+                {/* Address in White - Made bolder and moved higher to avoid wave overlap */}
                 <p className={cn(
-                    "font-bold text-white/90 text-center uppercase tracking-tighter mt-0.5 px-2",
+                    "font-black text-white/95 text-center uppercase tracking-tighter mt-1 px-2 z-30",
                     isPrint ? "text-[6px]" : "text-[9px]"
                 )}>
                     Upazila: Birganj, Post: Birganj, Zila: Dinajpur
                 </p>
                 
                 {/* Curve SVG */}
-                <div className="absolute -bottom-1 left-0 right-0 w-full overflow-hidden leading-none">
-                    <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="w-full h-8">
+                <div className="absolute -bottom-0.5 left-0 right-0 w-full overflow-hidden leading-none z-10">
+                    <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="w-full h-10">
                         <path d="M0.00,49.98 C149.99,150.00 349.20,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z" style={{ stroke: 'none', fill: 'white' }}></path>
                     </svg>
                 </div>
@@ -136,9 +136,8 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 </div>
             </main>
 
-            {/* Footer Signature Section - Shifted to Right */}
+            {/* Footer Signature Section - Removed line per instructions */}
             <footer className="relative z-10 pb-3 flex flex-col items-end pr-4 mt-auto">
-                <div className={cn("border-t-2 border-black mb-0.5", isPrint ? "w-24" : "w-44")}></div>
                 <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[14px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
             </footer>
 
