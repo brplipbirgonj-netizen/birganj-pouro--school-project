@@ -24,7 +24,8 @@ import {
   PieChart,
   IdCard,
   UserCheck,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -222,14 +223,21 @@ export function Header() {
     setActionsDialogOpen(true);
   };
 
+  // Improved Permitted Menu Items Calculation
   const permittedMenuItems = useMemo(() => {
+    if (authLoading || !user) return [];
+    
     return mainMenuItems.filter(item => {
+      // Admin always has permission
+      if (user.role === 'admin') return true;
+      
+      // Teacher permissions check
       if (Array.isArray(item.permission)) {
         return item.permission.some(p => hasPermission(p));
       }
       return hasPermission(item.permission);
     });
-  }, [user, hasPermission]);
+  }, [user, hasPermission, authLoading]);
 
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
@@ -243,15 +251,16 @@ export function Header() {
     { label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines' },
   ];
 
-  const permittedBottomNavItems = useMemo(() => 
-    bottomNavItems.filter(item => {
+  const permittedBottomNavItems = useMemo(() => {
+    if (authLoading || !user) return [];
+    return bottomNavItems.filter(item => {
+        if (user.role === 'admin') return true;
         if (Array.isArray(item.permission)) {
             return item.permission.some(p => hasPermission(p));
         }
         return hasPermission(item.permission);
-    }), 
-    [user, hasPermission]
-  );
+    });
+  }, [user, hasPermission, authLoading]);
 
   if (!isClient) return <header className="h-16 bg-primary" />;
 
@@ -268,8 +277,8 @@ export function Header() {
                     <span className="sr-only">Toggle navigation menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col p-0 font-kalpurush">
-                  <SheetHeader className="p-4 border-b bg-red-50">
+                <SheetContent side="left" className="flex flex-col p-0 font-kalpurush h-full">
+                  <SheetHeader className="p-4 border-b bg-red-50 shrink-0">
                       <SheetTitle className="sr-only">Main Menu</SheetTitle>
                       <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
                     <Link
@@ -284,7 +293,8 @@ export function Header() {
                       <span className="font-black text-slate-900">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
                     </Link>
                   </SheetHeader>
-                  <div className="p-4 border-b bg-blue-50/50">
+                  
+                  <div className="p-4 border-b bg-blue-50/50 shrink-0">
                       <Label htmlFor="academic-year-select" className="text-xs font-black uppercase text-muted-foreground tracking-widest">শিক্ষাবর্ষ নির্বাচন</Label>
                       {availableYears.length > 0 ? (
                           <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -301,9 +311,10 @@ export function Header() {
                           <div className="mt-1.5 h-11 w-full animate-pulse rounded-md bg-muted" />
                       )}
                   </div>
-                  <nav className="flex-1 overflow-y-auto bg-slate-50/50">
+
+                  <nav className="flex-1 overflow-y-auto bg-slate-50/50 min-h-0">
                     <div className="grid gap-2 p-4">
-                      {permittedMenuItems.map((item) => (
+                      {permittedMenuItems.length > 0 ? permittedMenuItems.map((item) => (
                         <SheetClose asChild key={item.id}>
                           <Link
                             href={item.href}
@@ -317,12 +328,17 @@ export function Header() {
                             <ChevronRight className={cn("ml-auto h-4 w-4 opacity-30 group-hover:opacity-100", pathname === item.href ? "text-white opacity-100" : "")} />
                           </Link>
                         </SheetClose>
-                      ))}
+                      )) : (
+                        <div className="flex flex-col items-center justify-center py-10 gap-3">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary opacity-30" />
+                            <p className="text-xs font-bold text-muted-foreground">মেনু লোড হচ্ছে...</p>
+                        </div>
+                      )}
                     </div>
                   </nav>
                   
                   {/* Sidebar User Profile Section */}
-                  <div className="p-4 border-t bg-white mt-auto">
+                  <div className="p-4 border-t bg-white shrink-0 mt-auto">
                     <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-2xl border border-primary/5">
                         <Avatar className="h-12 w-12 border-2 border-white shadow-md">
                             <AvatarImage src={displayPhoto || undefined} />
@@ -331,7 +347,7 @@ export function Header() {
                         <div className="flex-1 overflow-hidden text-left">
                             <p className="text-sm font-black text-slate-900 truncate">{displayName || 'ব্যবহারকারী'}</p>
                             <p className="text-[10px] font-bold text-primary italic truncate">
-                                {displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
+                                {displayDesignation || (user?.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
                             </p>
                         </div>
                     </div>
@@ -343,11 +359,10 @@ export function Header() {
                       <LogOut className="mr-2 h-5 w-5" />
                       লগ আউট
                     </Button>
-                  </div>
-
-                  <div className="p-3 border-t bg-muted/10 text-center text-[10px] text-muted-foreground font-bold">
-                    <p>© ২০২৬ {schoolInfo.name}।</p>
-                    <p>কেন্দ্রীয় শিক্ষা ব্যবস্থাপনা পোর্টাল</p>
+                    <div className="mt-3 text-center text-[10px] text-muted-foreground font-bold">
+                        <p>© ২০২৬ {schoolInfo.name}।</p>
+                        <p>ডিজিটাল ম্যানেজমেন্ট পোর্টাল</p>
+                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
@@ -376,7 +391,6 @@ export function Header() {
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Main Top Bar User Info */}
           {user && (
             <div className="hidden lg:flex flex-col items-end text-right mr-1 leading-tight select-none">
               <span className="text-[13px] font-black text-white drop-shadow-sm">{displayName || 'User'}</span>
@@ -557,7 +571,7 @@ export function Header() {
                     <Dialog key="search-dialog" open={searchOpen} onOpenChange={handleSearchOpen}>
                         <DialogTrigger asChild>
                             <div className="flex justify-center items-center h-full relative">
-                                <button className="absolute -top-3 flex items-center justify-center shrink-0 z-10 outline-none focus:outline-none">
+                                <button className="absolute -top-3 flex items-center justify-center shrink-0 z-10 outline-none focus:outline-none border-none bg-transparent">
                                     <div className="h-14 w-14 sm:h-16 sm:w-16 bg-white rounded-full border-4 border-primary shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                                         <Search className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                                     </div>
@@ -621,7 +635,7 @@ export function Header() {
                     <button 
                         key="back-item" 
                         onClick={() => router.back()} 
-                        className="flex flex-col items-center justify-center gap-0.5 transition-colors text-primary-foreground/70 hover:text-white min-w-0 h-full w-full px-0 select-none"
+                        className="flex flex-col items-center justify-center gap-0.5 transition-colors text-primary-foreground/70 hover:text-white min-w-0 h-full w-full px-0 select-none border-none bg-transparent"
                     >
                         <item.icon className="h-5 w-5 shrink-0" />
                         <span className="text-[8px] sm:text-[10px] font-black uppercase truncate w-full text-center px-0.5">{item.label}</span>
@@ -630,7 +644,7 @@ export function Header() {
             }
 
             return (
-              <Link key={item.href || index} href={item.href!} className="h-full w-full px-0 select-none">
+              <Link key={item.href || index} href={item.href!} className="h-full w-full px-0 select-none no-underline">
                 <div className={cn(
                   "flex flex-col items-center justify-center gap-0.5 transition-colors h-full w-full",
                   isActive ? "text-white" : "text-primary-foreground/70 hover:text-white"
