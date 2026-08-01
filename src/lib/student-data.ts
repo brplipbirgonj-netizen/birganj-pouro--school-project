@@ -87,20 +87,32 @@ export const getStudentPlaceholderImage = (gender?: string) => {
  * it returns empty so the UI can use the correct gender-based face.
  */
 export const sanitizePhotoUrl = (url: string | undefined | null, gender?: string): string => {
-    if (!url) return '';
+    if (!url || typeof url !== 'string') return '';
     
-    // Check if it's an old random picsum URL (e.g. picsum.photos/seed/1/200/200)
-    // Avoid URLs with generic seeds that aren't specific profiles
-    const genericSeeds = ['1', '2', '3', 'student', 'school', '123', 'abc'];
-    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
-    const pathParts = urlObj.pathname.split('/');
-    const seed = pathParts[3]; // picsum.photos/seed/{seed}/width/height
+    // If it's a data URI (base64 image), it's a valid intentional photo
+    if (url.startsWith('data:')) return url;
 
-    if (genericSeeds.includes(seed)) {
+    try {
+        const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+        const urlObj = new URL(fullUrl);
+        
+        // Handle picsum.photos logic specifically to filter out generic placeholders
+        if (urlObj.hostname.includes('picsum.photos')) {
+            const genericSeeds = ['1', '2', '3', 'student', 'school', '123', 'abc'];
+            const pathParts = urlObj.pathname.split('/');
+            // /seed/{seed}/width/height -> ["", "seed", "{seed}", "200", "200"]
+            const seed = pathParts[2]; 
+
+            if (genericSeeds.includes(seed)) {
+                return '';
+            }
+        }
+        return url;
+    } catch (e) {
+        // If URL parsing fails, return empty to use gender-based fallback
+        // This prevents the 'Invalid URL' crash
         return '';
     }
-
-    return url;
 };
 
 // To handle data from Firestore
