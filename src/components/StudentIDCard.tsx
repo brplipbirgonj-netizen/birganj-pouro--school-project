@@ -33,18 +33,18 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
 
     return (
         <div className={cn(
-            "student-id-card font-kalpurush flex flex-col border-[3px] border-[#2418ff] overflow-hidden bg-white relative box-border",
-            isPrint ? "w-[54mm] h-[86mm]" : "w-[280px] h-[440px] shadow-2xl rounded-sm"
+            "student-id-card font-kalpurush flex flex-col border-[3px] border-[#2418ff] overflow-hidden bg-white relative box-border shadow-md",
+            isPrint ? "w-[54mm] h-[86mm]" : "w-[280px] h-[440px] rounded-sm"
         )}>
             {/* Header Section with Curve */}
             <div className={cn(
-                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 text-white",
-                isPrint ? "h-[25mm]" : "h-[120px]"
+                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-1.5 text-white",
+                isPrint ? "h-[24mm]" : "h-[110px]"
             )}>
                 {schoolInfo.logoUrl && (
                     <div className={cn(
-                        "bg-white rounded-full p-0.5 mb-1",
-                        isPrint ? "w-8 h-8" : "w-12 h-12"
+                        "bg-white rounded-full p-0.5 mb-1 shadow-sm",
+                        isPrint ? "w-7 h-7" : "w-11 h-11"
                     )}>
                         <img 
                             src={schoolInfo.logoUrl} 
@@ -53,9 +53,10 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                         />
                     </div>
                 )}
+                {/* School Name in Yellow for contrast as requested */}
                 <h1 className={cn(
-                    "font-black text-center leading-none",
-                    isPrint ? "text-[10px]" : "text-[16px]"
+                    "font-black text-center leading-none text-yellow-300 drop-shadow-md",
+                    isPrint ? "text-[10px]" : "text-[17px]"
                 )}>
                     {schoolInfo.name}
                 </h1>
@@ -74,12 +75,12 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 </div>
             </div>
 
-            <main className="relative z-20 flex-1 flex flex-col items-center pt-2 px-3">
+            <main className="relative z-20 flex-1 flex flex-col items-center pt-1 px-3">
                 {/* Photo & QR Section */}
-                <div className="flex items-center justify-between gap-2 w-full mb-3">
+                <div className="flex items-center justify-between gap-2 w-full mb-2">
                     {/* Student Photo */}
                     <div className={cn(
-                        "relative border-2 border-[#2418ff] bg-white overflow-hidden shadow-sm flex items-center justify-center",
+                        "relative border-2 border-[#2418ff] bg-white overflow-hidden shadow-sm flex items-center justify-center rounded-sm",
                         isPrint ? "w-[20mm] h-[25mm]" : "w-28 h-36"
                     )}>
                         <img 
@@ -92,7 +93,7 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
 
                     {/* QR Code */}
                     <div className={cn(
-                        "flex flex-col items-center justify-center border-2 border-slate-100 p-1 bg-white shadow-sm",
+                        "flex flex-col items-center justify-center border-2 border-slate-100 p-1 bg-white shadow-sm rounded-sm",
                         isPrint ? "w-[20mm] h-[25mm]" : "w-28 h-36"
                     )}>
                         <QRCodeCanvas 
@@ -104,37 +105,37 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 </div>
 
                 {/* Identity Badge */}
-                <div className="bg-[#2418ff] text-white px-8 py-0.5 rounded-full mb-2 shadow-md">
-                    <span className={cn("font-black tracking-widest", isPrint ? "text-[9px]" : "text-[12px]")}>পরিচয়পত্র</span>
+                <div className="bg-[#2418ff] text-white px-8 py-0.5 rounded-full mb-1 shadow-md">
+                    <span className={cn("font-black tracking-widest uppercase", isPrint ? "text-[9px]" : "text-[12px]")}>পরিচয়পত্র</span>
                 </div>
 
                 {/* Student Name */}
-                <div className="flex flex-col items-center mb-2 w-full">
+                <div className="flex flex-col items-center mb-1 w-full">
                     <h2 className={cn("font-black text-[#2418ff] leading-none text-center", isPrint ? "text-[14px]" : "text-[22px]")}>
                         {student.studentNameBn}
                     </h2>
                     <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center mt-0.5", isPrint ? "text-[7px]" : "text-[11px]")}>
-                        {student.studentNameEn || 'MD. STUDENT NAME'}
+                        {student.studentNameEn || 'STUDENT NAME'}
                     </p>
                 </div>
 
-                {/* Detailed Information */}
-                <div className="w-full border-t border-slate-100 pt-2 flex flex-col gap-1 font-black">
+                {/* Detailed Information (Reduced spacing and moved up) */}
+                <div className="w-full border-t border-slate-100 pt-1 flex flex-col gap-0.5 font-black">
                     <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-24 print:w-16 text-slate-600">শ্রেণি ও রোল</span>
+                        <span className="w-20 print:w-16 text-slate-600">শ্রেণি ও রোল</span>
                         <span className="flex-1">: {classNamesMap[student.className] || student.className}, {toBengaliNumber(student.roll)}</span>
                     </div>
                     <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-24 print:w-16 text-slate-600">শিক্ষার্থী আইডি</span>
+                        <span className="w-20 print:w-16 text-slate-600">আইডি নং</span>
                         <span className="flex-1">: {student.generatedId ? toBengaliNumber(student.generatedId) : '-'}</span>
                     </div>
                     <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-24 print:w-16 text-slate-600">শিক্ষাবর্ষ</span>
-                        <span className="flex-1">: {toBengaliNumber(student.academicYear)}</span>
+                        <span className="w-20 print:w-16 text-slate-600">মোবাইল নং</span>
+                        <span className="flex-1">: {toBengaliNumber(student.guardianMobile || '')}</span>
                     </div>
                     <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-24 print:w-16 text-slate-600">মোবাইল নং</span>
-                        <span className="flex-1">: {toBengaliNumber(student.guardianMobile || '')}</span>
+                        <span className="w-20 print:w-16 text-slate-600">শিক্ষাবর্ষ</span>
+                        <span className="flex-1">: {toBengaliNumber(student.academicYear)}</span>
                     </div>
                 </div>
             </main>
