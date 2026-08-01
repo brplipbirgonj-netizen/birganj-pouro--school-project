@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭�
 
 export default function AdmissionsManagementPage() {
     const db = useFirestore();
-    const { user, hasPermission } = useAuth();
+    const { user, hasPermission, loading: authLoading } = useAuth();
     const { toast } = useToast();
     
     const [applications, setApplications] = useState<AdmissionApplication[]>([]);
@@ -37,21 +38,25 @@ export default function AdmissionsManagementPage() {
 
     const canManageAdmissions = hasPermission('manage:admissions');
 
-    const fetchApplications = async () => {
-        if (!db) return;
+    const fetchApplications = useCallback(async () => {
+        if (!db || !user || !canManageAdmissions) return;
         setIsLoading(true);
         try {
             const data = await getAdmissionApplications(db);
             setApplications(data);
         } catch (e) {
-            console.error(e);
+            console.error("Fetch Applications Error:", e);
         }
         setIsLoading(false);
-    };
+    }, [db, user, canManageAdmissions]);
 
     useEffect(() => {
-        if (db && user) fetchApplications();
-    }, [db, user]);
+        if (!authLoading && db && user && canManageAdmissions) {
+            fetchApplications();
+        } else if (!authLoading && (!user || !canManageAdmissions)) {
+            setIsLoading(false);
+        }
+    }, [db, user, authLoading, canManageAdmissions, fetchApplications]);
 
     const filteredApps = useMemo(() => {
         if (filterClass === 'all') return applications;
@@ -84,12 +89,24 @@ export default function AdmissionsManagementPage() {
         } catch (e) {}
     };
 
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center font-kalpurush">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        );
+    }
+
     if (!canManageAdmissions) {
         return (
             <div className="min-h-screen bg-slate-100 font-kalpurush">
                 <Header />
-                <main className="p-8 text-center">
-                    <p className="text-xl text-red-600 font-bold">আপনার এই পেজটি দেখার অনুমতি নেই।</p>
+                <main className="p-8 text-center mt-20">
+                    <Card className="max-w-md mx-auto p-10 border-2 border-red-200">
+                        <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                        <h2 className="text-2xl font-black text-red-900 mb-2">প্রবেশাধিকার নেই</h2>
+                        <p className="text-slate-600 font-bold">আপনার এই পেজটি দেখার অনুমতি নেই। দয়া করে এডমিনের সাথে যোগাযোগ করুন।</p>
+                    </Card>
                 </main>
             </div>
         );
@@ -109,7 +126,7 @@ export default function AdmissionsManagementPage() {
                             <div className="flex items-center gap-2">
                                 <Filter className="h-4 w-4 text-muted-foreground" />
                                 <Select value={filterClass} onValueChange={setFilterClass}>
-                                    <SelectTrigger className="w-40 bg-white shadow-sm"><SelectValue placeholder="শ্রেণি ফিল্টার" /></SelectTrigger>
+                                    <SelectTrigger className="w-40 bg-white shadow-sm font-bold"><SelectValue placeholder="শ্রেণি ফিল্টার" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">সকল আবেদন</SelectItem>
                                         {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
@@ -120,9 +137,12 @@ export default function AdmissionsManagementPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {isLoading ? (
-                            <div className="p-20 text-center italic text-muted-foreground">লোড হচ্ছে...</div>
+                            <div className="p-20 text-center italic text-muted-foreground flex flex-col items-center gap-4">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <span>আবেদনগুলো লোড হচ্ছে...</span>
+                            </div>
                         ) : filteredApps.length === 0 ? (
-                            <div className="p-20 text-center text-muted-foreground">কোনো নতুন আবেদন পাওয়া যায়নি।</div>
+                            <div className="p-20 text-center text-muted-foreground font-bold">কোনো নতুন আবেদন পাওয়া যায়নি।</div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <Table>

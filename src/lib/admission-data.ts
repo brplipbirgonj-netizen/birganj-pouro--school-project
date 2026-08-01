@@ -1,3 +1,4 @@
+
 'use client';
 /**
  * @fileOverview Admission application data services.
@@ -50,7 +51,6 @@ export const saveAdmissionApplication = (db: Firestore, data: NewAdmissionData) 
         academicYear: String(data.academicYear),
     };
 
-    // Mutation should not be awaited directly per guidelines to allow optimistic UI
     return addDoc(collection(db, ADMISSIONS_COLLECTION), dataToSave)
         .catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({

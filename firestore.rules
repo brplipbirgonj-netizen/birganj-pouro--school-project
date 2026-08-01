@@ -11,14 +11,16 @@ service cloud.firestore {
 
     // Direct check for admin role from the users collection
     function isAdmin() {
-      return isAuthed() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuthed() && userDoc != null && userDoc.data.role == 'admin';
     }
 
     // Direct check for specific permission
     function hasPermission(permission) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return isAuthed() && 
-        (permission in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions);
+        userDoc != null && 
+        permission in userDoc.data.get('permissions', []);
     }
 
     // --- Rules for Collections ---
@@ -31,7 +33,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow get, update: if isAuthed() && request.auth.uid == userId;
       allow list: if isAdmin();
-      allow create: if isAuthed(); // Allow initial profile creation
+      allow create: if isAuthed();
       allow delete: if isAdmin();
     }
 
@@ -110,12 +112,12 @@ service cloud.firestore {
     }
 
     match /admissionApplications/{id} {
-      // Allow public creation for the online admission portal
+      // Public creation allowed
       allow create: if true;
-      // Protected read/update for school management
-      allow read, update, delete: if isAdmin() || hasPermission('manage:admissions');
+      // Staff access for management
+      allow read, get, list, update, delete: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
     }
     
-    // Trigger deployment: Syncing latest admission rules and backend IR fix.
+    // Trigger deployment: Fixing list permissions for admission management and helper robustness.
   }
 }
