@@ -395,8 +395,20 @@ export function Header() {
                     </div>
                   </nav>
                   
-                  {/* Logout and User Info Footer for Sidebar */}
-                  <div className="p-4 border-t bg-muted/30 space-y-3">
+                  {/* Sidebar User Profile Section (Enhanced outside the button) */}
+                  <div className="p-4 border-t bg-muted/40 mt-auto">
+                    <div className="flex items-center gap-3 mb-4 p-2 bg-white rounded-xl shadow-sm border border-primary/10">
+                        <Avatar className="h-10 w-10 border-2 border-primary/20">
+                            <AvatarImage src={displayPhoto || undefined} />
+                            <AvatarFallback>{displayName?.charAt(0) || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 overflow-hidden text-left">
+                            <p className="text-sm font-black text-slate-900 truncate">{displayName || 'ব্যবহারকারী'}</p>
+                            <p className="text-[10px] font-bold text-primary italic truncate">
+                                {displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
+                            </p>
+                        </div>
+                    </div>
                     <Button 
                       variant="destructive" 
                       className="w-full font-black shadow-md h-11" 
@@ -405,12 +417,6 @@ export function Header() {
                       <LogOut className="mr-2 h-4 w-4" />
                       লগ আউট
                     </Button>
-                    <div className="text-center space-y-0.5">
-                      <p className="text-sm font-black text-slate-800">{displayName || 'অজানা ব্যবহারকারী'}</p>
-                      <p className="text-[10px] font-bold text-primary italic">
-                        {displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
-                      </p>
-                    </div>
                   </div>
 
                   <div className="p-4 border-t bg-muted/20 text-center text-[10px] text-muted-foreground">
@@ -444,6 +450,14 @@ export function Header() {
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
+          {/* Main Top Bar User Info (Always Visible on Desktop/Tablet) */}
+          {user && (
+            <div className="hidden lg:flex flex-col items-end text-right mr-1 leading-tight select-none">
+              <span className="text-[13px] font-black text-white drop-shadow-sm">{displayName || 'User'}</span>
+              <span className="text-[10px] font-bold text-white/80 italic">{displayDesignation || 'শিক্ষক'}</span>
+            </div>
+          )}
+
           <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
               <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
@@ -583,9 +597,9 @@ export function Header() {
                       <span className="font-bold">লগ আউট</span>
                   </DropdownMenuItem>
                   
-                  {/* Info below logout in Dropdown */}
+                  {/* Detailed profile footer inside dropdown */}
                   <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5 text-center">
+                  <div className="px-2 py-1.5 text-center bg-muted/20 rounded-b-md">
                     <p className="text-[10px] font-black text-slate-800 leading-tight">{displayName}</p>
                     <p className="text-[9px] font-bold text-primary italic opacity-70">
                       {displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
