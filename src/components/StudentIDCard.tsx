@@ -70,12 +70,13 @@ export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentI
                     <div className="absolute -inset-1 bg-primary/10 rounded-lg blur-[2px]"></div>
                     <div className={cn(
                         "relative border-[1.5px] border-primary bg-white overflow-hidden rounded-md shadow-sm",
-                        isPrint ? "w-18 h-22" : "w-28 h-32"
+                        isPrint ? "w-20 h-28" : "w-28 h-32"
                     )}>
                         <Image 
                             src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} 
                             alt="Photo" 
                             fill
+                            priority
                             className="object-cover" 
                             data-ai-hint={isFemale(student.gender) ? "girl face" : "boy face"}
                         />

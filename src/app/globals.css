@@ -72,6 +72,14 @@
       print-color-adjust: exact !important;
     }
     
+    /* Force images to be visible and print correctly */
+    img {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      display: block !important;
+      max-width: none !important;
+    }
+
     /* Hide everything on the page first */
     body * {
       visibility: hidden !important;
