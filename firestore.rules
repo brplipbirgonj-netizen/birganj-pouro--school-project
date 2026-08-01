@@ -19,16 +19,17 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Direct check for admin role
+    // Direct check for admin role or permission
     function isAdmin() {
       return isAuthed() && userExists() && getUserData().role == 'admin';
     }
 
-    // Direct check for specific permission
+    // Direct check for specific permission (admins have all permissions)
     function hasPermission(permission) {
-      return isAuthed() && 
-        userExists() && 
-        permission in getUserData().get('permissions', []);
+      return isAuthed() && userExists() && (
+        getUserData().role == 'admin' || 
+        permission in getUserData().get('permissions', [])
+      );
     }
 
     // --- Rules for Collections ---
@@ -47,23 +48,23 @@ service cloud.firestore {
 
     match /classRoutines/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:routines');
+      allow write: if hasPermission('manage:routines');
     }
 
     match /proxyClasses/{id} {
       allow read: if isAuthed();
-      allow create, update, delete, write: if isAdmin() || hasPermission('manage:routines');
+      allow create, update, delete, write: if hasPermission('manage:routines');
     }
 
     match /notices/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:documents');
+      allow write: if hasPermission('manage:documents');
       allow delete: if isAdmin();
     }
 
     match /holidays/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:documents');
+      allow write: if hasPermission('manage:documents');
       allow delete: if isAdmin();
     }
     
@@ -74,60 +75,58 @@ service cloud.firestore {
 
     match /students/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:students');
+      allow write: if hasPermission('manage:students');
       allow delete: if isAdmin();
     }
     
     match /staff/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:staff');
+      allow write: if hasPermission('manage:staff');
       allow delete: if isAdmin();
     }
 
     match /staffAttendance/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:staff-attendance');
+      allow write: if hasPermission('manage:staff-attendance');
     }
 
     match /attendance/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:attendance');
+      allow write: if hasPermission('manage:attendance');
       allow delete: if isAdmin();
     }
     
     match /results/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('input:results') || hasPermission('manage:results');
+      allow write: if hasPermission('input:results') || hasPermission('manage:results');
       allow delete: if isAdmin();
     }
 
     match /messageLogs/{id} {
       allow read: if isAuthed();
-      allow create: if isAdmin() || hasPermission('send:messaging');
-      allow update, delete: if isAdmin() || hasPermission('manage:messaging');
+      allow create: if hasPermission('send:messaging');
+      allow update, delete: if hasPermission('manage:messaging');
     }
 
     match /feeCollections/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('collect:fees');
+      allow write: if hasPermission('collect:fees');
       allow delete: if isAdmin();
     }
 
     match /transactions/{id} {
       allow read: if isAuthed();
-      allow write: if isAdmin() || hasPermission('manage:transactions');
+      allow write: if hasPermission('manage:transactions');
       allow delete: if isAdmin();
     }
 
     match /admissionApplications/{id} {
       // Public creation allowed for anyone
       allow create: if true;
-      // Detailed permissions for management
-      allow get, read: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
-      allow list: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
-      allow update, delete: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
+      // Management permissions
+      allow read, update, delete: if isAuthed() && hasPermission('manage:admissions');
     }
     
-    // Trigger deployment: Refining admission list rules and robust helper functions.
+    // Trigger deployment: Refining helper functions and explicit permission hierarchy.
   }
 }
