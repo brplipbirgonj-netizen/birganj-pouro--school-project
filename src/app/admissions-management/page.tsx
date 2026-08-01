@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -36,7 +37,7 @@ export default function AdmissionsManagementPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [filterClass, setFilterClass] = useState<string>('all');
 
-    const canManageAdmissions = hasPermission('manage:admissions');
+    const canManageAdmissions = useMemo(() => hasPermission('manage:admissions'), [hasPermission]);
 
     useEffect(() => {
         setIsMounted(true);
@@ -50,17 +51,20 @@ export default function AdmissionsManagementPage() {
             setApplications(data);
         } catch (e) {
             console.error("Fetch Applications Error:", e);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }, [db, user, canManageAdmissions]);
 
     useEffect(() => {
-        if (isMounted && !authLoading && db && user && canManageAdmissions) {
-            fetchApplications();
-        } else if (isMounted && !authLoading && (!user || !canManageAdmissions)) {
-            setIsLoading(false);
+        if (isMounted && !authLoading) {
+            if (user && canManageAdmissions) {
+                fetchApplications();
+            } else {
+                setIsLoading(false);
+            }
         }
-    }, [db, user, authLoading, canManageAdmissions, fetchApplications, isMounted]);
+    }, [isMounted, authLoading, user, canManageAdmissions, fetchApplications]);
 
     const filteredApps = useMemo(() => {
         if (filterClass === 'all') return applications;
@@ -93,15 +97,22 @@ export default function AdmissionsManagementPage() {
         } catch (e) {}
     };
 
-    if (!isMounted || authLoading) {
+    if (!isMounted) {
+        return null;
+    }
+
+    if (authLoading) {
         return (
             <div className="min-h-screen bg-slate-100 flex items-center justify-center font-kalpurush">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="text-muted-foreground font-bold">অথেনটিকেশন যাচাই করা হচ্ছে...</p>
+                </div>
             </div>
         );
     }
 
-    if (!canManageAdmissions) {
+    if (!user || !canManageAdmissions) {
         return (
             <div className="min-h-screen bg-slate-100 font-kalpurush">
                 <Header />

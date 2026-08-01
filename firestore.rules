@@ -9,18 +9,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Direct check for admin role from the users collection
+    // Safely get user data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if user document exists
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Direct check for admin role
     function isAdmin() {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isAuthed() && userDoc != null && userDoc.data.role == 'admin';
+      return isAuthed() && userExists() && getUserData().role == 'admin';
     }
 
     // Direct check for specific permission
     function hasPermission(permission) {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return isAuthed() && 
-        userDoc != null && 
-        permission in userDoc.data.get('permissions', []);
+        userExists() && 
+        permission in getUserData().get('permissions', []);
     }
 
     // --- Rules for Collections ---
@@ -112,12 +120,14 @@ service cloud.firestore {
     }
 
     match /admissionApplications/{id} {
-      // Public creation allowed
+      // Public creation allowed for anyone
       allow create: if true;
-      // Staff access for management
-      allow read, get, list, update, delete: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
+      // Detailed permissions for management
+      allow get, read: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
+      allow list: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
+      allow update, delete: if isAuthed() && (isAdmin() || hasPermission('manage:admissions'));
     }
     
-    // Trigger deployment: Fixing list permissions for admission management and helper robustness.
+    // Trigger deployment: Refining admission list rules and robust helper functions.
   }
 }
