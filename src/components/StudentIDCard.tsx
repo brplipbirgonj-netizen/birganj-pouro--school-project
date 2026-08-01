@@ -38,13 +38,13 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
         )}>
             {/* Header Section with Curve */}
             <div className={cn(
-                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-1.5 text-white",
-                isPrint ? "h-[24mm]" : "h-[110px]"
+                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 text-white",
+                isPrint ? "h-[28mm]" : "h-[130px]"
             )}>
                 {schoolInfo.logoUrl && (
                     <div className={cn(
                         "bg-white rounded-full p-0.5 mb-1 shadow-sm",
-                        isPrint ? "w-7 h-7" : "w-11 h-11"
+                        isPrint ? "w-8 h-8" : "w-12 h-12"
                     )}>
                         <img 
                             src={schoolInfo.logoUrl} 
@@ -53,16 +53,16 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                         />
                     </div>
                 )}
-                {/* School Name in Yellow for contrast as requested */}
+                {/* School Name in Yellow for contrast */}
                 <h1 className={cn(
-                    "font-black text-center leading-none text-yellow-300 drop-shadow-md",
-                    isPrint ? "text-[10px]" : "text-[17px]"
+                    "font-black text-center leading-tight text-yellow-300 drop-shadow-md px-2",
+                    isPrint ? "text-[11px]" : "text-[18px]"
                 )}>
                     {schoolInfo.name}
                 </h1>
                 <p className={cn(
                     "font-bold text-white/90 text-center uppercase tracking-tighter mt-0.5",
-                    isPrint ? "text-[5.5px]" : "text-[8px]"
+                    isPrint ? "text-[6px]" : "text-[9px]"
                 )}>
                     Upazila: Birganj, Post: Birganj, Zila: Dinajpur
                 </p>
@@ -75,9 +75,9 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 </div>
             </div>
 
-            <main className="relative z-20 flex-1 flex flex-col items-center pt-1 px-3">
+            <main className="relative z-20 flex-1 flex flex-col items-center pt-0 px-3">
                 {/* Photo & QR Section */}
-                <div className="flex items-center justify-between gap-2 w-full mb-2">
+                <div className="flex items-center justify-between gap-2 w-full mb-1">
                     {/* Student Photo */}
                     <div className={cn(
                         "relative border-2 border-[#2418ff] bg-white overflow-hidden shadow-sm flex items-center justify-center rounded-sm",
@@ -104,13 +104,8 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                     </div>
                 </div>
 
-                {/* Identity Badge */}
-                <div className="bg-[#2418ff] text-white px-8 py-0.5 rounded-full mb-1 shadow-md">
-                    <span className={cn("font-black tracking-widest uppercase", isPrint ? "text-[9px]" : "text-[12px]")}>পরিচয়পত্র</span>
-                </div>
-
-                {/* Student Name */}
-                <div className="flex flex-col items-center mb-1 w-full">
+                {/* Student Name - Moved up since badge is removed */}
+                <div className="flex flex-col items-center mb-1 w-full mt-1">
                     <h2 className={cn("font-black text-[#2418ff] leading-none text-center", isPrint ? "text-[14px]" : "text-[22px]")}>
                         {student.studentNameBn}
                     </h2>
@@ -119,7 +114,7 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                     </p>
                 </div>
 
-                {/* Detailed Information (Reduced spacing and moved up) */}
+                {/* Detailed Information - Moved up and gap reduced */}
                 <div className="w-full border-t border-slate-100 pt-1 flex flex-col gap-0.5 font-black">
                     <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
                         <span className="w-20 print:w-16 text-slate-600">শ্রেণি ও রোল</span>
@@ -140,9 +135,9 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 </div>
             </main>
 
-            {/* Footer Signature Section */}
-            <footer className="relative z-10 pb-2 flex flex-col items-center mt-auto">
-                <div className={cn("border-t-2 border-black mb-0.5", isPrint ? "w-20" : "w-40")}></div>
+            {/* Footer Signature Section - Now has more space */}
+            <footer className="relative z-10 pb-3 flex flex-col items-center mt-auto">
+                <div className={cn("border-t-2 border-black mb-0.5", isPrint ? "w-24" : "w-44")}></div>
                 <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[14px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
             </footer>
 
