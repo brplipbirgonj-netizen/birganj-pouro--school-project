@@ -100,19 +100,19 @@ const NoticeTicker = () => {
     if (!latestNotice) return null;
 
     return (
-        <div className="w-full bg-slate-900 text-white h-10 flex items-center overflow-hidden border-b-2 border-primary shadow-lg sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
-            <div className="bg-destructive px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-[5px_0_10px_rgba(0,0,0,0.5)]">
+        <div className="w-full bg-yellow-200 text-red-700 h-10 flex items-center overflow-hidden border-b-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
+            <div className="bg-red-600 text-white px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-lg">
                 <Megaphone className="h-4 w-4 animate-bounce" />
                 <span className="font-black text-sm whitespace-nowrap">জরুরি নোটিশ:</span>
             </div>
             <div className="flex-1 relative overflow-hidden h-full flex items-center">
                 <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-20 group-hover:pause-animation">
-                    <span className="font-bold text-sm tracking-wide">
-                        <span className="text-amber-400">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
+                    <span className="font-black text-sm tracking-wide">
+                        <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
                     </span>
                     {/* Repeated text for seamless scrolling */}
-                    <span className="font-bold text-sm tracking-wide">
-                        <span className="text-amber-400">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
+                    <span className="font-black text-sm tracking-wide">
+                        <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
                     </span>
                 </div>
             </div>
