@@ -67,7 +67,6 @@ const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
 };
 
-// All 13 Menu Items
 const mainMenuItems = [
   { id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, href: '/', permission: 'view:dashboard', color: 'bg-sky-50 text-sky-700 border-sky-100' },
   { id: 'admissions', label: 'ভর্তি আবেদনসমূহ', icon: UserCheck, href: '/admissions-management', permission: 'manage:admissions', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
@@ -241,23 +240,23 @@ export function Header() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col p-0 font-kalpurush h-full">
-                  <SheetHeader className="p-4 border-b bg-primary/5 shrink-0">
+                  <SheetHeader className="p-3 border-b bg-primary/5 shrink-0">
                       <SheetTitle className="sr-only">Main Menu</SheetTitle>
                       <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
-                    <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                      {isSchoolInfoLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : (schoolInfo.logoUrl && (
-                        <div className="relative h-10 w-10">
+                    <Link href="/" className="flex items-center gap-2 text-base font-semibold text-foreground">
+                      {isSchoolInfoLoading ? <Skeleton className="h-8 w-8 rounded-full" /> : (schoolInfo.logoUrl && (
+                        <div className="relative h-8 w-8">
                           <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
                         </div>
                       ))}
-                      <span className="font-black text-slate-900 truncate">{isSchoolInfoLoading ? <Skeleton className="h-6 w-32" /> : schoolInfo.name}</span>
+                      <span className="font-black text-slate-900 truncate text-sm">{isSchoolInfoLoading ? <Skeleton className="h-5 w-24" /> : schoolInfo.name}</span>
                     </Link>
                   </SheetHeader>
                   
-                  <div className="p-4 border-b bg-slate-50 shrink-0">
+                  <div className="px-4 py-2 border-b bg-slate-50 shrink-0">
                       <Label htmlFor="year-select" className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">শিক্ষাবর্ষ</Label>
                       <Select value={selectedYear} onValueChange={setSelectedYear}>
-                          <SelectTrigger id="year-select" className="mt-1.5 h-10 bg-white border-2 border-primary/10 font-black text-primary">
+                          <SelectTrigger id="year-select" className="mt-1 h-8 bg-white border-2 border-primary/10 font-black text-primary text-xs">
                               <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -270,47 +269,41 @@ export function Header() {
 
                   <div className="flex-1 overflow-hidden">
                     <ScrollArea className="h-full">
-                        <nav className="grid gap-2 p-4">
+                        <nav className="grid gap-1.5 p-3">
                             {permittedMenuItems.map((item) => (
                                 <SheetClose asChild key={item.id}>
                                     <Link
                                         href={item.href}
                                         className={cn(
-                                            "flex items-center gap-4 px-4 py-3.5 rounded-xl border-2 transition-all shadow-sm",
+                                            "flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all shadow-sm",
                                             pathname === item.href ? "border-primary bg-primary text-white shadow-md" : cn(item.color, "hover:shadow-md")
                                         )}
                                     >
-                                        <item.icon className={cn("h-5 w-5 shrink-0", pathname === item.href ? "text-white" : "")} />
-                                        <span className="font-black text-sm">{item.label}</span>
-                                        <ChevronRight className={cn("ml-auto h-4 w-4 opacity-30", pathname === item.href ? "text-white opacity-100" : "")} />
+                                        <item.icon className={cn("h-4 w-4 shrink-0", pathname === item.href ? "text-white" : "")} />
+                                        <span className="font-black text-xs">{item.label}</span>
+                                        <ChevronRight className={cn("ml-auto h-3 w-3 opacity-30", pathname === item.href ? "text-white opacity-100" : "")} />
                                     </Link>
                                 </SheetClose>
                             ))}
-                            {permittedMenuItems.length === 0 && (
-                                <div className="flex flex-col items-center py-20 gap-2">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary opacity-20" />
-                                    <p className="text-xs font-bold text-muted-foreground">মেনু লোড হচ্ছে...</p>
-                                </div>
-                            )}
                         </nav>
                     </ScrollArea>
                   </div>
                   
-                  <div className="p-4 border-t bg-white shrink-0 mt-auto">
-                    <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-2xl border">
-                        <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                  <div className="p-3 border-t bg-white shrink-0 mt-auto">
+                    <div className="flex items-center gap-2 mb-3 p-2 bg-muted/30 rounded-xl border">
+                        <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
                             <AvatarImage src={displayPhoto || undefined} />
-                            <AvatarFallback className="font-black">{displayName?.charAt(0) || 'U'}</AvatarFallback>
+                            <AvatarFallback className="font-black text-xs">{displayName?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 overflow-hidden">
-                            <p className="text-sm font-black text-slate-900 truncate">{displayName || 'User'}</p>
-                            <p className="text-[10px] font-bold text-primary italic truncate">
+                            <p className="text-xs font-black text-slate-900 truncate">{displayName || 'User'}</p>
+                            <p className="text-[9px] font-bold text-primary italic truncate">
                                 {displayDesignation || (user?.role === 'admin' ? 'এডমিন' : 'শিক্ষক')}
                             </p>
                         </div>
                     </div>
-                    <Button variant="destructive" className="w-full font-black h-11 rounded-xl" onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" /> লগ আউট
+                    <Button variant="destructive" className="w-full font-black h-9 rounded-xl text-xs" onClick={handleLogout}>
+                      <LogOut className="mr-2 h-3.5 w-3.5" /> লগ আউট
                     </Button>
                   </div>
                 </SheetContent>
