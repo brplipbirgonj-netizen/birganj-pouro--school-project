@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap, Loader2, Printer, FileText, Check, AlertCircle } from 'lucide-react';
+import { Upload, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap, Loader2, Printer, FileText, Check, AlertCircle, Phone } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { saveAdmissionApplication, NewAdmissionData } from '@/lib/admission-data';
 import { useFirestore } from '@/firebase';
@@ -81,7 +81,6 @@ export default function AdmissionPortalPage() {
 
     const handleInputChange = (field: keyof NewAdmissionData, value: any) => {
         setStudent(prev => ({...prev, [field]: value}));
-        // Remove from error set if value is provided
         if (value && errors.has(field)) {
             const nextErrors = new Set(errors);
             nextErrors.delete(field);
@@ -92,12 +91,10 @@ export default function AdmissionPortalPage() {
     const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
         if (file.size > 2 * 1024 * 1024) {
             toast({ variant: "destructive", title: "ছবি বড়", description: "২ মেগাবাইটের কম সাইজের ছবি দিন।" });
             return;
         }
-
         const reader = new FileReader();
         reader.onload = (e) => {
             const dataUrl = e.target?.result as string;
@@ -130,11 +127,7 @@ export default function AdmissionPortalPage() {
 
         if (missingFields.size > 0) {
             setErrors(missingFields);
-            toast({
-                variant: 'destructive',
-                title: 'তথ্য অসম্পূর্ণ',
-                description: 'অনুগ্রহ করে সকল লাল চিহ্নিত ঘরগুলো পূরণ করুন।'
-            });
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'অনুগ্রহ করে লাল চিহ্নিত ঘরগুলো পূরণ করুন।' });
             return false;
         }
         return true;
@@ -177,12 +170,10 @@ export default function AdmissionPortalPage() {
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!db) return;
-
         if (!confirmReview) {
             toast({ variant: "destructive", title: "নিশ্চিতকরণ আবশ্যক", description: "তথ্য যাচাই করে নিচের বক্সে টিক দিন।" });
             return;
         }
-
         setIsLoading(true);
         try {
             await saveAdmissionApplication(db, student);
@@ -254,7 +245,7 @@ export default function AdmissionPortalPage() {
             </div>
 
             <CardContent className="p-6 sm:p-10">
-                <form onSubmit={handleSubmit} className="space-y-8">
+                <form onSubmit={handleSubmit} className="space-y-8" autoComplete="on">
                     {/* Step 1: Institutional Info */}
                     {currentStep === 1 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
@@ -274,6 +265,8 @@ export default function AdmissionPortalPage() {
                                 <div className="space-y-2">
                                     <Label className={cn("font-bold", errors.has('previousSchool') && "text-red-600")}>পূর্ববর্তী বিদ্যালয়ের নাম *</Label>
                                     <Input 
+                                        name="previous_school"
+                                        autoComplete="organization"
                                         className={cn("h-12", errors.has('previousSchool') && "border-red-500")} 
                                         value={student.previousSchool} 
                                         onChange={e => handleInputChange('previousSchool', e.target.value)} 
@@ -317,11 +310,11 @@ export default function AdmissionPortalPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label className={cn("font-bold", errors.has('studentNameBn') && "text-red-600")}>নাম (বাংলা) *</Label>
-                                    <Input className={cn("h-12", errors.has('studentNameBn') && "border-red-500")} value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} required />
+                                    <Input name="student_name_bn" autoComplete="name" className={cn("h-12", errors.has('studentNameBn') && "border-red-500")} value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} required />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">নাম (ইংরেজি)</Label>
-                                    <Input className="h-12 uppercase" value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} />
+                                    <Input name="student_name_en" autoComplete="name" className="h-12 uppercase" value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className={cn("font-bold", errors.has('dob') && "text-red-600")}>জন্ম তারিখ *</Label>
@@ -329,7 +322,7 @@ export default function AdmissionPortalPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">জন্ম নিবন্ধন নম্বর</Label>
-                                    <Input className="h-12" value={student.birthRegNo} onChange={e => handleInputChange('birthRegNo', e.target.value)} />
+                                    <Input name="birth_reg" autoComplete="off" className="h-12" value={student.birthRegNo} onChange={e => handleInputChange('birthRegNo', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className={cn("font-bold", errors.has('gender') && "text-red-600")}>লিঙ্গ *</Label>
@@ -382,15 +375,15 @@ export default function AdmissionPortalPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label className={cn("font-bold", errors.has('fatherNameBn') && "text-red-600")}>পিতার নাম (বাংলা) *</Label>
-                                    <Input className={cn("h-12", errors.has('fatherNameBn') && "border-red-500")} value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} />
+                                    <Input name="father_name_bn" autoComplete="name" className={cn("h-12", errors.has('fatherNameBn') && "border-red-500")} value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">পিতার নাম (ইংরেজি)</Label>
-                                    <Input className="h-12 uppercase" value={student.fatherNameEn} onChange={e => handleInputChange('fatherNameEn', e.target.value)} />
+                                    <Input name="father_name_en" autoComplete="name" className="h-12 uppercase" value={student.fatherNameEn} onChange={e => handleInputChange('fatherNameEn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">পিতার NID নম্বর</Label>
-                                    <Input className="h-12" value={student.fatherNid} onChange={e => handleInputChange('fatherNid', e.target.value)} />
+                                    <Input name="father_nid" autoComplete="off" className="h-12" value={student.fatherNid} onChange={e => handleInputChange('fatherNid', e.target.value)} />
                                 </div>
                                 <div className="hidden sm:block"></div>
                                 
@@ -398,15 +391,15 @@ export default function AdmissionPortalPage() {
 
                                 <div className="space-y-2">
                                     <Label className={cn("font-bold", errors.has('motherNameBn') && "text-red-600")}>মাতার নাম (বাংলা) *</Label>
-                                    <Input className={cn("h-12", errors.has('motherNameBn') && "border-red-500")} value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} />
+                                    <Input name="mother_name_bn" autoComplete="name" className={cn("h-12", errors.has('motherNameBn') && "border-red-500")} value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">মাতার নাম (ইংরেজি)</Label>
-                                    <Input className="h-12 uppercase" value={student.motherNameEn} onChange={e => handleInputChange('motherNameEn', e.target.value)} />
+                                    <Input name="mother_name_en" autoComplete="name" className="h-12 uppercase" value={student.motherNameEn} onChange={e => handleInputChange('motherNameEn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">মাতার NID নম্বর</Label>
-                                    <Input className="h-12" value={student.motherNid} onChange={e => handleInputChange('motherNid', e.target.value)} />
+                                    <Input name="mother_nid" autoComplete="off" className="h-12" value={student.motherNid} onChange={e => handleInputChange('motherNid', e.target.value)} />
                                 </div>
                                 <div className="hidden sm:block"></div>
 
@@ -414,11 +407,11 @@ export default function AdmissionPortalPage() {
 
                                 <div className="space-y-2">
                                     <Label className={cn("font-bold text-red-600", errors.has('guardianMobile') && "text-red-700 underline")}>অভিভাবকের মোবাইল নম্বর *</Label>
-                                    <Input className={cn("h-12 border-red-200", errors.has('guardianMobile') && "border-red-500 bg-red-50")} type="tel" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} />
+                                    <Input name="guardian_mobile" autoComplete="tel" className={cn("h-12 border-red-200", errors.has('guardianMobile') && "border-red-500 bg-red-50")} type="tel" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">শিক্ষার্থীর মোবাইল (যদি থাকে)</Label>
-                                    <Input className="h-12" type="tel" value={student.studentMobile} onChange={e => handleInputChange('studentMobile', e.target.value)} />
+                                    <Input name="student_mobile" autoComplete="tel" className="h-12" type="tel" value={student.studentMobile} onChange={e => handleInputChange('studentMobile', e.target.value)} />
                                 </div>
                             </div>
                             <div className="flex gap-4 mt-6">
@@ -438,24 +431,24 @@ export default function AdmissionPortalPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label className={cn("font-bold", errors.has('presentVillage') && "text-red-600")}>গ্রাম/মহল্লা *</Label>
-                                        <Input className={cn("h-12", errors.has('presentVillage') && "border-red-500")} value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
+                                        <Input name="village" autoComplete="address-line1" className={cn("h-12", errors.has('presentVillage') && "border-red-500")} value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
-                                        <Input className="h-12" value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} />
+                                        <Input name="union" autoComplete="address-line2" className="h-12" value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ডাকঘর</Label>
-                                        <Input className="h-12" value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} />
+                                        <Input name="post_office" autoComplete="off" className="h-12" value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className={cn("font-bold", errors.has('presentUpazila') && "text-red-600")}>উপজেলা *</Label>
-                                            <Input className={cn("h-12", errors.has('presentUpazila') && "border-red-500")} value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
+                                            <Input name="upazila" autoComplete="address-level2" className={cn("h-12", errors.has('presentUpazila') && "border-red-500")} value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label className={cn("font-bold", errors.has('presentDistrict') && "text-red-600")}>জেলা *</Label>
-                                            <Input className={cn("h-12", errors.has('presentDistrict') && "border-red-500")} value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} />
+                                            <Input name="district" autoComplete="address-level1" className={cn("h-12", errors.has('presentDistrict') && "border-red-500")} value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} />
                                         </div>
                                     </div>
                                 </div>
@@ -472,24 +465,24 @@ export default function AdmissionPortalPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label className="font-bold">গ্রাম/মহল্লা</Label>
-                                        <Input className="h-12" value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} />
+                                        <Input name="p_village" autoComplete="address-line1" className="h-12" value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
-                                        <Input className="h-12" value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} />
+                                        <Input name="p_union" autoComplete="address-line2" className="h-12" value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-bold">ডাকঘর</Label>
-                                        <Input className="h-12" value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} />
+                                        <Input name="p_post_office" autoComplete="off" className="h-12" value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className="font-bold">উপজেলা</Label>
-                                            <Input className="h-12" value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} />
+                                            <Input name="p_upazila" autoComplete="address-level2" className="h-12" value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="font-bold">জেলা</Label>
-                                            <Input className="h-12" value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} />
+                                            <Input name="p_district" autoComplete="address-level1" className="h-12" value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} />
                                         </div>
                                     </div>
                                 </div>
@@ -506,58 +499,75 @@ export default function AdmissionPortalPage() {
                     {currentStep === 5 && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
                             <div className="flex items-center justify-between border-b pb-4">
-                                <h3 className="text-xl font-black flex items-center gap-2 text-primary"><FileText className="h-6 w-6" /> ৫. আবেদনপত্র প্রিভিউ (ড্রাফট)</h3>
+                                <h3 className="text-xl font-black flex items-center gap-2 text-primary"><FileText className="h-6 w-6" /> ৫. আবেদনপত্র প্রিভিউ ও নিশ্চিতকরণ</h3>
                                 <Badge variant="secondary" className="font-bold bg-amber-100 text-amber-800">সাবমিট করার আগে তথ্য যাচাই করুন</Badge>
                             </div>
 
                             <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-200 space-y-8 shadow-inner overflow-hidden">
+                                {/* Student Summary */}
                                 <div className="flex flex-col sm:flex-row gap-6 items-start">
                                     <div className="h-32 w-32 rounded-lg border-2 border-primary/20 bg-white p-1 shadow-sm shrink-0">
                                         {photoPreview ? <Image src={photoPreview} alt="Student" width={128} height={128} className="object-cover h-full w-full rounded" /> : <div className="h-full w-full bg-muted flex items-center justify-center"><User className="text-muted-foreground h-10 w-10" /></div>}
                                     </div>
                                     <div className="space-y-2 w-full">
-                                        <h4 className="text-2xl font-black text-slate-800">{student.studentNameBn || 'নাম প্রদান করা হয়নি'}</h4>
+                                        <h4 className="text-2xl font-black text-slate-800">{student.studentNameBn || 'নাম নেই'}</h4>
+                                        <p className="text-sm font-bold text-muted-foreground uppercase">{student.studentNameEn || 'English Name Missing'}</p>
                                         <p className="text-sm font-bold text-primary">{classNamesMap[student.className] || 'শ্রেণি'} শ্রেণিতে ভর্তির আবেদন - {toBengaliNumber(student.academicYear)}</p>
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm font-medium">
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-4 text-xs font-semibold">
                                             <p className="border-b pb-1"><span className="text-muted-foreground">পূর্ববর্তী স্কুল:</span> {student.previousSchool || '-'}</p>
-                                            <p className="border-b pb-1"><span className="text-muted-foreground">লিঙ্গ:</span> {student.gender === 'male' ? 'পুরুষ' : student.gender === 'female' ? 'মহিলা' : 'অন্যান্য'}</p>
-                                            <p className="border-b pb-1"><span className="text-muted-foreground">ধর্ম:</span> {student.religion || '-'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">জন্ম নিবন্ধন:</span> {student.birthRegNo || '-'}</p>
                                             <p className="border-b pb-1"><span className="text-muted-foreground">জন্ম তারিখ:</span> {student.dob ? format(student.dob, 'dd/MM/yyyy') : '-'}</p>
-                                            <p className="border-b pb-1"><span className="text-muted-foreground">বিভাগ:</span> {student.group || 'সাধারণ'}</p>
-                                            <p className="border-b pb-1"><span className="text-muted-foreground">নিবন্ধন নং:</span> {student.birthRegNo || '-'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">লিঙ্গ ও ধর্ম:</span> {student.gender === 'male' ? 'পুরুষ' : student.gender === 'female' ? 'মহিলা' : 'অন্যান্য'}, {student.religion || '-'}</p>
+                                            <p className="border-b pb-1"><span className="text-muted-foreground">বিভাগ ও ঐচ্ছিক:</span> {student.group || 'সাধারণ'}, {student.optionalSubject || '-'}</p>
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* Parents Summary */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-primary pl-2">অভিভাবকের তথ্য</p>
-                                        <div className="space-y-2 text-sm">
-                                            <p className="flex justify-between border-b pb-1"><span>পিতার নাম:</span> <span className="font-bold">{student.fatherNameBn}</span></p>
-                                            <p className="flex justify-between border-b pb-1"><span>পিতার এনআইডি:</span> <span className="font-bold">{student.fatherNid || '-'}</span></p>
-                                            <p className="flex justify-between border-b pb-1"><span>মাতার নাম:</span> <span className="font-bold">{student.motherNameBn}</span></p>
-                                            <p className="flex justify-between border-b pb-1"><span>মোবাইল:</span> <span className="font-bold text-emerald-700">{student.guardianMobile}</span></p>
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-primary pl-2">পিতা ও মাতার তথ্য</p>
+                                        <div className="space-y-3 text-xs bg-white p-4 rounded-xl border">
+                                            <div className="space-y-1">
+                                                <p className="text-muted-foreground">পিতার নাম (বাংলা ও ইংরেজি):</p>
+                                                <p className="font-bold text-slate-800">{student.fatherNameBn}</p>
+                                                <p className="font-bold text-slate-600 uppercase text-[10px]">{student.fatherNameEn || '-'}</p>
+                                                <p className="text-[10px]">এনআইডি: <span className="font-bold">{student.fatherNid || '-'}</span></p>
+                                            </div>
+                                            <Separator />
+                                            <div className="space-y-1">
+                                                <p className="text-muted-foreground">মাতার নাম (বাংলা ও ইংরেজি):</p>
+                                                <p className="font-bold text-slate-800">{student.motherNameBn}</p>
+                                                <p className="font-bold text-slate-600 uppercase text-[10px]">{student.motherNameEn || '-'}</p>
+                                                <p className="text-[10px]">এনআইডি: <span className="font-bold">{student.motherNid || '-'}</span></p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-emerald-500 pl-2">ঠিকানা</p>
-                                        <div className="space-y-1 text-sm font-medium">
-                                            <p className="font-bold text-xs text-muted-foreground">বর্তমান ঠিকানা:</p>
-                                            <p className="mb-2">{student.presentVillage}, {student.presentUnion}, {student.presentPostOffice}, {student.presentUpazila}, {student.presentDistrict}</p>
-                                            <p className="font-bold text-xs text-muted-foreground">স্থায়ী ঠিকানা:</p>
-                                            <p>{student.permanentVillage || student.presentVillage}, {student.permanentUnion || student.presentUnion}, {student.permanentPostOffice || student.presentPostOffice}, {student.permanentUpazila || student.presentUpazila}, {student.permanentDistrict || student.presentDistrict}</p>
+
+                                    {/* Contact Summary */}
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest border-l-4 border-emerald-500 pl-2">যোগাযোগ ও ঠিকানা</p>
+                                        <div className="space-y-3 text-xs bg-white p-4 rounded-xl border">
+                                            <div className="flex items-center gap-2 text-emerald-700 font-bold mb-2">
+                                                <Phone className="h-4 w-4" /> মোবাইল: {student.guardianMobile}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-muted-foreground">বর্তমান ঠিকানা:</p>
+                                                <p className="font-bold leading-relaxed">{student.presentVillage}, {student.presentUnion}, {student.presentPostOffice}, {student.presentUpazila}, {student.presentDistrict}</p>
+                                            </div>
+                                            <Separator />
+                                            <div className="space-y-1">
+                                                <p className="text-muted-foreground">স্থায়ী ঠিকানা:</p>
+                                                <p className="font-bold leading-relaxed">{student.permanentVillage || student.presentVillage}, {student.permanentUnion || student.presentUnion}, {student.permanentPostOffice || student.presentPostOffice}, {student.permanentUpazila || student.presentUpazila}, {student.permanentDistrict || student.presentDistrict}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-5 bg-blue-50 rounded-xl border-2 border-blue-100 flex items-start gap-4">
-                                <Checkbox 
-                                    id="confirm-all" 
-                                    checked={confirmReview} 
-                                    onCheckedChange={(v) => setConfirmReview(!!v)} 
-                                    className="mt-1 h-5 w-5"
-                                />
+                                <Checkbox id="confirm-all" checked={confirmReview} onCheckedChange={(v) => setConfirmReview(!!v)} className="mt-1 h-5 w-5" />
                                 <Label htmlFor="confirm-all" className="text-sm font-bold leading-relaxed text-blue-900 cursor-pointer">
                                     আমি অঙ্গীকার করছি যে, উপরে দেওয়া সকল তথ্য সঠিক। যদি কোনো তথ্য ভুল বা অসত্য প্রমাণিত হয়, তবে বিদ্যালয় কর্তৃপক্ষ আমার আবেদন বাতিল করতে পারবে। আমি বিদ্যালয়ের সকল নিয়ম মেনে চলতে বাধ্য থাকব।
                                 </Label>
@@ -565,13 +575,9 @@ export default function AdmissionPortalPage() {
 
                             <div className="flex gap-4 mt-8">
                                 <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> সংশোধন করুন</Button>
-                                <Button 
-                                    type="submit" 
-                                    disabled={isLoading || !confirmReview} 
-                                    className="h-12 flex-1 font-black shadow-xl bg-primary hover:bg-primary/90 text-white text-lg"
-                                >
+                                <Button type="submit" disabled={isLoading || !confirmReview} className="h-12 flex-1 font-black shadow-xl bg-primary hover:bg-primary/90 text-white text-lg">
                                     {isLoading ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />} 
-                                    তথ্য চূড়ান্ত ও জমা দিন
+                                    আবেদন চূড়ান্ত করুন
                                 </Button>
                             </div>
                         </div>
@@ -659,7 +665,7 @@ function PrintableApplication({ student, schoolInfo }: { student: NewAdmissionDa
                     <p className="font-black text-sm">অভিভাবকের স্বাক্ষর ও তারিখ</p>
                 </div>
                 <div className="text-center italic text-[10px]">
-                    <p>অনলাইন আবেদনের তারিখ: {today}</p>
+                    <p>আবেদনের তারিখ: {today}</p>
                     <p>Birganj Pouro High School Portal</p>
                 </div>
                 <div className="text-center w-64 border-t-2 border-black pt-1">
