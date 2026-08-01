@@ -33,18 +33,18 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
 
     return (
         <div className={cn(
-            "student-id-card font-kalpurush flex flex-col border-[3px] border-[#2418ff] overflow-hidden bg-white relative box-border shadow-md",
+            "student-id-card font-kalpurush flex flex-col border-[2px] border-[#2418ff] overflow-hidden bg-white relative box-border shadow-md",
             isPrint ? "w-[54mm] h-[86mm]" : "w-[280px] h-[440px] rounded-sm"
         )}>
-            {/* Header Section with Curve */}
+            {/* Header Section - Height Reduced */}
             <div className={cn(
-                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 pb-8 text-white",
-                isPrint ? "h-[34mm]" : "h-[150px]"
+                "relative z-10 bg-[#2418ff] flex flex-col items-center pt-1.5 pb-6 text-white shrink-0",
+                isPrint ? "h-[26mm]" : "h-[125px]"
             )}>
                 {schoolInfo.logoUrl && (
                     <div className={cn(
                         "bg-white rounded-full p-0.5 mb-1 shadow-sm",
-                        isPrint ? "w-8 h-8" : "w-12 h-12"
+                        isPrint ? "w-7 h-7" : "w-10 h-10"
                     )}>
                         <img 
                             src={schoolInfo.logoUrl} 
@@ -55,22 +55,22 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                 )}
                 {/* School Name in Yellow */}
                 <h1 className={cn(
-                    "font-black text-center leading-tight text-yellow-300 drop-shadow-md px-2",
-                    isPrint ? "text-[11px]" : "text-[18px]"
+                    "font-black text-center leading-none text-yellow-300 drop-shadow-md px-1",
+                    isPrint ? "text-[10px]" : "text-[16px]"
                 )}>
                     {schoolInfo.name}
                 </h1>
-                {/* Address in White - Made bolder and moved higher to avoid wave overlap */}
+                {/* Address in White - Moved Up and More Visible */}
                 <p className={cn(
-                    "font-black text-white/95 text-center uppercase tracking-tighter mt-1 px-2 z-30",
-                    isPrint ? "text-[6px]" : "text-[9px]"
+                    "font-black text-white text-center uppercase tracking-tighter mt-1 px-1 z-30",
+                    isPrint ? "text-[5.5px]" : "text-[8.5px]"
                 )}>
-                    Upazila: Birganj, Post: Birganj, Zila: Dinajpur
+                    UPAZILA: BIRGANJ, POST: BIRGANJ, ZILA: DINAJPUR
                 </p>
                 
                 {/* Curve SVG */}
                 <div className="absolute -bottom-0.5 left-0 right-0 w-full overflow-hidden leading-none z-10">
-                    <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="w-full h-10">
+                    <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="w-full h-8">
                         <path d="M0.00,49.98 C149.99,150.00 349.20,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z" style={{ stroke: 'none', fill: 'white' }}></path>
                     </svg>
                 </div>
@@ -78,11 +78,11 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
 
             <main className="relative z-20 flex-1 flex flex-col items-center pt-0 px-3">
                 {/* Photo & QR Section */}
-                <div className="flex items-center justify-between gap-2 w-full mb-1">
+                <div className="flex items-center justify-between gap-2 w-full mb-0.5">
                     {/* Student Photo */}
                     <div className={cn(
                         "relative border-2 border-[#2418ff] bg-white overflow-hidden shadow-sm flex items-center justify-center rounded-sm",
-                        isPrint ? "w-[20mm] h-[25mm]" : "w-28 h-36"
+                        isPrint ? "w-[19mm] h-[23mm]" : "w-26 h-32"
                     )}>
                         <img 
                             src={sanitizedUrl} 
@@ -95,50 +95,50 @@ Guardian: ${student.guardianMobile || 'N/A'}`;
                     {/* QR Code */}
                     <div className={cn(
                         "flex flex-col items-center justify-center border-2 border-slate-100 p-1 bg-white shadow-sm rounded-sm",
-                        isPrint ? "w-[20mm] h-[25mm]" : "w-28 h-36"
+                        isPrint ? "w-[19mm] h-[23mm]" : "w-26 h-32"
                     )}>
                         <QRCodeCanvas 
                             value={qrData}
-                            size={isPrint ? 68 : 95}
+                            size={isPrint ? 64 : 90}
                             level={"H"}
                         />
                     </div>
                 </div>
 
-                {/* Student Name */}
-                <div className="flex flex-col items-center mb-1 w-full mt-1">
-                    <h2 className={cn("font-black text-[#2418ff] leading-none text-center", isPrint ? "text-[14px]" : "text-[22px]")}>
+                {/* Student Name - Compacted */}
+                <div className="flex flex-col items-center mb-0.5 w-full mt-0.5">
+                    <h2 className={cn("font-black text-[#2418ff] leading-none text-center", isPrint ? "text-[12px]" : "text-[20px]")}>
                         {student.studentNameBn}
                     </h2>
-                    <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center mt-0.5", isPrint ? "text-[7px]" : "text-[11px]")}>
+                    <p className={cn("font-bold text-slate-500 uppercase tracking-tighter text-center mt-0.5", isPrint ? "text-[6.5px]" : "text-[10px]")}>
                         {student.studentNameEn || 'STUDENT NAME'}
                     </p>
                 </div>
 
-                {/* Detailed Information */}
+                {/* Detailed Information - Moved Up and Compacted */}
                 <div className="w-full border-t border-slate-100 pt-1 flex flex-col gap-0.5 font-black">
-                    <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-20 print:w-16 text-slate-600">শ্রেণি ও রোল</span>
+                    <div className={cn("flex items-center", isPrint ? "text-[9px]" : "text-[15px]")}>
+                        <span className="w-18 print:w-14 text-slate-600">শ্রেণি ও রোল</span>
                         <span className="flex-1">: {classNamesMap[student.className] || student.className}, {toBengaliNumber(student.roll)}</span>
                     </div>
-                    <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-20 print:w-16 text-slate-600">আইডি নং</span>
+                    <div className={cn("flex items-center", isPrint ? "text-[9px]" : "text-[15px]")}>
+                        <span className="w-18 print:w-14 text-slate-600">আইডি নং</span>
                         <span className="flex-1">: {student.generatedId ? toBengaliNumber(student.generatedId) : '-'}</span>
                     </div>
-                    <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-20 print:w-16 text-slate-600">মোবাইল নং</span>
+                    <div className={cn("flex items-center", isPrint ? "text-[9px]" : "text-[15px]")}>
+                        <span className="w-18 print:w-14 text-slate-600">মোবাইল নং</span>
                         <span className="flex-1">: {toBengaliNumber(student.guardianMobile || '')}</span>
                     </div>
-                    <div className={cn("flex items-center", isPrint ? "text-[10px]" : "text-[16px]")}>
-                        <span className="w-20 print:w-16 text-slate-600">শিক্ষাবর্ষ</span>
+                    <div className={cn("flex items-center", isPrint ? "text-[9px]" : "text-[15px]")}>
+                        <span className="w-18 print:w-14 text-slate-600">শিক্ষাবর্ষ</span>
                         <span className="flex-1">: {toBengaliNumber(student.academicYear)}</span>
                     </div>
                 </div>
             </main>
 
-            {/* Footer Signature Section - Removed line per instructions */}
-            <footer className="relative z-10 pb-3 flex flex-col items-end pr-4 mt-auto">
-                <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[14px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
+            {/* Footer Signature Section - Right Aligned and No Line */}
+            <footer className="relative z-10 pb-2 flex flex-col items-end pr-4 mt-auto">
+                <p className={cn("font-black text-slate-800", isPrint ? "text-[7.5px]" : "text-[13px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
             </footer>
 
             <style jsx>{`
