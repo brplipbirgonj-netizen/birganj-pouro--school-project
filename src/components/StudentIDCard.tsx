@@ -24,8 +24,8 @@ const classNamesMap: { [key: string]: string } = {
 export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentIDCardProps) => {
     const sanitizedUrl = sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender);
     
-    // Updated QR data format to include mobile number and clear labels for accuracy
-    const qrData = `Student ID: ${student.generatedId || '-'}
+    // QR data formatted for high scanability
+    const qrData = `ID: ${student.generatedId || '-'}
 Name: ${student.studentNameBn}
 Class: ${classNamesMap[student.className] || student.className}
 Roll: ${student.roll}
@@ -90,21 +90,21 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                         />
                     </div>
 
-                    {/* QR Code Section */}
+                    {/* QR Code Section - Adjusted for Scannability */}
                     <div className={cn(
-                        "flex flex-col items-center justify-center border-2 border-slate-100 p-1 bg-white shadow-sm rounded-sm",
+                        "flex flex-col items-center justify-center border-2 border-slate-100 p-0.5 bg-white shadow-sm rounded-sm overflow-hidden",
                         isPrint ? "w-[20mm] h-[24mm]" : "w-28 h-34"
                     )}>
                         <QRCodeSVG 
                             value={qrData}
-                            size={isPrint ? 68 : 100}
-                            level={"M"}
-                            includeMargin={true}
+                            size={isPrint ? 72 : 110}
+                            level={"L"} // Lower level means larger dots, easier to scan
+                            includeMargin={false}
                         />
                     </div>
                 </div>
 
-                {/* Name Section - Spacing reduced to lift data up */}
+                {/* Name Section */}
                 <div className="flex flex-col items-center mb-1 w-full mt-1">
                     <h2 className={cn("font-black text-[#2418ff] leading-none text-center", isPrint ? "text-[12px]" : "text-[19px]")}>
                         {student.studentNameBn}
@@ -114,7 +114,7 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                     </p>
                 </div>
 
-                {/* Data Grid - Compact and pushed higher */}
+                {/* Data Grid */}
                 <div className="w-full border-t border-slate-100 pt-1 flex flex-col gap-0.5 font-black">
                     <div className={cn("flex items-center", isPrint ? "text-[9.5px]" : "text-[15px]")}>
                         <span className="w-18 text-slate-600">শ্রেণি ও রোল</span>
@@ -135,7 +135,7 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                 </div>
             </main>
 
-            {/* Footer Signature - Standard right aligned */}
+            {/* Footer Signature */}
             <footer className="relative z-10 pb-3 flex flex-col items-end pr-5 mt-auto">
                 <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[13px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
             </footer>
