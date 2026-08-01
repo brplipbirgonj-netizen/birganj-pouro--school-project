@@ -17,6 +17,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 
 const initialStudentState: NewAdmissionData = {
   className: '',
@@ -41,14 +42,16 @@ const initialStudentState: NewAdmissionData = {
   presentVillage: '',
   presentUnion: '',
   presentPostOffice: '',
-  presentUpazila: '',
-  presentDistrict: '',
+  presentUpazila: 'বীরগঞ্জ',
+  presentDistrict: 'দিনাজপুর',
   permanentVillage: '',
   permanentUnion: '',
   permanentPostOffice: '',
-  permanentUpazila: '',
-  permanentDistrict: '',
+  permanentUpazila: 'বীরগঞ্জ',
+  permanentDistrict: 'দিনাজপুর',
 };
+
+const inputFocusClasses = "transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50";
 
 export default function AdmissionPortalPage() {
     const router = useRouter();
@@ -75,6 +78,11 @@ export default function AdmissionPortalPage() {
         const file = event.target.files?.[0];
         if (!file) return;
 
+        if (file.size > 2 * 1024 * 1024) {
+            toast({ variant: "destructive", title: "ছবি বড়", description: "২ মেগাবাইটের কম সাইজের ছবি দিন।" });
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const dataUrl = e.target?.result as string;
@@ -82,6 +90,28 @@ export default function AdmissionPortalPage() {
             handleInputChange('photoUrl', dataUrl);
         };
         reader.readAsDataURL(file);
+    };
+
+    const handleSameAddress = (checked: boolean | string) => {
+        if (checked) {
+            setStudent(prev => ({
+                ...prev,
+                permanentVillage: prev.presentVillage,
+                permanentUnion: prev.presentUnion,
+                permanentPostOffice: prev.presentPostOffice,
+                permanentUpazila: prev.presentUpazila,
+                permanentDistrict: prev.presentDistrict,
+            }));
+        } else {
+            setStudent(prev => ({
+                ...prev,
+                permanentVillage: '',
+                permanentUnion: '',
+                permanentPostOffice: '',
+                permanentUpazila: '',
+                permanentDistrict: '',
+            }));
+        }
     };
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -100,7 +130,7 @@ export default function AdmissionPortalPage() {
             setIsSuccess(true);
             toast({ title: "আবেদন জমা হয়েছে", description: "আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।" });
         } catch (error) {
-            toast({ variant: "destructive", title: "ত্রুটি", description: "আবেদন জমা দেওয়া যায়নি।" });
+            console.error(error);
         } finally {
             setIsLoading(false);
         }
@@ -155,7 +185,7 @@ export default function AdmissionPortalPage() {
                     {[1, 2, 3, 4].map(step => (
                         <div key={step} className={cn(
                             "h-10 w-10 rounded-full flex items-center justify-center border-2 font-black transition-all",
-                            currentStep >= step ? "bg-primary border-primary text-white scale-110" : "bg-white border-muted text-muted-foreground"
+                            currentStep >= step ? "bg-primary border-primary text-white scale-110 shadow-md" : "bg-white border-muted text-muted-foreground"
                         )}>
                             {step}
                         </div>
@@ -165,6 +195,7 @@ export default function AdmissionPortalPage() {
 
             <CardContent className="p-6 sm:p-10">
                 <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Step 1: Institutional Info */}
                     {currentStep === 1 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                             <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><GraduationCap className="h-6 w-6" /> ১. প্রাতিষ্ঠানিক তথ্য</h3>
@@ -187,6 +218,7 @@ export default function AdmissionPortalPage() {
                                     <Input value={student.academicYear} disabled className="h-12 bg-muted font-bold" />
                                 </div>
                                 {(student.className === '9' || student.className === '10') && (
+                                    <>
                                     <div className="space-y-2">
                                         <Label className="font-bold">বিভাগ (গ্রুপ)</Label>
                                         <Select value={student.group} onValueChange={v => handleInputChange('group', v)}>
@@ -198,27 +230,43 @@ export default function AdmissionPortalPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">ঐচ্ছিক বিষয়</Label>
+                                        <Select value={student.optionalSubject} onValueChange={v => handleInputChange('optionalSubject', v)}>
+                                            <SelectTrigger className="h-12"><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="উচ্চতর গণিত">উচ্চতর গণিত</SelectItem>
+                                                <SelectItem value="কৃষি শিক্ষা">কৃষি শিক্ষা</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    </>
                                 )}
                             </div>
-                            <Button type="button" onClick={nextStep} className="w-full h-12 text-lg font-black mt-6">পরবর্তী ধাপ <ArrowRight className="ml-2 h-5 w-5" /></Button>
+                            <Button type="button" onClick={nextStep} className="w-full h-12 text-lg font-black mt-6 shadow-lg">পরবর্তী ধাপ <ArrowRight className="ml-2 h-5 w-5" /></Button>
                         </div>
                     )}
 
+                    {/* Step 2: Student Personal Info */}
                     {currentStep === 2 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                             <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><User className="h-6 w-6" /> ২. শিক্ষার্থীর ব্যক্তিগত তথ্য</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label className="font-bold">নাম (বাংলা)</Label>
-                                    <Input className="h-12" value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} required />
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.studentNameBn} onChange={e => handleInputChange('studentNameBn', e.target.value)} required />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">নাম (ইংরেজি)</Label>
-                                    <Input className="h-12" value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} />
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.studentNameEn} onChange={e => handleInputChange('studentNameEn', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">জন্ম তারিখ</Label>
                                     <DatePicker value={student.dob} onChange={d => handleInputChange('dob', d)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">জন্ম নিবন্ধন নম্বর</Label>
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.birthRegNo} onChange={e => handleInputChange('birthRegNo', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold">লিঙ্গ</Label>
@@ -227,70 +275,171 @@ export default function AdmissionPortalPage() {
                                         <SelectContent>
                                             <SelectItem value="male">পুরুষ</SelectItem>
                                             <SelectItem value="female">মহিলা</SelectItem>
+                                            <SelectItem value="other">অন্যান্য</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">ধর্ম</Label>
+                                    <Select value={student.religion} onValueChange={v => handleInputChange('religion', v)}>
+                                        <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="islam">ইসলাম</SelectItem>
+                                            <SelectItem value="hinduism">হিন্দু</SelectItem>
+                                            <SelectItem value="buddhism">বৌদ্ধ</SelectItem>
+                                            <SelectItem value="christianity">খ্রিস্টান</SelectItem>
+                                            <SelectItem value="other">অন্যান্য</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="sm:col-span-2 space-y-2">
                                     <Label className="font-bold">ছবি</Label>
-                                    <div className="flex items-center gap-4 border p-4 rounded-lg bg-slate-50">
-                                        <div className="h-20 w-20 rounded border bg-white flex items-center justify-center overflow-hidden">
-                                            {photoPreview ? <Image src={photoPreview} alt="Preview" width={80} height={80} className="object-cover h-full" /> : <Upload className="text-muted-foreground" />}
+                                    <div className="flex items-center gap-4 border p-4 rounded-lg bg-slate-50 border-dashed border-primary/30">
+                                        <div className="h-24 w-24 rounded border bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                                            {photoPreview ? <Image src={photoPreview} alt="Preview" width={96} height={96} className="object-cover h-full" /> : <Upload className="text-muted-foreground" />}
                                         </div>
-                                        <Input type="file" accept="image/*" onChange={handlePhotoChange} className="cursor-pointer" />
+                                        <div className="space-y-2">
+                                            <Input type="file" accept="image/*" onChange={handlePhotoChange} className="cursor-pointer h-10" />
+                                            <p className="text-[10px] text-muted-foreground">পাসপোর্ট সাইজ ছবি, সর্বোচ্চ ২ মেগাবাইট।</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             <div className="flex gap-4 mt-6">
                                 <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> ব্যাকে যান</Button>
-                                <Button type="button" onClick={nextStep} className="h-12 flex-1 font-black">পরবর্তী ধাপ <ArrowRight className="ml-2 h-5 w-5" /></Button>
+                                <Button type="button" onClick={nextStep} className="h-12 flex-1 font-black shadow-lg">পরবর্তী ধাপ <ArrowRight className="ml-2 h-5 w-5" /></Button>
                             </div>
                         </div>
                     )}
 
+                    {/* Step 3: Guardian Info */}
                     {currentStep === 3 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                             <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><Users className="h-6 w-6" /> ৩. অভিভাবকের তথ্য</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label className="font-bold">পিতার নাম (বাংলা)</Label>
-                                    <Input className="h-12" value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} required />
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.fatherNameBn} onChange={e => handleInputChange('fatherNameBn', e.target.value)} required />
                                 </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">পিতার নাম (ইংরেজি)</Label>
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.fatherNameEn} onChange={e => handleInputChange('fatherNameEn', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">পিতার NID নম্বর</Label>
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.fatherNid} onChange={e => handleInputChange('fatherNid', e.target.value)} />
+                                </div>
+                                <div className="hidden sm:block"></div>
+                                
+                                <Separator className="sm:col-span-2 my-2" />
+
                                 <div className="space-y-2">
                                     <Label className="font-bold">মাতার নাম (বাংলা)</Label>
-                                    <Input className="h-12" value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} required />
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.motherNameBn} onChange={e => handleInputChange('motherNameBn', e.target.value)} required />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold">অভিভাবকের মোবাইল নম্বর</Label>
-                                    <Input className="h-12" type="tel" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} required />
+                                    <Label className="font-bold">মাতার নাম (ইংরেজি)</Label>
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.motherNameEn} onChange={e => handleInputChange('motherNameEn', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">মাতার NID নম্বর</Label>
+                                    <Input className={cn("h-12", inputFocusClasses)} value={student.motherNid} onChange={e => handleInputChange('motherNid', e.target.value)} />
+                                </div>
+                                <div className="hidden sm:block"></div>
+
+                                <Separator className="sm:col-span-2 my-2" />
+
+                                <div className="space-y-2">
+                                    <Label className="font-bold text-red-600">অভিভাবকের মোবাইল নম্বর</Label>
+                                    <Input className={cn("h-12 border-red-200", inputFocusClasses)} type="tel" value={student.guardianMobile} onChange={e => handleInputChange('guardianMobile', e.target.value)} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">শিক্ষার্থীর মোবাইল (যদি থাকে)</Label>
+                                    <Input className={cn("h-12", inputFocusClasses)} type="tel" value={student.studentMobile} onChange={e => handleInputChange('studentMobile', e.target.value)} />
                                 </div>
                             </div>
                             <div className="flex gap-4 mt-6">
                                 <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> ব্যাকে যান</Button>
-                                <Button type="button" onClick={nextStep} className="h-12 flex-1 font-black">পরবর্তী ধাপ <ArrowRight className="ml-2 h-5 w-5" /></Button>
+                                <Button type="button" onClick={nextStep} className="h-12 flex-1 font-black shadow-lg">পরবর্তী ধাপ <ArrowRight className="ml-2 h-5 w-5" /></Button>
                             </div>
                         </div>
                     )}
 
+                    {/* Step 4: Address & Confirmation */}
                     {currentStep === 4 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                             <h3 className="text-xl font-black flex items-center gap-2 text-primary border-b pb-2"><Home className="h-6 w-6" /> ৪. ঠিকানা ও নিশ্চিতকরণ</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label className="font-bold">গ্রাম/মহল্লা</Label>
-                                    <Input className="h-12" value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="font-bold">উপজেলা</Label>
-                                    <Input className="h-12" value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
+                            
+                            <div className="space-y-4">
+                                <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-primary pl-2">বর্তমান ঠিকানা</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">গ্রাম/মহল্লা</Label>
+                                        <Input className={cn("h-12", inputFocusClasses)} value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
+                                        <Input className={cn("h-12", inputFocusClasses)} value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">ডাকঘর</Label>
+                                        <Input className={cn("h-12", inputFocusClasses)} value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="font-bold">উপজেলা</Label>
+                                            <Input className={cn("h-12", inputFocusClasses)} value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="font-bold">জেলা</Label>
+                                            <Input className={cn("h-12", inputFocusClasses)} value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            <div className="space-y-4 pt-4">
+                                <div className="flex justify-between items-center">
+                                    <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-emerald-500 pl-2">স্থায়ী ঠিকানা</p>
+                                    <div className="flex items-center space-x-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                                        <Checkbox id="same-as-present" onCheckedChange={handleSameAddress} />
+                                        <label htmlFor="same-as-present" className="text-xs font-bold text-emerald-700 cursor-pointer">বর্তমান ঠিকানার অনুরূপ</label>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">গ্রাম/মহল্লা</Label>
+                                        <Input className={cn("h-12", inputFocusClasses)} value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
+                                        <Input className={cn("h-12", inputFocusClasses)} value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">ডাকঘর</Label>
+                                        <Input className={cn("h-12", inputFocusClasses)} value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="font-bold">উপজেলা</Label>
+                                            <Input className={cn("h-12", inputFocusClasses)} value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="font-bold">জেলা</Label>
+                                            <Input className={cn("h-12", inputFocusClasses)} value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-100 flex items-start gap-3 mt-6">
                                 <Checkbox id="confirm" required className="mt-1" />
                                 <Label htmlFor="confirm" className="text-sm font-bold leading-relaxed">আমি ঘোষণা করছি যে, উপরে দেওয়া সকল তথ্য সঠিক। কোনো তথ্য ভুল প্রমাণিত হলে আমার আবেদন বাতিল করার ক্ষমতা কর্তৃপক্ষের থাকবে।</Label>
                             </div>
+
                             <div className="flex gap-4 mt-8">
                                 <Button type="button" variant="outline" onClick={prevStep} className="h-12 flex-1 font-black"><ArrowLeft className="mr-2 h-5 w-5" /> ব্যাকে যান</Button>
-                                <Button type="submit" disabled={isLoading} className="h-12 flex-1 font-black shadow-xl">
+                                <Button type="submit" disabled={isLoading} className="h-12 flex-1 font-black shadow-xl bg-primary hover:bg-primary/90 text-white">
                                     {isLoading ? <Loader2 className="animate-spin" /> : 'আবেদন জমা দিন'}
                                 </Button>
                             </div>
