@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -81,10 +80,24 @@ export default function AdmissionsManagementPage() {
         try {
             await approveAndEnrollStudent(db, selectedApp, parseInt(rollNumber));
             toast({ title: 'সফল', description: 'শিক্ষার্থীকে সফলভাবে ভর্তি করা হয়েছে।' });
+            
+            // Send confirmation SMS
+            const msg = `সম্মানিত অভিভাবক, অভিনন্দন! বীরগঞ্জ পৌর উচ্চ বিদ্যালয়ে আপনার সন্তান ${selectedApp.studentNameBn}-এর ভর্তি প্রক্রিয়া সফলভাবে সম্পন্ন হয়েছে। রোল নম্বর: ${rollNumber.toLocaleString('bn-BD')}। ধন্যবাদ। - প্রধান শিক্ষক`;
+            const encodedMsg = encodeURIComponent(msg);
+            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const separator = isIOS ? '&' : '?';
+            
             setIsApproveOpen(false);
+            const mobile = selectedApp.guardianMobile;
             setSelectedApp(null);
             setRollNumber('');
             fetchApplications();
+
+            // Open SMS drafter after a small delay to allow UI updates
+            setTimeout(() => {
+                window.location.href = `sms:${mobile}${separator}body=${encodedMsg}`;
+            }, 500);
+
         } catch (e) {
             toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ভর্তি প্রক্রিয়া সম্পন্ন করা যায়নি।' });
         } finally {
