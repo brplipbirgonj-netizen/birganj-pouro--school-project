@@ -15,15 +15,19 @@ service cloud.firestore {
 
     // এডমিন রোল চেক করা
     function isAdmin() {
-      return isAuthed() && getUserData().role == 'admin';
+      return isAuthed() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().role == 'admin';
     }
 
     // নির্দিষ্ট পারমিশন আছে কিনা চেক করা (এডমিনদের সব পারমিশন ডিফল্টভাবে থাকে)
     function hasPermission(permission) {
-      return isAuthed() && (
-        getUserData().role == 'admin' || 
-        (permission in getUserData().get('permissions', []))
-      );
+      return isAuthed() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          getUserData().role == 'admin' || 
+          (permission in getUserData().get('permissions', []))
+        );
     }
 
     // --- কালেকশন ভিত্তিক রুলস ---
