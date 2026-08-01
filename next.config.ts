@@ -53,6 +53,24 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '1drv.ms',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'onedrive.live.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'public.db.files.1drv.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   async headers() {
