@@ -13,7 +13,7 @@ import { getAdmissionApplications, approveAndEnrollStudent, deleteApplication, A
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, CheckCircle, XCircle, Trash2, Loader2, Phone, Calendar, UserPlus, Filter, MapPin, User, Users, GraduationCap, FileText } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Trash2, Loader2, Phone, Calendar, UserPlus, Filter, MapPin, User, Users, GraduationCap, FileText, MessageCircle, MessageSquareDashed } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -99,6 +99,23 @@ export default function AdmissionsManagementPage() {
             toast({ title: 'আবেদন মুছে ফেলা হয়েছে' });
             fetchApplications();
         } catch (e) {}
+    };
+
+    const handleSendDirectSMS = (mobile: string, studentName: string) => {
+        const msg = `সম্মানিত অভিভাবক, বীরগঞ্জ পৌর উচ্চ বিদ্যালয়ে আপনার সন্তান ${studentName}-এর অনলাইন ভর্তি আবেদনটি আমরা পেয়েছি। আবেদনের বিষয়ে বিস্তারিত তথ্যের জন্য বিদ্যালয়ে যোগাযোগ করার অনুরোধ করা হলো। ধন্যবাদ। - প্রধান শিক্ষক`;
+        const encodedMsg = encodeURIComponent(msg);
+        const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const separator = isIOS ? '&' : '?';
+        window.location.href = `sms:${mobile}${separator}body=${encodedMsg}`;
+    };
+
+    const handleSendWhatsApp = (mobile: string, studentName: string) => {
+        const msg = `সম্মানিত অভিভাবক, বীরগঞ্জ পৌর উচ্চ বিদ্যালয়ে আপনার সন্তান ${studentName}-এর অনলাইন ভর্তি আবেদনটি আমরা পেয়েছি।`;
+        const encodedMsg = encodeURIComponent(msg);
+        let cleanNum = mobile.replace(/[^\d]/g, '');
+        if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
+        if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
+        window.open(`https://wa.me/${cleanNum}?text=${encodedMsg}`, '_blank');
     };
 
     if (!isMounted) {
@@ -198,7 +215,25 @@ export default function AdmissionsManagementPage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <p className="text-xs font-bold text-slate-700">পিতা: {app.fatherNameBn}</p>
-                                                    <p className="text-xs font-bold text-emerald-700 flex items-center gap-1 mt-1"><Phone className="h-3 w-3" /> {app.guardianMobile}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <p className="text-xs font-bold text-emerald-700 flex items-center gap-1"><Phone className="h-3 w-3" /> {app.guardianMobile}</p>
+                                                        <div className="flex gap-1">
+                                                            <button 
+                                                                onClick={() => handleSendDirectSMS(app.guardianMobile, app.studentNameBn)}
+                                                                className="text-blue-600 hover:text-blue-800"
+                                                                title="SMS পাঠান"
+                                                            >
+                                                                <MessageSquareDashed className="h-3 w-3" />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleSendWhatsApp(app.guardianMobile, app.studentNameBn)}
+                                                                className="text-green-600 hover:text-green-800"
+                                                                title="WhatsApp পাঠান"
+                                                            >
+                                                                <MessageCircle className="h-3 w-3" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge className={cn(
@@ -291,18 +326,30 @@ export default function AdmissionsManagementPage() {
                                     <h4 className="text-xl font-black text-primary border-b-2 border-primary/20 pb-2 flex items-center gap-2">
                                         <MapPin className="h-6 w-6" /> ৩. ঠিকানা ও যোগাযোগ
                                     </h4>
-                                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 mb-6 flex items-center gap-3">
-                                        <Phone className="h-6 w-6 text-emerald-700" />
-                                        <div>
-                                            <p className="text-xs text-emerald-700 font-black uppercase">প্রাথমিক মোবাইল নম্বর (SMS এর জন্য)</p>
-                                            <p className="text-2xl font-black text-slate-800">{selectedApp.guardianMobile}</p>
-                                        </div>
-                                        {selectedApp.studentMobile && (
-                                            <div className="ml-12 border-l border-emerald-200 pl-8">
-                                                <p className="text-xs text-emerald-700 font-black uppercase">শিক্ষার্থীর মোবাইল</p>
-                                                <p className="text-2xl font-black text-slate-800">{selectedApp.studentMobile}</p>
+                                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 mb-6 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <Phone className="h-6 w-6 text-emerald-700" />
+                                            <div>
+                                                <p className="text-xs text-emerald-700 font-black uppercase">অভিভাবকের মোবাইল নম্বর</p>
+                                                <p className="text-2xl font-black text-slate-800">{selectedApp.guardianMobile}</p>
                                             </div>
-                                        )}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                variant="outline" 
+                                                className="bg-white text-blue-600 border-blue-200 hover:bg-blue-50 font-bold"
+                                                onClick={() => handleSendDirectSMS(selectedApp.guardianMobile, selectedApp.studentNameBn)}
+                                            >
+                                                <MessageSquareDashed className="mr-2 h-4 w-4" /> SMS পাঠান
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                className="bg-white text-green-600 border-green-200 hover:bg-green-50 font-bold"
+                                                onClick={() => handleSendWhatsApp(selectedApp.guardianMobile, selectedApp.studentNameBn)}
+                                            >
+                                                <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+                                            </Button>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
