@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon } from 'lucide-react';
 import { Student } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
@@ -14,10 +15,11 @@ import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { getStaff } from '@/lib/staff-data';
 import { generateNotice } from '@/ai/flows/generate-notice-flow';
+import { getGalleryConfig, GalleryConfig, defaultGalleryConfig } from '@/lib/gallery-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit, doc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,6 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { getTransactions, Transaction } from '@/lib/transactions-data';
+import Image from 'next/image';
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
@@ -110,7 +113,6 @@ const NoticeTicker = () => {
                     <span className="font-black text-sm tracking-wide">
                         <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
                     </span>
-                    {/* Repeated text for seamless scrolling */}
                     <span className="font-black text-sm tracking-wide">
                         <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
                     </span>
@@ -131,6 +133,78 @@ const NoticeTicker = () => {
                 }
             `}</style>
         </div>
+    );
+};
+
+const GalleryCard = () => {
+    const db = useFirestore();
+    const { user } = useAuth();
+    const [config, setConfig] = useState<GalleryConfig>(defaultGalleryConfig);
+    const [currentIdx, setCurrentIdx] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        const unsub = onSnapshot(doc(db, 'school', 'gallery'), (snap) => {
+            if (snap.exists()) {
+                setConfig(snap.data() as GalleryConfig);
+            }
+            setIsLoading(false);
+        });
+        return () => unsub();
+    }, [db, user]);
+
+    const activeImages = useMemo(() => config.images.filter(img => img.isActive), [config.images]);
+
+    useEffect(() => {
+        if (activeImages.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentIdx(prev => (prev + 1) % activeImages.length);
+        }, config.duration * 1000);
+        return () => clearInterval(interval);
+    }, [activeImages, config.duration]);
+
+    if (isLoading) return <Skeleton className="h-full w-full rounded-lg" />;
+
+    return (
+        <Card className="relative overflow-hidden bg-white border-2 border-black shadow-sm group hover:shadow-lg transition-all duration-500">
+            <CardHeader className="p-3 bg-primary/5 border-b border-black/10 relative z-20">
+                <CardTitle className="text-xs font-black text-primary flex items-center gap-1.5 uppercase">
+                    <ImageIcon className="h-3.5 w-3.5" /> বিদ্যালয় গ্যালারি
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 relative h-28 sm:h-32 overflow-hidden">
+                {activeImages.length > 0 ? (
+                    <div className="relative w-full h-full">
+                        {activeImages.map((img, idx) => (
+                            <div 
+                                key={img.id}
+                                className={cn(
+                                    "absolute inset-0 transition-opacity duration-1000",
+                                    idx === currentIdx ? "opacity-100 z-10" : "opacity-0 z-0"
+                                )}
+                            >
+                                <Image 
+                                    src={img.url} 
+                                    alt={img.title} 
+                                    fill 
+                                    className="object-cover"
+                                    data-ai-hint="school landscape"
+                                />
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-[2px] p-1 text-center">
+                                    <p className="text-[10px] text-white font-black truncate">{img.title}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-muted-foreground italic">
+                        <ImageIcon className="h-8 w-8 mb-1 opacity-20" />
+                        <p className="text-[10px]">ছবি নেই</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
 };
 
@@ -327,7 +401,6 @@ const NoticeBoard = () => {
                                 </DialogHeader>
                                 
                                 <div className="space-y-6 py-4">
-                                    {/* AI Writing Section */}
                                     <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3">
                                     <div className="flex items-center gap-2 text-indigo-700 font-black text-sm uppercase tracking-wider">
                                         <Sparkles className="h-4 w-4 animate-bounce" /> AI দিয়ে ড্রাফট করুন (অ্যাডভান্সড)
@@ -500,7 +573,6 @@ const LiveRoutineCard = () => {
 
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-        // 1. Find Current Class status
         let periodIndex = -1;
         for(let i=0; i<periodTimes.length; i++) {
             const period = periodTimes[i];
@@ -511,7 +583,6 @@ const LiveRoutineCard = () => {
                 if (period.name === 'বিরতি') {
                     status = 'এখন টিফিনের বিরতি চলছে।';
                 } else {
-                    // 3+3 logic
                     if (i < 3) periodIndex = i; 
                     if (i > 3) periodIndex = i - 1;
                 }
@@ -547,7 +618,6 @@ const LiveRoutineCard = () => {
              status = 'এখন কোনো ক্লাস চলছে না।';
         }
 
-        // 2. Find Next Class info
         let nextRawPeriodIndex = -1;
         for(let i=0; i<periodTimes.length; i++) {
             const period = periodTimes[i];
@@ -623,7 +693,6 @@ const LiveRoutineCard = () => {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        {/* Current Classes */}
                         <div>
                             {periodInfo.runningClasses && periodInfo.runningClasses.length > 0 ? (
                                 <div className="space-y-2">
@@ -668,7 +737,6 @@ const LiveRoutineCard = () => {
                             )}
                         </div>
 
-                        {/* Next Classes */}
                         {!periodInfo.isSpecialStatus && (
                             <div>
                                 {periodInfo.nextClasses && periodInfo.nextClasses.length > 0 ? (
@@ -900,7 +968,10 @@ export default function Home() {
       <Header />
       <NoticeTicker />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
-        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
+          {/* Gallery Card */}
+          <GalleryCard />
+
           {/* Total Students Card */}
           <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">

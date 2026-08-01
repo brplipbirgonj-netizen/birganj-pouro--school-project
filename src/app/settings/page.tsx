@@ -11,12 +11,13 @@ import { Label } from '@/components/ui/label';
 import { 
     Trash2, Upload, Info, Database, Calculator, Clock, Loader2, ChevronRight, User, School, 
     Calendar, Users, HardDriveDownload, Monitor, ShieldAlert,
-    FileSpreadsheet, FileJson, Download
+    FileSpreadsheet, FileJson, Download, ImageIcon, Plus, CheckCircle2, Save, Eye, EyeOff
 } from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import { addHoliday, getHolidays, deleteHoliday, Holiday, NewHolidayData, createInitialHolidays } from '@/lib/holiday-data';
+import { getGalleryConfig, saveGalleryConfig, GalleryConfig, GalleryImage, defaultGalleryConfig } from '@/lib/gallery-data';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import type { SchoolInfo } from '@/lib/school-info';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,6 +41,7 @@ import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSubjects } from '@/lib/subjects';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import * as XLSX from 'xlsx';
 
 // --- Utility Functions ---
@@ -54,6 +56,172 @@ const classNamesMap: Record<string, string> = {
 };
 
 // --- Sub Components ---
+
+function GalleryManagementSettings() {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [config, setConfig] = useState<GalleryConfig>(defaultGalleryConfig);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    const [newImgUrl, setNewImgUrl] = useState('');
+    const [newImgTitle, setNewImgTitle] = useState('');
+
+    useEffect(() => {
+        if (!db) return;
+        getGalleryConfig(db).then(data => {
+            setConfig(data);
+            setIsLoading(false);
+        });
+    }, [db]);
+
+    const handleSave = async () => {
+        if (!db) return;
+        setIsSaving(true);
+        try {
+            await saveGalleryConfig(db, config);
+            toast({ title: 'গ্যালারি সেটিংস সংরক্ষিত হয়েছে' });
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleAddImage = () => {
+        if (!newImgUrl.trim()) {
+            toast({ variant: 'destructive', title: 'ছবির লিংক দিন' });
+            return;
+        }
+        const newImg: GalleryImage = {
+            id: Math.random().toString(36).substr(2, 9),
+            url: newImgUrl,
+            title: newImgTitle || 'নতুন ছবি',
+            isActive: true
+        };
+        setConfig(prev => ({ ...prev, images: [...prev.images, newImg] }));
+        setNewImgUrl('');
+        setNewImgTitle('');
+    };
+
+    const handleRemoveImage = (id: string) => {
+        setConfig(prev => ({ ...prev, images: prev.images.filter(img => img.id !== id) }));
+    };
+
+    const handleToggleActive = (id: string, val: boolean) => {
+        setConfig(prev => ({
+            ...prev,
+            images: prev.images.map(img => img.id === id ? { ...img, isActive: val } : img)
+        }));
+    };
+
+    if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+
+    return (
+        <Card className="border-none shadow-none">
+            <CardHeader className="px-0 pt-0">
+                <CardTitle className="text-2xl font-black flex items-center gap-2">
+                    <ImageIcon className="h-6 w-6 text-primary" /> ড্যাশবোর্ড গ্যালারি ব্যবস্থাপনা
+                </CardTitle>
+                <CardDescription>ড্যাশবোর্ডে প্রদর্শিত ছবি এবং স্লাইডার সেটিংস নিয়ন্ত্রণ করুন</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 space-y-8">
+                {/* Global Slider Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 border-dashed rounded-2xl bg-primary/5">
+                    <div className="space-y-2">
+                        <Label className="font-bold flex items-center gap-2">
+                            <Clock className="h-4 w-4" /> স্লাইড ডিউরেশন (সেকেন্ড)
+                        </Label>
+                        <div className="flex items-center gap-3">
+                            <Input 
+                                type="number" 
+                                value={config.duration} 
+                                onChange={e => setConfig(prev => ({ ...prev, duration: parseInt(e.target.value) || 5 }))}
+                                className="w-32 h-11 text-lg font-black text-center"
+                            />
+                            <span className="text-sm font-bold text-muted-foreground">সেকেন্ড পর ছবি পরিবর্তন হবে</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Add New Image Form */}
+                <div className="space-y-4">
+                    <h3 className="font-black text-lg text-slate-800">নতুন ছবি যোগ করুন</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase">ছবির লিংক (URL)</Label>
+                            <Input value={newImgUrl} onChange={e => setNewImgUrl(e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase">ছবির শিরোনাম</Label>
+                            <Input value={newImgTitle} onChange={e => setNewImgTitle(e.target.value)} placeholder="উদা: আমাদের মাঠ" />
+                        </div>
+                        <Button onClick={handleAddImage} variant="outline" className="h-10 border-primary text-primary font-black hover:bg-primary/5">
+                            <Plus className="h-4 w-4 mr-2" /> ছবি যুক্ত করুন
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Image List */}
+                <div className="space-y-4 pt-4">
+                    <h3 className="font-black text-lg text-slate-800 flex items-center justify-between">
+                        ছবির তালিকা 
+                        <Badge variant="outline" className="font-black">{toBengaliNumber(config.images.length)} টি ছবি</Badge>
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {config.images.map((img) => (
+                            <div key={img.id} className={cn(
+                                "group relative border-2 rounded-xl overflow-hidden bg-white shadow-sm transition-all hover:shadow-md",
+                                !img.isActive && "opacity-60 grayscale-[0.5]"
+                            )}>
+                                <div className="aspect-video relative">
+                                    <Image src={img.url} alt={img.title} fill className="object-cover" />
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button 
+                                            variant="destructive" 
+                                            size="icon" 
+                                            className="h-7 w-7 shadow-lg"
+                                            onClick={() => handleRemoveImage(img.id)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                    <div className="absolute bottom-2 left-2">
+                                        <Badge className={cn("font-black text-[9px] shadow-lg", img.isActive ? "bg-emerald-600" : "bg-slate-500")}>
+                                            {img.isActive ? 'প্রদর্শিত হচ্ছে' : 'লুকানো'}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                <div className="p-3 space-y-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Input 
+                                            value={img.title} 
+                                            onChange={e => {
+                                                const next = config.images.map(i => i.id === img.id ? { ...i, title: e.target.value } : i);
+                                                setConfig(prev => ({ ...prev, images: next }));
+                                            }}
+                                            className="h-8 text-[11px] font-bold bg-muted/20 border-transparent focus:border-primary"
+                                        />
+                                        <Switch 
+                                            checked={img.isActive} 
+                                            onCheckedChange={v => handleToggleActive(img.id, v)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter className="px-0 border-t justify-end pt-8">
+                <Button onClick={handleSave} disabled={isSaving} className="px-12 h-12 text-lg font-black shadow-xl">
+                    {isSaving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+                    পরিবর্তন সেভ করুন
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+}
 
 function SystemUsageInfo() {
     return (
@@ -475,7 +643,6 @@ function UserManagementSettings() {
         return () => unsubscribe();
     }, [db, currentUser]);
 
-    // Enhanced map that includes both name and photo for lookup
     const staffInfoMap = useMemo(() => {
         const map = new Map<string, { name: string, photo: string }>();
         allStaff.forEach(s => { 
@@ -521,7 +688,6 @@ function UserManagementSettings() {
                             {users.map(u => {
                                 const staffInfo = staffInfoMap.get(u.email?.toLowerCase().trim() || '');
                                 const isMe = u.uid === currentUser?.uid;
-                                // Prefer the photo from staff collection for synced teachers
                                 const finalPhoto = staffInfo?.photo || u.photoUrl;
                                 const finalName = staffInfo?.name || u.displayName || 'Admin';
 
@@ -704,7 +870,6 @@ function BackupAndExportSettings() {
         try {
             const fullData: any = {};
             
-            // Fetch all data
             for (const collName of collectionsToExport) {
                 const snap = await getDocs(collection(db, collName));
                 fullData[collName] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -821,6 +986,7 @@ export default function SettingsPage() {
         if (isAdmin) {
             items.push(
                 { id: 'school', label: 'প্রতিষ্ঠানের তথ্য', icon: School, color: 'text-emerald-600 bg-emerald-50' },
+                { id: 'gallery', label: 'গ্যালারি সেটিংস', icon: ImageIcon, color: 'text-primary bg-primary/10' },
                 { id: 'holidays', label: 'অতিরিক্ত ছুটি', icon: Calendar, color: 'text-rose-600 bg-rose-50' },
                 { id: 'users', label: 'ইউজার ম্যানেজমেন্ট', icon: Users, color: 'text-blue-600 bg-blue-50' },
                 { id: 'backup', label: 'ব্যাকআপ ও এক্সপোর্ট', icon: HardDriveDownload, color: 'text-amber-600 bg-amber-50' },
@@ -865,6 +1031,7 @@ export default function SettingsPage() {
                     <div className="p-6 sm:p-10 lg:p-14 flex-1">
                         {activeSection === 'profile' && <ProfileSettings />}
                         {activeSection === 'school' && isAdmin && <SchoolInfoSettings />}
+                        {activeSection === 'gallery' && isAdmin && <GalleryManagementSettings />}
                         {activeSection === 'holidays' && isAdmin && <HolidaySettings />}
                         {activeSection === 'users' && isAdmin && <UserManagementSettings />}
                         {activeSection === 'backup' && isAdmin && <BackupAndExportSettings />}
@@ -876,4 +1043,3 @@ export default function SettingsPage() {
         </div>
     );
 }
-

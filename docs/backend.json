@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "user": {
@@ -47,6 +48,26 @@
         "photoUrl": { "type": "string" }
       },
       "required": ["studentNameBn", "className", "academicYear", "guardianMobile", "photoUrl", "previousSchool"]
+    },
+    "galleryConfig": {
+      "title": "Gallery Configuration",
+      "description": "Configuration for the dashboard gallery images and settings.",
+      "type": "object",
+      "properties": {
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "url": { "type": "string" },
+              "title": { "type": "string" },
+              "isActive": { "type": "boolean" }
+            }
+          }
+        },
+        "duration": { "type": "number" }
+      }
     }
   },
   "auth": {
@@ -64,6 +85,10 @@
     "/admissionApplications/{id}": {
       "schema": { "$ref": "#/entities/admissionApplication" },
       "description": "Stores online admission applications."
+    },
+    "/school/gallery": {
+      "schema": { "$ref": "#/entities/galleryConfig" },
+      "description": "Stores dashboard gallery settings and images."
     }
   }
 }
