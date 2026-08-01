@@ -63,6 +63,7 @@ import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage, sanitize
 import { StudentFeeDialog } from './StudentFeeDialog';
 import { cn } from '@/lib/utils';
 import { getExams, Exam } from '@/lib/exam-data';
+import { ScrollArea } from './ui/scroll-area';
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -126,7 +127,7 @@ export function Header() {
     let unsubscribe: (() => void) | undefined;
     
     if (user.role === 'teacher' && user.email) {
-      const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase()), limit(1));
+      const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase().trim()), limit(1));
       unsubscribe = onSnapshot(staffQuery, (snapshot) => {
         if (!snapshot.empty) {
           const staffData = snapshot.docs[0].data();
@@ -134,7 +135,7 @@ export function Header() {
           setDisplayName(staffData.nameBn);
           setDisplayDesignation(staffData.designation);
         } else {
-          setDisplayPhoto(null);
+          setDisplayPhoto(user.photoUrl || null);
           setDisplayName(user.displayName || null);
           setDisplayDesignation('শিক্ষক');
         }
@@ -197,7 +198,7 @@ export function Header() {
   const filteredResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     
-    const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+    const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
     const q = searchQuery.toLowerCase();
     const qEn = bnToEn(q);
 
@@ -225,7 +226,7 @@ export function Header() {
 
   // Improved Permitted Menu Items Calculation
   const permittedMenuItems = useMemo(() => {
-    if (authLoading || !user) return [];
+    if (!user) return [];
     
     return mainMenuItems.filter(item => {
       // Admin always has permission
@@ -237,22 +238,20 @@ export function Header() {
       }
       return hasPermission(item.permission);
     });
-  }, [user, hasPermission, authLoading]);
+  }, [user, hasPermission]);
 
   const bottomNavItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
-    { label: 'ফেরত', icon: ArrowLeft, type: 'back', permission: 'view:dashboard' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
     { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
     { label: '', icon: Search, type: 'search', permission: 'view:students' },
-    { label: 'ফলাফল', icon: BookMarked, href: '/results', permission: ['manage:results', 'input:results'] },
     { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
     { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: ['send:messaging', 'manage:messaging'] },
     { label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines' },
   ];
 
   const permittedBottomNavItems = useMemo(() => {
-    if (authLoading || !user) return [];
+    if (!user) return [];
     return bottomNavItems.filter(item => {
         if (user.role === 'admin') return true;
         if (Array.isArray(item.permission)) {
@@ -260,7 +259,7 @@ export function Header() {
         }
         return hasPermission(item.permission);
     });
-  }, [user, hasPermission, authLoading]);
+  }, [user, hasPermission]);
 
   if (!isClient) return <header className="h-16 bg-primary" />;
 
@@ -312,30 +311,32 @@ export function Header() {
                       )}
                   </div>
 
-                  <nav className="flex-1 overflow-y-auto bg-slate-50/50 min-h-0">
-                    <div className="grid gap-2 p-4">
-                      {permittedMenuItems.length > 0 ? permittedMenuItems.map((item) => (
-                        <SheetClose asChild key={item.id}>
-                          <Link
-                            href={item.href}
-                            className={cn(
-                              "flex items-center gap-4 px-4 py-3.5 rounded-xl border-2 transition-all group hover:scale-[1.02] shadow-sm",
-                              pathname === item.href ? "border-primary bg-primary text-white shadow-md ring-2 ring-primary/20" : cn(item.color, "hover:shadow-md")
+                  <div className="flex-1 overflow-hidden min-h-0">
+                    <ScrollArea className="h-full">
+                        <nav className="grid gap-2 p-4">
+                            {permittedMenuItems.length > 0 ? permittedMenuItems.map((item) => (
+                                <SheetClose asChild key={item.id}>
+                                    <Link
+                                        href={item.href}
+                                        className={cn(
+                                            "flex items-center gap-4 px-4 py-3.5 rounded-xl border-2 transition-all group hover:scale-[1.02] shadow-sm",
+                                            pathname === item.href ? "border-primary bg-primary text-white shadow-md ring-2 ring-primary/20" : cn(item.color, "hover:shadow-md")
+                                        )}
+                                    >
+                                        <item.icon className={cn("h-5 w-5 shrink-0", pathname === item.href ? "text-white" : "")} />
+                                        <span className="font-black text-sm">{item.label}</span>
+                                        <ChevronRight className={cn("ml-auto h-4 w-4 opacity-30 group-hover:opacity-100", pathname === item.href ? "text-white opacity-100" : "")} />
+                                    </Link>
+                                </SheetClose>
+                            )) : (
+                                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                    <Loader2 className="h-10 w-10 animate-spin text-primary opacity-30" />
+                                    <p className="text-xs font-bold text-muted-foreground">মেনু লোড হচ্ছে...</p>
+                                </div>
                             )}
-                          >
-                            <item.icon className={cn("h-5 w-5 shrink-0", pathname === item.href ? "text-white" : "")} />
-                            <span className="font-black text-sm">{item.label}</span>
-                            <ChevronRight className={cn("ml-auto h-4 w-4 opacity-30 group-hover:opacity-100", pathname === item.href ? "text-white opacity-100" : "")} />
-                          </Link>
-                        </SheetClose>
-                      )) : (
-                        <div className="flex flex-col items-center justify-center py-10 gap-3">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary opacity-30" />
-                            <p className="text-xs font-bold text-muted-foreground">মেনু লোড হচ্ছে...</p>
-                        </div>
-                      )}
-                    </div>
-                  </nav>
+                        </nav>
+                    </ScrollArea>
+                  </div>
                   
                   {/* Sidebar User Profile Section */}
                   <div className="p-4 border-t bg-white shrink-0 mt-auto">
@@ -345,9 +346,9 @@ export function Header() {
                             <AvatarFallback className="font-black">{displayName?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 overflow-hidden text-left">
-                            <p className="text-sm font-black text-slate-900 truncate">{displayName || 'ব্যবহারকারী'}</p>
+                            <p className="text-sm font-black text-slate-900 truncate">{displayName || 'Admin'}</p>
                             <p className="text-[10px] font-bold text-primary italic truncate">
-                                {displayDesignation || (user?.role === 'admin' ? 'সিস্টেম এডমিন' : 'শিক্ষক')}
+                                {displayDesignation || (user?.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'শিক্ষক')}
                             </p>
                         </div>
                     </div>
@@ -393,8 +394,8 @@ export function Header() {
         <div className="flex items-center gap-2 sm:gap-4">
           {user && (
             <div className="hidden lg:flex flex-col items-end text-right mr-1 leading-tight select-none">
-              <span className="text-[13px] font-black text-white drop-shadow-sm">{displayName || 'User'}</span>
-              <span className="text-[10px] font-bold text-white/80 italic">{displayDesignation || 'শিক্ষক'}</span>
+              <span className="text-[13px] font-black text-white drop-shadow-sm">{displayName || 'Admin'}</span>
+              <span className="text-[10px] font-bold text-white/80 italic">{displayDesignation || 'সিস্টেম এডমিনিস্ট্রেটর'}</span>
             </div>
           )}
 
@@ -533,7 +534,7 @@ export function Header() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-700 font-bold">
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className="mr-2 h-5 w-5" />
                       <span>লগ আউট</span>
                   </DropdownMenuItem>
                   
@@ -627,19 +628,6 @@ export function Header() {
                             </div>
                         </DialogContent>
                     </Dialog>
-                )
-            }
-
-            if (item.type === 'back') {
-                return (
-                    <button 
-                        key="back-item" 
-                        onClick={() => router.back()} 
-                        className="flex flex-col items-center justify-center gap-0.5 transition-colors text-primary-foreground/70 hover:text-white min-w-0 h-full w-full px-0 select-none border-none bg-transparent"
-                    >
-                        <item.icon className="h-5 w-5 shrink-0" />
-                        <span className="text-[8px] sm:text-[10px] font-black uppercase truncate w-full text-center px-0.5">{item.label}</span>
-                    </button>
                 )
             }
 
