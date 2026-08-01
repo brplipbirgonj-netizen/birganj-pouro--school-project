@@ -183,7 +183,7 @@
         "attendance": {
           "type": "array",
           "items": {
-            "object",
+            "type": "object",
             "properties": {
               "studentId": { "type": "string" },
               "status": { "type": "string", "enum": ["present", "absent"] }
@@ -381,6 +381,46 @@
         "senderName": { "type": "string" }
       },
       "required": ["title", "content", "date", "senderName"]
+    },
+    "admissionApplication": {
+      "title": "Admission Application",
+      "description": "An online application for student admission.",
+      "type": "object",
+      "properties": {
+        "applicationId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "appliedAt": { "type": "string", "format": "date-time" },
+        "className": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "group": { "type": "string" },
+        "optionalSubject": { "type": "string" },
+        "studentNameBn": { "type": "string" },
+        "studentNameEn": { "type": "string" },
+        "dob": { "type": "string", "format": "date-time" },
+        "birthRegNo": { "type": "string" },
+        "gender": { "type": "string" },
+        "religion": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "fatherNameBn": { "type": "string" },
+        "fatherNameEn": { "type": "string" },
+        "fatherNid": { "type": "string" },
+        "motherNameBn": { "type": "string" },
+        "motherNameEn": { "type": "string" },
+        "motherNid": { "type": "string" },
+        "guardianMobile": { "type": "string" },
+        "studentMobile": { "type": "string" },
+        "presentVillage": { "type": "string" },
+        "presentUnion": { "type": "string" },
+        "presentPostOffice": { "type": "string" },
+        "presentUpazila": { "type": "string" },
+        "presentDistrict": { "type": "string" },
+        "permanentVillage": { "type": "string" },
+        "permanentUnion": { "type": "string" },
+        "permanentPostOffice": { "type": "string" },
+        "permanentUpazila": { "type": "string" },
+        "permanentDistrict": { "type": "string" }
+      },
+      "required": ["studentNameBn", "className", "academicYear", "guardianMobile", "photoUrl"]
     }
   },
   "auth": {
@@ -456,6 +496,10 @@
     "/notices/{noticeId}": {
       "schema": { "$ref": "#/entities/notice" },
       "description": "Stores school notices and announcements."
+    },
+    "/admissionApplications/{id}": {
+      "schema": { "$ref": "#/entities/admissionApplication" },
+      "description": "Stores online admission applications submitted by parents."
     }
   }
 }
