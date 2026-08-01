@@ -24,7 +24,7 @@ const classNamesMap: { [key: string]: string } = {
 export const StudentIDCard = ({ student, schoolInfo, isPrint = false }: StudentIDCardProps) => {
     const sanitizedUrl = sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender);
     
-    // QR data formatted for high scannability with essential student info
+    // Scannable student information for QR code
     const qrData = `ID: ${student.generatedId || '-'}
 Name: ${student.studentNameBn}
 Class: ${classNamesMap[student.className] || student.className}
@@ -36,15 +36,15 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
             "student-id-card font-kalpurush flex flex-col border-[2px] border-[#2418ff] overflow-hidden bg-white relative box-border shadow-md",
             isPrint ? "w-[54mm] h-[86mm]" : "w-[280px] h-[440px] rounded-sm"
         )}>
-            {/* Header Section - Blue area reduced for more content space */}
+            {/* Header Section - Blue background with Wave */}
             <div className={cn(
                 "relative z-10 bg-[#2418ff] flex flex-col items-center pt-2 pb-5 text-white shrink-0",
-                isPrint ? "h-[20mm]" : "h-[105px]"
+                isPrint ? "h-[22mm]" : "h-[110px]"
             )}>
                 {schoolInfo.logoUrl && (
                     <div className={cn(
                         "bg-white rounded-full p-0.5 mb-1 shadow-sm",
-                        isPrint ? "w-6 h-6" : "w-10 h-10"
+                        isPrint ? "w-7 h-7" : "w-11 h-11"
                     )}>
                         <img 
                             src={schoolInfo.logoUrl} 
@@ -59,14 +59,16 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                 )}>
                     {schoolInfo.name}
                 </h1>
+                
+                {/* School Address - Positioned for maximum visibility */}
                 <p className={cn(
-                    "font-bold text-white text-center uppercase tracking-tighter mt-1 px-1 z-30 opacity-95",
-                    isPrint ? "text-[5px]" : "text-[8px]"
+                    "font-bold text-white text-center uppercase tracking-tighter mt-1 px-1 z-30 opacity-100",
+                    isPrint ? "text-[5.5px]" : "text-[9px]"
                 )}>
                     Upazila: Birganj, Post: Birganj, Zila: Dinajpur
                 </p>
                 
-                {/* Wave effect */}
+                {/* Wave effect at bottom of header */}
                 <div className="absolute -bottom-0.5 left-0 right-0 w-full overflow-hidden leading-none z-10">
                     <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="w-full h-8">
                         <path d="M0.00,49.98 C149.99,150.00 349.20,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z" style={{ stroke: 'none', fill: 'white' }}></path>
@@ -75,7 +77,7 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
             </div>
 
             <main className="relative z-20 flex-1 flex flex-col items-center pt-0 px-3">
-                {/* Photo & QR Section - Side by side and large */}
+                {/* Photo & QR Section - Side by side */}
                 <div className="flex items-center justify-between gap-2 w-full mb-1">
                     {/* Student Photo */}
                     <div className={cn(
@@ -90,7 +92,7 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                         />
                     </div>
 
-                    {/* QR Code Section - SVG format for crystal clear printing */}
+                    {/* QR Code - High scannability with level L */}
                     <div className={cn(
                         "flex flex-col items-center justify-center border-2 border-slate-100 p-0.5 bg-white shadow-sm rounded-sm overflow-hidden",
                         isPrint ? "w-[20mm] h-[24mm]" : "w-28 h-34"
@@ -104,7 +106,7 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                     </div>
                 </div>
 
-                {/* Name Section - Bold and Blue */}
+                {/* Name Section - Bold blue text */}
                 <div className="flex flex-col items-center mb-1 w-full mt-1">
                     <h2 className={cn("font-black text-[#2418ff] leading-none text-center", isPrint ? "text-[12px]" : "text-[19px]")}>
                         {student.studentNameBn}
@@ -114,7 +116,7 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                     </p>
                 </div>
 
-                {/* Data Grid - Compact spacing to fit everything up */}
+                {/* Data Grid - Compact spacing to leave room for signature */}
                 <div className="w-full border-t border-slate-100 pt-1 flex flex-col gap-0.5 font-black">
                     <div className={cn("flex items-center", isPrint ? "text-[9.5px]" : "text-[15px]")}>
                         <span className="w-18 text-slate-600">শ্রেণি ও রোল</span>
@@ -135,9 +137,9 @@ Mobile: ${student.guardianMobile || student.studentMobile || '-'}`;
                 </div>
             </main>
 
-            {/* Footer Signature - Placed at the very bottom right without line */}
-            <footer className="relative z-10 pb-3 flex flex-col items-end pr-5 mt-auto">
-                <p className={cn("font-black text-slate-800", isPrint ? "text-[8px]" : "text-[13px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
+            {/* Footer Signature - Right aligned with space */}
+            <footer className="relative z-10 pb-4 flex flex-col items-end pr-5 mt-auto">
+                <p className={cn("font-black text-slate-800", isPrint ? "text-[8.5px]" : "text-[14px]")}>প্রধান শিক্ষকের স্বাক্ষর</p>
             </footer>
 
             <style jsx>{`
