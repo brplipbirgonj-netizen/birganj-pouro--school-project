@@ -6,324 +6,35 @@
       "description": "Represents an application user with a role and online status.",
       "type": "object",
       "properties": {
-        "uid": { "type": "string", "description": "The user's unique ID from Firebase Auth." },
-        "email": { "type": "string", "format": "email", "description": "The user's email address." },
-        "role": { "type": "string", "enum": ["admin", "teacher"], "description": "The user's role." },
-        "photoUrl": { "type": "string", "description": "URL of the user's profile picture." },
-        "displayName": { "type": "string", "description": "Name of the user." },
-        "isOnline": { "type": "boolean", "description": "Whether the user is currently logged in." },
-        "permissions": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "A list of permission strings."
-        },
-        "lastLoginAt": { "type": "string", "format": "date-time", "description": "The last time the user logged in." }
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "teacher"] },
+        "photoUrl": { "type": "string" },
+        "displayName": { "type": "string" },
+        "isOnline": { "type": "boolean" },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
-    },
-    "emailLog": {
-      "title": "Email Log",
-      "description": "A record of an email sent through the system.",
-      "type": "object",
-      "properties": {
-        "to": { "type": "string" },
-        "subject": { "type": "string" },
-        "body": { "type": "string" },
-        "sentAt": { "type": "string", "format": "date-time" },
-        "senderUid": { "type": "string" },
-        "recipientType": { "type": "string" }
-      },
-      "required": ["to", "subject", "body", "sentAt", "senderUid"]
-    },
-    "messageLog": {
-      "title": "Message Log",
-      "description": "Logs of messages or calls made to students/parents via the system.",
-      "type": "object",
-      "properties": {
-        "recipientsCount": { "type": "number" },
-        "type": { "type": "string", "enum": ["all", "class", "individual", "absent", "call"] },
-        "className": { "type": "string" },
-        "content": { "type": "string" },
-        "notes": { "type": "string", "description": "Additional notes, e.g., call duration or outcome." },
-        "sentAt": { "type": "string", "format": "date-time" },
-        "senderUid": { "type": "string" },
-        "senderName": { "type": "string" }
-      },
-      "required": ["recipientsCount", "type", "content", "sentAt", "senderUid"]
     },
     "student": {
       "title": "Student",
       "description": "A student in the school",
       "type": "object",
       "properties": {
-        "generatedId": { "type": "string", "description": "The auto-generated 8-digit student ID (YYCCRRRR)." },
+        "generatedId": { "type": "string" },
         "roll": { "type": "number" },
         "className": { "type": "string" },
         "academicYear": { "type": "string" },
         "studentNameBn": { "type": "string" },
         "studentNameEn": { "type": "string" },
-        "fatherNameBn": { "type": "string" },
-        "fatherNameEn": { "type": "string" },
-        "motherNameBn": { "type": "string" },
-        "motherNameEn": { "type": "string" },
-        "dob": { "type": "string", "format": "date-time" },
-        "birthRegNo": { "type": "string" },
-        "guardianMobile": { "type": "string" },
-        "studentMobile": { "type": "string" },
-        "fatherNid": { "type": "string" },
-        "motherNid": { "type": "string" },
-        "gender": { "type": "string" },
-        "religion": { "type": "string" },
-        "group": { "type": "string" },
-        "optionalSubject": { "type": "string" },
-        "presentVillage": { "type": "string" },
-        "presentUnion": { "type": "string" },
-        "presentPostOffice": { "type": "string" },
-        "presentUpazila": { "type": "string" },
-        "presentDistrict": { "type": "string" },
-        "permanentVillage": { "type": "string" },
-        "permanentUnion": { "type": "string" },
-        "permanentPostOffice": { "type": "string" },
-        "permanentUpazila": { "type": "string" },
-        "permanentDistrict": { "type": "string" },
         "photoUrl": { "type": "string" }
       },
-      "required": ["roll", "className", "academicYear", "studentNameBn", "fatherNameBn", "motherNameBn", "photoUrl"]
-    },
-    "staff": {
-      "title": "Staff",
-      "description": "A teacher or staff member of the school.",
-      "type": "object",
-      "properties": {
-        "employeeId": { "type": "string", "description": "The auto-generated 6-digit employee ID (YYYYSS)." },
-        "nameBn": { "type": "string" },
-        "nameEn": { "type": "string" },
-        "fatherNameBn": { "type": "string" },
-        "motherNameBn": { "type": "string" },
-        "dob": { "type": "string", "format": "date-time" },
-        "designation": {
-          "type": "string",
-          "enum": [
-            "প্রধান শিক্ষক",
-            "প্রধান শিক্ষক (ভারপ্রাপ্ত)",
-            "সহকারী শিক্ষক",
-            "অফিস সহকারী",
-            "অফিস সহায়ক",
-            "আয়া"
-          ]
-        },
-        "subject": { "type": "string" },
-        "mobile": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "joinDate": { "type": "string", "format": "date-time" },
-        "education": { "type": "string" },
-        "address": { "type": "string" },
-        "photoUrl": { "type": "string" },
-        "isActive": { "type": "boolean" },
-        "staffType": { "type": "string", "enum": ["teacher", "staff"] }
-      },
-      "required": ["nameBn", "designation", "mobile", "joinDate", "photoUrl", "staffType", "isActive"]
-    },
-    "staffAttendanceRecord": {
-      "title": "Staff Attendance Record",
-      "description": "Daily attendance and leave record for staff members.",
-      "type": "object",
-      "properties": {
-        "date": { "type": "string", "format": "date" },
-        "attendance": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "staffId": { "type": "string" },
-              "status": { "type": "string", "enum": ["present", "leave"] },
-              "leaveType": { "type": "string", "enum": ["CL", "SL", "EL", "DL", "Other"] },
-              "checkIn": { "type": "string" },
-              "checkOut": { "type": "string" },
-              "note": { "type": "string" }
-            },
-            "required": ["staffId", "status"]
-          }
-        }
-      },
-      "required": ["date", "attendance"]
-    },
-    "schoolInfo": {
-      "title": "School Information",
-      "description": "General information about the school.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "nameEn": { "type": "string" },
-        "eiin": { "type": "string" },
-        "code": { "type": "string" },
-        "address": { "type": "string" },
-        "logoUrl": { "type": "string" }
-      },
-      "required": ["name"]
-    },
-    "holiday": {
-      "title": "Holiday",
-      "description": "A holiday record.",
-      "type": "object",
-      "properties": {
-        "date": { "type": "string", "format": "date" },
-        "description": { "type": "string" }
-      },
-      "required": ["date", "description"]
-    },
-    "attendanceRecord": {
-      "title": "Attendance Record",
-      "description": "Daily attendance record for a class.",
-      "type": "object",
-      "properties": {
-        "date": { "type": "string", "format": "date" },
-        "academicYear": { "type": "string" },
-        "className": { "type": "string" },
-        "attendance": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "studentId": { "type": "string" },
-              "status": { "type": "string", "enum": ["present", "absent"] }
-            },
-            "required": ["studentId", "status"]
-          }
-        }
-      },
-      "required": ["date", "academicYear", "className", "attendance"]
-    },
-    "feeCollection": {
-      "title": "Fee Collection",
-      "description": "A single fee collection transaction for a student.",
-      "type": "object",
-      "properties": {
-        "studentId": { "type": "string" },
-        "academicYear": { "type": "string" },
-        "collectionDate": { "type": "string", "format": "date" },
-        "description": { "type": "string", "description": "A brief description of the collection." },
-        "totalAmount": { "type": "number" },
-        "collectorName": { "type": "string" },
-        "collectorUid": { "type": "string" },
-        "transactionIds": { "type": "array", "items": { "type": "string" } },
-        "breakdown": { "type": "object" }
-      },
-      "required": ["studentId", "academicYear", "collectionDate", "totalAmount"]
-    },
-    "result": {
-      "title": "Result",
-      "description": "Results for a class in a particular subject.",
-      "type": "object",
-      "properties": {
-        "academicYear": { "type": "string" },
-        "className": { "type": "string" },
-        "group": { "type": "string" },
-        "subject": { "type": "string" },
-        "fullMarks": { "type": "number" },
-        "results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "studentId": { "type": "string" },
-              "written": { "type": "number" },
-              "mcq": { "type": "number" },
-              "practical": { "type": "number" }
-            },
-            "required": ["studentId"]
-          }
-        }
-      },
-      "required": ["academicYear", "className", "subject", "fullMarks", "results"]
-    },
-    "transaction": {
-      "title": "Transaction",
-      "description": "An income or expense transaction record.",
-      "type": "object",
-      "properties": {
-        "date": { "type": "string", "format": "date" },
-        "type": { "type": "string", "enum": ["income", "expense"] },
-        "accountHead": { "type": "string" },
-        "description": { "type": "string" },
-        "amount": { "type": "number" },
-        "academicYear": { "type": "string" },
-        "feeCollectionId": { "type": "string" }
-      },
-      "required": ["date", "type", "accountHead", "amount", "academicYear"]
-    },
-    "classRoutine": {
-      "title": "Class Routine",
-      "description": "Weekly class routine for a specific class and group.",
-      "type": "object",
-      "properties": {
-        "academicYear": { "type": "string" },
-        "className": { "type": "string" },
-        "group": { "type": "string" },
-        "day": { "type": "string", "enum": ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"] },
-        "periods": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["academicYear", "className", "day", "periods"]
-    },
-    "proxyClass": {
-      "title": "Proxy Class",
-      "description": "A temporary teacher assignment for a specific class and period.",
-      "type": "object",
-      "properties": {
-        "date": { "type": "string", "format": "date" },
-        "academicYear": { "type": "string" },
-        "className": { "type": "string" },
-        "periodIndex": { "type": "number" },
-        "originalTeacher": { "type": "string" },
-        "proxyTeacher": { "type": "string" },
-        "subject": { "type": "string" },
-        "assignedBy": { "type": "string" },
-        "assignedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["date", "academicYear", "className", "periodIndex", "originalTeacher", "proxyTeacher"]
-    },
-    "examRoutine": {
-      "title": "Exam Routine",
-      "description": "Schedule for a specific examination.",
-      "type": "object",
-      "properties": {
-        "examName": { "type": "string" },
-        "academicYear": { "type": "string" },
-        "className": { "type": "string" },
-        "group": { "type": "string" },
-        "subject": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "time": { "type": "string" }
-      },
-      "required": ["examName", "academicYear", "className", "subject", "date", "time"]
-    },
-    "exam": {
-      "title": "Exam",
-      "description": "An examination event like Annual Exam, Half-yearly etc.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "academicYear": { "type": "string" },
-        "classes": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["name", "academicYear"]
-    },
-    "notice": {
-      "title": "Notice",
-      "description": "A general school notice or announcement.",
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" },
-        "content": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "priority": { "type": "string", "enum": ["normal", "important", "urgent"] },
-        "senderName": { "type": "string" }
-      },
-      "required": ["title", "content", "date", "senderName"]
+      "required": ["roll", "className", "academicYear", "studentNameBn", "photoUrl"]
     },
     "admissionApplication": {
       "title": "Admission Application",
-      "description": "An online application for student admission.",
+      "description": "An online application for student admission submitted by parents.",
       "type": "object",
       "properties": {
         "applicationId": { "type": "string" },
@@ -331,19 +42,9 @@
         "appliedAt": { "type": "string", "format": "date-time" },
         "className": { "type": "string" },
         "academicYear": { "type": "string" },
-        "group": { "type": "string" },
         "studentNameBn": { "type": "string" },
-        "studentNameEn": { "type": "string" },
-        "dob": { "type": "string", "format": "date-time" },
-        "birthRegNo": { "type": "string" },
-        "gender": { "type": "string" },
-        "religion": { "type": "string" },
-        "photoUrl": { "type": "string" },
-        "fatherNameBn": { "type": "string" },
-        "motherNameBn": { "type": "string" },
         "guardianMobile": { "type": "string" },
-        "presentVillage": { "type": "string" },
-        "presentUpazila": { "type": "string" }
+        "photoUrl": { "type": "string" }
       },
       "required": ["studentNameBn", "className", "academicYear", "guardianMobile", "photoUrl"]
     }
@@ -356,73 +57,13 @@
       "schema": { "$ref": "#/entities/user" },
       "description": "Stores user profile information."
     },
-    "/emailLogs/{id}": {
-      "schema": { "$ref": "#/entities/emailLog" },
-      "description": "Stores logs of sent emails."
-    },
-    "/messageLogs/{id}": {
-      "schema": { "$ref": "#/entities/messageLog" },
-      "description": "Stores logs of sent messages."
-    },
     "/students/{studentId}": {
       "schema": { "$ref": "#/entities/student" },
       "description": "Stores individual student records."
     },
-    "/staff/{staffId}": {
-      "schema": { "$ref": "#/entities/staff" },
-      "description": "Stores individual teacher and staff records."
-    },
-    "/staffAttendance/{id}": {
-      "schema": { "$ref": "#/entities/staffAttendanceRecord" },
-      "description": "Stores daily attendance and leave records for staff."
-    },
-    "/school/info": {
-      "schema": { "$ref": "#/entities/schoolInfo" },
-      "description": "Stores general school information."
-    },
-    "/holidays/{holidayId}": {
-      "schema": { "$ref": "#/entities/holiday" },
-      "description": "Stores holiday records."
-    },
-    "/attendance/{attendanceId}": {
-      "schema": { "$ref": "#/entities/attendanceRecord" },
-      "description": "Stores daily attendance records."
-    },
-    "/results/{resultId}": {
-      "schema": { "$ref": "#/entities/result" },
-      "description": "Stores results for a class in a particular subject."
-    },
-     "/feeCollections/{collectionId}": {
-      "schema": { "$ref": "#/entities/feeCollection" },
-      "description": "Stores fee collection records for students."
-    },
-    "/transactions/{transactionId}": {
-      "schema": { "$ref": "#/entities/transaction" },
-      "description": "Stores income and expense transaction records."
-    },
-    "/classRoutines/{routineId}": {
-      "schema": { "$ref": "#/entities/classRoutine" },
-      "description": "Stores weekly class routines."
-    },
-    "/proxyClasses/{proxyId}": {
-      "schema": { "$ref": "#/entities/proxyClass" },
-      "description": "Stores temporary proxy teacher assignments."
-    },
-    "/examRoutines/{routineId}": {
-      "schema": { "$ref": "#/entities/examRoutine" },
-      "description": "Stores exam schedules."
-    },
-    "/exams/{examId}": {
-      "schema": { "$ref": "#/entities/exam" },
-      "description": "Stores examination events."
-    },
-    "/notices/{noticeId}": {
-      "schema": { "$ref": "#/entities/notice" },
-      "description": "Stores school notices and announcements."
-    },
     "/admissionApplications/{id}": {
       "schema": { "$ref": "#/entities/admissionApplication" },
-      "description": "Stores online admission applications submitted by parents."
+      "description": "Stores online admission applications."
     }
   }
 }

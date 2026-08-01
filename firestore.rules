@@ -9,28 +9,37 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Direct check for admin role or permission without separate exists() for performance
+    // Safely check for admin role (short-circuits if not authed)
     function isAdmin() {
       return isAuthed() && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Direct check for specific permission (admins have all permissions)
+    // Safely check for specific permission (short-circuits if not authed)
     function hasPermission(permission) {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       return isAuthed() && (
-        userData.role == 'admin' || 
-        permission in userData.get('permissions', [])
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+        permission in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('permissions', [])
       );
     }
 
     // --- Rules for Collections ---
 
+    // 1. Admission Applications (Must be public for create)
+    match /admissionApplications/{id} {
+      // Public creation allowed for anyone to apply online
+      allow create: if true;
+      // Reading/Managing is restricted to staff with permission
+      allow read, write: if isAuthed() && hasPermission('manage:admissions');
+    }
+
+    // 2. School Info
     match /school/info {
       allow read: if true;
       allow write: if isAdmin();
     }
 
+    // 3. User Profiles
     match /users/{userId} {
       allow get, update: if isAuthed() && request.auth.uid == userId;
       allow list: if isAdmin();
@@ -38,6 +47,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // 4. Academic & Management Collections
     match /classRoutines/{id} {
       allow read: if isAuthed();
       allow write: if hasPermission('manage:routines');
@@ -111,15 +121,7 @@ service cloud.firestore {
       allow write: if hasPermission('manage:transactions');
       allow delete: if isAdmin();
     }
-
-    match /admissionApplications/{id} {
-      // Public creation allowed for anyone
-      allow create: if true;
-      // Explicitly allow list and get for managers
-      allow read: if isAuthed() && hasPermission('manage:admissions');
-      allow update, delete: if isAuthed() && hasPermission('manage:admissions');
-    }
     
-    // Final Trigger deployment: Simplifying hasPermission and explicit admission rules.
+    // Deployment Version: 2024-05-22T10:45:00Z - Critical Fix for Public Submission
   }
 }
