@@ -1,9 +1,10 @@
-
 'use server';
 /**
- * @fileOverview AI notice generation flow.
+ * @fileOverview AI notice generation flow for professional school communication.
  *
- * - generateNotice - A function that generates professional school notice content.
+ * - generateNotice - A function that generates professional school notice content using Gemini.
+ * - GenerateNoticeInput - The input type for the notice generation.
+ * - GenerateNoticeOutput - The return type for the notice generation.
  */
 
 import {ai} from '@/ai/genkit';
@@ -15,14 +16,10 @@ const GenerateNoticeInputSchema = z.object({
 export type GenerateNoticeInput = z.infer<typeof GenerateNoticeInputSchema>;
 
 const GenerateNoticeOutputSchema = z.object({
-  title: z.string().describe('A suitable title for the notice.'),
+  title: z.string().describe('A suitable short title for the notice in Bengali.'),
   content: z.string().describe('The detailed content of the notice in Bengali.'),
 });
 export type GenerateNoticeOutput = z.infer<typeof GenerateNoticeOutputSchema>;
-
-export async function generateNotice(input: GenerateNoticeInput): Promise<GenerateNoticeOutput> {
-  return generateNoticeFlow(input);
-}
 
 const prompt = ai.definePrompt({
   name: 'generateNoticePrompt',
@@ -37,7 +34,8 @@ Requirements:
 2. The content must be formal, respectful, and clearly state the information.
 3. Use proper Bengali grammar and formal address (e.g., "সংশ্লিষ্ট সকলকে জানানো যাচ্ছে যে...").
 4. If the topic is about a holiday, mention the reason and dates clearly.
-5. Keep it concise but complete.`,
+5. Keep it concise but complete.
+6. The output must be valid JSON matching the specified schema.`,
 });
 
 const generateNoticeFlow = ai.defineFlow(
@@ -48,6 +46,22 @@ const generateNoticeFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+        throw new Error('AI failed to generate notice content');
+    }
+    return output;
   }
 );
+
+/**
+ * Wrapper function for the generateNoticeFlow.
+ * Exported to be used as a Server Action.
+ */
+export async function generateNotice(input: GenerateNoticeInput): Promise<GenerateNoticeOutput> {
+  try {
+    return await generateNoticeFlow(input);
+  } catch (error) {
+    console.error("AI Generation Error:", error);
+    throw new Error('AI সেবাটি এই মুহূর্তে ব্যস্ত আছে। অনুগ্রহ করে কিছুক্ষণ পর চেষ্টা করুন।');
+  }
+}
