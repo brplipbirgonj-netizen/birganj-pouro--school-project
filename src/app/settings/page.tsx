@@ -25,7 +25,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDocs, where, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDocs, where, limit, FirestoreError } from 'firebase/firestore';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { User as SystemUser, userFromDoc, UserRole } from '@/lib/user';
@@ -43,6 +43,8 @@ import { getSubjects } from '@/lib/subjects';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import * as XLSX from 'xlsx';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // --- Utility Functions ---
 const toBengaliNumber = (str: string | number) => {
@@ -638,6 +640,13 @@ function UserManagementSettings() {
         const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
             setUsers(snapshot.docs.map(userFromDoc).sort((a, b) => (a.email || '').localeCompare(b.email || '')));
             setIsLoading(false);
+        }, async (error: FirestoreError) => {
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'users',
+                    operation: 'list',
+                }));
+            }
         });
         getDocs(collection(db, 'staff')).then(snap => setAllStaff(snap.docs.map(staffFromDoc)));
         return () => unsubscribe();
@@ -792,7 +801,12 @@ function ProfileSettings() {
                     setDisplayDesignation('শিক্ষক');
                 }
             }, (error) => {
-                if (error.code === 'permission-denied') return;
+                if (error.code === 'permission-denied') {
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({
+                        path: 'staff',
+                        operation: 'get',
+                    }));
+                }
             });
         } else {
             setDisplayPhoto(user.photoUrl || null);
@@ -907,7 +921,13 @@ function BackupAndExportSettings() {
             }
 
             toast({ title: 'ব্যাকআপ সফল হয়েছে', description: `সিস্টেমের পূর্ণাঙ্গ ডেটা এক্সপোর্ট করা হয়েছে।` });
-        } catch (error) {
+        } catch (error: any) {
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'backup-export',
+                    operation: 'list',
+                }));
+            }
             console.error(error);
             toast({ variant: 'destructive', title: 'এক্সপোর্ট ব্যর্থ হয়েছে', description: 'সার্ভার থেকে তথ্য পাওয়া যায়নি।' });
         } finally {

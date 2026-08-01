@@ -43,7 +43,13 @@ export const getGalleryConfig = async (db: Firestore): Promise<GalleryConfig> =>
             return { ...defaultGalleryConfig, ...docSnap.data() } as GalleryConfig;
         }
         return defaultGalleryConfig;
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: GALLERY_DOC_PATH,
+                operation: 'get',
+            }));
+        }
         console.error("Error getting gallery config:", e);
         return defaultGalleryConfig;
     }

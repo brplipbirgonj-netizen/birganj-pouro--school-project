@@ -8,6 +8,7 @@ import {
   where,
   Firestore,
   setDoc,
+  FirestoreError,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -41,7 +42,13 @@ export const getStaffAttendanceByDate = async (db: Firestore, date: string): Pro
             return { id: docSnap.id, ...docSnap.data() } as StaffDailyAttendance;
         }
         return undefined;
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: COLLECTION,
+                operation: 'get',
+            }));
+        }
         console.error("Error getting staff attendance:", e);
         return undefined;
     }
@@ -69,7 +76,7 @@ export const saveStaffAttendance = (db: Firestore, record: StaffDailyAttendance)
         attendance: cleanedAttendance
     };
 
-    return setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError) => {
+    return setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError: any) => {
         const permissionError = new FirestorePermissionError({
             path: COLLECTION,
             operation: 'write',
@@ -89,7 +96,13 @@ export const getStaffAttendanceForRange = async (db: Firestore, startDate: strin
     try {
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StaffDailyAttendance));
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: COLLECTION,
+                operation: 'list',
+            }));
+        }
         console.error("Error getting staff attendance range:", e);
         return [];
     }

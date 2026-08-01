@@ -94,46 +94,55 @@ const NoticeTicker = () => {
                 setLatestNotice(null);
             }
             setIsLoading(false);
+        }, async (error: FirestoreError) => {
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'notices',
+                    operation: 'list',
+                }));
+            }
         });
 
         return () => unsubscribe();
     }, [db, user]);
 
-    if (isLoading) return <Skeleton className="h-10 w-full mb-4 rounded-none" />;
-    if (!latestNotice) return null;
-
-    return (
-        <div className="w-full bg-yellow-100 text-red-700 h-10 flex items-center overflow-hidden border-b-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
-            <div className="bg-red-600 text-white px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-lg">
-                <Megaphone className="h-4 w-4 animate-bounce" />
-                <span className="font-black text-sm whitespace-nowrap">জরুরি নোটিশ:</span>
-            </div>
-            <div className="flex-1 relative overflow-hidden h-full flex items-center">
-                <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-20 group-hover:pause-animation">
-                    <span className="font-black text-sm tracking-wide">
-                        <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
-                    </span>
-                    <span className="font-black text-sm tracking-wide">
-                        <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
-                    </span>
+    if (latestNotice) {
+        return (
+            <div className="w-full bg-yellow-100 text-red-700 h-10 flex items-center overflow-hidden border-b-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
+                <div className="bg-red-600 text-white px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-lg">
+                    <Megaphone className="h-4 w-4 animate-bounce" />
+                    <span className="font-black text-sm whitespace-nowrap">জরুরি নোটিশ:</span>
                 </div>
+                <div className="flex-1 relative overflow-hidden h-full flex items-center">
+                    <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-20 group-hover:pause-animation">
+                        <span className="font-black text-sm tracking-wide">
+                            <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
+                        </span>
+                        <span className="font-black text-sm tracking-wide">
+                            <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
+                        </span>
+                    </div>
+                </div>
+                <style jsx>{`
+                    @keyframes marquee {
+                        0% { transform: translateX(0); }
+                        100% { transform: translateX(-50%); }
+                    }
+                    .animate-marquee {
+                        animation: marquee 35s linear infinite;
+                        display: inline-flex;
+                        width: max-content;
+                    }
+                    .pause-animation {
+                        animation-play-state: paused;
+                    }
+                `}</style>
             </div>
-            <style jsx>{`
-                @keyframes marquee {
-                    0% { transform: translateX(0); }
-                    100% { transform: translateX(-50%); }
-                }
-                .animate-marquee {
-                    animation: marquee 35s linear infinite;
-                    display: inline-flex;
-                    width: max-content;
-                }
-                .pause-animation {
-                    animation-play-state: paused;
-                }
-            `}</style>
-        </div>
-    );
+        );
+    }
+
+    if (isLoading) return <Skeleton className="h-10 w-full mb-4 rounded-none" />;
+    return null;
 };
 
 const GalleryCard = () => {
@@ -150,6 +159,13 @@ const GalleryCard = () => {
                 setConfig(snap.data() as GalleryConfig);
             }
             setIsLoading(false);
+        }, async (error: FirestoreError) => {
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'school/gallery',
+                    operation: 'get',
+                }));
+            }
         });
         return () => unsub();
     }, [db, user]);
@@ -447,7 +463,7 @@ const NoticeBoard = () => {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label className="font-bold">বিস্তারিত বিষয়বস্তু</Label>
+                                        <Label className="font-bold"> বিস্তারিত বিষয়বস্তু</Label>
                                         <Textarea 
                                             placeholder="নোটিশের বিস্তারিত লিখুন..."
                                             value={newNotice.content} 
@@ -707,7 +723,7 @@ const LiveRoutineCard = () => {
                                         <TableHeader className="bg-muted/50">
                                             <TableRow>
                                                 <TableHead>সময়</TableHead>
-                                                <TableHead>শিক্ষকর</TableHead>
+                                                <TableHead>শিক্ষক</TableHead>
                                                 <TableHead>শ্রেণি</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -926,12 +942,12 @@ export default function Home() {
         setClassAttendance(classMap);
       },
       (error: FirestoreError) => {
-        if (error.code === 'permission-denied') return;
-        const permissionError = new FirestorePermissionError({
-            path: 'students',
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        if (error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: 'students',
+                operation: 'list',
+            }));
+        }
       });
 
       const staffQuery = query(collection(db, 'staff'), where('isActive', '==', true), where('staffType', '==', 'teacher'));
@@ -939,12 +955,12 @@ export default function Home() {
         setTotalTeachers(querySnapshot.size);
       },
       (error: FirestoreError) => {
-        if (error.code === 'permission-denied') return;
-        const permissionError = new FirestorePermissionError({
-            path: 'staff',
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        if (error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: 'staff',
+                operation: 'list',
+            }));
+        }
       });
 
       return () => {
