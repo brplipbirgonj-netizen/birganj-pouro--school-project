@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, FilePlus, IdCard, FileText, FileBadge, Award, Grid3X3 } from 'lucide-react';
+import { ArrowRight, FilePlus, IdCard, FileText, FileBadge, Award, Grid3X3, Contact } from 'lucide-react';
 
 export default function DocumentsPage() {
   return (
@@ -17,6 +17,29 @@ export default function DocumentsPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* ID Card Card */}
+            <Card className="border-2 border-primary/20 hover:border-primary/40 transition-all shadow-lg bg-white">
+                <CardHeader className="bg-primary/5">
+                    <CardTitle className="flex items-center gap-2">
+                        <Contact className="h-6 w-6 text-primary" /> পরিচয়পত্র (ID Card)
+                    </CardTitle>
+                    <CardDescription>ছবিসহ প্রফেশনাল ডিজিটাল আইডি কার্ড</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                        সকল শিক্ষার্থীর জন্য দৃষ্টিনন্দিত আইডি কার্ড জেনারেট করুন। এক পাতায় ৮টি কার্ড স্বয়ংক্রিয়ভাবে সাজানো হবে।
+                   </p>
+                </CardContent>
+                 <CardFooter>
+                    <Link href="/documents/id-card" className="w-full">
+                        <Button className="w-full font-black text-md shadow-md">
+                            জেনারেট করুন
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            </Card>
+
             {/* Admit Card Card */}
             <Card className="border-2 border-primary/10 hover:border-primary/30 transition-all shadow-md">
                 <CardHeader className="bg-primary/5">
