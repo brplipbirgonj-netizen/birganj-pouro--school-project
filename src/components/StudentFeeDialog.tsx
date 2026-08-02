@@ -28,6 +28,7 @@ import { MoneyReceipt } from './MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
