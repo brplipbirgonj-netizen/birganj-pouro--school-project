@@ -12,12 +12,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getFullRoutine, saveRoutinesBatch, ClassRoutine } from '@/lib/routine-data';
+import { getFullRoutine, saveRoutinesBatch, ClassRoutine, ROUTINE_COLLECTION } from '@/lib/routine-data';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, FilePen, FilePlus, Users, Info, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -32,7 +32,7 @@ import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { getProxyClasses, saveProxyClass, deleteProxyClass, ProxyClass, NewProxyData } from '@/lib/proxy-data';
 import { getStaff, Staff } from '@/lib/staff-data';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, writeBatch, doc } from 'firebase/firestore';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
@@ -964,7 +964,7 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
 };
 
 export default function RoutinesPage() {
-    const { selectedYear, availableYears } = useAcademicYear();
+    const { selectedYear, setSelectedYear, availableYears } = useAcademicYear();
     const [isClient, setIsClient] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     
@@ -1058,6 +1058,59 @@ export default function RoutinesPage() {
         });
     };
 
+    const handleCopyRoutine = async () => {
+        if (!db || !targetYear || targetYear === selectedYear) {
+            toast({ variant: 'destructive', title: 'সঠিক বছর নির্বাচন করুন' });
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const batch = writeBatch(db);
+            const currentRoutines = await getFullRoutine(db, selectedYear);
+            
+            currentRoutines.forEach(r => {
+                const docId = `${targetYear}_${r.className}_${r.day}`;
+                const docRef = doc(db, ROUTINE_COLLECTION, docId);
+                batch.set(docRef, { ...r, academicYear: targetYear }, { merge: true });
+            });
+
+            await batch.commit();
+            toast({ title: `রুটিন সফলভাবে ${toBengaliNumber(targetYear)} সালে কপি হয়েছে।` });
+            setSelectedYear(targetYear);
+            setIsCopyDialogOpen(false);
+        } catch (e) {
+            console.error(e);
+            toast({ variant: 'destructive', title: 'কপি করা সম্ভব হয়নি।' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleMakeBlank = async () => {
+        if (!db || !isAdmin) return;
+        
+        setIsLoading(true);
+        try {
+            const batch = writeBatch(db);
+            const currentRoutines = await getFullRoutine(db, selectedYear);
+            
+            currentRoutines.forEach(r => {
+                const docId = `${selectedYear}_${r.className}_${r.day}`;
+                const docRef = doc(db, ROUTINE_COLLECTION, docId);
+                batch.update(docRef, { periods: Array(6).fill('') });
+            });
+
+            await batch.commit();
+            toast({ title: `${toBengaliNumber(selectedYear)} সালের রুটিন খালি করা হয়েছে।` });
+            fetchData();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const sidebarItems = useMemo(() => {
         const items = [
             { id: 'class-routine', label: 'ক্লাস রুটিন', icon: CalendarClock, color: 'text-indigo-600 bg-indigo-50' },
@@ -1065,6 +1118,8 @@ export default function RoutinesPage() {
             { id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' },
         ];
         if (isAdmin) {
+            items.push({ id: 'copy-routine', label: 'রুটিন কপি করুন', icon: Copy, color: 'text-amber-600 bg-amber-50' });
+            items.push({ id: 'blank-routine', label: 'ফাঁকা রুটিন', icon: FilePlus, color: 'text-slate-600 bg-slate-50' });
             items.push({ id: 'statistics', label: 'পরিসংখ্যান', icon: BarChart3, color: 'text-violet-600 bg-violet-50' });
             items.push({ id: 'upload', label: 'এক্সেল আপলোড', icon: FileUp, color: 'text-rose-600 bg-rose-50' });
         }
@@ -1148,6 +1203,19 @@ export default function RoutinesPage() {
                                 {activeSection === 'exam-routine' && (
                                     <ExamRoutineTab />
                                 )}
+                                {activeSection === 'copy-routine' && (
+                                    <CopyRoutineTab 
+                                        onCopy={handleCopyRoutine} 
+                                        targetYear={targetYear} 
+                                        setTargetYear={setTargetYear} 
+                                        availableYears={availableYears} 
+                                        selectedYear={selectedYear}
+                                        isProcessing={isLoading}
+                                    />
+                                )}
+                                {activeSection === 'blank-routine' && (
+                                    <BlankRoutineTab onReset={handleMakeBlank} selectedYear={selectedYear} isProcessing={isLoading} />
+                                )}
                                 {activeSection === 'statistics' && (
                                     <RoutineStatistics stats={stats} />
                                 )}
@@ -1195,6 +1263,95 @@ function ExamRoutineTab() {
             <LayoutGrid className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-black text-slate-800">পরীক্ষার রুটিন মডিউল</h3>
             <p className="font-bold text-muted-foreground">এই ফিচারটি নির্মাণাধীন আছে। শীঘ্রই এটি ব্যবহারের জন্য উন্মুক্ত হবে।</p>
+        </Card>
+    );
+}
+
+function CopyRoutineTab({ onCopy, targetYear, setTargetYear, availableYears, selectedYear, isProcessing }: any) {
+    return (
+        <Card className="border-2 border-amber-100 bg-amber-50/20 rounded-3xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-500">
+            <CardHeader className="bg-amber-100/50 pb-6">
+                <CardTitle className="text-xl font-black text-amber-900 flex items-center gap-2">
+                    <Copy className="h-6 w-6" /> রুটিন কপি করুন
+                </CardTitle>
+                <CardDescription className="text-amber-800 font-bold">এক বছরের রুটিন অন্য বছরের জন্য হুবহু কপি করার সুবিধা</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+                <div className="bg-white p-6 rounded-2xl border-2 border-amber-200 shadow-sm space-y-4">
+                    <div className="space-y-2">
+                        <Label className="font-black text-primary">কোন বছর থেকে কপি করবেন?</Label>
+                        <div className="p-3 bg-muted/30 rounded-lg border font-black text-lg text-center">{toBengaliNumber(selectedYear)}</div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="font-black text-primary">কোন বছরে কপি করবেন?</Label>
+                        <Select value={targetYear} onValueChange={setTargetYear}>
+                            <SelectTrigger className="h-12 text-lg font-black bg-white border-2 border-amber-200"><SelectValue placeholder="বছর নির্বাচন করুন" /></SelectTrigger>
+                            <SelectContent>
+                                {availableYears.map((y: string) => (
+                                    <SelectItem key={y} value={y} disabled={y === selectedYear}>{toBengaliNumber(y)}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                
+                <div className="p-4 bg-white/80 rounded-xl border border-dashed border-amber-300 flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                    <p className="text-xs font-bold text-amber-900 leading-relaxed">
+                        সতর্কতা: কপি করার ফলে টার্গেট বছরের বর্তমান রুটিন (যদি থাকে) তা সম্পূর্ণভাবে মুছে যাবে এবং নতুন ডাটা দিয়ে প্রতিস্থাপিত হবে।
+                    </p>
+                </div>
+
+                <Button onClick={onCopy} disabled={!targetYear || isProcessing} className="w-full h-14 text-lg font-black shadow-xl bg-amber-600 hover:bg-amber-700">
+                    {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Copy className="mr-2" />}
+                    কপি নিশ্চিত করুন
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+function BlankRoutineTab({ onReset, selectedYear, isProcessing }: any) {
+    return (
+        <Card className="border-2 border-rose-100 bg-rose-50/20 rounded-3xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-500">
+            <CardHeader className="bg-rose-100/50 pb-6">
+                <CardTitle className="text-xl font-black text-rose-900 flex items-center gap-2">
+                    <FilePlus className="h-6 w-6" /> ফাঁকা রুটিন (Reset)
+                </CardTitle>
+                <CardDescription className="text-rose-800 font-bold">বর্তমান বছরের রুটিন পুরোপুরি পরিষ্কার করার সুবিধা</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6 text-center">
+                <div className="bg-white p-10 rounded-2xl border-2 border-rose-200 shadow-sm flex flex-col items-center gap-4">
+                    <div className="p-4 bg-rose-100 rounded-full">
+                        <AlertTriangle className="h-12 w-12 text-rose-600 animate-pulse" />
+                    </div>
+                    <h4 className="text-xl font-black text-rose-950">{toBengaliNumber(selectedYear)} সালের রুটিন মুছতে চান?</h4>
+                    <p className="text-sm font-bold text-muted-foreground max-w-sm">
+                        এটি এই বছরের সকল শ্রেণির সকল দিনের রুটিন ডাটা মুছে ফেলবে। এই কাজটি আর ফিরিয়ে আনা যাবে না।
+                    </p>
+                </div>
+
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button disabled={isProcessing} variant="destructive" className="w-full h-14 text-lg font-black shadow-xl">
+                            {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Trash2 className="mr-2" />}
+                            রুটিন পুরোপুরি মুছুন
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="font-kalpurush">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-2xl font-black text-rose-700">আপনি কি নিশ্চিত?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-base font-bold">
+                                এটি {toBengaliNumber(selectedYear)} সালের সম্পূর্ণ রুটিন ডাটা ডিলিট করে দিবে। আপনি কি রুটিনটি রিসেট করতে চান?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="gap-2">
+                            <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                            <AlertDialogAction onClick={onReset} className="bg-rose-600 hover:bg-rose-700 font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </CardContent>
         </Card>
     );
 }
