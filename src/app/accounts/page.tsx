@@ -1076,20 +1076,24 @@ export default function AccountsPage() {
   const canCollectFees = hasPermission('collect:fees');
   const canViewReports = hasPermission('view:collection-report');
   const canManageTransactions = hasPermission('manage:transactions');
+  const canViewMonthlyReport = hasPermission('view:accounts-monthly-report');
+  const canViewCashbook = hasPermission('view:cashbook-ledger');
 
   const sidebarItems = useMemo(() => {
-    const items = [{ id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
+    const items = [{ id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
     if (canCollectFees) {
         items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' });
         items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
     }
     if (canViewReports) items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
-    items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' });
-    items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' });
-    items.push({ id: 'monthly-report', label: 'মাসিক রিপোর্ট', icon: FileBarChart, color: 'text-emerald-600 bg-emerald-50' });
+    if (canViewCashbook) {
+        items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' });
+        items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' });
+    }
+    if (canViewMonthlyReport) items.push({ id: 'monthly-report', label: 'মাসিক রিপোর্ট', icon: FileBarChart, color: 'text-emerald-600 bg-emerald-50' });
     if (canManageTransactions) items.push({ id: 'new-transaction', label: 'আয়/ব্যয় এন্ট্রি', icon: PlusCircle, color: 'text-primary bg-primary/10' });
     return items;
-  }, [canCollectFees, canViewReports, canManageTransactions]);
+  }, [canCollectFees, canViewReports, canManageTransactions, canViewMonthlyReport, canViewCashbook]);
 
   if (!isClient) return null;
 

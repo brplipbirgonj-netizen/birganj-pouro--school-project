@@ -28,6 +28,8 @@ export const availablePermissions = [
   { id: 'view:accounts', label: 'হিসাব শাখা দেখুন' },
   { id: 'collect:fees', label: 'বেতন আদায় করুন' },
   { id: 'view:collection-report', label: 'বেতন আদায়ের রিপোর্ট দেখুন' },
+  { id: 'view:accounts-monthly-report', label: 'মাসিক আয়-ব্যয় রিপোর্ট দেখুন' },
+  { id: 'view:cashbook-ledger', label: 'ক্যাশবুক ও খতিয়ান দেখুন' },
   { id: 'manage:transactions', label: 'সাধারণ লেনদেন ম্যানেজ করুন' },
   
   { id: 'manage:documents', label: 'ডকুমেন্ট ম্যানেজ করুন' },
@@ -56,6 +58,8 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:accounts',
     'collect:fees',
     'view:collection-report',
+    'view:accounts-monthly-report',
+    'view:cashbook-ledger',
     'view:routines',
     'manage:documents',
     'send:messaging',
