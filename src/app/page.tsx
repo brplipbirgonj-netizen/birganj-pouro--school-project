@@ -987,7 +987,7 @@ export default function Home() {
     <div className="flex min-h-screen w-full flex-col bg-sky-100 font-kalpurush">
       <Header />
       <NoticeTicker />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[600px]">
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
           {/* Gallery Card */}
           <GalleryCard />
@@ -1082,7 +1082,7 @@ export default function Home() {
                     <Info className="h-5 w-5 text-primary" /> আজকের হাজিরা
                 </CardTitle>
                 <CardDescription>
-                    {attendanceTaken ? 'শ্রেণিভিত্তিক আজকের উপস্থিতির সারসংক্ষেপ' : 'আজ এখনও কোনো শ্রেণির হাজিরা নেওয়া হয়নি।'}
+                    {attendanceTaken ? 'শ্রেণিভিত্তিক আজকের উপস্থিতির সারসংক্ষেপ' : 'আজ এখনো কোনো শ্রেণির হাজিরা নেওয়া হয়নি।'}
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0">

@@ -478,7 +478,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
-                .filter((c): c is FeeCollection => c !== null)
+                .filter((c): c is FeeCollection => f !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
             
             setCollections(data);
@@ -636,96 +636,98 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
     };
 
     return (
-        <Card className={cn("border-2", type === 'income' ? "border-emerald-100" : "border-rose-100")}>
-            <CardHeader className={cn(type === 'income' ? "bg-emerald-50/50" : "bg-rose-50/50")}>
-                <CardTitle className="flex items-center gap-2">
-                    {type === 'income' ? <PlusCircle className="text-emerald-600" /> : <MinusCircle className="text-rose-600" />}
-                    নতুন {type === 'income' ? 'আয়' : 'ব্যয়'} এন্ট্রি করুন
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="date">তারিখ</Label>
-                            <DatePicker value={date} onChange={setDate} placeholder="তারিখ" />
-                        </div>
-                        <div className="space-y-2">
-                             <Label>লেনদেনের ধরণ</Label>
-                            <RadioGroup value={type} onValueChange={(v) => { setType(v as TransactionType); setAccountHead(''); }} className="flex items-center space-x-4 pt-2">
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="income" id="income" />
-                                    <Label htmlFor="income" className="font-bold text-emerald-700">আয়</Label>
+        <div className="pb-40">
+            <Card className={cn("border-2", type === 'income' ? "border-emerald-100" : "border-rose-100")}>
+                <CardHeader className={cn(type === 'income' ? "bg-emerald-50/50" : "bg-rose-50/50")}>
+                    <CardTitle className="flex items-center gap-2">
+                        {type === 'income' ? <PlusCircle className="text-emerald-600" /> : <MinusCircle className="text-rose-600" />}
+                        নতুন {type === 'income' ? 'আয়' : 'ব্যয়'} এন্ট্রি করুন
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="date">তারিখ</Label>
+                                <DatePicker value={date} onChange={setDate} placeholder="তারিখ" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>লেনদেনের ধরণ</Label>
+                                <RadioGroup value={type} onValueChange={(v) => { setType(v as TransactionType); setAccountHead(''); }} className="flex items-center space-x-4 pt-2">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="income" id="income" />
+                                        <Label htmlFor="income" className="font-bold text-emerald-700">আয়</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="expense" id="expense" />
+                                        <Label htmlFor="expense" className="font-bold text-rose-700">ব্যয়</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>পেমেন্ট পদ্ধতি</Label>
+                                <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="cash" id="meth-cash" />
+                                        <Label htmlFor="meth-cash" className="font-bold">নগদ (Cash)</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="bank" id="meth-bank" />
+                                        <Label htmlFor="meth-bank" className="font-bold">ব্যাংক (Bank)</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="account-head">খাত (Account Head)</Label>
+                                <Select value={accountHead} onValueChange={setAccountHead}>
+                                    <SelectTrigger id="account-head" className="bg-white font-bold"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
+                                    <SelectContent>
+                                        {(type === 'income' ? incomeHeads : expenseHeads).map(head => (
+                                            <SelectItem key={head} value={head}>{head}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">টাকার পরিমাণ</Label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span>
+                                    <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="pl-8 text-lg font-black" />
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="expense" id="expense" />
-                                    <Label htmlFor="expense" className="font-bold text-rose-700">ব্যয়</Label>
+                            </div>
+
+                            {type === 'expense' && (
+                                <div className="space-y-2 animate-in slide-in-from-top-2">
+                                    <Label htmlFor="voucherNo" className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-rose-500" /> ভাউচার নং
+                                    </Label>
+                                    <Input id="voucherNo" value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" className="font-bold" />
                                 </div>
-                            </RadioGroup>
-                        </div>
-                        <div className="space-y-2">
-                             <Label>পেমেন্ট পদ্ধতি</Label>
-                            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="cash" id="meth-cash" />
-                                    <Label htmlFor="meth-cash" className="font-bold">নগদ (Cash)</Label>
+                            )}
+
+                            {method === 'bank' && (
+                                <div className="space-y-2 animate-in slide-in-from-top-2">
+                                    <Label htmlFor="checkNo" className="flex items-center gap-2">
+                                        <Hash className="h-4 w-4 text-blue-500" /> চেক নং (Check No)
+                                    </Label>
+                                    <Input id="checkNo" value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" className="font-bold" />
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="bank" id="meth-bank" />
-                                    <Label htmlFor="meth-bank" className="font-bold">ব্যাংক (Bank)</Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="account-head">খাত (Account Head)</Label>
-                            <Select value={accountHead} onValueChange={setAccountHead}>
-                                <SelectTrigger id="account-head" className="bg-white font-bold"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
-                                <SelectContent>
-                                    {(type === 'income' ? incomeHeads : expenseHeads).map(head => (
-                                        <SelectItem key={head} value={head}>{head}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="amount">টাকার পরিমাণ</Label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span>
-                                <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="pl-8 text-lg font-black" />
+                            )}
+
+                            <div className="lg:col-span-3 space-y-2">
+                                <Label htmlFor="description">বিবরণ / মন্তব্য (ঐচ্ছিক)</Label>
+                                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." />
                             </div>
                         </div>
-
-                        {type === 'expense' && (
-                            <div className="space-y-2 animate-in slide-in-from-top-2">
-                                <Label htmlFor="voucherNo" className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-rose-500" /> ভাউচার নং
-                                </Label>
-                                <Input id="voucherNo" value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" className="font-bold" />
-                            </div>
-                        )}
-
-                        {method === 'bank' && (
-                            <div className="space-y-2 animate-in slide-in-from-top-2">
-                                <Label htmlFor="checkNo" className="flex items-center gap-2">
-                                    <Hash className="h-4 w-4 text-blue-500" /> চেক নং (Check No)
-                                </Label>
-                                <Input id="checkNo" value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" className="font-bold" />
-                            </div>
-                        )}
-
-                        <div className="lg:col-span-3 space-y-2">
-                            <Label htmlFor="description">বিবরণ / মন্তব্য (ঐচ্ছিক)</Label>
-                            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." />
+                        <div className="flex justify-end pt-4">
+                            <Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg", type === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700")}>
+                                {type === 'income' ? 'আয় সেভ করুন' : 'ব্যয় সেভ করুন'}
+                            </Button>
                         </div>
-                    </div>
-                     <div className="flex justify-end pt-4">
-                        <Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg", type === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700")}>
-                            {type === 'income' ? 'আয় সেভ করুন' : 'ব্যয় সেভ করুন'}
-                        </Button>
-                    </div>
-                </form>
-            </CardContent>
-        </Card>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
     )
 }
 
@@ -1016,7 +1018,7 @@ export default function AccountsPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-teal-100 font-kalpurush">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
         <Card className="border-2 border-primary/10">
           <CardHeader>
              <CardTitle className="text-3xl font-black">হিসাব শাখা</CardTitle>
