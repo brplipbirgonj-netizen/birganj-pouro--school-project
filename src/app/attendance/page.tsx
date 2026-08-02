@@ -587,7 +587,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                         <ListChecks className="h-6 w-6" /> মাসিক হাজিরা সারাংশ ({BENGALI_MONTHS[parseInt(selectedMonth)]})
                     </CardTitle>
                     <div className="flex gap-4 text-xs font-bold">
-                        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-rose-100 border border-rose-300 rounded" /> বন্ধের দিন</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-red-200 border border-red-400 rounded" /> বন্ধের দিন</span>
                         <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white border border-slate-300 rounded" /> কার্যদিবস</span>
                     </div>
                 </CardHeader>
@@ -612,15 +612,16 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                     const dateObj = new Date(row.dateStr);
                                     const fullDateStr = format(dateObj, 'dd-MM-yyyy');
                                     const dayName = format(dateObj, 'EEEE', { locale: bn });
+                                    const isOff = row.isWeekend || row.isHolidayDay;
                                     
                                     return (
                                         <TableRow key={i} className={cn(
                                             "h-10 hover:bg-slate-50 transition-colors",
-                                            (row.isWeekend || row.isHolidayDay) ? "bg-rose-50/50" : ""
+                                            isOff ? "bg-red-100/70" : ""
                                         )}>
                                             <TableCell className={cn(
                                                 "text-center font-black border-r text-xs whitespace-nowrap",
-                                                (row.isWeekend || row.isHolidayDay) ? "text-rose-600 bg-rose-100/50" : "text-slate-600"
+                                                isOff ? "text-red-700 bg-red-200/50" : "text-slate-600"
                                             )}>
                                                 {toBengaliNumber(fullDateStr)} {dayName}
                                             </TableCell>
@@ -736,7 +737,7 @@ const MissedAttendanceTab = () => {
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
-    }, [fetchMissedAttendance, isClient]);
+    }, [fetchMissedAttendance, i][isClient]);
 
     if (!isClient) return null;
 
@@ -1005,7 +1006,8 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
                         <TableHead className="text-center">মোট কার্যদিবস</TableHead>
                         <TableHead className="text-center">উপস্থিত</TableHead>
                         <TableHead className="text-center">অনুপস্থিত</TableHead>
-                        <TableHead className="text-right">উপস্থিতির হার (%)</TableHead>
+                        <TableHead className="text-right">উপস্থিতি (%)</TableHead>
+                        <TableHead className="text-right">অনুপস্থিতি (%)</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1016,9 +1018,15 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
                             <TableCell className="text-center font-medium">{report.totalDays.toLocaleString('bn-BD')}</TableCell>
                             <TableCell className="text-center text-emerald-600 font-black">{report.presentDays.toLocaleString('bn-BD')}</TableCell>
                             <TableCell className="text-center text-rose-600 font-black">{report.absentDays.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-right font-black text-primary">
+                            <TableCell className="text-right font-black text-emerald-700">
                                 {report.totalDays > 0 ? 
-                                    toBengaliNumber(((report.presentDays / report.totalDays) * 100).toFixed(2)) + '%' 
+                                    toBengaliNumber(((report.presentDays / report.totalDays) * 100).toFixed(1)) + '%' 
+                                    : 'N/A'
+                                }
+                            </TableCell>
+                            <TableCell className="text-right font-black text-rose-700">
+                                {report.totalDays > 0 ? 
+                                    toBengaliNumber(((report.absentDays / report.totalDays) * 100).toFixed(1)) + '%' 
                                     : 'N/A'
                                 }
                             </TableCell>
