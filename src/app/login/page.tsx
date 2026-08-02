@@ -15,7 +15,6 @@ import { signIn, signUp } from '@/lib/auth';
 import type { UserRole } from '@/lib/user';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import { UserPlus, BookOpen } from 'lucide-react';
 
 function AuthFormFields({ email, password, setEmail, setPassword }: {
     email: string;
@@ -30,7 +29,7 @@ function AuthFormFields({ email, password, setEmail, setPassword }: {
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-10" />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="password" throws="font-bold text-xs">পাসওয়ার্ড</Label>
+                <Label htmlFor="password" className="font-bold text-xs">পাসওয়ার্ড</Label>
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-10" />
             </div>
         </>
@@ -97,7 +96,7 @@ export default function LoginPage() {
     const ActionButtonRow = ({ role, action }: { role: UserRole, action: 'signIn' | 'signUp' }) => (
         <div className="flex flex-row gap-2 mt-6">
             <Link href="/public-results" className="flex-1">
-                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5">
+                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5 bg-white">
                     ফলাফল দেখুন
                 </Button>
             </Link>
@@ -109,7 +108,7 @@ export default function LoginPage() {
                 {isLoading ? '...' : (action === 'signIn' ? 'প্রবেশ করুন' : 'নিবন্ধন')}
             </Button>
             <Link href="/admission" className="flex-1">
-                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5">
+                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5 bg-white">
                     অনলাইন ভর্তি
                 </Button>
             </Link>
@@ -143,7 +142,7 @@ export default function LoginPage() {
                                 {schoolInfo.name}
                             </h1>
                             <p className="text-white font-bold italic text-sm sm:text-xl leading-none opacity-95">
-                                কেন্দ্রীয় ডিজিটাল ম্যানেজমেন্ট পোর্টাল
+                                ডিজিটাল ম্যানেজমেন্ট পোর্টাল
                             </p>
                         </div>
                     </>
@@ -152,8 +151,16 @@ export default function LoginPage() {
             
             <div className="w-full max-w-md space-y-6">
                 <Card className="shadow-2xl border-2 border-white/50 overflow-hidden">
-                    <CardHeader className="bg-primary/5 border-b-2 border-primary/10 text-center py-3">
-                        <CardTitle className="text-lg font-black text-primary">প্রবেশ করুন</CardTitle>
+                    <CardHeader className="bg-primary/5 border-b-2 border-primary/10 text-center py-4">
+                        <div className="flex flex-row gap-2 justify-center mb-3">
+                            <Link href="/public-results">
+                                <Button variant="outline" size="sm" className="h-9 px-3 text-[10px] sm:text-xs font-bold border-primary/20 hover:bg-primary/5 bg-white">ফলাফল দেখুন</Button>
+                            </Link>
+                            <Button variant="default" size="sm" className="h-9 px-4 text-[10px] sm:text-xs font-black shadow-sm cursor-default">প্রবেশ করুন</Button>
+                            <Link href="/admission">
+                                <Button variant="outline" size="sm" className="h-9 px-3 text-[10px] sm:text-xs font-bold border-primary/20 hover:bg-primary/5 bg-white">অনলাইন ভর্তি</Button>
+                            </Link>
+                        </div>
                         <CardDescription className="font-bold text-[11px] text-muted-foreground">সিস্টেম ব্যবহারের জন্য আপনার ইমেইল ও পাসওয়ার্ড দিন</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
