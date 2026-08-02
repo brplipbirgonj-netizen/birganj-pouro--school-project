@@ -45,7 +45,7 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
         .filter(([_, amount]) => amount && amount > 0);
 
     return (
-        <div className="money-receipt font-kalpurush w-[148mm] h-[210mm] p-6 bg-white text-black border-2 border-black border-l-[10px] border-l-primary relative overflow-hidden flex flex-col mx-auto my-4 shadow-sm print:m-0 print:border-black print:border-l-[10px] print:border-l-primary print:shadow-none box-border">
+        <div className="money-receipt font-kalpurush w-[148mm] h-[210mm] p-6 bg-white text-black border-2 border-black relative overflow-hidden flex flex-col mx-auto my-4 shadow-sm print:m-0 print:border-2 print:border-black print:shadow-none box-border">
             {/* Watermark */}
             {schoolInfo.logoUrl && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
@@ -80,7 +80,7 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                 </div>
 
                 <div className="space-y-1">
-                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest border-l-4 border-primary pl-2 mb-2">পেমেন্ট বিবরণ</p>
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-widest border-l-4 border-black pl-2 mb-2">পেমেন্ট বিবরণ</p>
                     <div className="border border-black rounded overflow-hidden">
                         <table className="w-full text-xs text-left border-collapse">
                             <thead>
