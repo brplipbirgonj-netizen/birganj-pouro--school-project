@@ -976,7 +976,6 @@ export default function RoutinesPage() {
     const [isEditMode, setIsEditMode] = useState(false);
     const [activeSection, setActiveSection] = useState('class-routine');
 
-    const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
     const [targetYear, setTargetYear] = useState('');
     const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
     const { user, hasPermission } = useAuth();
@@ -1078,7 +1077,7 @@ export default function RoutinesPage() {
             await batch.commit();
             toast({ title: `রুটিন সফলভাবে ${toBengaliNumber(targetYear)} সালে কপি হয়েছে।` });
             setSelectedYear(targetYear);
-            setIsCopyDialogOpen(false);
+            setActiveSection('class-routine');
         } catch (e) {
             console.error(e);
             toast({ variant: 'destructive', title: 'কপি করা সম্ভব হয়নি।' });
@@ -1104,6 +1103,7 @@ export default function RoutinesPage() {
             await batch.commit();
             toast({ title: `${toBengaliNumber(selectedYear)} সালের রুটিন খালি করা হয়েছে।` });
             fetchData();
+            setActiveSection('class-routine');
         } catch (e) {
             console.error(e);
         } finally {
@@ -1326,7 +1326,7 @@ function BlankRoutineTab({ onReset, selectedYear, isProcessing }: any) {
                         <AlertTriangle className="h-12 w-12 text-rose-600 animate-pulse" />
                     </div>
                     <h4 className="text-xl font-black text-rose-950">{toBengaliNumber(selectedYear)} সালের রুটিন মুছতে চান?</h4>
-                    <p className="text-sm font-bold text-muted-foreground max-w-sm">
+                    <p className="text-sm font-bold text-muted-foreground max-sm">
                         এটি এই বছরের সকল শ্রেণির সকল দিনের রুটিন ডাটা মুছে ফেলবে। এই কাজটি আর ফিরিয়ে আনা যাবে না।
                     </p>
                 </div>
