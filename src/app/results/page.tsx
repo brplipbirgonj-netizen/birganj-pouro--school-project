@@ -16,7 +16,7 @@ import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult,
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
@@ -830,8 +830,8 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <div className="space-y-4 animate-in fade-in duration-500">
                     <div className="border-2 border-primary/10 rounded-md overflow-hidden bg-white">
                         <Table>
-                            <TableHeader className="bg-muted/50">
-                                <TableRow>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
                                     <TableHead className="w-12 text-center"><Checkbox checked={selectedIds.size === failedStudents.length} onCheckedChange={(c) => setSelectedIds(c ? new Set(failedStudents.map(s => s.student.id)) : new Set())} /></TableHead>
                                     <TableHead className="text-center font-black">রোল</TableHead>
                                     <TableHead className="font-black">নাম</TableHead>
@@ -946,6 +946,8 @@ export default function ResultsPage() {
     const canManageFullMarks = hasPermission('manage:full-marks') || hasPermission('manage:results');
     const canUploadMarks = hasPermission('upload:marks');
 
+    const [activeSection, setActiveSection] = useState('management');
+
     useEffect(() => {
         setIsClient(true); 
         if (!db || !user) return;
@@ -958,6 +960,34 @@ export default function ResultsPage() {
         });
         return () => unsubscribe();
     }, [db, user]);
+
+    // Update initial active section based on permissions
+    useEffect(() => {
+        if (canViewRes) setActiveSection('management');
+        else if (canManageFullMarks) setActiveSection('full-marks');
+        else if (hasPermission('view:merit-list')) setActiveSection('merit');
+    }, [canViewRes, canManageFullMarks, hasPermission]);
+
+    const sidebarItems = useMemo(() => {
+        const items = [];
+        if (canViewRes) {
+            items.push({ id: 'management', label: 'নম্বর ইনপুট', icon: FilePen, color: 'text-indigo-600 bg-indigo-50' });
+            items.push({ id: 'sheet', label: 'ফলাফল শিট', icon: FileSpreadsheet, color: 'text-emerald-600 bg-emerald-50' });
+        }
+        if (canManageFullMarks) {
+            items.push({ id: 'full-marks', label: 'বিষয় ও পূর্ণমান', icon: CheckCircle2, color: 'text-violet-600 bg-violet-50' });
+        }
+        if (hasPermission('view:merit-list')) {
+            items.push({ id: 'merit', label: 'মেধা তালিকা', icon: Trophy, color: 'text-amber-600 bg-amber-50' });
+        }
+        if (hasPermission('promote:students')) {
+            items.push({ id: 'special-promotion', label: 'বিশেষ পাশ', icon: Star, color: 'text-rose-600 bg-rose-50' });
+        }
+        if (canUploadMarks) {
+            items.push({ id: 'upload', label: 'Excel আপলোড', icon: FileUp, color: 'text-blue-600 bg-blue-50' });
+        }
+        return items;
+    }, [canViewRes, canManageFullMarks, hasPermission, canUploadMarks]);
 
     if (isClient && !canViewRes && !hasPermission('view:merit-list') && user?.role !== 'admin' && !canManageFullMarks) return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50">
@@ -972,53 +1002,56 @@ export default function ResultsPage() {
     );
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-violet-50 font-kalpurush">
+        <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
-                <Card className="border-2 border-primary/10 shadow-xl overflow-hidden rounded-xl">
-                    <CardHeader className="bg-white/70 border-b backdrop-blur-sm">
-                        <CardTitle className="text-3xl font-black text-primary">ফলাফল ব্যবস্থাপনা</CardTitle>
-                        {isClient && <p className="text-sm font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
-                    </CardHeader>
-                    <CardContent className="pt-6 bg-slate-50/30">
-                        {isClient ? (
-                            <Tabs defaultValue={canViewRes ? "management" : (canManageFullMarks ? "full-marks" : "merit")}>
-                                <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto bg-muted/50 p-1.5 gap-2 border rounded-lg mb-6">
-                                    {canViewRes && <TabsTrigger value="management" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">নম্বর ইনপুট</TabsTrigger>}
-                                    {canManageFullMarks && <TabsTrigger value="full-marks" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিষয় ও পূর্ণমান</TabsTrigger>}
-                                    {canViewRes && <TabsTrigger value="sheet" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">ফলাফল শিট</TabsTrigger>}
-                                    {hasPermission('view:merit-list') && <TabsTrigger value="merit" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">মেধা তালিকা</TabsTrigger>}
-                                    {hasPermission('promote:students') && <TabsTrigger value="special-promotion" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">বিশেষ পাশ</TabsTrigger>}
-                                    {canUploadMarks && <TabsTrigger value="upload" className="text-xs py-2.5 font-black data-[state=active]:shadow-md">Excel আপলোড</TabsTrigger>}
-                                </TabsList>
-                                <TabsContent value="management" className="mt-4 animate-in fade-in duration-500">
-                                    <MarkManagementTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="full-marks" className="mt-4 animate-in fade-in duration-500">
-                                    <FullMarksTab />
-                                </TabsContent>
-                                <TabsContent value="sheet" className="mt-4 animate-in fade-in duration-500">
-                                    <ResultSheetTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="merit" className="mt-4 animate-in fade-in duration-500">
-                                    <MeritListTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="special-promotion" className="mt-4 animate-in fade-in duration-500">
-                                    <SpecialPromotionTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="upload" className="mt-4 animate-in fade-in duration-500">
-                                    <BulkUploadTab allStudents={allStudents} />
-                                </TabsContent>
-                            </Tabs>
-                        ) : (
+            <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-40">
+                {/* Sidebar Navigation */}
+                <aside className="w-full md:w-72 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0">
+                    <h2 className="text-3xl font-black mb-8 px-4 hidden md:block text-slate-900 tracking-tight">ফলাফল ব্যবস্থাপনা</h2>
+                    <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                        {sidebarItems.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveSection(item.id)}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                    activeSection === item.id 
+                                        ? "bg-white shadow-md text-primary scale-105" 
+                                        : "text-muted-foreground hover:bg-slate-200/50"
+                                )}
+                            >
+                                <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                                    <item.icon className="h-4 w-4" />
+                                </div>
+                                <span className="text-sm">{item.label}</span>
+                                {activeSection === item.id && <ChevronRight className="ml-auto h-4 w-4 hidden md:block" />}
+                            </button>
+                        ))}
+                    </div>
+                </aside>
+
+                {/* Content Area */}
+                <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+                    <div className="p-6 sm:p-10 lg:p-12 flex-1">
+                        {isLoading ? (
                             <div className="space-y-4">
                                 <Skeleton className="h-12 w-full" />
                                 <Skeleton className="h-64 w-full" />
                             </div>
+                        ) : (
+                            <>
+                                {activeSection === 'management' && <MarkManagementTab allStudents={allStudents} />}
+                                {activeSection === 'full-marks' && <FullMarksTab />}
+                                {activeSection === 'sheet' && <ResultSheetTab allStudents={allStudents} />}
+                                {activeSection === 'merit' && <MeritListTab allStudents={allStudents} />}
+                                {activeSection === 'special-promotion' && <SpecialPromotionTab allStudents={allStudents} />}
+                                {activeSection === 'upload' && <BulkUploadTab allStudents={allStudents} />}
+                            </>
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </main>
         </div>
     );
 }
+
