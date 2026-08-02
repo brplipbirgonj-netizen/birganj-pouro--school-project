@@ -855,6 +855,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <Table>
                             <TableHeader className="bg-muted/50">
                                 <TableRow>
+                                    <TableHead className="w-16 text-center font-black">ক্রমিক</TableHead>
                                     <TableHead className="w-20 text-center font-black">রোল</TableHead>
                                     <TableHead className="font-black">নাম</TableHead>
                                     <TableHead className="text-center font-black">অনুপস্থিতি দিন</TableHead>
@@ -862,10 +863,11 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {alerts.map(alert => {
+                                {alerts.map((alert, idx) => {
                                     const student = studentMap.get(alert.studentId);
                                     return (
                                         <TableRow key={alert.studentId} className="hover:bg-rose-50 transition-colors">
+                                            <TableCell className="text-center font-bold">{(idx + 1).toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="text-center font-black">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
                                             <TableCell className="font-bold text-rose-900">{student?.studentNameBn || '-'}</TableCell>
                                             <TableCell className="text-center">
