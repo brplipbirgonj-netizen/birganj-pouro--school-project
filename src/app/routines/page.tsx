@@ -17,7 +17,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, FilePen, FilePlus, Users, Info, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -616,7 +616,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                                 className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-100 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                                 onClick={() => handleDeleteProxy(proxy.id)}
                                             >
-                                                <Trash2 className="h-3 w-3" />
+                                                <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
                                             <div className="text-[10px] font-black text-primary mb-1 uppercase">{classNamesMap[proxy.className]} শ্রেণি</div>
                                             <p className="text-xs font-bold leading-tight mb-2">{proxy.subject}</p>
