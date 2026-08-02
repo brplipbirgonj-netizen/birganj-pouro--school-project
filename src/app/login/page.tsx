@@ -15,6 +15,7 @@ import { signIn, signUp } from '@/lib/auth';
 import type { UserRole } from '@/lib/user';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 
 function AuthFormFields({ email, password, setEmail, setPassword }: {
     email: string;
@@ -93,31 +94,20 @@ export default function LoginPage() {
         }
     };
 
-    const ActionButtonRow = ({ role, action }: { role: UserRole, action: 'signIn' | 'signUp' }) => (
-        <div className="flex flex-row gap-2 mt-6">
-            <Link href="/public-results" className="flex-1">
-                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5 bg-white">
-                    ফলাফল দেখুন
-                </Button>
-            </Link>
-            <Button 
-                type="submit" 
-                className="flex-1 h-11 font-black text-[10px] sm:text-xs px-1 shadow-lg" 
-                disabled={isLoading}
-            >
-                {isLoading ? '...' : (action === 'signIn' ? 'প্রবেশ করুন' : 'নিবন্ধন')}
-            </Button>
-            <Link href="/admission" className="flex-1">
-                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5 bg-white">
-                    অনলাইন ভর্তি
-                </Button>
-            </Link>
-        </div>
+    const SubmitButton = ({ action }: { action: 'signIn' | 'signUp' }) => (
+        <Button 
+            type="submit" 
+            className="w-full h-12 mt-6 font-black text-lg shadow-lg" 
+            disabled={isLoading}
+        >
+            {isLoading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : null}
+            {isLoading ? 'প্রসেস হচ্ছে...' : (action === 'signIn' ? 'প্রবেশ করুন' : 'নিবন্ধন সম্পন্ন করুন')}
+        </Button>
     );
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-4 font-kalpurush text-black">
-            <div className="mb-6 flex flex-col items-center gap-0 text-center">
+            <div className="mb-4 flex flex-col items-center gap-0 text-center">
                 {isSchoolInfoLoading ? (
                     <>
                         <Skeleton className="h-20 w-20 rounded-full" />
@@ -126,7 +116,7 @@ export default function LoginPage() {
                 ) : (
                     <>
                         {schoolInfo.logoUrl && (
-                            <div className="relative z-10 -mb-2">
+                            <div className="relative z-10">
                                 <Image
                                     src={schoolInfo.logoUrl}
                                     alt="School Logo"
@@ -137,8 +127,8 @@ export default function LoginPage() {
                             </div>
                         )}
                         
-                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-6 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform relative z-0">
-                            <h1 className="text-2xl sm:text-[45px] font-black text-white leading-none tracking-tighter mb-2 [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
+                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-5 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform relative z-0">
+                            <h1 className="text-2xl sm:text-[45px] font-black text-white leading-none tracking-tighter mb-1 [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
                                 {schoolInfo.name}
                             </h1>
                             <p className="text-white font-bold italic text-sm sm:text-xl leading-none opacity-95">
@@ -174,21 +164,21 @@ export default function LoginPage() {
                             <TabsContent value="teacher-login" className="mt-0">
                                 <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'teacher'); }} className="space-y-4">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                    <ActionButtonRow role="teacher" action="signIn" />
+                                    <SubmitButton action="signIn" />
                                 </form>
                             </TabsContent>
                             
                             <TabsContent value="admin-login" className="mt-0">
                                 <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'admin'); }} className="space-y-4">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                    <ActionButtonRow role="admin" action="signIn" />
+                                    <SubmitButton action="signIn" />
                                 </form>
                             </TabsContent>
                             
                             <TabsContent value="signup" className="mt-0">
                                 <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signUp', 'teacher'); }} className="space-y-4">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                    <ActionButtonRow role="teacher" action="signUp" />
+                                    <SubmitButton action="signUp" />
                                 </form>
                             </TabsContent>
                         </Tabs>
@@ -202,3 +192,4 @@ export default function LoginPage() {
         </div>
     );
 }
+
