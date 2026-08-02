@@ -25,13 +25,13 @@ function AuthFormFields({ email, password, setEmail, setPassword }: {
 }) {
     return (
         <>
-            <div className="space-y-2">
-                <Label htmlFor="email" className="font-bold text-xs">ইমেইল</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-10" />
+            <div className="space-y-1.5">
+                <Label htmlFor="email" className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground">ইমেইল</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-9" />
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="password" className="font-bold text-xs">পাসওয়ার্ড</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-10" />
+            <div className="space-y-1.5">
+                <Label htmlFor="password" className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground">পাসওয়ার্ড</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-9" />
             </div>
         </>
     );
@@ -97,26 +97,26 @@ export default function LoginPage() {
     const SubmitButton = ({ action }: { action: 'signIn' | 'signUp' }) => (
         <Button 
             type="submit" 
-            className="w-full h-12 mt-6 font-black text-lg shadow-lg" 
+            className="w-full h-11 mt-4 font-black text-base shadow-lg bg-primary hover:bg-primary/90" 
             disabled={isLoading}
         >
-            {isLoading ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : null}
+            {isLoading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
             {isLoading ? 'প্রসেস হচ্ছে...' : (action === 'signIn' ? 'প্রবেশ করুন' : 'নিবন্ধন সম্পন্ন করুন')}
         </Button>
     );
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-4 font-kalpurush text-black">
-            <div className="mb-4 flex flex-col items-center gap-0 text-center">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-2 sm:p-4 font-kalpurush text-black overflow-hidden">
+            <div className="mb-2 flex flex-col items-center gap-0 text-center scale-90 sm:scale-100">
                 {isSchoolInfoLoading ? (
                     <>
-                        <Skeleton className="h-20 w-20 rounded-full" />
-                        <Skeleton className="h-8 w-64" />
+                        <Skeleton className="h-16 w-16 rounded-full" />
+                        <Skeleton className="h-6 w-56 mt-2" />
                     </>
                 ) : (
                     <>
                         {schoolInfo.logoUrl && (
-                            <div className="relative z-10">
+                            <div className="relative z-10 -mb-2">
                                 <Image
                                     src={schoolInfo.logoUrl}
                                     alt="School Logo"
@@ -127,11 +127,11 @@ export default function LoginPage() {
                             </div>
                         )}
                         
-                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-5 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform relative z-0">
-                            <h1 className="text-2xl sm:text-[45px] font-black text-white leading-none tracking-tighter mb-1 [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
+                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2rem] px-8 py-4 flex flex-col items-center gap-0 shadow-[0_12px_25px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform relative z-0">
+                            <h1 className="text-xl sm:text-[40px] font-black text-white leading-tight tracking-tighter mb-0.5 [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
                                 {schoolInfo.name}
                             </h1>
-                            <p className="text-white font-bold italic text-sm sm:text-xl leading-none opacity-95">
+                            <p className="text-white font-bold italic text-xs sm:text-lg leading-none opacity-95">
                                 ডিজিটাল ম্যানেজমেন্ট পোর্টাল
                             </p>
                         </div>
@@ -139,44 +139,44 @@ export default function LoginPage() {
                 )}
             </div>
             
-            <div className="w-full max-w-md space-y-6">
-                <Card className="shadow-2xl border-2 border-primary/30 overflow-hidden">
-                    <CardHeader className="bg-primary/5 border-b-2 border-primary/10 text-center py-4">
-                        <div className="flex flex-row gap-2 justify-center mb-3">
+            <div className="w-full max-w-md space-y-4 scale-95 sm:scale-100">
+                <Card className="shadow-2xl border-2 border-primary/30 overflow-hidden bg-white/95 backdrop-blur-sm">
+                    <CardHeader className="bg-primary/5 border-b-2 border-primary/10 text-center py-3">
+                        <div className="flex flex-row gap-1.5 justify-center mb-2">
                             <Link href="/public-results">
-                                <Button variant="outline" size="sm" className="h-9 px-3 text-[10px] sm:text-xs font-bold border-primary/20 hover:bg-primary/5 bg-white">ফলাফল দেখুন</Button>
+                                <Button variant="outline" size="sm" className="h-8 px-2.5 text-[9px] sm:text-xs font-bold border-primary/20 hover:bg-primary/5 bg-white">ফলাফল দেখুন</Button>
                             </Link>
-                            <Button variant="default" size="sm" className="h-9 px-4 text-[10px] sm:text-xs font-black shadow-sm cursor-default">প্রবেশ করুন</Button>
+                            <Button variant="default" size="sm" className="h-8 px-4 text-[9px] sm:text-xs font-black shadow-sm cursor-default bg-primary">প্রবেশ করুন</Button>
                             <Link href="/admission">
-                                <Button variant="outline" size="sm" className="h-9 px-3 text-[10px] sm:text-xs font-bold border-primary/20 hover:bg-primary/5 bg-white">অনলাইন ভর্তি</Button>
+                                <Button variant="outline" size="sm" className="h-8 px-2.5 text-[9px] sm:text-xs font-bold border-primary/20 hover:bg-primary/5 bg-white">অনলাইন ভর্তি</Button>
                             </Link>
                         </div>
-                        <CardDescription className="font-bold text-[11px] text-muted-foreground">সিস্টেম ব্যবহারের জন্য আপনার ইমেইল ও পাসওয়ার্ড দিন</CardDescription>
+                        <CardDescription className="font-bold text-[10px] text-muted-foreground uppercase tracking-tight">সিস্টেম ব্যবহারের জন্য আপনার ইমেইল ও পাসওয়ার্ড দিন</CardDescription>
                     </CardHeader>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-4 pb-5">
                         <Tabs defaultValue="teacher-login">
-                            <TabsList className="grid w-full grid-cols-3 bg-muted p-1 mb-4">
-                                <TabsTrigger value="teacher-login" className="font-bold text-xs h-8">শিক্ষক</TabsTrigger>
-                                <TabsTrigger value="admin-login" className="font-bold text-xs h-8">এডমিন</TabsTrigger>
-                                <TabsTrigger value="signup" className="font-bold text-xs h-8">নিবন্ধন</TabsTrigger>
+                            <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 mb-4 h-9">
+                                <TabsTrigger value="teacher-login" className="font-black text-[10px] sm:text-xs h-7 data-[state=active]:bg-white data-[state=active]:shadow-sm">শিক্ষক</TabsTrigger>
+                                <TabsTrigger value="admin-login" className="font-black text-[10px] sm:text-xs h-7 data-[state=active]:bg-white data-[state=active]:shadow-sm">এডমিন</TabsTrigger>
+                                <TabsTrigger value="signup" className="font-black text-[10px] sm:text-xs h-7 data-[state=active]:bg-white data-[state=active]:shadow-sm">নিবন্ধন</TabsTrigger>
                             </TabsList>
 
-                            <TabsContent value="teacher-login" className="mt-0">
-                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'teacher'); }} className="space-y-4">
+                            <TabsContent value="teacher-login" className="mt-0 outline-none">
+                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'teacher'); }} className="space-y-3">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
                                     <SubmitButton action="signIn" />
                                 </form>
                             </TabsContent>
                             
-                            <TabsContent value="admin-login" className="mt-0">
-                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'admin'); }} className="space-y-4">
+                            <TabsContent value="admin-login" className="mt-0 outline-none">
+                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'admin'); }} className="space-y-3">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
                                     <SubmitButton action="signIn" />
                                 </form>
                             </TabsContent>
                             
-                            <TabsContent value="signup" className="mt-0">
-                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signUp', 'teacher'); }} className="space-y-4">
+                            <TabsContent value="signup" className="mt-0 outline-none">
+                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signUp', 'teacher'); }} className="space-y-3">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
                                     <SubmitButton action="signUp" />
                                 </form>
@@ -192,3 +192,4 @@ export default function LoginPage() {
         </div>
     );
 }
+
