@@ -351,7 +351,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                             if (defaulters.length === 0) return null;
                             return (
                                 <div key={cls} className="space-y-3">
-                                    <h3 className="font-black text-lg text-slate-800 border-l-4 border-red-500 pl-3">{classNamesMap[cls]} শ্রেণি</h3>
+                                    <h3 className="font-black text-lg text-slate-800 border-l-4 border-red-500 pl-3">{classNamesMap[cls]}</h3>
                                     <div className="table-container">
                                         <Table>
                                             <TableHeader className="bg-muted/50">
@@ -423,7 +423,9 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
     const classes = ['6', '7', '8', '9', '10'];
 
     const filteredStudents = useMemo(() => {
-        return studentsForYear.filter((student) => student.className === selectedClass);
+        return studentsForYear
+            .filter((student) => student.className === selectedClass)
+            .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
     }, [studentsForYear, selectedClass]);
 
     return (
@@ -434,7 +436,7 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
                         <SelectTrigger className="bg-white h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                            {classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
+                            {classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -500,7 +502,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
-                .filter((c): c is FeeCollection => c !== null)
+                .filter((c): c is FeeCollection => f !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
             setCollections(data);
             setIsLoading(false);
