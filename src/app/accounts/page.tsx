@@ -16,7 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2 } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle } from 'lucide-react';
 import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ const BENGALI_MONTHS = [
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 // Accounts Dashboard Component
-const AccountsDashboardTab = ({ transactions, isLoading }: { transactions: Transaction[], isLoading: boolean }) => {
+const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { transactions: Transaction[], isLoading: boolean, onActionClick: (type: 'income' | 'expense') => void }) => {
     const stats = useMemo(() => {
         const now = new Date();
         let todayIncome = 0;
@@ -160,6 +160,16 @@ const AccountsDashboardTab = ({ transactions, isLoading }: { transactions: Trans
                         <p className="text-[10px] font-bold text-muted-foreground mt-1 italic">সিস্টেমের সকল আয়-ব্যয়ের জের</p>
                     </CardContent>
                 </Card>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button onClick={() => onActionClick('income')} className="h-16 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-lg">
+                    <PlusCircle className="mr-2 h-6 w-6" /> আয় যোগ করুন
+                </Button>
+                <Button onClick={() => onActionClick('expense')} variant="destructive" className="h-16 text-lg font-black shadow-lg">
+                    <MinusCircle className="mr-2 h-6 w-6" /> ব্যয় যোগ করুন
+                </Button>
             </div>
 
             {/* Visual Charts */}
@@ -549,21 +559,26 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// New Transaction Component
-const NewTransactionTab = ({ onTransactionAdded }: { onTransactionAdded: () => void }) => {
+// New Transaction Component (Includes Income and Expense Entry)
+const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onTransactionAdded: () => void, initialType?: TransactionType }) => {
     const { toast } = useToast();
     const db = useFirestore();
     const { user } = useAuth();
     const { selectedYear } = useAcademicYear();
 
     const [date, setDate] = useState<Date | undefined>(new Date());
-    const [type, setType] = useState<TransactionType>('income');
+    const [type, setType] = useState<TransactionType>(initialType);
     const [accountHead, setAccountHead] = useState('');
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState<number | ''>('');
 
-    const incomeHeads = ['Tuition Fee', 'Exam Fee', 'Admission Fee', 'Session Fee', 'Donation', 'Other'];
-    const expenseHeads = ['Salary', 'Utilities', 'Stationery', 'Maintenance', 'Other'];
+    const incomeHeads = ['বেতন (Tuition Fee)', 'পরীক্ষা ফি (Exam Fee)', 'ভর্তি ফি (Admission Fee)', 'সেশন ফি (Session Fee)', 'অনুদান (Donation)', 'অন্যান্য'];
+    const expenseHeads = ['শিক্ষক/স্টাফ বেতন', 'বিদ্যুৎ ও ইউটিলিটি বিল', 'স্টেশনারি ও খাতা', 'মেরামত ও রক্ষণাবেক্ষণ', 'আপ্যায়ন খরচ', 'অন্যান্য'];
+
+    useEffect(() => {
+        setType(initialType);
+        setAccountHead('');
+    }, [initialType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -583,7 +598,7 @@ const NewTransactionTab = ({ onTransactionAdded }: { onTransactionAdded: () => v
 
         try {
             await addTransaction(db, newTransaction);
-            toast({ title: 'লেনদেন যোগ হয়েছে।' });
+            toast({ title: type === 'income' ? 'আয় যোগ হয়েছে।' : 'ব্যয় যোগ হয়েছে।' });
             // Reset form
             setDate(new Date());
             setAccountHead('');
@@ -596,11 +611,14 @@ const NewTransactionTab = ({ onTransactionAdded }: { onTransactionAdded: () => v
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>নতুন আয়/ব্যয় যোগ করুন</CardTitle>
+        <Card className={cn("border-2", type === 'income' ? "border-emerald-100" : "border-rose-100")}>
+            <CardHeader className={cn(type === 'income' ? "bg-emerald-50/50" : "bg-rose-50/50")}>
+                <CardTitle className="flex items-center gap-2">
+                    {type === 'income' ? <PlusCircle className="text-emerald-600" /> : <MinusCircle className="text-rose-600" />}
+                    নতুন {type === 'income' ? 'আয়' : 'ব্যয়'} এন্ট্রি করুন
+                </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
@@ -609,21 +627,21 @@ const NewTransactionTab = ({ onTransactionAdded }: { onTransactionAdded: () => v
                         </div>
                         <div className="space-y-2">
                              <Label>লেনদেনের ধরণ</Label>
-                            <RadioGroup value={type} onValueChange={(v) => setType(v as TransactionType)} className="flex items-center space-x-4 pt-2">
+                            <RadioGroup value={type} onValueChange={(v) => { setType(v as TransactionType); setAccountHead(''); }} className="flex items-center space-x-4 pt-2">
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="income" id="income" />
-                                    <Label htmlFor="income">আয়</Label>
+                                    <Label htmlFor="income" className="font-bold text-emerald-700">আয়</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="expense" id="expense" />
-                                    <Label htmlFor="expense">ব্যয়</Label>
+                                    <Label htmlFor="expense" className="font-bold text-rose-700">ব্যয়</Label>
                                 </div>
                             </RadioGroup>
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="account-head">খাত</Label>
+                            <Label htmlFor="account-head">খাত (Account Head)</Label>
                             <Select value={accountHead} onValueChange={setAccountHead}>
-                                <SelectTrigger id="account-head"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
+                                <SelectTrigger id="account-head" className="bg-white font-bold"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
                                 <SelectContent>
                                     {(type === 'income' ? incomeHeads : expenseHeads).map(head => (
                                         <SelectItem key={head} value={head}>{head}</SelectItem>
@@ -633,15 +651,20 @@ const NewTransactionTab = ({ onTransactionAdded }: { onTransactionAdded: () => v
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="amount">টাকার পরিমাণ</Label>
-                            <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required />
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span>
+                                <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="pl-8 text-lg font-black" />
+                            </div>
                         </div>
                         <div className="md:col-span-2 space-y-2">
-                            <Label htmlFor="description">বিবরণ</Label>
-                            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} />
+                            <Label htmlFor="description">বিবরণ / মন্তব্য (ঐচ্ছিক)</Label>
+                            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." />
                         </div>
                     </div>
-                     <div className="flex justify-end">
-                        <Button type="submit">লেনদেন সেভ করুন</Button>
+                     <div className="flex justify-end pt-4">
+                        <Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg", type === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700")}>
+                            {type === 'income' ? 'আয় সেভ করুন' : 'ব্যয় সেভ করুন'}
+                        </Button>
                     </div>
                 </form>
             </CardContent>
@@ -703,11 +726,11 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-12 text-muted-foreground">লোড হচ্ছে...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></TableCell></TableRow>
                             ) : cashbookData.length === 0 ? (
                                 <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
                             ) : (
-                                cashbookData.map(tx => (
+                                [...cashbookData].reverse().map(tx => (
                                     <TableRow key={tx.id} className="hover:bg-accent/5">
                                         <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
                                         <TableCell>
@@ -775,7 +798,7 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
             </CardHeader>
             <CardContent>
                 {isLoading ? (
-                    <p className="text-center p-12 text-muted-foreground">লোড হচ্ছে...</p>
+                    <p className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></p>
                 ) : Object.keys(ledgerData).length === 0 ? (
                     <p className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</p>
                 ) : (
@@ -803,7 +826,7 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {data.transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(tx => (
+                                                {data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
                                                     <TableRow key={tx.id}>
                                                         <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
                                                         <TableCell className="max-w-[200px] truncate">{tx.description || '-'}</TableCell>
@@ -835,6 +858,9 @@ export default function AccountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [pendingEntryType, setPendingEntryType] = useState<TransactionType>('income');
+
   const canCollectFees = hasPermission('collect:fees');
   const canViewReports = hasPermission('view:collection-report');
   const canManageTransactions = hasPermission('manage:transactions');
@@ -888,8 +914,12 @@ export default function AccountsPage() {
   }
   tabs.push({ value: "cashbook", label: "ক্যাশবুক" });
   tabs.push({ value: "ledger", label: "খতিয়ান" });
-  if (canManageTransactions) tabs.push({ value: "new-transaction", label: "নতুন" });
+  if (canManageTransactions) tabs.push({ value: "new-transaction", label: "আয়/ব্যয় এন্ট্রি" });
 
+  const handleDashboardAction = (type: TransactionType) => {
+    setPendingEntryType(type);
+    setActiveTab("new-transaction");
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-teal-100">
@@ -902,13 +932,13 @@ export default function AccountsPage() {
           </CardHeader>
           <CardContent>
              {isClient ? (
-                <Tabs defaultValue="dashboard">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
                     {tabs.map(tab => <TabsTrigger key={tab.value} value={tab.value} className="flex-1 min-w-[80px] font-bold">{tab.label}</TabsTrigger>)}
                   </TabsList>
                   
                   <TabsContent value="dashboard" className="mt-4">
-                      <AccountsDashboardTab transactions={transactions} isLoading={isLoading} />
+                      <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={handleDashboardAction} />
                   </TabsContent>
 
                   {canCollectFees && (
@@ -936,7 +966,7 @@ export default function AccountsPage() {
                   </TabsContent>
                    {canManageTransactions && (
                     <TabsContent value="new-transaction" className="mt-4">
-                      <NewTransactionTab onTransactionAdded={fetchTransactions} />
+                      <NewTransactionTab onTransactionAdded={fetchTransactions} initialType={pendingEntryType} />
                     </TabsContent>
                    )}
                 </Tabs>
