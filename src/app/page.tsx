@@ -15,6 +15,7 @@ import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { getStaff } from '@/lib/staff-data';
 import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { getGalleryConfig, GalleryConfig, defaultGalleryConfig } from '@/lib/gallery-data';
+import { getTransactions, Transaction } from '@/lib/transactions-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
@@ -1115,4 +1116,10 @@ export default function Home() {
       </main>
     </div>
   );
+}
+
+function toBengaliNumber(str: string | number) {
+  if (!str && str !== 0) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
