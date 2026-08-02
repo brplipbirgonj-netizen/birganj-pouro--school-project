@@ -503,12 +503,16 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
             const start = format(startOfMonth(new Date(year, month)), 'yyyy-MM-dd');
             const end = format(endOfMonth(new Date(year, month)), 'yyyy-MM-dd');
 
+            // General Way: Fetch by academicYear and filter date in memory to avoid Index errors
             const [attSnap, holidayList] = await Promise.all([
-                getDocs(query(collection(db, 'attendance'), where('academicYear', '==', selectedYear), where('date', '>=', start), where('date', '<=', end))),
+                getDocs(query(collection(db, 'attendance'), where('academicYear', '==', selectedYear))),
                 getHolidays(db)
             ]);
 
-            setAttendanceData(attSnap.docs.map(d => d.data() as DailyAttendance));
+            const allAttRecords = attSnap.docs.map(d => d.data() as DailyAttendance);
+            const filteredAtt = allAttRecords.filter(r => r.date >= start && r.date <= end);
+
+            setAttendanceData(filteredAtt);
             setHolidays(holidayList.map(h => h.date));
         } catch (e) {
             console.error(e);
@@ -682,22 +686,25 @@ const MissedAttendanceTab = () => {
             const today = new Date();
             const realEnd = end > today ? today : end;
 
+            const startStr = format(start, 'yyyy-MM-dd');
+            const endStr = format(realEnd, 'yyyy-MM-dd');
+
             const allDatesInMonth = eachDayOfInterval({ start, end: realEnd });
             
             // Fetch Holidays
             const holidays = await getHolidays(db);
             const holidayDates = holidays.map(h => h.date);
 
-            // Fetch Existing Attendance for this month and class
+            // General way: Fetch by Year and Class only, avoid index error on date range
             const q = query(
                 collection(db, 'attendance'),
                 where('academicYear', '==', selectedYear),
-                where('className', '==', selectedClass),
-                where('date', '>=', format(start, 'yyyy-MM-dd')),
-                where('date', '<=', format(realEnd, 'yyyy-MM-dd'))
+                where('className', '==', selectedClass)
             );
             const snap = await getDocs(q);
-            const takenDates = snap.docs.map(doc => doc.data().date);
+            const takenDates = snap.docs
+                .map(doc => doc.data().date)
+                .filter(d => d >= startStr && d <= endStr);
 
             // Filter missed days: Workday, No Holiday, Not in TakenDates
             const missed = allDatesInMonth.filter(date => {
