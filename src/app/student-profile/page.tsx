@@ -10,13 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
 import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2 } from 'lucide-react';
+import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,6 +28,11 @@ import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, ResponsiveContainerProps } from 'recharts';
+import { getAllResults } from '@/lib/results-data';
+import { getSubjects } from '@/lib/subjects';
+import { processStudentResults } from '@/lib/results-calculation';
+import { getExams } from '@/lib/exam-data';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -195,6 +200,8 @@ function StudentProfileSearchContent() {
     const [holidays, setHolidays] = useState<string[]>([]);
     const [paidMonths, setPaidMonths] = useState<string[]>([]);
     const [feeHistory, setFeeHistory] = useState<FeeCollection[]>([]);
+    const [academicProgress, setAcademicProgress] = useState<any[]>([]);
+    const [isProgressLoading, setIsProgressLoading] = useState(false);
     const [activeProfileTab, setActiveProfileTab] = useState('details');
 
     useEffect(() => {
@@ -234,7 +241,7 @@ function StudentProfileSearchContent() {
 
         setIsLoading(true);
         try {
-            const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+            const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
             const rollEn = parseInt(bnToEn(searchRoll), 10);
 
             if (isNaN(rollEn)) {
@@ -296,11 +303,51 @@ function StudentProfileSearchContent() {
             });
             setPaidMonths(Array.from(monthsPaid));
 
+            // Fetch Academic Progress Data
+            setIsProgressLoading(true);
+            const exams = await getExams(db, selectedYear);
+            const progressData = [];
+            
+            for (const exam of exams) {
+                if (!exam.classes.includes(foundStudent.className)) continue;
+                
+                const allResults = await getAllResults(db, selectedYear, exam.name);
+                const classRes = allResults.filter(r => r.className === foundStudent.className);
+                if (classRes.length === 0) continue;
+
+                const subs = getSubjects(foundStudent.className, foundStudent.group).filter(s => s.isExamSubject !== false);
+                
+                // Get other students in class to calculate merit rank
+                const classStudentsQuery = query(
+                    collection(db, 'students'),
+                    where('academicYear', '==', selectedYear),
+                    where('className', '==', foundStudent.className)
+                );
+                const classStudentsSnap = await getDocs(classStudentsQuery);
+                const classStudents = classStudentsSnap.docs.map(studentFromDoc);
+
+                const results = processStudentResults(classStudents, classRes, subs);
+                const studentResult = results.find(r => r.student.id === foundStudent.id);
+
+                if (studentResult) {
+                    progressData.push({
+                        exam: exam.name,
+                        gpa: studentResult.gpa,
+                        marks: studentResult.totalMarks,
+                        rank: studentResult.isPass ? studentResult.meritPosition : 0,
+                        isPass: studentResult.isPass
+                    });
+                }
+            }
+            setAcademicProgress(progressData);
+            setIsProgressLoading(false);
+
             setShowProfile(true);
             setActiveProfileTab('details');
         } catch (error: any) {
             console.error("Search Error:", error);
             toast({ variant: 'destructive', title: 'অনুসন্ধান ব্যর্থ হয়েছে' });
+            setIsProgressLoading(false);
         } finally {
             setIsLoading(false);
         }
@@ -547,10 +594,11 @@ function StudentProfileSearchContent() {
                                         </div>
 
                                         <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
-                                            <TabsList className="grid w-full grid-cols-3 h-10 bg-muted/30 p-1 mb-4">
-                                                <TabsTrigger value="details" className="font-bold text-xs"><Info className="h-3.5 w-3.5 mr-1" /> ব্যক্তিগত তথ্য</TabsTrigger>
-                                                <TabsTrigger value="attendance_stats" className="font-bold text-xs"><CalendarCheck className="h-3.5 w-3.5 mr-1" /> হাজিরা রিপোর্ট</TabsTrigger>
-                                                <TabsTrigger value="fees_stats" className="font-bold text-xs"><Banknote className="h-3.5 w-3.5 mr-1" /> বেতন অবস্থা</TabsTrigger>
+                                            <TabsList className="grid w-full grid-cols-4 h-10 bg-muted/30 p-1 mb-4">
+                                                <TabsTrigger value="details" className="font-bold text-[10px] sm:text-xs px-1"><Info className="h-3.5 w-3.5 mr-1" /> তথ্য</TabsTrigger>
+                                                <TabsTrigger value="academic_stats" className="font-bold text-[10px] sm:text-xs px-1"><Award className="h-3.5 w-3.5 mr-1" /> প্রগতি</TabsTrigger>
+                                                <TabsTrigger value="attendance_stats" className="font-bold text-[10px] sm:text-xs px-1"><CalendarCheck className="h-3.5 w-3.5 mr-1" /> হাজিরা</TabsTrigger>
+                                                <TabsTrigger value="fees_stats" className="font-bold text-[10px] sm:text-xs px-1"><Banknote className="h-3.5 w-3.5 mr-1" /> বেতন</TabsTrigger>
                                             </TabsList>
 
                                             <TabsContent value="details" className="mt-0">
@@ -565,6 +613,31 @@ function StudentProfileSearchContent() {
                                                         <div className="flex justify-between border-b pb-1"><span>ধর্ম:</span> <span className="font-bold">{religionMapBn[studentData.religion?.toLowerCase() || ''] || studentData.religion || 'অন্যান্য'}</span></div>
                                                         <div className="flex justify-between border-b pb-1"><span>বিভাগ:</span> <span className="font-bold">{groupMapBn[studentData.group?.toLowerCase() || ''] || studentData.group || 'সাধারণ'}</span></div>
                                                     </div>
+                                                </div>
+                                            </TabsContent>
+
+                                            <TabsContent value="academic_stats" className="mt-0">
+                                                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                                                    {academicProgress.length > 0 ? (
+                                                        <>
+                                                        <div className="grid grid-cols-2 gap-2 flex-1 w-full">
+                                                            {academicProgress.slice(-2).map((p, i) => (
+                                                                <div key={i} className="p-2 bg-violet-50 rounded-lg text-center border border-violet-200">
+                                                                    <p className="text-[10px] font-black text-violet-700 uppercase truncate">{p.exam}</p>
+                                                                    <p className="text-xl font-black">GPA: {toBengaliNumber(p.gpa.toFixed(2))}</p>
+                                                                    {p.rank > 0 && <p className="text-[10px] font-bold text-violet-600">মেধাস্থান: {toBengaliNumber(p.rank)}</p>}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="hidden sm:block text-violet-700">
+                                                            <TrendingUp className="h-10 w-10 opacity-30" />
+                                                        </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex-1 text-center py-4 bg-slate-50 border-2 border-dashed rounded-lg">
+                                                            <p className="text-sm font-bold text-muted-foreground italic">এই বছরের পরীক্ষার রেজাল্ট এখনো এন্ট্রি হয়নি।</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </TabsContent>
 
@@ -600,12 +673,12 @@ function StudentProfileSearchContent() {
                                                         const isPaid = paidMonths.includes(month);
                                                         return (
                                                             <div key={month} className={cn(
-                                                                "flex flex-col items-center justify-center w-20 p-1.5 rounded-md border-2 text-[10px] font-black transition-all",
+                                                                "flex flex-col items-center justify-center w-16 sm:w-20 p-1 sm:p-1.5 rounded-md border-2 text-[10px] font-black transition-all",
                                                                 isPaid ? "bg-emerald-50 border-emerald-400 text-emerald-800 shadow-sm" : "bg-rose-50 border-rose-200 text-rose-600 opacity-70"
                                                             )}>
-                                                                <span className="leading-tight mb-1">{month}</span>
+                                                                <span className="leading-tight mb-1 text-[8px] sm:text-[10px]">{month}</span>
                                                                 <Badge variant="outline" className={cn(
-                                                                    "h-4 text-[7px] font-black px-1.5 border-none",
+                                                                    "h-3 sm:h-4 text-[6px] sm:text-[7px] font-black px-1 border-none",
                                                                     isPaid ? "bg-emerald-600 text-white" : "bg-rose-500 text-white"
                                                                 )}>
                                                                     {isPaid ? 'পরিশোধিত' : 'বকেয়া'}
@@ -622,62 +695,99 @@ function StudentProfileSearchContent() {
 
                             {/* BOTTOM SECTION: Main Scrollable Content */}
                             <div className="flex-1 overflow-y-auto bg-slate-100/50 p-4 sm:p-8">
-                                <div className="max-w-full space-y-6">
-                                    {activeProfileTab === 'fees_stats' ? (
-                                        <div className="space-y-6 animate-in fade-in duration-500">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                                    <Banknote className="h-5 w-5 text-primary" /> ফি আদায়ের বিস্তারিত বিবরণ
-                                                </h3>
-                                                <Badge variant="outline" className="font-black bg-white border-primary/20 text-primary">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</Badge>
-                                            </div>
-                                            <div className="border-[4px] border-black rounded-xl overflow-hidden bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
-                                                <Table>
-                                                    <TableHeader className="bg-primary/5">
-                                                        <TableRow className="border-b-[4px] border-black">
-                                                            <TableHead className="font-black text-black">তারিখ</TableHead>
-                                                            <TableHead className="font-black text-black">বিবরণ</TableHead>
-                                                            <TableHead className="font-black text-black text-right">পরিমাণ</TableHead>
-                                                            <TableHead className="font-black text-black">আদায়কারী</TableHead>
+                                <div className="max-w-full space-y-8">
+                                    
+                                    {/* 1. Academic Performance Chart Section */}
+                                    <div className="space-y-4 animate-in fade-in duration-500">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                                <Award className="h-5 w-5 text-violet-600" /> বাৎসরিক মেধা প্রগতি চার্ট
+                                            </h3>
+                                            <Badge className="bg-violet-600 font-black">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</Badge>
+                                        </div>
+                                        <Card className="border-[4px] border-black rounded-xl overflow-hidden bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
+                                            <CardContent className="p-4 sm:p-8 h-[300px]">
+                                                {isProgressLoading ? (
+                                                    <div className="h-full flex items-center justify-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mr-2" /> ডেটা প্রসেস হচ্ছে...</div>
+                                                ) : academicProgress.length > 0 ? (
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <LineChart data={academicProgress}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                                                            <XAxis dataKey="exam" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold' }} />
+                                                            <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold' }} />
+                                                            <RechartsTooltip 
+                                                                contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold' }}
+                                                                itemStyle={{ color: '#7C3AED' }}
+                                                            />
+                                                            <Legend />
+                                                            <Line 
+                                                                name="অর্জিত GPA"
+                                                                type="monotone" 
+                                                                dataKey="gpa" 
+                                                                stroke="#7C3AED" 
+                                                                strokeWidth={4} 
+                                                                dot={{ r: 6, fill: '#7C3AED', strokeWidth: 2, stroke: '#fff' }} 
+                                                                activeDot={{ r: 8 }}
+                                                            />
+                                                        </LineChart>
+                                                    </ResponsiveContainer>
+                                                ) : (
+                                                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                                                        <TrendingUp className="h-16 w-16 mb-4" />
+                                                        <p className="font-bold">তুলনামূলক চার্ট তৈরির জন্য পর্যাপ্ত রেজাল্ট পাওয়া যায়নি।</p>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    {/* 2. Attendance Heatmap Section */}
+                                    <div className="space-y-4 animate-in fade-in duration-500">
+                                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                            <LayoutGrid className="h-5 w-5 text-primary" /> বার্ষিক হাজিরা ক্যালেন্ডার
+                                        </h3>
+                                        <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
+                                        <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg text-sm text-blue-900 font-bold italic shadow-sm">
+                                            <p className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> হাজিরা ক্যালেন্ডারে যে কোনো তারিখের ওপর মাউস রাখলে বিস্তারিত তথ্য দেখা যাবে।</p>
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Fee History Table */}
+                                    <div className="space-y-4 animate-in fade-in duration-500">
+                                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                            <Banknote className="h-5 w-5 text-primary" /> ফি আদায়ের বিস্তারিত বিবরণ
+                                        </h3>
+                                        <div className="border-[4px] border-black rounded-xl overflow-hidden bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
+                                            <Table>
+                                                <TableHeader className="bg-primary/5">
+                                                    <TableRow className="border-b-[4px] border-black">
+                                                        <TableHead className="font-black text-black">তারিখ</TableHead>
+                                                        <TableHead className="font-black text-black">বিবরণ</TableHead>
+                                                        <TableHead className="font-black text-black text-right">পরিমাণ</TableHead>
+                                                        <TableHead className="font-black text-black">আদায়কারী</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {feeHistory.length === 0 ? (
+                                                        <TableRow>
+                                                            <TableCell colSpan={4} className="text-center py-10 font-bold text-muted-foreground italic">
+                                                                কোনো লেনদেনের তথ্য পাওয়া যায়নি।
+                                                            </TableCell>
                                                         </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {feeHistory.length === 0 ? (
-                                                            <TableRow>
-                                                                <TableCell colSpan={4} className="text-center py-10 font-bold text-muted-foreground italic">
-                                                                    কোনো লেনদেনের তথ্য পাওয়া যায়নি।
-                                                                </TableCell>
+                                                    ) : (
+                                                        feeHistory.map((fee) => (
+                                                            <TableRow key={fee.id} className="border-b-2 border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                                                                <TableCell className="font-bold text-xs whitespace-nowrap">{format(fee.collectionDate, 'dd/MM/yyyy', { locale: bn })}</TableCell>
+                                                                <TableCell className="font-black text-sm">{fee.description}</TableCell>
+                                                                <TableCell className="font-black text-right text-emerald-700 text-lg">{toBengaliNumber(fee.totalAmount)} ৳</TableCell>
+                                                                <TableCell className="text-[10px] font-bold text-muted-foreground">{fee.collectorName || '-'}</TableCell>
                                                             </TableRow>
-                                                        ) : (
-                                                            feeHistory.map((fee) => (
-                                                                <TableRow key={fee.id} className="border-b-2 border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
-                                                                    <TableCell className="font-bold text-xs whitespace-nowrap">{format(fee.collectionDate, 'dd/MM/yyyy', { locale: bn })}</TableCell>
-                                                                    <TableCell className="font-black text-sm">{fee.description}</TableCell>
-                                                                    <TableCell className="font-black text-right text-emerald-700 text-lg">{toBengaliNumber(fee.totalAmount)} ৳</TableCell>
-                                                                    <TableCell className="text-[10px] font-bold text-muted-foreground">{fee.collectorName || '-'}</TableCell>
-                                                                </TableRow>
-                                                            ))
-                                                        )}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
+                                                        ))
+                                                    )}
+                                                </TableBody>
+                                            </Table>
                                         </div>
-                                    ) : (
-                                        <div className="space-y-6 animate-in fade-in duration-500">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                                    <LayoutGrid className="h-5 w-5 text-primary" /> বার্ষিক অ্যাটেন্ডেন্স ক্যালেন্ডার
-                                                </h3>
-                                                <Badge variant="outline" className="font-black bg-white border-primary/20 text-primary">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</Badge>
-                                            </div>
-                                            
-                                            <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
-                                            
-                                            <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg text-sm text-blue-900 font-bold italic shadow-sm">
-                                                <p className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> হাজিরা ক্যালেন্ডারে যে কোনো তারিখের ওপর মাউস রাখলে বিস্তারিত তথ্য দেখা যাবে।</p>
-                                            </div>
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
