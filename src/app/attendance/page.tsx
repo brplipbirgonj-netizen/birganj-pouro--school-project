@@ -617,7 +617,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                     return (
                                         <TableRow key={i} className={cn(
                                             "h-10 hover:bg-slate-50 transition-colors",
-                                            isOff ? "bg-red-100/70" : ""
+                                            isOff ? "bg-red-200/60" : ""
                                         )}>
                                             <TableCell className={cn(
                                                 "text-center font-black border-r text-xs whitespace-nowrap",
@@ -737,7 +737,7 @@ const MissedAttendanceTab = () => {
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
-    }, [fetchMissedAttendance, i][isClient]);
+    }, [fetchMissedAttendance, isClient]);
 
     if (!isClient) return null;
 
