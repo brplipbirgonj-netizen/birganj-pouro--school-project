@@ -1108,8 +1108,8 @@ export default function AttendancePage() {
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
             <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
-                {/* Sidebar Navigation */}
-                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0">
+                {/* Sidebar Navigation - Fixed/Sticky */}
+                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
                     <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
                     <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
                         {sidebarItems.map(item => (

@@ -368,7 +368,7 @@ const FullMarksTab = () => {
                                 .map(name => subjects.find(s => s.name === name)!);
 
                             return (
-                                <AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
+                                AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
                                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/10">
                                         <span className="font-black text-lg text-slate-800">{classNamesMap[cls]} শ্রেণি</span>
                                         <Badge variant="secondary" className="ml-2 font-bold">{uniqueSubjects.length.toLocaleString('bn-BD')} টি বিষয়</Badge>
@@ -1005,8 +1005,8 @@ export default function ResultsPage() {
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
             <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-40">
-                {/* Sidebar Navigation - Thinned from 72 to 60 */}
-                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0">
+                {/* Sidebar Navigation - Fixed/Sticky */}
+                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
                     <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">ফলাফল ব্যবস্থাপনা</h2>
                     <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
                         {sidebarItems.map(item => (
