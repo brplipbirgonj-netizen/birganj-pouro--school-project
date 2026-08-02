@@ -222,24 +222,6 @@ export function Header() {
     });
   }, [user, hasPermission]);
 
-  const permittedBottomNavItems = useMemo(() => {
-    if (!user) return [];
-    const bottomNavItems = [
-      { label: 'হোম', icon: LayoutDashboard, href: '/', permission: 'view:dashboard' },
-      { label: 'শিক্ষার্থী', icon: Users, href: '/student-list', permission: 'view:students' },
-      { label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance' },
-      { label: '', icon: Search, type: 'search', permission: 'view:students' },
-      { label: 'হিসাব', icon: Banknote, href: '/accounts', permission: 'view:accounts' },
-      { label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: ['send:messaging', 'manage:messaging'] },
-      { label: 'রুটিন', icon: CalendarClock, href: '/routines', permission: 'view:routines' },
-    ];
-    return bottomNavItems.filter(item => {
-        if (user.role === 'admin') return true;
-        if (Array.isArray(item.permission)) return item.permission.some(p => hasPermission(p));
-        return hasPermission(item.permission);
-    });
-  }, [user, hasPermission]);
-
   if (!isClient) return <header className="h-16 bg-primary" />;
 
   return (
@@ -350,6 +332,17 @@ export function Header() {
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
+          {user && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full bg-white/20 text-white hover:bg-white/30 shadow-sm"
+              onClick={() => handleSearchOpen(true)}
+              title="শিক্ষার্থী খুঁজুন"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          )}
           {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
             <div className="flex items-center gap-3">
               <div className="hidden md:flex flex-col items-end text-right">
@@ -383,32 +376,6 @@ export function Header() {
           )}
         </div>
       </header>
-
-      {user && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-primary no-print shadow-[0_-4px_10px_rgba(0,0,0,0.15)] flex items-center justify-around font-kalpurush">
-          {permittedBottomNavItems.map((item, idx) => {
-            const isActive = item.href ? pathname === item.href : false;
-            if (item.type === 'search') {
-                return (
-                    <div key="search" className="relative -top-3">
-                        <Button 
-                            className="h-14 w-14 rounded-full bg-white border-4 border-primary shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95"
-                            onClick={() => handleSearchOpen(true)}
-                        >
-                            <Search className="h-7 w-7 text-primary" />
-                        </Button>
-                    </div>
-                )
-            }
-            return (
-              <Link key={idx} href={item.href!} className={cn("flex flex-col items-center gap-1 transition-colors", isActive ? "text-white" : "text-primary-foreground/70")}>
-                <item.icon className="h-5 w-5" />
-                <span className="text-[9px] font-black uppercase">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
 
       {/* Student Search Dialog */}
       <Dialog open={searchOpen} onOpenChange={handleSearchOpen}>
