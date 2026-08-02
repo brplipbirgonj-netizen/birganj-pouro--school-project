@@ -20,11 +20,12 @@ import { format, eachDayOfInterval, subDays, startOfMonth, endOfMonth, isSameDay
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, Check, X, Search, CalendarDays, CalendarCheck } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, Check, X, Search, CalendarDays, CalendarCheck, Plus, Save, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -343,6 +344,120 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </TabsContent>
                 ))}
             </Tabs>
+        </div>
+    );
+};
+
+const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { toast } = useToast();
+    const { user } = useAuth();
+    
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [rollsInput, setRollsInput] = useState<string>('');
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleSave = async () => {
+        if (!db || !user || !selectedClass) return;
+        
+        setIsProcessing(true);
+        try {
+            const today = new Date();
+            const todayStr = format(today, 'yyyy-MM-dd');
+            
+            // 1. Get all students of this class
+            const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === selectedClass);
+            
+            if (classStudents.length === 0) {
+                toast({ variant: 'destructive', title: 'এই শ্রেণিতে কোনো শিক্ষার্থী নেই' });
+                setIsProcessing(false);
+                return;
+            }
+
+            // 2. Parse rolls (handle Bengali digits too)
+            const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]);
+            const inputRolls = rollsInput
+                .split(/[\s,]+/)
+                .map(r => parseInt(bnToEn(r.trim()), 10))
+                .filter(r => !isNaN(r));
+
+            if (inputRolls.length === 0 && rollsInput.trim() !== '') {
+                 toast({ variant: 'destructive', title: 'রোল নম্বরগুলো সঠিক নয়' });
+                 setIsProcessing(false);
+                 return;
+            }
+
+            // 3. Map to attendance status
+            const attendanceData: StudentAttendance[] = classStudents.map(student => ({
+                studentId: student.id,
+                status: inputRolls.includes(student.roll) ? 'present' : 'absent'
+            }));
+
+            const dailyAttendance: DailyAttendance = {
+                date: todayStr,
+                academicYear: selectedYear,
+                className: selectedClass,
+                attendance: attendanceData,
+            };
+
+            await saveDailyAttendance(db, dailyAttendance);
+            
+            toast({ 
+                title: 'হাজিরা সফলভাবে সংরক্ষিত হয়েছে', 
+                description: `${inputRolls.length.toLocaleString('bn-BD')} জন উপস্থিত এবং বাকিরা অনুপস্থিত হিসেবে গণ্য হয়েছে।` 
+            });
+            setRollsInput('');
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    return (
+        <div className="mt-4 space-y-6 animate-in fade-in duration-500">
+            <Card className="border-2 border-primary/10 shadow-lg">
+                <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                        <Plus className="h-5 w-5" /> রোল ইনপুট দিয়ে দ্রুত হাজিরা
+                    </CardTitle>
+                    <CardDescription>শ্রেণি সিলেক্ট করে উপস্থিত শিক্ষার্থীদের রোল নম্বরগুলো লিখুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+                    <div className="max-w-md space-y-2">
+                        <Label className="font-black text-primary">শ্রেণি নির্বাচন করুন</Label>
+                        <Select value={selectedClass} onValueChange={setSelectedClass}>
+                            <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="font-black text-primary">উপস্থিত রোল নম্বরসমূহ (কমা বা স্পেস দিয়ে লিখুন)</Label>
+                        <Textarea 
+                            placeholder="উদা: ১, ২, ৫, ১০, ১২..." 
+                            className="min-h-[150px] text-lg font-black tracking-widest leading-relaxed focus:ring-primary"
+                            value={rollsInput}
+                            onChange={e => setRollsInput(e.target.value)}
+                        />
+                        <p className="text-[10px] text-muted-foreground italic font-bold">*** বাংলা বা ইংরেজি উভয় অংকেই রোল নম্বর লেখা যাবে।</p>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <Button 
+                            onClick={handleSave} 
+                            disabled={isProcessing || !rollsInput.trim()}
+                            className="px-12 h-14 text-lg font-black shadow-xl"
+                        >
+                            {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                            হাজিরা সেভ করুন
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };
@@ -807,14 +922,18 @@ export default function AttendancePage() {
                             </div>
                         ) : (
                             <Tabs defaultValue="digital-attendance">
-                                <TabsList className="grid w-full grid-cols-4 h-14 mb-8 gap-2 bg-muted/50 p-1.5 rounded-lg border">
-                                    <TabsTrigger value="digital-attendance" className="font-black text-md data-[state=active]:shadow-lg">ডিজিটাল হাজিরা</TabsTrigger>
-                                    <TabsTrigger value="report" className="font-black text-md data-[state=active]:shadow-lg">রিপোর্ট</TabsTrigger>
-                                    <TabsTrigger value="missed-attendance" className="font-black text-md data-[state=active]:shadow-lg text-amber-700">বকেয়া হাজিরা</TabsTrigger>
-                                    <TabsTrigger value="alerts" className="font-black text-md data-[state=active]:shadow-lg text-rose-700">সতর্কবার্তা</TabsTrigger>
+                                <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto md:h-14 mb-8 gap-2 bg-muted/50 p-1.5 rounded-lg border">
+                                    <TabsTrigger value="digital-attendance" className="font-black text-sm md:text-md data-[state=active]:shadow-lg">ডিজিটাল হাজিরা</TabsTrigger>
+                                    <TabsTrigger value="quick-roll" className="font-black text-sm md:text-md data-[state=active]:shadow-lg text-emerald-700">রোল ইনপুট</TabsTrigger>
+                                    <TabsTrigger value="report" className="font-black text-sm md:text-md data-[state=active]:shadow-lg">রিপোর্ট</TabsTrigger>
+                                    <TabsTrigger value="missed-attendance" className="font-black text-sm md:text-md data-[state=active]:shadow-lg text-amber-700">বকেয়া হাজিরা</TabsTrigger>
+                                    <TabsTrigger value="alerts" className="font-black text-sm md:text-md data-[state=active]:shadow-lg text-rose-700">সতর্কবার্তা</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="digital-attendance" className="mt-4 animate-in slide-in-from-left-4 duration-500">
                                     <DigitalAttendanceTab allStudents={allStudents} />
+                                </TabsContent>
+                                <TabsContent value="quick-roll" className="mt-4">
+                                    <QuickRollAttendanceTab allStudents={allStudents} />
                                 </TabsContent>
                                 <TabsContent value="report" className="mt-4 animate-in slide-in-from-right-4 duration-500">
                                     <AttendanceReportTab allStudents={allStudents} />
@@ -833,3 +952,4 @@ export default function AttendancePage() {
         </div>
     );
 }
+
