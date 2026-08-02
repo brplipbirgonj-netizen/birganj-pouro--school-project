@@ -95,7 +95,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-4 font-kalpurush">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-4 font-kalpurush text-black">
             <div className="mb-8 flex flex-col items-center gap-4 text-center">
                 {isSchoolInfoLoading ? (
                     <>
@@ -108,13 +108,20 @@ export default function LoginPage() {
                             <Image
                                 src={schoolInfo.logoUrl}
                                 alt="School Logo"
-                                width={100}
-                                height={100}
-                                className="rounded-full object-contain bg-white p-1 shadow-lg"
+                                width={110}
+                                height={110}
+                                className="rounded-full object-contain bg-white p-1 shadow-lg border-2 border-primary/20 mb-2"
                             />
                         )}
-                        <h1 className="text-3xl font-black text-primary">{schoolInfo.name}</h1>
-                        <p className="text-muted-foreground font-bold italic">কেন্দ্রীয় ডিজিটাল ম্যানেজমেন্ট পোর্টাল</p>
+                        
+                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-6 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform">
+                            <h1 className="text-2xl sm:text-[45px] font-black text-white leading-none tracking-tighter mb-2 [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
+                                {schoolInfo.name}
+                            </h1>
+                            <p className="text-white font-bold italic text-sm sm:text-xl leading-none opacity-95">
+                                কেন্দ্রীয় ডিজিটাল ম্যানেজমেন্ট পোর্টাল
+                            </p>
+                        </div>
                     </>
                 )}
             </div>
