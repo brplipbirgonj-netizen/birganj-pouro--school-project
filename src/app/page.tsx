@@ -46,7 +46,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
-import { getTransactions, Transaction } from '@/lib/transactions-data';
 import Image from 'next/image';
 
 const parseTeacherName = (cell: string): string => {
@@ -107,17 +106,17 @@ const NoticeTicker = () => {
 
     if (latestNotice) {
         return (
-            <div className="w-full bg-yellow-100 text-red-700 h-10 flex items-center overflow-hidden border-b-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
-                <div className="bg-red-600 text-white px-4 h-full flex items-center gap-2 shrink-0 z-10 shadow-lg">
-                    <Megaphone className="h-4 w-4 animate-bounce" />
-                    <span className="font-black text-sm whitespace-nowrap">জরুরি নোটিশ:</span>
+            <div className="w-full bg-yellow-100 text-red-700 h-8 flex items-center overflow-hidden border-y-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
+                <div className="bg-red-600 text-white px-3 h-full flex items-center gap-1.5 shrink-0 z-10 shadow-lg">
+                    <Megaphone className="h-3.5 w-3.5 animate-bounce" />
+                    <span className="font-black text-xs whitespace-nowrap leading-none">জরুরি নোটিশ:</span>
                 </div>
                 <div className="flex-1 relative overflow-hidden h-full flex items-center">
-                    <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-20 group-hover:pause-animation">
-                        <span className="font-black text-sm tracking-wide">
+                    <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-10 group-hover:pause-animation">
+                        <span className="font-black text-xs tracking-tight">
                             <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
                         </span>
-                        <span className="font-black text-sm tracking-wide">
+                        <span className="font-black text-xs tracking-tight">
                             <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
                         </span>
                     </div>
@@ -140,7 +139,7 @@ const NoticeTicker = () => {
         );
     }
 
-    if (isLoading) return <Skeleton className="h-10 w-full mb-4 rounded-none" />;
+    if (isLoading) return <Skeleton className="h-8 w-full mb-4 rounded-none" />;
     return null;
 };
 
