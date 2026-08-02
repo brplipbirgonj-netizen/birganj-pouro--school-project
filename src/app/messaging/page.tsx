@@ -180,8 +180,8 @@ export default function MessagingPage() {
             </div>
           </aside>
 
-          <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white md:rounded-[32px] shadow-2xl border-slate-200/50 overflow-hidden flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4 p-4 sm:p-8">
+          <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+            <div className="lg:col-span-2 bg-white md:rounded-[32px] shadow-2xl border-slate-200/50 overflow-hidden flex flex-col p-4 sm:p-8">
                 {!canSendMessages ? (
                     <div className="flex flex-col items-center justify-center py-20 opacity-50"><ShieldAlert className="h-16 w-16 text-red-500 mb-4" /><p className="font-black">অনুমতি নেই</p></div>
                 ) : (
@@ -229,7 +229,7 @@ export default function MessagingPage() {
                 )}
             </div>
 
-            <div className="bg-white md:rounded-[32px] shadow-2xl border-slate-200/50 overflow-hidden flex flex-col p-4 animate-in fade-in slide-in-from-right-4">
+            <div className="bg-white md:rounded-[32px] shadow-2xl border-slate-200/50 overflow-hidden flex flex-col p-4">
                 <div className="flex items-center gap-2 mb-4 border-b pb-4"><History className="h-5 w-5 text-primary" /><h3 className="font-black">মেসেজ ইতিহাস</h3></div>
                 <div className="relative mb-4"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="ইতিহাস খুঁজুন..." value={logSearchQuery} onChange={e => setLogSearchQuery(e.target.value)} className="pl-9 h-9 text-xs" /></div>
                 <div className="space-y-3 overflow-y-auto max-h-[600px] pr-2">

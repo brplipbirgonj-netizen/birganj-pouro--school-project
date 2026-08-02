@@ -299,7 +299,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <Card className="border-red-200">
                 <CardHeader className="bg-red-50/50">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -312,7 +312,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                         <div className="flex items-center gap-2">
                             <Label className="font-bold whitespace-nowrap">মাস নির্বাচন:</Label>
                             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                                <SelectTrigger className="w-44 bg-white shadow-sm font-bold text-primary"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="w-44 bg-white shadow-sm font-bold text-primary h-9 text-xs"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                                 </SelectContent>
@@ -327,7 +327,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                             if (defaulters.length === 0) return null;
                             return (
                                 <div key={cls} className="space-y-3">
-                                    <h3 className="font-black text-lg text-slate-800 border-l-4 border-red-500 pl-3">{classNamesMap[cls]}</h3>
+                                    <h3 className="font-black text-lg text-slate-800 border-l-4 border-red-500 pl-3">{classNamesMap[cls]} শ্রেণি</h3>
                                     <div className="table-container">
                                         <Table>
                                             <TableHeader className="bg-muted/50">
@@ -345,8 +345,8 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                                                         <TableCell className="font-bold">{student.studentNameBn}</TableCell>
                                                         <TableCell className="text-xs">{student.guardianMobile || student.studentMobile || '-'}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleSendReminder(student)}>
-                                                                <Smartphone className="h-4 w-4 mr-2" /> SMS পাঠান
+                                                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs font-bold" onClick={() => handleSendReminder(student)}>
+                                                                <Smartphone className="h-3.5 w-3.5 mr-2" /> SMS পাঠান
                                                             </Button>
                                                         </TableCell>
                                                     </TableRow>
@@ -379,14 +379,14 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
     }, [studentsForYear, selectedClass]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white/50 items-end">
                 <div className="space-y-2 flex-1">
                     <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                            {classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                            {classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -416,7 +416,7 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
                                 <TableCell className="whitespace-nowrap font-bold text-slate-800">{student.studentNameBn}</TableCell>
                                 <TableCell className="whitespace-nowrap text-muted-foreground">{student.fatherNameBn}</TableCell>
                                 <TableCell className="text-right">
-                                <Button onClick={() => setFeeStudent(student)} size="sm" className="bg-teal-600 hover:bg-teal-700 font-bold">বেতন আদায়</Button>
+                                <Button onClick={() => setFeeStudent(student)} size="sm" className="bg-teal-600 hover:bg-teal-700 font-bold h-8 text-xs">বেতন আদায়</Button>
                                 </TableCell>
                             </TableRow>
                             ))
@@ -479,64 +479,67 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     }, [collections, collectorFilter, dateFilter]);
 
     return (
-        <Card className="border-none shadow-none">
-            <CardHeader className="px-0 pt-0">
-                <CardTitle>বেতন আদায়ের রিপোর্ট</CardTitle>
-                <div className="flex flex-col md:flex-row gap-4 mt-4 bg-muted/30 p-4 rounded-lg">
-                    <div className="space-y-2 flex-1">
-                        <Label>তারিখ দিয়ে ফিল্টার</Label>
-                        <DatePicker value={dateFilter} onChange={setDateFilter} placeholder="তারিখ নির্বাচন করুন" />
-                    </div>
-                    <div className="space-y-2 flex-1">
-                        <Label>আদায়কারী</Label>
-                        <Select value={collectorFilter} onValueChange={setCollectorFilter}>
-                            <SelectTrigger className="bg-white"><SelectValue placeholder="সকল আদায়কারী" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">সকল আদায়কারী</SelectItem>
-                                {uniqueCollectors.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg">
+                <div className="space-y-2 flex-1">
+                    <Label className="text-xs font-bold">তারিখ দিয়ে ফিল্টার</Label>
+                    <DatePicker value={dateFilter} onChange={setDateFilter} placeholder="তারিখ নির্বাচন করুন" />
                 </div>
-            </CardHeader>
-            <CardContent className="px-0 pt-4">
-                <div className="table-container">
-                    <Table>
-                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                            <TableRow>
-                                <TableHead>তারিখ</TableHead>
-                                <TableHead className="text-center w-20">রোল</TableHead>
-                                <TableHead>নাম</TableHead>
-                                <TableHead>শ্রেণি</TableHead>
-                                <TableHead className="text-right">মোট আদায়</TableHead>
-                                <TableHead>আদায়কারী</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
-                            ) : filteredCollections.length === 0 ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
-                            ) : (
-                                filteredCollections.map(c => {
-                                    const student = studentMap.get(c.studentId);
-                                    return (
-                                        <TableRow key={c.id} className="hover:bg-accent/5">
-                                            <TableCell className="whitespace-nowrap">{format(c.collectionDate, 'PP', { locale: bn })}</TableCell>
-                                            <TableCell className="font-black text-center">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
-                                            <TableCell className="whitespace-nowrap font-bold text-primary">{student?.studentNameBn || '-'}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{student ? (classNamesMap[student.className] || student.className) : '-'}</TableCell>
-                                            <TableCell className="text-right font-black text-emerald-700">{(c.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
-                                            <TableCell className="whitespace-nowrap text-xs">{c.collectorName || '-'}</TableCell>
-                                        </TableRow>
-                                    );
-                                })
-                            )}
-                        </TableBody>
-                    </Table>
+                <div className="space-y-2 flex-1">
+                    <Label className="text-xs font-bold">আদায়কারী</Label>
+                    <Select value={collectorFilter} onValueChange={setCollectorFilter}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সকল আদায়কারী" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">সকল আদায়কারী</SelectItem>
+                            {uniqueCollectors.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+            
+            <Card className="border-none shadow-none">
+                <CardHeader className="px-0 pt-0">
+                    <CardTitle className="text-xl">আদায় রিপোর্ট</CardTitle>
+                </CardHeader>
+                <CardContent className="px-0 pt-2">
+                    <div className="table-container">
+                        <Table>
+                            <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                                <TableRow>
+                                    <TableHead>তারিখ</TableHead>
+                                    <TableHead className="text-center w-20">রোল</TableHead>
+                                    <TableHead>নাম</TableHead>
+                                    <TableHead>শ্রেণি</TableHead>
+                                    <TableHead className="text-right">মোট আদায়</TableHead>
+                                    <TableHead>আদায়কারী</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    <TableRow><TableCell colSpan={6} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
+                                ) : filteredCollections.length === 0 ? (
+                                    <TableRow><TableCell colSpan={6} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                ) : (
+                                    filteredCollections.map(c => {
+                                        const student = studentMap.get(c.studentId);
+                                        return (
+                                            <TableRow key={c.id} className="hover:bg-accent/5">
+                                                <TableCell className="whitespace-nowrap">{format(c.collectionDate, 'PP', { locale: bn })}</TableCell>
+                                                <TableCell className="font-black text-center">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
+                                                <TableCell className="whitespace-nowrap font-bold text-primary">{student?.studentNameBn || '-'}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{student ? (classNamesMap[student.className] || student.className) : '-'}</TableCell>
+                                                <TableCell className="text-right font-black text-emerald-700">{(c.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
+                                                <TableCell className="whitespace-nowrap text-xs">{c.collectorName || '-'}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 };
 
@@ -583,9 +586,9 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
     };
 
     return (
-        <Card className={cn("border-2 shadow-lg", type === 'income' ? "border-emerald-100" : "border-rose-100")}>
-            <CardHeader className={cn("rounded-t-lg", type === 'income' ? "bg-emerald-50/50" : "bg-rose-50/50")}>
-                <CardTitle className="flex items-center gap-2">
+        <Card className={cn("border-2 shadow-lg animate-in fade-in duration-500", type === 'income' ? "border-emerald-100" : "border-rose-100")}>
+            <CardHeader className={cn("rounded-t-lg p-4", type === 'income' ? "bg-emerald-50/50" : "bg-rose-50/50")}>
+                <CardTitle className="flex items-center gap-2 text-lg">
                     {type === 'income' ? <PlusCircle className="text-emerald-600" /> : <MinusCircle className="text-rose-600" />}
                     নতুন {type === 'income' ? 'আয়' : 'ব্যয়'} এন্ট্রি করুন
                 </CardTitle>
@@ -593,37 +596,37 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
             <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="space-y-2"><Label>তারিখ</Label><DatePicker value={date} onChange={setDate} /></div>
+                        <div className="space-y-2"><Label className="text-xs font-bold">তারিখ</Label><DatePicker value={date} onChange={setDate} /></div>
                         <div className="space-y-2">
-                            <Label>লেনদেনের ধরণ</Label>
+                            <Label className="text-xs font-bold">লেনদেনের ধরণ</Label>
                             <RadioGroup value={type} onValueChange={(v) => { setType(v as TransactionType); setAccountHead(''); }} className="flex items-center space-x-4 pt-2">
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="income" id="inc" /><Label htmlFor="inc" className="font-bold text-emerald-700">আয়</Label></div>
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="expense" id="exp" /><Label htmlFor="exp" className="font-bold text-rose-700">ব্যয়</Label></div>
                             </RadioGroup>
                         </div>
                         <div className="space-y-2">
-                            <Label>পেমেন্ট পদ্ধতি</Label>
+                            <Label className="text-xs font-bold">পেমেন্ট পদ্ধতি</Label>
                             <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="cash" id="m-cash" /><Label htmlFor="m-cash" className="font-bold">নগদ</Label></div>
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="bank" id="m-bank" /><Label htmlFor="m-bank" className="font-bold">ব্যাংক</Label></div>
                             </RadioGroup>
                         </div>
                         <div className="space-y-2">
-                            <Label>খাত (Account Head)</Label>
+                            <Label className="text-xs font-bold">খাত (Account Head)</Label>
                             <Select value={accountHead} onValueChange={setAccountHead}>
-                                <SelectTrigger className="bg-white"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
+                                <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
                                 <SelectContent>{(type === 'income' ? incomeHeads : expenseHeads).map(head => <SelectItem key={head} value={head}>{head}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>টাকার পরিমাণ</Label>
+                            <Label className="text-xs font-bold">টাকার পরিমাণ</Label>
                             <div className="relative"><span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span><input type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-8 text-lg font-black ring-offset-background" /></div>
                         </div>
-                        {type === 'expense' && <div className="space-y-2"><Label>ভাউচার নং</Label><Input value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" /></div>}
-                        {method === 'bank' && <div className="space-y-2"><Label>চেক নং</Label><Input value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" /></div>}
-                        <div className="lg:col-span-3 space-y-2"><Label>বিবরণ / মন্তব্য (ঐচ্ছিক)</Label><Input value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." /></div>
+                        {type === 'expense' && <div className="space-y-2"><Label className="text-xs font-bold">ভাউচার নং</Label><Input value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" className="h-9 text-xs" /></div>}
+                        {method === 'bank' && <div className="space-y-2"><Label className="text-xs font-bold">চেক নং</Label><Input value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" className="h-9 text-xs" /></div>}
+                        <div className="lg:col-span-3 space-y-2"><Label className="text-xs font-bold">বিবরণ / মন্তব্য (ঐচ্ছিক)</Label><Input value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." className="h-9 text-xs" /></div>
                     </div>
-                    <div className="flex justify-end pt-4"><Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg", type === 'income' ? "bg-emerald-600" : "bg-rose-600")}>সেভ করুন</Button></div>
+                    <div className="flex justify-end pt-4"><Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg h-12", type === 'income' ? "bg-emerald-600" : "bg-rose-600")}>সেভ করুন</Button></div>
                 </form>
             </CardContent>
         </Card>
@@ -654,8 +657,8 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
     }
 
     return (
-        <Card className="border-none shadow-none">
-            <CardHeader className="px-0 pt-0"><CardTitle>ক্যাশবুক</CardTitle></CardHeader>
+        <Card className="border-none shadow-none animate-in fade-in duration-500">
+            <CardHeader className="px-0 pt-0"><CardTitle className="text-xl">ক্যাশবুক</CardTitle></CardHeader>
             <CardContent className="px-0 pt-4">
                 <div className="table-container">
                     <Table className="min-w-[950px]">
@@ -680,8 +683,8 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                 [...cashbookData].reverse().map(tx => (
                                     <TableRow key={tx.id}>
                                         <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
-                                        <TableCell><p className="font-bold">{tx.accountHead}</p><p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{tx.description}</p></TableCell>
-                                        <TableCell className="text-center"><Badge variant="outline" className={cn("text-[10px] font-black", tx.method === 'bank' ? "text-blue-700 bg-blue-50" : "text-amber-700 bg-amber-50")}>{tx.method === 'bank' ? 'Bank' : 'Cash'}</Badge></TableCell>
+                                        <TableCell><p className="font-bold text-xs">{tx.accountHead}</p><p className="text-[9px] text-muted-foreground truncate max-w-[200px]">{tx.description}</p></TableCell>
+                                        <TableCell className="text-center"><Badge variant="outline" className={cn("text-[9px] font-black", tx.method === 'bank' ? "text-blue-700 bg-blue-50" : "text-amber-700 bg-amber-50")}>{tx.method === 'bank' ? 'Bank' : 'Cash'}</Badge></TableCell>
                                         <TableCell className="text-center"><div className="flex flex-col gap-1 items-center">{tx.voucherNo && <Badge className="text-[8px] bg-rose-50 text-rose-600">V: {tx.voucherNo}</Badge>}{tx.checkNo && <Badge className="text-[8px] bg-blue-50 text-blue-600">C: {tx.checkNo}</Badge>}</div></TableCell>
                                         <TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                         <TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
@@ -689,7 +692,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                         {canManageTransactions && (
                                             <TableCell className="text-right">
                                                 <AlertDialog>
-                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                                     <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>মুছে ফেলতে চান?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx.id)}>হ্যাঁ</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                                                 </AlertDialog>
                                             </TableCell>
@@ -719,33 +722,33 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
     }, [transactions]);
     
     return (
-         <Card className="border-none shadow-none">
-             <CardHeader className="px-0 pt-0"><CardTitle>খতিয়ান (লেজার)</CardTitle></CardHeader>
+         <Card className="border-none shadow-none animate-in fade-in duration-500">
+             <CardHeader className="px-0 pt-0"><CardTitle className="text-xl">খতিয়ান (লেজার)</CardTitle></CardHeader>
             <CardContent className="px-0 pt-4">
                 {isLoading ? <p className="text-center py-20 italic">লোড হচ্ছে...</p> : Object.keys(ledgerData).length === 0 ? <p className="text-center py-20 italic">তথ্য নেই</p> : (
                     <Accordion type="multiple" className="w-full space-y-3">
                         {Object.entries(ledgerData).map(([head, data]) => (
                              <AccordionItem value={head} key={head} className="border-2 rounded-xl px-4 bg-white shadow-sm overflow-hidden">
-                                <AccordionTrigger className="hover:no-underline font-black text-lg py-4">
+                                <AccordionTrigger className="hover:no-underline font-black text-base py-4">
                                     <div className="flex justify-between w-full pr-4 text-left">
                                         <span>{head}</span>
-                                        <div className="flex gap-4 text-xs">
+                                        <div className="flex gap-4 text-[10px]">
                                             <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-100">আয়: {data.income.toLocaleString('bn-BD')}</Badge>
                                             <Badge variant="outline" className="text-rose-700 bg-rose-50 border-rose-100">ব্যয়: {data.expense.toLocaleString('bn-BD')}</Badge>
                                         </div>
                                     </div>
                                 </AccordionTrigger>
-                                <AccordionContent className="pt-2">
-                                    <div className="table-container">
+                                <AccordionContent className="pt-2 p-0">
+                                    <div className="table-container max-h-[300px]">
                                         <Table>
                                             <TableHeader className="bg-muted/30"><TableRow><TableHead>তারিখ</TableHead><TableHead>বিবরণ</TableHead><TableHead className="text-right">আয়</TableHead><TableHead className="text-right">ব্যয়</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {data.items.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
                                                     <TableRow key={tx.id} className="h-10">
-                                                        <TableCell>{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
+                                                        <TableCell className="text-xs">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
                                                         <TableCell className="text-[10px]">{tx.description || '-'}</TableCell>
-                                                        <TableCell className="text-right font-bold text-emerald-600">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
-                                                        <TableCell className="text-right font-bold text-rose-600">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                                        <TableCell className="text-right font-bold text-emerald-600 text-xs">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                                        <TableCell className="text-right font-bold text-rose-600 text-xs">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>

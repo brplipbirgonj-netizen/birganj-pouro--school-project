@@ -16,7 +16,7 @@ import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult,
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
@@ -31,7 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getExams, Exam } from '@/lib/exam-data';
 import { Badge } from '@/components/ui/badge';
 
-const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 
 type Marks = {
@@ -46,7 +46,6 @@ const normalize = (name: string) => {
     return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
 };
 
-// Separate Tab Component for Mark Input (Only Obtained Marks)
 const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -128,7 +127,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const handleMarkChange = (studentId: string, field: keyof Marks, value: string) => {
         const numValue = value === '' ? undefined : parseInt(value, 10);
         const newMarks = new Map(marks);
-        const studentMarks = newMarks.get(studentId) || {};
+        const studentMarks = { ...(newMarks.get(studentId) || {}) };
         studentMarks[field] = isNaN(numValue!) ? undefined : numValue;
         newMarks.set(studentId, studentMarks);
         setMarks(newMarks);
@@ -176,7 +175,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                     const roll = parseInt(rollStr.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
                     const student = studentsForClass.find(s => s.roll === roll);
                     if (!student) continue;
-                    const sm = newMarks.get(student.id) || {};
+                    const sm = { ...(newMarks.get(student.id) || {}) };
                     const getVal = (k: string) => parseInt(String(row[k] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
                     const w = getVal('লিখিত') || getVal('written'); if (!isNaN(w)) sm.written = w;
                     const m = getVal('বহুনির্বাচনী') || getVal('mcq'); if (!isNaN(m)) sm.mcq = m;
@@ -190,19 +189,19 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50">
                 <div className="space-y-2">
                     <Label>পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
-                        <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
                         <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="class">শ্রেণি</Label>
                     <Select value={className} onValueChange={(v) => { setClassName(v); setGroup(''); setSubject(''); }}>
-                        <SelectTrigger id="class" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                        <SelectTrigger id="class" className="bg-white h-9 text-xs"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
                         <SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent>
                     </Select>
                 </div>
@@ -210,7 +209,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <div className="space-y-2">
                         <Label htmlFor="group">গ্রুপ</Label>
                         <Select value={group} onValueChange={setGroup} required>
-                            <SelectTrigger id="group" className="bg-white"><SelectValue placeholder="গ্রুপ নির্বাচন" /></SelectTrigger>
+                            <SelectTrigger id="group" className="bg-white h-9 text-xs"><SelectValue placeholder="গ্রুপ নির্বাচন" /></SelectTrigger>
                             <SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent>
                         </Select>
                     </div>
@@ -218,24 +217,24 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <div className="space-y-2">
                     <Label htmlFor="subject">বিষয়</Label>
                     <Select value={subject} onValueChange={setSubject} disabled={!className || (showGroupSelector && !group)}>
-                        <SelectTrigger id="subject" className="bg-white"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger>
+                        <SelectTrigger id="subject" className="bg-white h-9 text-xs"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger>
                         <SelectContent>{availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
-                <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject || !examName} className="w-full">{isLoadingStudents ? 'লোড হচ্ছে...' : 'লোড করুন'}</Button>
+                <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject || !examName} className="h-9 text-xs font-black">{isLoadingStudents ? 'লোড হচ্ছে...' : 'লোড করুন'}</Button>
             </div>
             
             {studentsForClass.length > 0 && (
-                <Card className="overflow-hidden border-2">
+                <Card className="overflow-hidden border-2 shadow-lg">
                     <CardHeader className="bg-muted/30 p-3 flex flex-row justify-between items-center space-y-0 border-b">
                          <div className="flex items-center gap-4">
-                            <span className="font-bold text-sm text-primary">{subject} ({studentsForClass.length.toLocaleString('bn-BD')} জন)</span>
-                            <Badge variant="outline" className="bg-white font-black text-xs px-3">পূর্ণমান: {fullMarks.toLocaleString('bn-BD')}</Badge>
+                            <span className="font-black text-sm text-primary">{subject} ({studentsForClass.length.toLocaleString('bn-BD')} জন)</span>
+                            <Badge variant="outline" className="bg-white font-black text-[10px] px-3">পূর্ণমান: {fullMarks.toLocaleString('bn-BD')}</Badge>
                          </div>
                          {canUploadMarks && (
                              <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 bg-white"><Download className="mr-2 h-4 w-4" /> নমুনা</Button>
-                                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 bg-white"><FileUp className="mr-2 h-4 w-4" /> আপলোড</Button>
+                                <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 text-[10px] bg-white"><Download className="mr-2 h-3.5 w-3.5" /> নমুনা</Button>
+                                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 text-[10px] bg-white"><FileUp className="mr-2 h-3.5 w-3.5" /> আপলোড</Button>
                                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
                             </div>
                          )}
@@ -244,7 +243,13 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <div className="max-h-[500px] overflow-auto">
                             <Table>
                                 <TableHeader className="sticky top-0 bg-white z-20 shadow-sm">
-                                    <TableRow><TableHead className="w-20 text-center">রোল</TableHead><TableHead>শিক্ষার্থীর নাম</TableHead><TableHead className="w-32">লিখিত</TableHead><TableHead className="w-32">MCQ</TableHead>{selectedSubjectInfo?.practical && <TableHead className="w-32">ব্যবহারিক</TableHead>}</TableRow>
+                                    <TableRow>
+                                        <TableHead className="w-20 text-center font-black">রোল</TableHead>
+                                        <TableHead className="font-black">শিক্ষার্থীর নাম</TableHead>
+                                        <TableHead className="w-32 font-black">লিখিত</TableHead>
+                                        <TableHead className="w-32 font-black">MCQ</TableHead>
+                                        {selectedSubjectInfo?.practical && <TableHead className="w-32 font-black">ব্যবহারিক</TableHead>}
+                                    </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {studentsForClass.map(student => (
@@ -267,7 +272,6 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// Enhanced Tab for Subject Config and Full Marks Management
 const FullMarksTab = () => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -316,7 +320,6 @@ const FullMarksTab = () => {
             if (currentRecord) {
                 await saveClassResults(db, { ...currentRecord, fullMarks: val });
             } else {
-                // Create a placeholder record with empty results but saved fullMarks
                 await saveClassResults(db, {
                     academicYear: selectedYear,
                     examName: exam,
@@ -343,19 +346,19 @@ const FullMarksTab = () => {
     const classes = ['6', '7', '8', '9', '10'];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div className="max-w-md p-4 border rounded-lg bg-white/50 shadow-sm">
                 <div className="space-y-2">
-                    <Label className="font-bold">১. পরীক্ষা নির্বাচন করুন</Label>
+                    <Label className="font-bold text-sm">১. পরীক্ষা নির্বাচন করুন</Label>
                     <Select value={examName} onValueChange={setExamName}>
-                        <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                         <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
             </div>
 
             {examName && (
-                <div className="space-y-4 animate-in fade-in duration-500">
+                <div className="space-y-4">
                     <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2">
                         <CheckCircle2 className="h-6 w-6" /> বিষয় ভিত্তিক পূর্ণমান তালিকা ({examName})
                     </h3>
@@ -363,12 +366,11 @@ const FullMarksTab = () => {
                     <Accordion type="multiple" defaultValue={['6']} className="w-full space-y-3">
                         {classes.map(cls => {
                             const subjects = getSubjects(cls).filter(s => s.isExamSubject !== false);
-                            // Ensure unique subjects if duplicates exist in list
                             const uniqueSubjects = Array.from(new Set(subjects.map(s => s.name)))
                                 .map(name => subjects.find(s => s.name === name)!);
 
                             return (
-                                AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
+                                <AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
                                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/10">
                                         <span className="font-black text-lg text-slate-800">{classNamesMap[cls]} শ্রেণি</span>
                                         <Badge variant="secondary" className="ml-2 font-bold">{uniqueSubjects.length.toLocaleString('bn-BD')} টি বিষয়</Badge>
@@ -555,7 +557,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
     const subBgColors = ['bg-[#f0f9ff]', 'bg-[#ecfdf5]', 'bg-[#fffbeb]', 'bg-[#f5f3ff]', 'bg-[#fff7ed]', 'bg-[#fff1f2]'];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
                 <div className="space-y-2">
                     <Label className="font-bold text-xs">পরীক্ষা</Label>
@@ -594,7 +596,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                 });
 
                 return (
-                    <div key={gk} className="space-y-0 animate-in fade-in duration-500">
+                    <div key={gk} className="space-y-0">
                         <div className="flex justify-between items-center bg-primary/10 p-2 rounded-t-lg border-x-2 border-t-2 border-slate-400">
                             <h3 className="font-black text-primary text-sm uppercase">শাখা: {groupNamesMap[gk] || gk}</h3>
                             <Badge variant="secondary" className="font-black px-3 text-xs">মোট: {results.length.toLocaleString('bn-BD')} জন</Badge>
@@ -603,25 +605,25 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <Table className="min-w-max border-separate border-spacing-0">
                                 <TableHeader className="z-30">
                                     <TableRow className="border-b-2 border-slate-400">
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-0 top-0 z-30 w-14 text-xs p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">রোল</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-14 top-0 z-30 min-w-[200px] text-xs p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">শিক্ষার্থীর নাম</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-0 top-0 z-40 w-14 text-[10px] p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">রোল</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-14 top-0 z-40 min-w-[150px] text-[10px] p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">শিক্ষার্থীর নাম</TableHead>
                                         {subs.map((s, idx) => (
                                             <TableHead 
                                                 key={s.name} 
                                                 colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} 
                                                 className={cn(
-                                                    "text-center border-r-2 border-b-2 border-slate-400 font-black py-1 text-[10px] sticky top-0 z-20 px-2",
+                                                    "text-center border-r-2 border-b-2 border-slate-400 font-black py-1 text-[9px] sticky top-0 z-30 px-2",
                                                     subBgColors[idx % subBgColors.length]
                                                 )}
                                             >
                                                 {s.name}
                                             </TableHead>
                                         ))}
-                                        <TableHead rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#f0fdfa] p-1 sticky top-0 right-[240px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মোট</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#eef2ff] p-1 sticky top-0 right-[180px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">GPA</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">গ্রেড</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#fefce8] p-1 sticky top-0 right-[60px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মেধা</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-b-2 border-slate-400 text-[10px] bg-[#f8fafc] p-1 sticky top-0 right-0 z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">প্রিন্ট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#f0fdfa] p-1 sticky top-0 right-[240px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মোট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#eef2ff] p-1 sticky top-0 right-[180px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">GPA</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">গ্রেড</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fefce8] p-1 sticky top-0 right-[60px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মেধা</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-b-2 border-slate-400 text-[9px] bg-[#f8fafc] p-1 sticky top-0 right-0 z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">প্রিন্ট</TableHead>
                                     </TableRow>
                                     <TableRow className="border-b-2 border-slate-400">
                                         {subs.map((s, idx) => {
@@ -631,14 +633,14 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <React.Fragment key={s.name}>
                                                     {!isEng && (
                                                         <>
-                                                            <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>লিখিত</TableHead>
-                                                            <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>MCQ</TableHead>
-                                                            {s.practical && <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>ব্যবহারিক</TableHead>}
+                                                            <TableHead className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>লিখিত</TableHead>
+                                                            <TableHead className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>MCQ</TableHead>
+                                                            {s.practical && <TableHead className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>ব্যবহারিক</TableHead>}
                                                         </>
                                                     )}
-                                                    <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-black bg-blue-200/60 p-0.5 text-blue-950 sticky top-9 z-20 w-14", bgColor)}>প্রাপ্ত</TableHead>
-                                                    <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-10", bgColor)}>গ্রেড</TableHead>
-                                                    <TableHead className={cn("text-[10px] text-center border-r-2 border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>পয়েন্ট</TableHead>
+                                                    <TableHead className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-black bg-blue-200/60 p-0.5 text-blue-950 sticky top-7 z-20 w-12", bgColor)}>প্রাপ্ত</TableHead>
+                                                    <TableHead className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-8", bgColor)}>গ্রেড</TableHead>
+                                                    <TableHead className={cn("text-[8px] text-center border-r-2 border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>পয়েন্ট</TableHead>
                                                 </React.Fragment>
                                             )
                                         })}
@@ -646,9 +648,9 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </TableHeader>
                                 <TableBody>
                                     {results.map(res => (
-                                        <TableRow key={res.student.id} className="h-8 hover:bg-slate-50 transition-colors">
-                                            <TableCell className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b border-slate-400 text-xs p-0.5 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="font-bold sticky left-14 z-20 bg-white border-r-2 border-b border-slate-400 text-xs p-0.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] shadow-[2px_0_0px_rgba(0,0,0,0.2)]">
+                                        <TableRow key={res.student.id} className="h-7 hover:bg-slate-50 transition-colors">
+                                            <TableCell className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b border-slate-400 text-[10px] p-0.5 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="font-bold sticky left-14 z-20 bg-white border-r-2 border-b border-slate-400 text-[10px] p-0.5 px-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px] shadow-[2px_0_0px_rgba(0,0,0,0.2)]">
                                                 {res.student.studentNameBn}
                                             </TableCell>
                                             {subs.map((s, idx) => {
@@ -659,24 +661,24 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     <React.Fragment key={s.name}>
                                                         {!isEng && (
                                                             <>
-                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] p-0.5 font-medium", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] p-0.5 font-medium", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                                {s.practical && <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] p-0.5 font-medium", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
+                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[9px] p-0.5 font-medium", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[9px] p-0.5 font-medium", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                                {s.practical && <TableCell className={cn("text-center border-r border-b border-slate-400 text-[9px] p-0.5 font-medium", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
                                                             </>
                                                         )}
                                                         <TableCell className={cn("text-center border-r border-b border-slate-400 font-black bg-blue-100/40 text-blue-950 text-[10px] p-0.5", bgColor)}>{sr?.marks?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                        <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] font-black p-0.5", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100/50")}>{sr?.grade ?? '-'}</TableCell>
-                                                        <TableCell className={cn("text-center border-r-2 border-b border-slate-400 text-[10px] p-0.5 font-bold", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                        <TableCell className={cn("text-center border-r border-b border-slate-400 text-[9px] font-black p-0.5", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100/50")}>{sr?.grade ?? '-'}</TableCell>
+                                                        <TableCell className={cn("text-center border-r-2 border-b border-slate-400 text-[9px] p-0.5 font-bold", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <TableCell className="text-center font-black text-primary border-r-2 border-b border-slate-400 text-xs p-0.5 sticky right-[240px] bg-[#f0fdfa] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="text-center font-black border-r-2 border-b border-slate-400 text-xs p-0.5 sticky right-[180px] bg-[#eef2ff] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[120px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[60px] bg-[#fefce8] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-500 italic text-[9px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
+                                            <TableCell className="text-center font-black text-primary border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[240px] bg-[#f0fdfa] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[180px] bg-[#eef2ff] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[120px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[60px] bg-[#fefce8] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-500 italic text-[8px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
                                             <TableCell className="text-center p-0.5 border-b border-slate-400 sticky right-0 bg-[#f8fafc] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-3 w-3 text-primary" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-3 w-3 text-primary" /></Button>
                                                 </Link>
                                             </TableCell>
                                         </TableRow>
@@ -729,15 +731,15 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
-                <div className="space-y-2"><Label className="font-bold">পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label className="font-bold">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-                {parseInt(className) >= 9 && (<div className="space-y-2"><Label className="font-bold">শাখা</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger className="bg-white"><SelectValue placeholder="সকল শাখা" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
-                <div className="flex gap-2 lg:col-span-1"><Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="flex-1 font-black shadow-md">তালিকা দেখুন</Button><Button onClick={handlePrint} disabled={processedResults.length === 0} variant="outline" className="border-primary text-primary hover:bg-primary/5 h-10"><Printer className="h-4 w-4" /></Button></div>
+                <div className="space-y-2"><Label className="font-bold text-sm">পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label className="font-bold text-sm">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
+                {parseInt(className) >= 9 && (<div className="space-y-2"><Label className="font-bold text-sm">শাখা</Label><Select value={groupFilter} onValueChange={setGroupFilter}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সকল শাখা" /></SelectTrigger><SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
+                <div className="flex gap-2 lg:col-span-1"><Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="flex-1 font-black shadow-md h-9 text-xs">তালিকা দেখুন</Button><Button onClick={handlePrint} disabled={processedResults.length === 0} variant="outline" className="border-primary text-primary hover:bg-primary/5 h-9"><Printer className="h-4 w-4" /></Button></div>
             </div>
             {processedResults.length > 0 && (
-                <div className="border-2 border-primary/10 rounded-xl bg-white shadow-lg overflow-hidden animate-in zoom-in-95 duration-500">
+                <div className="border-2 border-primary/10 rounded-xl bg-white shadow-lg overflow-hidden">
                     <div className="bg-primary/5 p-4 border-b flex justify-between items-center"><h3 className="text-lg font-black text-primary flex items-center gap-2"><Trophy className="h-5 w-5 text-amber-500" /> মেধা তালিকা: {classNamesMap[className]} শ্রেণি</h3><Badge variant="outline" className="font-black">মোট {processedResults.length.toLocaleString('bn-BD')} জন</Badge></div>
                     <div className="overflow-x-auto">
                         <Table>
@@ -819,15 +821,15 @@ const SpecialPromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
-                <div className="space-y-2"><Label className="font-bold">পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label className="font-bold">শ্রেণি</Label><Select value={className} onValueChange={c => { setClassName(c); setGroup(''); }}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-                {parseInt(className) >= 9 && (<div className="space-y-2"><Label className="font-bold">গ্রুপ</Label><Select value={group} onValueChange={setGroup}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
-                <Button onClick={handleViewFailed} disabled={isLoading || !examName || !className} className="lg:col-span-2 h-10 font-black">{isLoading ? 'লোড হচ্ছে...' : 'অকৃতকার্য শিক্ষার্থী খুঁজুন'}</Button>
+                <div className="space-y-2"><Label className="font-bold text-sm">পরীক্ষা</Label><Select value={examName} onValueChange={setExamName}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label className="font-bold text-sm">শ্রেণি</Label><Select value={className} onValueChange={c => { setClassName(c); setGroup(''); }}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
+                {parseInt(className) >= 9 && (<div className="space-y-2"><Label className="font-bold text-sm">গ্রুপ</Label><Select value={group} onValueChange={setGroup}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>)}
+                <Button onClick={handleViewFailed} disabled={isLoading || !examName || !className} className="lg:col-span-2 h-9 text-xs font-black">{isLoading ? 'লোড হচ্ছে...' : 'অকৃতকার্য শিক্ষার্থী খুঁজুন'}</Button>
             </div>
             {failedStudents.length > 0 && (
-                <div className="space-y-4 animate-in fade-in duration-500">
+                <div className="space-y-4">
                     <div className="border-2 border-primary/10 rounded-md overflow-hidden bg-white">
                         <Table>
                             <TableHeader>
@@ -924,11 +926,11 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-6 border-2 border-dashed border-primary/20 rounded-xl bg-white/50">
-            <div className="space-y-2"><Label className="font-bold">পরীক্ষা</Label><Input value={examName} onChange={e => setExamName(e.target.value)} placeholder="উদা: বার্ষিক পরীক্ষা" className="bg-white" /></div>
-            <div className="space-y-2"><Label className="font-bold">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label className="font-bold">শাখা (৯ম-১০ম)</Label><Select value={group} onValueChange={setGroup} disabled={parseInt(className) < 9}><SelectTrigger className="bg-white"><SelectValue placeholder="সকল" /></SelectTrigger><SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>
-            <Button onClick={() => fileInputRef.current?.click()} disabled={isLoading || !examName || !className} className="shadow-md h-12 font-black"><FileUp className="mr-2 h-5 w-5" /> {isLoading ? 'আপলোড হচ্ছে...' : 'Excel ফাইল আপলোড করুন'}</Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end p-6 border-2 border-dashed border-primary/20 rounded-xl bg-white/50 animate-in fade-in duration-500">
+            <div className="space-y-2"><Label className="font-bold text-sm">পরীক্ষা</Label><Input value={examName} onChange={e => setExamName(e.target.value)} placeholder="উদা: বার্ষিক পরীক্ষা" className="bg-white h-9 text-xs" /></div>
+            <div className="space-y-2"><Label className="font-bold text-sm">শ্রেণি</Label><Select value={className} onValueChange={setClassName}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label className="font-bold text-sm">শাখা (৯ম-১০ম)</Label><Select value={group} onValueChange={setGroup} disabled={parseInt(className) < 9}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সকল" /></SelectTrigger><SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent></Select></div>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={isLoading || !examName || !className} className="shadow-md h-12 font-black text-xs"><FileUp className="mr-2 h-5 w-5" /> {isLoading ? 'আপলোড হচ্ছে...' : 'Excel ফাইল আপলোড করুন'}</Button>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
         </div>
     );
@@ -961,7 +963,6 @@ export default function ResultsPage() {
         return () => unsubscribe();
     }, [db, user]);
 
-    // Update initial active section based on permissions
     useEffect(() => {
         if (canViewRes) setActiveSection('management');
         else if (canManageFullMarks) setActiveSection('full-marks');
@@ -1005,6 +1006,7 @@ export default function ResultsPage() {
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
             <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-40">
+                
                 {/* Sidebar Navigation - Fixed/Sticky */}
                 <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
                     <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">ফলাফল ব্যবস্থাপনা</h2>
