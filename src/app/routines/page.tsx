@@ -2,8 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,8 +16,8 @@ import { getFullRoutine, saveRoutinesBatch, ClassRoutine } from '@/lib/routine-d
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
-    Copy, Printer, FilePen, FilePlus, Users, Info, AlertCircle, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save
+    Copy, Printer, FilePen, FilePlus, Users, Info, User, 
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -35,7 +34,7 @@ import { getProxyClasses, saveProxyClass, deleteProxyClass, ProxyClass, NewProxy
 import { getStaff, Staff } from '@/lib/staff-data';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
-const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ"];
@@ -702,9 +701,9 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
 
     return (
         <Accordion type="multiple" className="w-full space-y-4">
-            <AccordionItem value="teacher-schedule-view">
-                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শিক্ষকের ব্যক্তিগত রুটিন (পিরিয়ড অনুযায়ী)</AccordionTrigger>
-                <AccordionContent className="p-4 border rounded-b-lg space-y-6">
+            <AccordionItem value="teacher-schedule-view" className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
+                <AccordionTrigger className="text-lg font-black bg-muted/20 px-6 py-4 hover:no-underline">শিক্ষকের ব্যক্তিগত রুটিন (পিরিয়ড অনুযায়ী)</AccordionTrigger>
+                <AccordionContent className="p-6 space-y-6">
                     <div className="max-w-md space-y-2">
                         <Label className="font-bold text-primary">শিক্ষক নির্বাচন করুন</Label>
                         <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
@@ -721,15 +720,13 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                         <div className="border-2 border-green-600 rounded-lg overflow-x-auto bg-white shadow-sm">
                             <Table className="min-w-[800px]">
                                 <TableHeader>
-                                    <TableRow className="bg-primary text-primary-foreground border-b-2 border-primary-foreground/20">
-                                        <TableCell colSpan={8} className="font-bold py-3 text-center text-base">
+                                    <TableRow className="bg-primary text-primary-foreground">
+                                        <TableCell colSpan={8} className="font-black py-4 text-center text-base">
                                             শিক্ষকের নাম: {teacherSummary?.name} | 
-                                            সাপ্তাহিক মোট ক্লাস: {teacherSummary?.total.toLocaleString('bn-BD')} টি | 
-                                            টিফিনের আগে: {teacherSummary?.before.toLocaleString('bn-BD')} টি | 
-                                            টিফিনের পরে: {teacherSummary?.after.toLocaleString('bn-BD')} টি
+                                            সাপ্তাহিক মোট ক্লাস: {teacherSummary?.total.toLocaleString('bn-BD')} টি
                                         </TableCell>
                                     </TableRow>
-                                    <TableRow className="bg-primary/5">
+                                    <TableRow className="bg-muted/50">
                                         <TableHead className="font-bold border-r text-center w-24">বার</TableHead>
                                         {periodLabels.map((p, i) => (
                                             <React.Fragment key={p}>
@@ -753,8 +750,8 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                                                         )}>
                                                             {entry ? (
                                                                 <div className="flex flex-col items-center">
-                                                                    <span className="font-bold text-xs text-blue-900 leading-tight">{subj}</span>
-                                                                    <span className="text-[10px] text-muted-foreground">{classNamesMap[clsId] || clsId} শ্রেণি</span>
+                                                                    <span className="font-black text-[11px] text-blue-900 leading-tight">{subj}</span>
+                                                                    <span className="text-[9px] font-bold text-muted-foreground">{classNamesMap[clsId] || clsId} শ্রেণি</span>
                                                                 </div>
                                                             ) : '-'}
                                                         </TableCell>
@@ -770,23 +767,23 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-muted/10 rounded-lg border-2 border-dashed">
                             <User className="h-12 w-12 mb-2 opacity-20" />
-                            <p>কোনো শিক্ষকের ব্যক্তিগত রুটিন দেখতে ড্রপডাউন থেকে তাঁর নাম সিলেক্ট করুন।</p>
+                            <p className="font-bold">শিক্ষক নির্বাচন করুন।</p>
                         </div>
                     )}
                 </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="class-stats">
-                <AccordionTrigger className="text-lg font-semibold bg-muted/20 px-4 rounded-t-lg">শ্রেণি ভিত্তিক বিষয় পরিসংখ্যান</AccordionTrigger>
-                <AccordionContent className="p-0 border rounded-b-lg">
+            <AccordionItem value="class-stats" className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
+                <AccordionTrigger className="text-lg font-black bg-muted/20 px-6 py-4 hover:no-underline">শ্রেণি ভিত্তিক বিষয় পরিসংখ্যান</AccordionTrigger>
+                <AccordionContent className="p-0">
                      <div className="overflow-x-auto">
-                        <Table className="border-collapse border-green-600 border">
+                        <Table className="border-collapse border-slate-200 border">
                             <TableHeader>
                                 <TableRow className="bg-muted/50">
-                                    <TableHead className="text-center font-bold border-r border-green-600 w-20">ক্রমিক নং</TableHead>
-                                    <TableHead className="font-bold border-r border-green-600 text-center">বিষয়ের নাম</TableHead>
+                                    <TableHead className="text-center font-black border-r w-20">ক্রমিক নং</TableHead>
+                                    <TableHead className="font-black border-r text-center">বিষয়ের নাম</TableHead>
                                     {classes.map(cls => (
-                                        <TableHead key={cls} className="text-center font-bold border-r border-green-600 w-24">
+                                        <TableHead key={cls} className="text-center font-black border-r w-24">
                                             {classNamesMap[cls]}
                                         </TableHead>
                                     ))}
@@ -795,24 +792,24 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                             <TableBody>
                                 {subjectRows.map((row, index) => (
                                     <TableRow key={row.key} className="hover:bg-muted/20 h-10">
-                                        <TableCell className="text-center border-r border-green-600">
+                                        <TableCell className="text-center border-r">
                                             {toBengaliNumber(index + 1).padStart(2, '০')}
                                         </TableCell>
-                                        <TableCell className="border-r border-green-600 pl-4">{row.display}</TableCell>
+                                        <TableCell className="border-r pl-4 font-bold">{row.display}</TableCell>
                                         {classes.map(cls => {
                                             const count = classStats[cls]?.[row.key] || 0;
                                             return (
-                                                <TableCell key={cls} className="text-center border-r border-green-600 font-medium">
+                                                <TableCell key={cls} className="text-center border-r font-black">
                                                     {count > 0 ? toBengaliNumber(count) : ''}
                                                 </TableCell>
                                             );
                                         })}
                                     </TableRow>
                                 ))}
-                                <TableRow className="bg-muted/30 font-bold h-12">
-                                    <TableCell colSpan={2} className="text-left pl-4 border-r border-green-600">মোট</TableCell>
+                                <TableRow className="bg-muted/30 font-black h-12">
+                                    <TableCell colSpan={2} className="text-left pl-4 border-r">সাপ্তাহিক মোট ক্লাস</TableCell>
                                     {classes.map(cls => (
-                                        <TableCell key={cls} className="text-center border-r border-green-600">
+                                        <TableCell key={cls} className="text-center border-r text-primary">
                                             {toBengaliNumber(columnTotals[cls])}
                                         </TableCell>
                                     ))}
@@ -820,68 +817,9 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
                             </TableBody>
                         </Table>
                     </div>
-                    <div className="p-4 bg-muted/10 border-t">
-                        <p className="text-xs font-bold text-muted-foreground">***নবম ও দশম শ্রেণির যৌথ বিষয় যেমন পদার্থ/ইতিহাস এর ক্ষেত্রে পিরিয়ড গণনার সময় শুধুমাত্র প্রথম বিষয়টি বিবেচনা করা হয়েছে।</p>
-                    </div>
                 </AccordionContent>
             </AccordionItem>
         </Accordion>
-    );
-};
-
-
-const RoutineTable = ({ className, routineData, conflicts, isEditMode, onCellChange, teacherColorMap, isMounted }: { className: string, routineData: any, conflicts: any, isEditMode: boolean, onCellChange: (cls: string, day: string, periodIdx: number, value: string) => void, teacherColorMap: Map<string, string>, isMounted: boolean }) => {
-    const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
-    const periods = [ 
-        { name: "১ম", time: "১০:৩০ - ১১:২০" }, 
-        { name: "২য়", time: "১১:২০ - ১২:১০" }, 
-        { name: "৩য়", time: "১২:১০ - ০১:০০" }
-    ];
-    const postBreakPeriods = [ 
-        { name: "৪র্থ", time: "০২:০০ - ০২:৪০" }, 
-        { name: "৫ম", time: "০২:৪০ - ০৩:২০" }, 
-        { name: "৬ষ্ঠ", time: "০৩:২০ - ০৪:০০" } 
-    ];
-
-    const routineForClass = routineData[className] || {};
-
-    return (
-        <Card className="border-2 border-green-600">
-            <CardHeader>
-                <CardTitle>ক্লাস রুটিন (শ্রেণি - {classNamesMap[className] || className})</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="overflow-x-auto">
-                    <Table className="border-collapse border-green-600 border min-w-[800px]">
-                        <TableHeader>
-                            <TableRow className="bg-muted/50">
-                                <TableHead className="border-r font-bold align-middle text-center w-[100px]">বার</TableHead>
-                                {periods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-[10px] text-muted-foreground">{p.time}</span></TableHead>)}
-                                <TableHead className="border-r text-center font-semibold bg-amber-50 text-amber-900 w-[80px]">বিরতি<br/><span className="font-normal text-[10px]">০১:০০ - ০২:০০</span></TableHead>
-                                {postBreakPeriods.map(p => <TableHead key={p.name} className="border-r text-center font-semibold">{p.name} পিরিয়ড<br/><span className="font-normal text-[10px] text-muted-foreground">{p.time}</span></TableHead>)}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {days.map(day => (
-                                <TableRow key={day}>
-                                    <TableCell className="font-bold border-r text-center bg-gray-50">{day}</TableCell>
-                                    {[...Array(3)].map((_, periodIdx) => {
-                                        const cellContent = (routineForClass[day] || [])[periodIdx] || '';
-                                        return <EditableCell key={`${day}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(className, day, periodIdx, value)} conflictKey={`${className}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
-                                    })}
-                                    <TableCell className="border-r text-center bg-amber-50/50 font-bold text-amber-800 text-xs">টিফিন</TableCell>
-                                    {[...Array(3)].map((_, i) => {
-                                        const periodIdx = i + 3;
-                                        const cellContent = (routineForClass[day] || [])[periodIdx] || '';
-                                        return <EditableCell key={`${day}-${periodIdx}`} content={cellContent} isEditMode={isEditMode} onCellChange={(value) => onCellChange(className, day, periodIdx, value)} conflictKey={`${className}-${day}-${periodIdx}`} conflicts={conflicts} teacherColorMap={teacherColorMap} isMounted={isMounted} />;
-                                    })}
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
     );
 };
 
@@ -904,17 +842,17 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
            <Table className="border-collapse w-full min-w-[900px] print:min-w-full print:text-[8px] border-green-600">
                 <TableHeader>
                    <TableRow className="bg-muted/50 h-14 print:h-8">
-                       <TableHead className="border-r font-bold align-middle text-center w-[100px] print:w-[60px] border-green-600">বার</TableHead>
-                       <TableHead className="border-r font-bold align-middle text-center w-[80px] print:w-[40px] border-green-600">শ্রেণি</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[100px] print:w-[60px] border-green-600 text-black">বার</TableHead>
+                       <TableHead className="border-r font-bold align-middle text-center w-[80px] print:w-[40px] border-green-600 text-black">শ্রেণি</TableHead>
                        {periods.map(p => (
-                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px] border-green-600">
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px] border-green-600 text-black">
                                {p.name}<br/>
                                <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
                            </TableHead>
                        ))}
                        <TableHead className="border-r text-center font-bold bg-amber-50 text-amber-900 w-[50px] print:w-[30px] print:text-[7px] border-green-600">বিরতি</TableHead>
                        {postBreakPeriods.map(p => (
-                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px] border-green-600">
+                           <TableHead key={p.name} className="border-r text-center font-bold min-w-[110px] print:min-w-[70px] border-green-600 text-black">
                                {p.name}<br/>
                                <span className="font-normal text-[10px] text-muted-foreground print:hidden">{p.time}</span>
                            </TableHead>
@@ -1017,226 +955,13 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
                         </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>{tooltipContent}</p>
+                        <p className="font-bold text-xs">{tooltipContent}</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         </TableCell>
     );
 };
-
-const ClassRoutineTab = ({ routineData, conflicts, isEditMode, onCellChange, teacherColorMap, isMounted }: { routineData: any, conflicts: any, isEditMode: boolean, onCellChange: (cls: string, day: string, periodIdx: number, value: string) => void, teacherColorMap: Map<string, string>, isMounted: boolean }) => {
-    const [className, setClassName] = useState('all');
-    
-    return (
-        <div className="space-y-6">
-             <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg items-end no-print bg-white/50">
-                <div className="space-y-2 flex-1">
-                    <Label htmlFor="class-name" className="font-bold text-primary">শ্রেণি নির্বাচন করুন</Label>
-                    <Select value={className} onValueChange={setClassName}>
-                        <SelectTrigger id="class-name" className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="all">সকল শ্রেণির সম্মিলিত রুটিন</SelectItem>
-                           <SelectItem value="6">৬ষ্ঠ শ্রেণি</SelectItem>
-                           <SelectItem value="7">৭ম শ্রেণি</SelectItem>
-                           <SelectItem value="8">৮ম শ্রেণি</SelectItem>
-                           <SelectItem value="9">৯ম শ্রেণি</SelectItem>
-                           <SelectItem value="10">১০ম শ্রেণি</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-            
-            {className === 'all' ? (
-                 <Card className="border-green-600 overflow-hidden border-2">
-                    <CardHeader className="no-print bg-primary/5">
-                        <CardTitle className="text-xl flex items-center gap-2">
-                            <Users className="h-5 w-5 text-primary" /> সকল শ্রেণির সম্মিলিত ক্লাস রুটিন
-                        </CardTitle>
-                        <CardDescription>নিছে স্ক্রল করে ডানে-বামে সব তথ্য দেখুন</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0 sm:p-6">
-                        <CombinedRoutineTable routineData={routineData} conflicts={conflicts} isEditMode={isEditMode} onCellChange={onCellChange} teacherColorMap={teacherColorMap} isMounted={isMounted} />
-                    </CardContent>
-                </Card>
-            ) : (
-                <RoutineTable 
-                    className={className} 
-                    routineData={routineData}
-                    conflicts={conflicts}
-                    isEditMode={isEditMode}
-                    onCellChange={onCellChange}
-                    teacherColorMap={teacherColorMap}
-                    isMounted={isMounted}
-                />
-            )}
-        </div>
-    );
-};
-
-const BulkRoutineUploadTab = ({ onRoutineParsed }: { onRoutineParsed: (data: Record<string, Record<string, string[]>>) => void }) => {
-    const { toast } = useToast();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleDownloadSample = () => {
-        const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
-        const classes = ['6', '7', '8', '9', '10'];
-        
-        const headers = ["বার", "শ্রেণি", "১ম পিরিয়ড", "২য় পিরিয়ড", "৩য় পিরিয়ড", "৪র্থ পিরিয়ড", "৫ম পিরিয়ড", "৬ষ্ঠ পিরিয়ড"];
-        const rows: any[] = [];
-        
-        days.forEach(day => {
-            classes.forEach(cls => {
-                rows.push({
-                    "বার": day,
-                    "শ্রেণি": cls,
-                    "১ম পিরিয়ড": "বিষয় - শিক্ষক",
-                    "২য় পিরিয়ড": "",
-                    "৩য় পিরিয়ড": "",
-                    "৪র্থ পিরিয়ড": "",
-                    "৫ম পিরিয়ড": "",
-                    "৬ষ্ঠ পিরিয়ড": ""
-                });
-            });
-        });
-
-        const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Class Routine");
-        XLSX.writeFile(wb, "routine_sample.xlsx");
-    };
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
-
-                if (json.length === 0) {
-                    toast({ variant: "destructive", title: "ফাইলটি খালি।" });
-                    return;
-                }
-
-                const newRoutineData: Record<string, Record<string, string[]>> = {};
-                const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
-                const classes = ['6', '7', '8', '9', '10'];
-
-                json.forEach((row: any) => {
-                    const day = row["বার"];
-                    const cls = String(row["শ্রেণি"]);
-                    
-                    if (days.includes(day) && classes.includes(cls)) {
-                        if (!newRoutineData[cls]) newRoutineData[cls] = {};
-                        newRoutineData[cls][day] = [
-                            String(row["১ম পিরিয়ড"] || ''),
-                            String(row["২য় পিরিয়ড"] || ''),
-                            String(row["৩য় পিরিয়ড"] || ''),
-                            String(row["৪র্থ পিরিয়ড"] || ''),
-                            String(row["৫ম পিরিয়ড"] || ''),
-                            String(row["৬ষ্ঠ পিরিয়ড"] || '')
-                        ];
-                    }
-                });
-
-                if (Object.keys(newRoutineData).length === 0) {
-                    toast({ variant: "destructive", title: "সঠিক ফরম্যাটে কোনো তথ্য পাওয়া যায়নি।" });
-                    return;
-                }
-
-                onRoutineParsed(newRoutineData);
-                toast({ 
-                    title: "এক্সেল ফাইল থেকে তথ্য লোড হয়েছে।", 
-                    description: "অনুগ্রহ করে 'ক্লাস রুটিন' ট্যাবে গিয়ে তথ্যগুলো পরীক্ষা করুন এবং 'পরিবর্তন সেভ করুন' বাটনে ক্লিক করুন।" 
-                });
-            } catch (error) {
-                toast({ variant: "destructive", title: "ফাইল পড়তে সমস্যা হয়েছে।" });
-            } finally {
-                if (fileInputRef.current) fileInputRef.current.value = '';
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    };
-
-    return (
-        <Card className="border-2 border-dashed border-green-600 bg-green-50/30">
-            <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                    <FileUp className="h-5 w-5 text-primary" /> এক্সেল আপলোড
-                </CardTitle>
-                <CardDescription>Excel ফাইলের মাধ্যমে দ্রুত রুটিন ইনপুট দিন।</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center p-10 space-y-6">
-                <div className="text-center space-y-2">
-                    <p className="text-sm font-medium">ধাপ ১: নমুনা ফাইলটি ডাউনলোড করুন</p>
-                    <Button variant="outline" onClick={handleDownloadSample} className="bg-white">
-                        <Download className="mr-2 h-4 w-4" /> নমুনা ফাইল ডাউনলোড
-                    </Button>
-                </div>
-                
-                <div className="w-full border-t border-green-200" />
-
-                <div className="text-center space-y-4">
-                    <p className="text-sm font-medium">ধাপ ২: পূরণকৃত ফাইলটি আপলোড করুন</p>
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleFileChange} 
-                        className="hidden" 
-                        accept=".xlsx, .xls" 
-                    />
-                    <Button size="lg" onClick={() => fileInputRef.current?.click()} className="shadow-lg">
-                        <FileUp className="mr-2 h-5 w-5" /> এক্সেল ফাইল আপলোড করুন
-                    </Button>
-                    <p className="text-xs text-muted-foreground">সতর্কতা: আপলোড করলে বর্তমান রুটিনের অসংরক্ষিত তথ্য পরিবর্তন হয়ে যাবে।</p>
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-const ExamRoutineTab = () => {
-    const [examName, setExamName] = useState('');
-
-    return (
-        <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white/50">
-                <div className="space-y-2 flex-1">
-                    <Label htmlFor="exam-name">পরীক্ষা</Label>
-                    <Select value={examName} onValueChange={setExamName}>
-                        <SelectTrigger id="exam-name" className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="half-yearly">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
-                            <SelectItem value="annual">বার্ষিক পরীক্ষা</SelectItem>
-                            <SelectItem value="pre-test">প্রাক-নির্বাচনী পরীক্ষা</SelectItem>
-                            <SelectItem value="test">নির্বাচনী পরীক্ষা</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="flex items-end">
-                     <Button className="w-full sm:auto">রুটিন দেখুন</Button>
-                </div>
-            </div>
-             <Card>
-                <CardHeader>
-                    <CardTitle>পরীক্ষার রুটিন</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-center text-muted-foreground p-12 bg-muted/20 rounded-lg border-2 border-dashed">
-                        পরীক্ষার রুটিন পরিচালনা করার ফিচার শীঘ্রই আসছে।
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-};
-
 
 export default function RoutinesPage() {
     const { selectedYear, availableYears } = useAcademicYear();
@@ -1249,6 +974,7 @@ export default function RoutinesPage() {
     const [routineData, setRoutineData] = useState<Record<string, Record<string, string[]>>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [activeSection, setActiveSection] = useState('class-routine');
 
     const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
     const [targetYear, setTargetYear] = useState('');
@@ -1332,313 +1058,157 @@ export default function RoutinesPage() {
         });
     };
 
-    const handleCancelEdit = () => {
-        setRoutineData(originalRoutineData);
-        setIsEditMode(false);
-    };
-
-    const handleCreateBlankRoutine = () => {
-        const blankRoutine: Record<string, Record<string, string[]>> = {};
-        const classes = ['6', '7', '8', '9', '10'];
-        const days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"];
-        
-        classes.forEach(cls => {
-            blankRoutine[cls] = {};
-            days.forEach(day => {
-                blankRoutine[cls][day] = Array(6).fill('');
-            });
-        });
-
-        setRoutineData(blankRoutine);
-        setOriginalRoutineData(blankRoutine);
-        if (!isEditMode) {
-            setIsEditMode(true);
+    const sidebarItems = useMemo(() => {
+        const items = [
+            { id: 'class-routine', label: 'ক্লাস রুটিন', icon: CalendarClock, color: 'text-indigo-600 bg-indigo-50' },
+            { id: 'proxy-management', label: 'বদলি ক্লাস (Proxy)', icon: Users, color: 'text-emerald-600 bg-emerald-50' },
+            { id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' },
+        ];
+        if (isAdmin) {
+            items.push({ id: 'statistics', label: 'পরিসংখ্যান', icon: BarChart3, color: 'text-violet-600 bg-violet-50' });
+            items.push({ id: 'upload', label: 'এক্সেল আপলোড', icon: FileUp, color: 'text-rose-600 bg-rose-50' });
         }
-        toast({ title: 'ফাঁকা রুটিন তৈরি হয়েছে', description: 'এখন আপনি রুটিনটি পূরণ করতে পারেন।' });
-    };
+        return items;
+    }, [isAdmin]);
 
-    const handlePrint = useCallback(() => {
-        if (typeof window !== 'undefined') {
-            window.print();
-        }
-    }, []);
-
-    const handleCopyRoutine = async () => {
-        if (!db) return;
-        if (!targetYear) {
-            toast({ variant: 'destructive', title: 'লক্ষ্য শিক্ষাবর্ষ নির্বাচন করুন।' });
-            return;
-        }
-        if (targetYear === selectedYear) {
-            toast({ variant: 'destructive', title: 'উৎস এবং লক্ষ্য শিক্ষাবর্ষ একই হতে পারে না।' });
-            return;
-        }
-        
-        const sourceRoutines = await getFullRoutine(db, selectedYear);
-
-        if (sourceRoutines.length === 0) {
-            toast({ variant: 'destructive', title: `উৎস শিক্ষাবর্ষে (${selectedYear}) কোনো রুটিন পাওয়া যায়নি।` });
-            return;
-        }
-
-        const targetRoutinesData: ClassRoutine[] = sourceRoutines.map(routine => ({
-            academicYear: targetYear,
-            className: routine.className,
-            day: routine.day,
-            periods: routine.periods,
-        }));
-        
-        try {
-            await saveRoutinesBatch(db, targetRoutinesData);
-            toast({ title: 'রুটিন সফলভাবে কপি হয়েছে।', description: `${selectedYear} থেকে ${targetYear} শিক্ষাবর্ষে রুটিন কপি করা হয়েছে।` });
-            setIsCopyDialogOpen(false);
-            setTargetYear('');
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'রুটিন কপি করা যায়নি।' });
-        }
-    };
-
-    const handleRoutineParsedFromExcel = (newData: Record<string, Record<string, string[]>>) => {
-        setRoutineData(newData);
-        setIsEditMode(true);
-    };
+    if (!isClient) return null;
 
     return (
-        <>
-            <div className="flex min-h-screen w-full flex-col bg-fuchsia-100 no-print">
-                <Header />
-                <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
-                    <Card className="shadow-xl border-2 border-green-600">
-                        <CardHeader className="bg-white/50">
-                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                                {isClient && (
-                                    <div className="flex items-center gap-2 text-[10px] sm:hidden no-print">
-                                        <Badge variant="outline" className="bg-white">{format(new Date(), 'PP', { locale: bn })}</Badge>
-                                        <Badge variant="secondary" className="bg-white">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</Badge>
+        <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
+            <Header />
+            <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
+                
+                {/* Sidebar Navigation - Sticky */}
+                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+                    <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">রুটিন শাখা</h2>
+                    <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                        {sidebarItems.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveSection(item.id)}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                    activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                                )}
+                            >
+                                <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                                    <item.icon className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="text-xs">{item.label}</span>
+                                {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
+                            </button>
+                        ))}
+                    </div>
+                </aside>
+
+                {/* Content Area */}
+                <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+                    <div className="p-4 sm:p-6 lg:p-8 flex-1">
+                        <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
+                                <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2 no-print">
+                                {isEditMode ? (
+                                    <>
+                                        <Button variant="outline" size="sm" onClick={() => setIsEditMode(false)} className="font-bold">বাতিল</Button>
+                                        <Button size="sm" onClick={handleSaveChanges} className="font-black shadow-md"><Save className="mr-2 h-4 w-4" /> সেভ করুন</Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Button variant="outline" size="sm" onClick={() => window.print()} className="font-bold bg-white"><Printer className="mr-2 h-4 w-4" /> প্রিন্ট</Button>
+                                        {canManageRoutines && activeSection === 'class-routine' && (
+                                            <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)} className="font-bold bg-white"><FilePen className="mr-2 h-4 w-4" /> এডিট</Button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {isLoading ? (
+                            <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>
+                        ) : (
+                            <div className="animate-in fade-in duration-500">
+                                {activeSection === 'class-routine' && (
+                                    <div className="space-y-6">
+                                        <CombinedRoutineTable 
+                                            routineData={routineData} 
+                                            conflicts={displayConflicts} 
+                                            isEditMode={isEditMode} 
+                                            onCellChange={handleCellChange} 
+                                            teacherColorMap={teacherColorMap} 
+                                            isMounted={isMounted} 
+                                        />
                                     </div>
                                 )}
-                                <div>
-                                    <CardTitle className="text-2xl font-black text-primary">রুটিন ব্যবস্থাপনা</CardTitle>
-                                    {isClient ? (
-                                        <p className="text-sm text-muted-foreground font-medium hidden sm:block">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
-                                    ) : (
-                                        <Skeleton className="h-5 w-32 mt-1" />
-                                    )}
-                                </div>
-                                <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-                                    {isClient && !isLoading ? (
-                                        <>
-                                            {isEditMode && canManageRoutines ? (
-                                                <>
-                                                    <Button variant="outline" onClick={handleCancelEdit}>বাতিল</Button>
-                                                    <Button onClick={handleSaveChanges} className="shadow-md">পরিবর্তন সেভ করুন</Button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                     <Button variant="outline" onClick={handlePrint} className="no-print bg-white">
-                                                        <Printer className="mr-2 h-4 w-4" /> রুটিন প্রিন্ট করুন
-                                                    </Button>
-                                                    {canManageRoutines && (
-                                                        <>
-                                                        <AlertDialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="outline" className="no-print bg-white">
-                                                                    <Copy className="mr-2 h-4 w-4" /> রুটিন কপি করুন
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>রুটিন কপি করুন</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        বর্তমান শিক্ষাবর্ষ ({selectedYear.toLocaleString('bn-BD')}) এর রুটিনটি অন্য একটি শিক্ষাবর্ষে কপি করুন।
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <div className="py-4">
-                                                                    <Label htmlFor="target-year">লক্ষ্য শিক্ষাবর্ষ</Label>
-                                                                    <Select value={targetYear} onValueChange={setTargetYear}>
-                                                                        <SelectTrigger id="target-year">
-                                                                            <SelectValue placeholder="শিক্ষাবর্ষ নির্বাচন করুন" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            {availableYears.filter(y => y !== selectedYear).map(year => (
-                                                                                <SelectItem key={year} value={year}>{year.toLocaleString('bn-BD')}</SelectItem>
-                                                                            ))}
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={handleCopyRoutine}>কপি করুন</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="outline" className="bg-white">
-                                                                    <FilePlus className="mr-2 h-4 w-4" /> ফাঁকা রুটিন
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        এটি বর্তমান রুটিনের সকল তথ্য মুছে একটি নতুন ফাঁকা রুটিন তৈরি করবে। এই কাজটি ফিরিয়ে আনা যাবে না।
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={handleCreateBlankRoutine}>
-                                                                        এগিয়ে যান
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                        <Button variant="outline" className="bg-white" onClick={() => setIsEditMode(true)}><FilePen className="mr-2 h-4 w-4" /> রুটিন এডিট</Button>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Skeleton className="h-9 w-44" />
-                                            <Skeleton className="h-9 w-36" />
-                                        </div>
-                                    )}
-                                </div>
+                                {activeSection === 'proxy-management' && (
+                                    <ProxyManagementTab routineData={routineData} academicYear={selectedYear} />
+                                )}
+                                {activeSection === 'exam-routine' && (
+                                    <ExamRoutineTab />
+                                )}
+                                {activeSection === 'statistics' && (
+                                    <RoutineStatistics stats={stats} />
+                                )}
+                                {activeSection === 'upload' && (
+                                    <BulkRoutineUploadTab onRoutineParsed={(d) => { setRoutineData(d); setIsEditMode(true); }} />
+                                )}
                             </div>
-                        </CardHeader>
-                        <CardContent className="pt-6">
-                            {isClient && !isLoading ? (
-                                <Tabs defaultValue="class-routine">
-                                    <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
-                                        <TabsTrigger value="class-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">ক্লাস রুটিন</TabsTrigger>
-                                        <TabsTrigger value="proxy-management" className="data-[state=active]:bg-white data-[state=active]:text-emerald-700 font-bold">বদলি ক্লাস (Proxy)</TabsTrigger>
-                                        <TabsTrigger value="exam-routine" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরীক্ষার রুটিন</TabsTrigger>
-                                        {isAdmin && (
-                                            <>
-                                                <TabsTrigger value="statistics" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">পরিসংখ্যান</TabsTrigger>
-                                                <TabsTrigger value="upload" className="data-[state=active]:bg-white data-[state=active]:text-primary font-bold">এক্সেল আপলোড</TabsTrigger>
-                                            </>
-                                        )}
-                                    </TabsList>
-                                    <TabsContent value="class-routine" className="mt-6">
-                                        <ClassRoutineTab routineData={routineData} conflicts={displayConflicts} isEditMode={isEditMode && canManageRoutines} onCellChange={handleCellChange} teacherColorMap={teacherColorMap!} isMounted={isMounted} />
-                                    </TabsContent>
-                                    <TabsContent value="proxy-management" className="mt-6">
-                                        <ProxyManagementTab routineData={routineData} academicYear={selectedYear} />
-                                    </TabsContent>
-                                    <TabsContent value="exam-routine" className="mt-6">
-                                        <ExamRoutineTab />
-                                    </TabsContent>
-                                    {isAdmin && (
-                                        <>
-                                            <TabsContent value="statistics" className="mt-6">
-                                                <RoutineStatistics stats={stats} />
-                                            </TabsContent>
-                                            <TabsContent value="upload" className="mt-6">
-                                                <BulkRoutineUploadTab onRoutineParsed={handleRoutineParsedFromExcel} />
-                                            </TabsContent>
-                                        </>
-                                    )}
-                                </Tabs>
-                            ) : (
-                            <div className="space-y-4">
-                                <div className="grid w-full grid-cols-4 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-                                        <div className="inline-flex items-center justify-center rounded-sm bg-background shadow-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                        <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                        <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                        <div className="inline-flex items-center justify-center rounded-sm h-8 w-full"><Skeleton className="h-4 w-24" /></div>
-                                    </div>
-                                    <div className="p-4 border rounded-lg">
-                                        <Skeleton className="h-48 w-full" />
-                                    </div>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </main>
-            </div>
-            {isClient && (
-                 <div className="printable-area routine-print-container text-black bg-white hidden print:flex">
-                    <style jsx global>{`
-                        @media print {
-                            .routine-print-container {
-                                display: flex !important;
-                                flex-direction: column !important;
-                                visibility: visible !important;
-                                width: 210mm !important;
-                                height: 297mm !important;
-                                padding: 5mm 8mm !important;
-                                box-sizing: border-box !important;
-                            }
-                            .routine-print-container table {
-                                width: 100% !important;
-                                border-collapse: collapse !important;
-                                table-layout: auto !important;
-                                border: 2px solid #16a34a !important;
-                            }
-                            .routine-print-container td, .routine-print-container th {
-                                font-size: 8px !important;
-                                padding: 1.5px 2px !important;
-                                border: 1px solid #16a34a !important;
-                                vertical-align: middle !important;
-                                line-height: 1 !important;
-                            }
-                            .routine-print-container header {
-                                margin-bottom: 4px !important;
-                            }
-                            .routine-print-container header h1 {
-                                font-size: 16px !important;
-                                margin-bottom: 1px !important;
-                            }
-                            .routine-print-container header p {
-                                font-size: 10px !important;
-                                margin-bottom: 1px !important;
-                            }
-                            .routine-print-container header h2 {
-                                font-size: 12px !important;
-                                margin-top: 2px !important;
-                            }
-                            .routine-print-container footer {
-                                margin-top: 6px !important;
-                                padding-top: 4px !important;
-                            }
-                        }
-                    `}</style>
-                    {isLoading || isSchoolInfoLoading ? (
-                        <div className="flex items-center justify-center h-full">লোড হচ্ছে...</div>
-                    ) : (
-                        <div className="flex flex-col h-full w-full">
-                             <header className="flex items-center gap-4 border-b-2 border-black pb-1 printable-header">
-                                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="School Logo" width={50} height={50} className="object-contain" />}
-                                <div className="text-center flex-grow">
-                                    <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
-                                    <p className="text-xs font-bold">{schoolInfo.address}</p>
-                                    <h2 className="text-lg font-extrabold mt-1 underline">
-                                        ক্লাস রুটিন - {selectedYear.toLocaleString('bn-BD')}
-                                    </h2>
-                                </div>
-                                <div className="w-[50px]"></div>
-                            </header>
-                            <div className="flex-1 w-full overflow-hidden mt-1">
-                                <CombinedRoutineTable 
-                                    routineData={routineData}
-                                    conflicts={displayConflicts}
-                                    isEditMode={false}
-                                    onCellChange={() => {}}
-                                    teacherColorMap={teacherColorMap}
-                                    isMounted={isMounted}
-                                />
-                            </div>
-                            <footer className="mt-4 pt-4 flex justify-between text-[10px] font-bold print-footer">
-                                <div className="text-center w-40 border-t border-black pt-1">রুটিন কমিটির স্বাক্ষর</div>
-                                <div className="text-center w-40 border-t border-black pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
-                            </footer>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            )}
-        </>
+            </main>
+
+            {/* Printable View */}
+            <div className="printable-area routine-print-container text-black bg-white hidden print:flex p-10 flex-col font-kalpurush">
+                <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
+                    {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
+                    <div className="text-center flex-grow">
+                        <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
+                        <p className="text-xs font-bold">{schoolInfo.address}</p>
+                        <h2 className="text-lg font-black mt-2 underline">ক্লাস রুটিন - {selectedYear.toLocaleString('bn-BD')}</h2>
+                    </div>
+                </header>
+                <div className="flex-1">
+                    <CombinedRoutineTable 
+                        routineData={routineData} 
+                        conflicts={displayConflicts} 
+                        isEditMode={false} 
+                        onCellChange={() => {}} 
+                        teacherColorMap={teacherColorMap} 
+                        isMounted={isMounted} 
+                    />
+                </div>
+                <footer className="mt-12 flex justify-between border-t-2 border-black pt-4">
+                    <div className="w-40 border-t border-black text-center font-bold text-xs pt-1">রুটিন কমিটির স্বাক্ষর</div>
+                    <div className="w-40 border-t border-black text-center font-bold text-xs pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
+                </footer>
+            </div>
+        </div>
+    );
+}
+
+function ExamRoutineTab() {
+    return (
+        <Card className="border-2 border-dashed rounded-3xl p-20 flex flex-col items-center justify-center text-center opacity-60">
+            <LayoutGrid className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-black text-slate-800">পরীক্ষার রুটিন মডিউল</h3>
+            <p className="font-bold text-muted-foreground">এই ফিচারটি নির্মাণাধীন আছে। শীঘ্রই এটি ব্যবহারের জন্য উন্মুক্ত হবে।</p>
+        </Card>
+    );
+}
+
+function BulkRoutineUploadTab({ onRoutineParsed }: { onRoutineParsed: (data: Record<string, Record<string, string[]>>) => void }) {
+    return (
+        <Card className="border-2 border-dashed border-rose-200 bg-rose-50/20 p-12 text-center rounded-3xl">
+            <FileUp className="h-16 w-16 text-rose-500 mx-auto mb-4" />
+            <h3 className="text-xl font-black mb-2">Excel রুটিন আপলোড</h3>
+            <p className="text-sm font-bold text-muted-foreground mb-6">নির্ধারিত ফরম্যাটের এক্সেল ফাইল আপলোড করে এক ক্লিকে রুটিন আপডেট করুন।</p>
+            <div className="flex justify-center gap-4">
+                <Button variant="outline" className="font-bold"><Download className="mr-2 h-4 w-4" /> ফরম্যাট ডাউনলোড</Button>
+                <Button className="font-black"><FileUp className="mr-2 h-4 w-4" /> ফাইল সিলেক্ট করুন</Button>
+            </div>
+        </Card>
     );
 }
