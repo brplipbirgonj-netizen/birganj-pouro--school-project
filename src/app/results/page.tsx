@@ -601,27 +601,27 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </div>
                         <div className="table-container border-2 border-slate-400 relative rounded-b-lg !overflow-auto">
                             <Table className="min-w-max border-separate border-spacing-0">
-                                <TableHeader className="z-40">
+                                <TableHeader className="z-30">
                                     <TableRow className="border-b-2 border-slate-400">
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-0 top-0 z-50 w-14 text-sm p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">রোল</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-14 top-0 z-50 min-w-[200px] text-sm p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">শিক্ষার্থীর নাম</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-0 top-0 z-30 w-14 text-xs p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">রোল</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-14 top-0 z-30 min-w-[200px] text-xs p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">শিক্ষার্থীর নাম</TableHead>
                                         {subs.map((s, idx) => (
                                             <TableHead 
                                                 key={s.name} 
                                                 colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} 
                                                 className={cn(
-                                                    "text-center border-r-2 border-b-2 border-slate-400 font-black py-1 text-xs sticky top-0 z-30 px-2",
+                                                    "text-center border-r-2 border-b-2 border-slate-400 font-black py-1 text-[10px] sticky top-0 z-20 px-2",
                                                     subBgColors[idx % subBgColors.length]
                                                 )}
                                             >
                                                 {s.name}
                                             </TableHead>
                                         ))}
-                                        <TableHead rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-slate-400 text-xs bg-[#f0fdfa] p-1 sticky top-0 right-[240px] z-40 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মোট</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-xs bg-[#eef2ff] p-1 sticky top-0 right-[180px] z-40 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">GPA</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-xs bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-40 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">গ্রেড</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-xs bg-[#fefce8] p-1 sticky top-0 right-[60px] z-40 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মেধা</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-b-2 border-slate-400 text-xs bg-[#f8fafc] p-1 sticky top-0 right-0 z-40 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">প্রিন্ট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#f0fdfa] p-1 sticky top-0 right-[240px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মোট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#eef2ff] p-1 sticky top-0 right-[180px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">GPA</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">গ্রেড</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[10px] bg-[#fefce8] p-1 sticky top-0 right-[60px] z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মেধা</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-b-2 border-slate-400 text-[10px] bg-[#f8fafc] p-1 sticky top-0 right-0 z-30 min-w-[60px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">প্রিন্ট</TableHead>
                                     </TableRow>
                                     <TableRow className="border-b-2 border-slate-400">
                                         {subs.map((s, idx) => {
@@ -631,14 +631,14 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <React.Fragment key={s.name}>
                                                     {!isEng && (
                                                         <>
-                                                            <TableHead className={cn("text-[11px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-30 w-12", bgColor)}>লিখিত</TableHead>
-                                                            <TableHead className={cn("text-[11px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-30 w-12", bgColor)}>MCQ</TableHead>
-                                                            {s.practical && <TableHead className={cn("text-[11px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-30 w-12", bgColor)}>ব্যবহারিক</TableHead>}
+                                                            <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>লিখিত</TableHead>
+                                                            <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>MCQ</TableHead>
+                                                            {s.practical && <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>ব্যবহারিক</TableHead>}
                                                         </>
                                                     )}
-                                                    <TableHead className={cn("text-[11px] text-center border-r border-b-2 border-slate-400 font-black bg-blue-200/60 p-0.5 text-blue-950 sticky top-9 z-30 w-14", bgColor)}>প্রাপ্ত</TableHead>
-                                                    <TableHead className={cn("text-[11px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-30 w-10", bgColor)}>গ্রেড</TableHead>
-                                                    <TableHead className={cn("text-[11px] text-center border-r-2 border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-30 w-12", bgColor)}>পয়েন্ট</TableHead>
+                                                    <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-black bg-blue-200/60 p-0.5 text-blue-950 sticky top-9 z-20 w-14", bgColor)}>প্রাপ্ত</TableHead>
+                                                    <TableHead className={cn("text-[10px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-10", bgColor)}>গ্রেড</TableHead>
+                                                    <TableHead className={cn("text-[10px] text-center border-r-2 border-b-2 border-slate-400 font-bold p-0.5 sticky top-9 z-20 w-12", bgColor)}>পয়েন্ট</TableHead>
                                                 </React.Fragment>
                                             )
                                         })}
@@ -647,8 +647,8 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <TableBody>
                                     {results.map(res => (
                                         <TableRow key={res.student.id} className="h-8 hover:bg-slate-50 transition-colors">
-                                            <TableCell className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b border-slate-400 text-sm p-0.5 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="font-bold sticky left-14 z-20 bg-white border-r-2 border-b border-slate-400 text-sm p-0.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] shadow-[2px_0_0px_rgba(0,0,0,0.2)]">
+                                            <TableCell className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b border-slate-400 text-xs p-0.5 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">{res.student.roll.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="font-bold sticky left-14 z-20 bg-white border-r-2 border-b border-slate-400 text-xs p-0.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] shadow-[2px_0_0px_rgba(0,0,0,0.2)]">
                                                 {res.student.studentNameBn}
                                             </TableCell>
                                             {subs.map((s, idx) => {
@@ -659,24 +659,24 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     <React.Fragment key={s.name}>
                                                         {!isEng && (
                                                             <>
-                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[11px] p-0.5 font-medium", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[11px] p-0.5 font-medium", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                                {s.practical && <TableCell className={cn("text-center border-r border-b border-slate-400 text-[11px] p-0.5 font-medium", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
+                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] p-0.5 font-medium", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                                <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] p-0.5 font-medium", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                                {s.practical && <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] p-0.5 font-medium", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-'}</TableCell>}
                                                             </>
                                                         )}
-                                                        <TableCell className={cn("text-center border-r border-b border-slate-400 font-black bg-blue-100/40 text-blue-950 text-xs p-0.5", bgColor)}>{sr?.marks?.toLocaleString('bn-BD') ?? '-'}</TableCell>
-                                                        <TableCell className={cn("text-center border-r border-b border-slate-400 text-[11px] font-black p-0.5", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100/50")}>{sr?.grade ?? '-'}</TableCell>
-                                                        <TableCell className={cn("text-center border-r-2 border-b border-slate-400 text-[11px] p-0.5 font-bold", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                        <TableCell className={cn("text-center border-r border-b border-slate-400 font-black bg-blue-100/40 text-blue-950 text-[10px] p-0.5", bgColor)}>{sr?.marks?.toLocaleString('bn-BD') ?? '-'}</TableCell>
+                                                        <TableCell className={cn("text-center border-r border-b border-slate-400 text-[10px] font-black p-0.5", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100/50")}>{sr?.grade ?? '-'}</TableCell>
+                                                        <TableCell className={cn("text-center border-r-2 border-b border-slate-400 text-[10px] p-0.5 font-bold", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-'}</TableCell>
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <TableCell className="text-center font-black text-primary border-r-2 border-b border-slate-400 text-sm p-0.5 sticky right-[240px] bg-[#f0fdfa] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="text-center font-black border-r-2 border-b border-slate-400 text-sm p-0.5 sticky right-[180px] bg-[#eef2ff] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-xs p-0.5 sticky right-[120px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-xs p-0.5 sticky right-[60px] bg-[#fefce8] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-500 italic text-[10px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
+                                            <TableCell className="text-center font-black text-primary border-r-2 border-b border-slate-400 text-xs p-0.5 sticky right-[240px] bg-[#f0fdfa] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="text-center font-black border-r-2 border-b border-slate-400 text-xs p-0.5 sticky right-[180px] bg-[#eef2ff] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[120px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[60px] bg-[#fefce8] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-500 italic text-[9px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
                                             <TableCell className="text-center p-0.5 border-b border-slate-400 sticky right-0 bg-[#f8fafc] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-4 w-4 text-primary" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-3 w-3 text-primary" /></Button>
                                                 </Link>
                                             </TableCell>
                                         </TableRow>
