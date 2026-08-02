@@ -16,14 +16,14 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins } from 'lucide-react';
 import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Transaction, NewTransactionData, addTransaction, getTransactions, deleteTransaction, TransactionType } from '@/lib/transactions-data';
+import { Transaction, NewTransactionData, addTransaction, getTransactions, deleteTransaction, TransactionType, PaymentMethod } from '@/lib/transactions-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
@@ -47,23 +47,29 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
         let todayIncome = 0;
         let monthlyIncome = 0;
         let monthlyExpense = 0;
-        let totalBalance = 0;
+        let cashBalance = 0;
+        let bankBalance = 0;
 
         transactions.forEach(t => {
             const amount = Number(t.amount) || 0;
             const tDate = new Date(t.date);
+            const method = t.method || 'cash';
             
             if (t.type === 'income') {
-                totalBalance += amount;
+                if (method === 'cash') cashBalance += amount;
+                else bankBalance += amount;
+
                 if (isToday(tDate)) todayIncome += amount;
                 if (isSameMonth(tDate, now)) monthlyIncome += amount;
             } else {
-                totalBalance -= amount;
+                if (method === 'cash') cashBalance -= amount;
+                else bankBalance -= amount;
+
                 if (isSameMonth(tDate, now)) monthlyExpense += amount;
             }
         });
 
-        return { todayIncome, monthlyIncome, monthlyExpense, totalBalance };
+        return { todayIncome, monthlyIncome, monthlyExpense, cashBalance, bankBalance };
     }, [transactions]);
 
     const chartData = useMemo(() => {
@@ -132,32 +138,29 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                     </CardContent>
                 </Card>
 
-                <Card className="border-2 border-rose-100 bg-rose-50/20 shadow-sm relative overflow-hidden group">
+                <Card className="border-2 border-amber-100 bg-amber-50/20 shadow-sm relative overflow-hidden group">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                        <CreditCard className="h-24 w-24 text-rose-900" />
+                        <Coins className="h-24 w-24 text-amber-900" />
                     </div>
                     <CardHeader className="pb-2 relative z-10">
-                        <CardTitle className="text-xs font-black uppercase text-rose-700">এই মাসের মোট ব্যয়</CardTitle>
+                        <CardTitle className="text-xs font-black uppercase text-amber-700">হাতে নগদ (Cash Balance)</CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
-                        <div className="text-3xl font-black text-rose-950">{stats.monthlyExpense.toLocaleString('bn-BD')} ৳</div>
-                        <p className="text-[10px] font-bold text-rose-600 mt-1">পরিচালনা ও অন্যান্য খরচ</p>
+                        <div className="text-3xl font-black text-amber-950">{stats.cashBalance.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-amber-600 mt-1">অফিসে গচ্ছিত টাকা</p>
                     </CardContent>
                 </Card>
 
-                <Card className={cn(
-                    "border-2 shadow-lg relative overflow-hidden group",
-                    stats.totalBalance >= 0 ? "border-amber-200 bg-amber-50/30" : "border-red-200 bg-red-50/30"
-                )}>
+                <Card className="border-2 border-blue-100 bg-blue-50/20 shadow-sm relative overflow-hidden group">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                        <LayoutDashboard className="h-24 w-24 text-amber-900" />
+                        <Landmark className="h-24 w-24 text-blue-900" />
                     </div>
                     <CardHeader className="pb-2 relative z-10">
-                        <CardTitle className="text-xs font-black uppercase text-amber-800">মোট ক্যাশ ব্যালেন্স (নগদ)</CardTitle>
+                        <CardTitle className="text-xs font-black uppercase text-blue-700">ব্যাংক ব্যালেন্স (Bank Balance)</CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
-                        <div className="text-3xl font-black text-amber-950">{stats.totalBalance.toLocaleString('bn-BD')} ৳</div>
-                        <p className="text-[10px] font-bold text-muted-foreground mt-1 italic">সিস্টেমের সকল আয়-ব্যয়ের জের</p>
+                        <div className="text-3xl font-black text-blue-950">{stats.bankBalance.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-blue-600 mt-1">ব্যাংক একাউন্টের জের</p>
                     </CardContent>
                 </Card>
             </div>
@@ -568,6 +571,7 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
 
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [type, setType] = useState<TransactionType>(initialType);
+    const [method, setMethod] = useState<PaymentMethod>('cash');
     const [accountHead, setAccountHead] = useState('');
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState<number | ''>('');
@@ -590,6 +594,7 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
         const newTransaction: NewTransactionData = {
             date,
             type,
+            method,
             accountHead,
             description,
             amount: Number(amount),
@@ -598,7 +603,7 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
 
         try {
             await addTransaction(db, newTransaction);
-            toast({ title: type === 'income' ? 'আয় যোগ হয়েছে।' : 'ব্যয় যোগ হয়েছে।' });
+            toast({ title: type === 'income' ? 'আয় যোগ হয়েছে।' : 'ব্যয় যোগ হয়েছে।', description: method === 'bank' ? 'ব্যাংক লেনদেন হিসেবে রেকর্ড করা হয়েছে।' : 'নগদ লেনদেন হিসেবে রেকর্ড করা হয়েছে।' });
             // Reset form
             setDate(new Date());
             setAccountHead('');
@@ -635,6 +640,19 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="expense" id="expense" />
                                     <Label htmlFor="expense" className="font-bold text-rose-700">ব্যয়</Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+                        <div className="space-y-2">
+                             <Label>পেমেন্ট পদ্ধতি</Label>
+                            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="cash" id="meth-cash" />
+                                    <Label htmlFor="meth-cash" className="font-bold">নগদ (Cash)</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="bank" id="meth-bank" />
+                                    <Label htmlFor="meth-bank" className="font-bold">ব্যাংক (Bank)</Label>
                                 </div>
                             </RadioGroup>
                         </div>
@@ -718,6 +736,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                             <TableRow>
                                 <TableHead className="font-bold">তারিখ</TableHead>
                                 <TableHead className="font-bold">বিবরণ</TableHead>
+                                <TableHead className="text-center font-bold">পদ্ধতি</TableHead>
                                 <TableHead className="text-right font-bold">আয়</TableHead>
                                 <TableHead className="text-right font-bold">ব্যয়</TableHead>
                                 <TableHead className="text-right font-bold">ব্য্যালেন্স</TableHead>
@@ -726,9 +745,9 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManageTransactions ? 7 : 6} className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></TableCell></TableRow>
                             ) : cashbookData.length === 0 ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManageTransactions ? 7 : 6} className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
                             ) : (
                                 [...cashbookData].reverse().map(tx => (
                                     <TableRow key={tx.id} className="hover:bg-accent/5">
@@ -736,6 +755,14 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                         <TableCell>
                                             <p className="font-bold">{tx.accountHead}</p>
                                             {tx.description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{tx.description}</p>}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge variant="outline" className={cn(
+                                                "text-[10px] font-bold px-2 py-0.5",
+                                                tx.method === 'bank' ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700"
+                                            )}>
+                                                {tx.method === 'bank' ? 'Bank' : 'Cash'}
+                                            </Badge>
                                         </TableCell>
                                         <TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                         <TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>

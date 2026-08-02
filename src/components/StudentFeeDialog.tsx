@@ -12,7 +12,7 @@ import { getFeeCollectionsForStudent, FeeCollection, FeeBreakdown } from '@/lib/
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
-import { NewTransactionData } from '@/lib/transactions-data';
+import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
 import { FilePen, Trash2, Smartphone, Printer } from 'lucide-react';
 import { format } from 'date-fns';
@@ -26,6 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MoneyReceipt } from './MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -75,6 +76,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     
     const [collectionDate, setCollectionDate] = useState<Date | undefined>(new Date());
     const [description, setDescription] = useState('');
+    const [method, setMethod] = useState<PaymentMethod>('cash');
     const [breakdown, setBreakdown] = useState<FeeBreakdown>(emptyBreakdown);
     const [collectorName, setCollectorName] = useState<string>('');
     const [shouldSendSMS, setShouldSendSMS] = useState(true);
@@ -110,6 +112,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 setCollectionDate(new Date(existingCollection.collectionDate));
                 setDescription(existingCollection.description);
                 setBreakdown(existingCollection.breakdown || {});
+                setMethod(existingCollection.method || 'cash');
             } else {
                 const today = new Date();
                 setCollectionDate(today);
@@ -117,6 +120,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 const currentMonthName = bengaliMonths[currentMonthIndex];
                 setDescription(currentMonthName ? `${currentMonthName} মাসের বেতন` : '');
                 setBreakdown(emptyBreakdown);
+                setMethod('cash');
             }
         }
     }, [existingCollection, open, bengaliMonths]);
@@ -164,6 +168,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 transactionsToCreate[accountHead] = {
                     date: collectionDate,
                     type: 'income',
+                    method,
                     accountHead: accountHead,
                     description: `Fee from ${student.studentNameBn}, Roll: ${student.roll.toLocaleString('bn-BD')}`,
                     amount: 0,
@@ -188,6 +193,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
             academicYear: selectedYear,
             collectionDate: Timestamp.fromDate(collectionDate),
             description,
+            method,
             totalAmount,
             breakdown,
             transactionIds: newTransactionIds,
@@ -250,11 +256,11 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 <div className="flex-grow overflow-y-auto -mx-2 px-2 sm:-mx-6 sm:px-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                         <div className="space-y-2">
-                            <Label htmlFor="date">আদায়ের তারিখ</Label>
+                            <Label htmlFor="date" className="font-bold">আদায়ের তারিখ</Label>
                             <DatePicker value={collectionDate} onChange={setCollectionDate} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description">বিবরণ</Label>
+                            <Label htmlFor="description" className="font-bold">বিবরণ</Label>
                             <div className="flex gap-2">
                                 <Select 
                                     onValueChange={(month) => month && setDescription(`${month} মাসের বেতন`)}
@@ -271,6 +277,19 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                                 </Select>
                                 <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="flex-1" />
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-bold">লেনদেনের মাধ্যম</Label>
+                            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="cash" id="fee-cash" />
+                                    <Label htmlFor="fee-cash" className="font-bold">নগদ (Cash)</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="bank" id="fee-bank" />
+                                    <Label htmlFor="fee-bank" className="font-bold">ব্যাংক (Bank)</Label>
+                                </div>
+                            </RadioGroup>
                         </div>
                     </div>
                     <div className="border-t pt-4">
@@ -435,6 +454,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                     <TableRow>
                                         <TableHead className="font-bold">আদায়ের তারিখ</TableHead>
                                         <TableHead className="font-bold">বিবরণ</TableHead>
+                                        <TableHead className="text-center font-bold">পদ্ধতি</TableHead>
                                         <TableHead className="text-right font-bold">মোট টাকা</TableHead>
                                         <TableHead className="font-bold text-center">রসিদ</TableHead>
                                         {canManageTransactions && <TableHead className="text-right font-bold">কার্যক্রম</TableHead>}
@@ -442,12 +462,20 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                 </TableHeader>
                                 <TableBody>
                                     {feeCollections.length === 0 ? (
-                                        <TableRow><TableCell colSpan={canManageTransactions ? 5 : 4} className="text-center h-32 italic text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center h-32 italic text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
                                     ) : (
                                         feeCollections.map(collection => (
                                             <TableRow key={collection.id} className="hover:bg-primary/5 transition-colors">
                                                 <TableCell className="whitespace-nowrap font-medium">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
                                                 <TableCell>{collection.description || 'N/A'}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant="outline" className={cn(
+                                                        "text-[10px] font-bold",
+                                                        collection.method === 'bank' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50"
+                                                    )}>
+                                                        {collection.method === 'bank' ? 'Bank' : 'Cash'}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-right font-bold text-primary whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
                                                 <TableCell className="text-center">
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary" onClick={() => handlePrint(collection)}>

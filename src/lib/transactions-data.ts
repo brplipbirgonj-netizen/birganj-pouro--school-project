@@ -17,11 +17,13 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 export type TransactionType = 'income' | 'expense';
+export type PaymentMethod = 'cash' | 'bank';
 
 export interface Transaction {
   id: string;
   date: Date;
   type: TransactionType;
+  method: PaymentMethod;
   accountHead: string;
   description: string;
   amount: number;
@@ -39,6 +41,7 @@ export const transactionFromDoc = (doc: DocumentData): Transaction => {
     return {
         id: doc.id,
         ...data,
+        method: data.method || 'cash',
         date: data.date.toDate(),
     } as Transaction;
 }
