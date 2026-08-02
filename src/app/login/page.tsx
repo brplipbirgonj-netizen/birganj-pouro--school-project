@@ -140,7 +140,7 @@ export default function LoginPage() {
             </div>
             
             <div className="w-full max-w-md space-y-6">
-                <Card className="shadow-2xl border-2 border-white/50 overflow-hidden">
+                <Card className="shadow-2xl border-2 border-primary/30 overflow-hidden">
                     <CardHeader className="bg-primary/5 border-b-2 border-primary/10 text-center py-4">
                         <div className="flex flex-row gap-2 justify-center mb-3">
                             <Link href="/public-results">
@@ -192,4 +192,3 @@ export default function LoginPage() {
         </div>
     );
 }
-
