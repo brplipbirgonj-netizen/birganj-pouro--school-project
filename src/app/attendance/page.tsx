@@ -1098,13 +1098,22 @@ export default function AttendancePage() {
         return () => unsubscribe();
     }, [db, user]);
 
-    const sidebarItems = useMemo(() => [
-        { id: 'digital-attendance', label: 'ডিজিটাল হাজিরা', icon: CalendarCheck, color: 'text-indigo-600 bg-indigo-50' },
-        { id: 'quick-roll', label: 'রোল ইনপুট', icon: Plus, color: 'text-emerald-600 bg-emerald-50' },
-        { id: 'report', label: 'রিপোর্ট ও বোর্ড', icon: ListChecks, color: 'text-violet-600 bg-violet-50' },
-        { id: 'missed-attendance', label: 'বকেয়া হাজিরা', icon: CalendarX, color: 'text-amber-600 bg-amber-50' },
-        { id: 'alerts', label: 'সতর্কবার্তা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' },
-    ], []);
+    const canInputQuickRoll = hasPermission('input:quick-roll-attendance');
+
+    const sidebarItems = useMemo(() => {
+        const items = [
+            { id: 'digital-attendance', label: 'ডিজিটাল হাজিরা', icon: CalendarCheck, color: 'text-indigo-600 bg-indigo-50' },
+        ];
+        if (canInputQuickRoll) {
+            items.push({ id: 'quick-roll', label: 'রোল ইনপুট', icon: Plus, color: 'text-emerald-600 bg-emerald-50' });
+        }
+        items.push(
+            { id: 'report', label: 'রিপোর্ট ও বোর্ড', icon: ListChecks, color: 'text-violet-600 bg-violet-50' },
+            { id: 'missed-attendance', label: 'বকেয়া হাজিরা', icon: CalendarX, color: 'text-amber-600 bg-amber-50' },
+            { id: 'alerts', label: 'সতর্কবার্তা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' },
+        );
+        return items;
+    }, [canInputQuickRoll]);
     
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">

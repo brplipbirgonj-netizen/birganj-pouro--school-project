@@ -17,6 +17,7 @@ export const availablePermissions = [
   { id: 'view:staff-attendance-report', label: 'স্টাফ হাজিরা ও ছুটির রিপোর্ট দেখুন' },
 
   { id: 'manage:attendance', label: 'শিক্ষার্থীর হাজিরা ম্যানেজ করুন' },
+  { id: 'input:quick-roll-attendance', label: 'রোল ইনপুট দিয়ে দ্রুত হাজিরা' },
 
   { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
   { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
@@ -53,6 +54,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'manage:staff-attendance',
     'view:staff-attendance-report',
     'manage:attendance',
+    'input:quick-roll-attendance',
     'input:results', 
     'view:merit-list',
     'view:accounts',
