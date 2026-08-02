@@ -14,7 +14,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone, Printer } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer, Loader2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -534,11 +534,13 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         {/* Printable Area for Receipt */}
         {student && printingCollection && (
             <div className="hidden print:block printable-area bg-white">
-                <MoneyReceipt 
-                    collection={printingCollection} 
-                    student={student} 
-                    schoolInfo={schoolInfo} 
-                />
+                <div className="flex items-center justify-center min-h-[297mm]">
+                    <MoneyReceipt 
+                        collection={printingCollection} 
+                        student={student} 
+                        schoolInfo={schoolInfo} 
+                    />
+                </div>
             </div>
         )}
         </>
