@@ -16,11 +16,11 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday, getHolidays } from '@/lib/holiday-data';
-import { format, eachDayOfInterval, subDays, startOfMonth, endOfMonth, isSameDay, getDaysInMonth } from 'date-fns';
+import { format, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, Smartphone, CalendarX, Check, X, Search, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -78,7 +78,6 @@ const AttendanceSheet = ({
             const existingAttendance = await getAttendanceForClassAndDate(db, todayStr, classId, selectedYear);
             setSavedAttendance(existingAttendance);
             
-            // If data exists and we are not in current memory state, populate it
             if (existingAttendance && currentAttendance.size === 0) {
                 existingAttendance.attendance.forEach(item => {
                     onStatusChange(item.studentId, item.status);
@@ -97,7 +96,6 @@ const AttendanceSheet = ({
     const handleSaveAttendance = () => {
         if (!db || !user) return;
         
-        // Strict blocking: Even admins shouldn't take regular attendance on holidays
         if (isWeekend) {
             toast({ variant: "destructive", title: "আজ সাপ্তাহিক ছুটি। হাজিরা গ্রহণ সম্ভব নয়।" });
             return;
@@ -107,7 +105,6 @@ const AttendanceSheet = ({
             return;
         }
 
-        // Logic Change: If student is not clicked, mark as absent automatically
         const attendanceData: StudentAttendance[] = students.map(student => ({
             studentId: student.id,
             status: currentAttendance.get(student.id) || 'absent'
@@ -131,18 +128,11 @@ const AttendanceSheet = ({
         }).catch(() => {});
     };
 
-    if (isLoading) {
-        return <p className="text-center p-8 italic">লোড হচ্ছে...</p>
-    }
+    if (isLoading) return <p className="text-center p-8 italic">লোড হচ্ছে...</p>;
 
-    // UI Block for holidays and weekends (For everyone)
-    if (isWeekend) {
-        return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">আজ সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>
-    }
+    if (isWeekend) return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">আজ সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>;
 
-    if (activeHoliday) {
-        return <p className="text-center text-amber-700 font-bold p-12 bg-amber-50 rounded-lg border-2 border-dashed border-amber-200">আজ {activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
-    }
+    if (activeHoliday) return <p className="text-center text-amber-700 font-bold p-12 bg-amber-50 rounded-lg border-2 border-dashed border-amber-200">আজ {activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
     
     if (savedAttendance && !isEditing) {
         const savedMap = new Map(savedAttendance.attendance.map(item => [item.studentId, item.status]));
@@ -385,8 +375,6 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
         try {
             const today = new Date();
             const todayStr = format(today, 'yyyy-MM-dd');
-            
-            // 1. Get all students of this class
             const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === selectedClass);
             
             if (classStudents.length === 0) {
@@ -395,7 +383,6 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
                 return;
             }
 
-            // 2. Parse rolls (handle Bengali digits too)
             const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
             const inputRolls = rollsInput
                 .split(/[\s,]+/)
@@ -408,7 +395,6 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
                  return;
             }
 
-            // 3. Map to attendance status
             const attendanceData: StudentAttendance[] = classStudents.map(student => ({
                 studentId: student.id,
                 status: inputRolls.includes(student.roll) ? 'present' : 'absent'
@@ -506,10 +492,9 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
         try {
             const year = parseInt(selectedYear);
             const month = parseInt(selectedMonth);
-            const start = format(startOfMonth(new Date(year, month)), 'yyyy-MM-dd');
-            const end = format(endOfMonth(new Date(year, month)), 'yyyy-MM-dd');
+            const start = format(new Date(year, month, 1), 'yyyy-MM-dd');
+            const end = format(new Date(year, month + 1, 0), 'yyyy-MM-dd');
 
-            // General Way: Fetch by academicYear and filter date in memory to avoid Index errors
             const [attSnap, holidayList] = await Promise.all([
                 getDocs(query(collection(db, 'attendance'), where('academicYear', '==', selectedYear))),
                 getHolidays(db)
@@ -532,7 +517,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
     const days = useMemo(() => {
         const year = parseInt(selectedYear);
         const month = parseInt(selectedMonth);
-        const totalDays = getDaysInMonth(new Date(year, month));
+        const totalDays = new Date(year, month + 1, 0).getDate();
         return Array.from({ length: totalDays }, (_, i) => i + 1);
     }, [selectedYear, selectedMonth]);
 
@@ -586,10 +571,6 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                     <CardTitle className="text-xl font-black text-primary flex items-center gap-2">
                         <ListChecks className="h-6 w-6" /> মাসিক হাজিরা সারাংশ ({BENGALI_MONTHS[parseInt(selectedMonth)]})
                     </CardTitle>
-                    <div className="flex gap-4 text-xs font-bold">
-                        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-red-200 border border-red-400 rounded" /> বন্ধের দিন</span>
-                        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white border border-slate-300 rounded" /> কার্যদিবস</span>
-                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="table-container max-h-[600px]">
@@ -691,11 +672,10 @@ const MissedAttendanceTab = () => {
         if (!db) return;
         setIsLoading(true);
         try {
-            // Get Month Dates
             const monthIndex = BENGALI_MONTHS.indexOf(selectedMonth);
             const year = parseInt(selectedYear);
-            const start = startOfMonth(new Date(year, monthIndex));
-            const end = endOfMonth(new Date(year, monthIndex));
+            const start = new Date(year, monthIndex, 1);
+            const end = new Date(year, monthIndex + 1, 0);
             const today = new Date();
             const realEnd = end > today ? today : end;
 
@@ -703,12 +683,9 @@ const MissedAttendanceTab = () => {
             const endStr = format(realEnd, 'yyyy-MM-dd');
 
             const allDatesInMonth = eachDayOfInterval({ start, end: realEnd });
-            
-            // Fetch Holidays
             const holidays = await getHolidays(db);
             const holidayDates = holidays.map(h => h.date);
 
-            // General way: Fetch by Year and Class only, avoid index error on date range
             const q = query(
                 collection(db, 'attendance'),
                 where('academicYear', '==', selectedYear),
@@ -719,7 +696,6 @@ const MissedAttendanceTab = () => {
                 .map(doc => doc.data().date)
                 .filter(d => d >= startStr && d <= endStr);
 
-            // Filter missed days: Workday, No Holiday, Not in TakenDates
             const missed = allDatesInMonth.filter(date => {
                 const dateStr = format(date, 'yyyy-MM-dd');
                 const isWeekend = date.getDay() === 5 || date.getDay() === 6;
@@ -935,17 +911,13 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
             );
 
             const allAttendance = allAttendanceForClass.filter(att => {
-                 if (!startDate || !endDate) {
-                    return true;
-                }
+                 if (!startDate || !endDate) return true;
                 try {
                     const attDate = new Date(att.date);
                     const start = new Date(startDate);
                     start.setHours(0, 0, 0, 0);
-
                     const end = new Date(endDate);
                     end.setHours(23, 59, 59, 999);
-
                     return attDate >= start && attDate <= end;
                 } catch(e) {
                     return false;
@@ -959,11 +931,8 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
                 allAttendance.forEach(dailyRecord => {
                     const studentAttendance = dailyRecord.attendance.find(a => a.studentId === student.id);
                     if (studentAttendance) {
-                        if (studentAttendance.status === 'present') {
-                            presentDays++;
-                        } else {
-                            absentDays++;
-                        }
+                        if (studentAttendance.status === 'present') presentDays++;
+                        else absentDays++;
                     }
                 });
 
@@ -980,20 +949,13 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
         }
 
         fetchAttendance();
-
     }, [classId, students, selectedYear, db, user, startDate, endDate]);
 
-     if (isLoading) {
-        return <p className="text-center p-8 italic">রিপোর্ট তৈরি হচ্ছে...</p>
-    }
+     if (isLoading) return <p className="text-center p-8 italic">রিপোর্ট তৈরি হচ্ছে...</p>;
 
-    if (students.length === 0) {
-        return <p className="text-center text-muted-foreground p-8">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>
-    }
+    if (students.length === 0) return <p className="text-center text-muted-foreground p-8">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>;
 
-    if (reportData.length === 0 || reportData[0].totalDays === 0) {
-        return <p className="text-center text-muted-foreground p-8 italic">এই নির্বাচনি সীমার মধ্যে কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</p>
-    }
+    if (reportData.length === 0 || reportData[0].totalDays === 0) return <p className="text-center text-muted-foreground p-8 italic">এই নির্বাচনি সীমার মধ্যে কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</p>;
 
 
     return (
@@ -1108,13 +1070,13 @@ export default function AttendancePage() {
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const db = useFirestore();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const { selectedYear } = useAcademicYear();
-     const [isClient, setIsClient] = useState(false);
+    const [isClient, setIsClient] = useState(false);
+    
+    const [activeSection, setActiveSection] = useState('digital-attendance');
 
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
+    useEffect(() => { setIsClient(true); }, []);
 
     useEffect(() => {
         if (!db || !user) return;
@@ -1127,63 +1089,76 @@ export default function AttendancePage() {
             setIsLoading(false);
         }, (error: FirestoreError) => {
             if (error.code === 'permission-denied') return;
-            const permissionError = new FirestorePermissionError({ path: 'students', operation: 'list' });
-            errorEmitter.emit('permission-error', permissionError);
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
             setIsLoading(false);
         });
 
         return () => unsubscribe();
     }, [db, user]);
+
+    const sidebarItems = useMemo(() => [
+        { id: 'digital-attendance', label: 'ডিজিটাল হাজিরা', icon: CalendarCheck, color: 'text-indigo-600 bg-indigo-50' },
+        { id: 'quick-roll', label: 'রোল ইনপুট', icon: Plus, color: 'text-emerald-600 bg-emerald-50' },
+        { id: 'report', label: 'রিপোর্ট ও বোর্ড', icon: ListChecks, color: 'text-violet-600 bg-violet-50' },
+        { id: 'missed-attendance', label: 'বকেয়া হাজিরা', icon: CalendarX, color: 'text-amber-600 bg-amber-50' },
+        { id: 'alerts', label: 'সতর্কবার্তা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' },
+    ], []);
     
     return (
-        <div className="flex min-h-screen w-full flex-col bg-amber-50 font-kalpurush">
+        <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
-                <Card className="border-2 border-primary/10 shadow-2xl overflow-hidden rounded-xl">
-                    <CardHeader className="bg-white/70 border-b backdrop-blur-sm">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div>
-                                <CardTitle className="text-3xl font-black text-primary flex items-center gap-3">
-                                    <CalendarCheck className="h-8 w-8" /> হাজিরা ব্যবস্থাপনা
-                                </CardTitle>
-                                {isClient && <p className="text-sm font-black text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="pt-6 bg-slate-50/30">
+            <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
+                {/* Sidebar Navigation */}
+                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0">
+                    <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
+                    <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                        {sidebarItems.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveSection(item.id)}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                    activeSection === item.id 
+                                        ? "bg-white shadow-md text-primary scale-105" 
+                                        : "text-muted-foreground hover:bg-slate-200/50"
+                                )}
+                            >
+                                <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                                    <item.icon className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="text-xs">{item.label}</span>
+                                {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
+                            </button>
+                        ))}
+                    </div>
+                </aside>
+
+                {/* Content Area */}
+                <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+                    <div className="p-4 sm:p-6 lg:p-8 flex-1">
                         {isLoading ? (
                             <div className="space-y-4">
                                 <Skeleton className="h-12 w-full" />
                                 <Skeleton className="h-64 w-full" />
                             </div>
                         ) : (
-                            <Tabs defaultValue="digital-attendance">
-                                <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto md:h-14 mb-8 gap-2 bg-muted/50 p-1.5 rounded-lg border">
-                                    <TabsTrigger value="digital-attendance" className="font-black text-sm md:text-md data-[state=active]:shadow-lg">ডিজিটাল হাজিরা</TabsTrigger>
-                                    <TabsTrigger value="quick-roll" className="font-black text-sm md:text-md data-[state=active]:shadow-lg text-emerald-700">রোল ইনপুট</TabsTrigger>
-                                    <TabsTrigger value="report" className="font-black text-sm md:text-md data-[state=active]:shadow-lg">রিপোর্ট ও বোর্ড</TabsTrigger>
-                                    <TabsTrigger value="missed-attendance" className="font-black text-sm md:text-md data-[state=active]:shadow-lg text-amber-700">বকেয়া হাজিরা</TabsTrigger>
-                                    <TabsTrigger value="alerts" className="font-black text-sm md:text-md data-[state=active]:shadow-lg text-rose-700">সতর্কবার্তা</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="digital-attendance" className="mt-4 animate-in slide-in-from-left-4 duration-500">
-                                    <DigitalAttendanceTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="quick-roll" className="mt-4">
-                                    <QuickRollAttendanceTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="report" className="mt-4 animate-in slide-in-from-right-4 duration-500">
-                                    <AttendanceReportTab allStudents={allStudents} />
-                                </TabsContent>
-                                <TabsContent value="missed-attendance" className="mt-4 animate-in fade-in duration-500">
-                                    <MissedAttendanceTab />
-                                </TabsContent>
-                                <TabsContent value="alerts" className="mt-4 animate-in zoom-in-95 duration-500">
-                                    <AbsenceAlertsTab allStudents={allStudents} />
-                                </TabsContent>
-                            </Tabs>
+                            <>
+                                <div className="mb-6 border-b pb-4">
+                                    <h2 className="text-2xl font-black text-slate-800">
+                                        {sidebarItems.find(i => i.id === activeSection)?.label}
+                                    </h2>
+                                    {isClient && <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
+                                </div>
+
+                                {activeSection === 'digital-attendance' && <DigitalAttendanceTab allStudents={allStudents} />}
+                                {activeSection === 'quick-roll' && <QuickRollAttendanceTab allStudents={allStudents} />}
+                                {activeSection === 'report' && <AttendanceReportTab allStudents={allStudents} />}
+                                {activeSection === 'missed-attendance' && <MissedAttendanceTab />}
+                                {activeSection === 'alerts' && <AbsenceAlertsTab allStudents={allStudents} />}
+                            </>
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </main>
         </div>
     );
