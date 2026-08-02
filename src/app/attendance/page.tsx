@@ -358,6 +358,19 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
     const [rollsInput, setRollsInput] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // Real-time counter logic
+    const rollCount = useMemo(() => {
+        if (!rollsInput.trim()) return 0;
+        const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
+        const parts = rollsInput.split(/[\s,]+/);
+        const uniqueRolls = new Set();
+        parts.forEach(p => {
+            const val = parseInt(bnToEn(p.trim()), 10);
+            if (!isNaN(val)) uniqueRolls.add(val);
+        });
+        return uniqueRolls.size;
+    }, [rollsInput]);
+
     const handleSave = async () => {
         if (!db || !user || !selectedClass) return;
         
@@ -376,7 +389,7 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
             }
 
             // 2. Parse rolls (handle Bengali digits too)
-            const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]);
+            const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
             const inputRolls = rollsInput
                 .split(/[\s,]+/)
                 .map(r => parseInt(bnToEn(r.trim()), 10))
@@ -436,7 +449,14 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="font-black text-primary">উপস্থিত রোল নম্বরসমূহ (কমা বা স্পেস দিয়ে লিখুন)</Label>
+                        <div className="flex justify-between items-center mb-1">
+                            <Label className="font-black text-primary">উপস্থিত রোল নম্বরসমূহ (কমা বা স্পেস দিয়ে লিখুন)</Label>
+                            {rollCount > 0 && (
+                                <Badge className="bg-emerald-600 font-black animate-in zoom-in duration-300">
+                                    মোট: {rollCount.toLocaleString('bn-BD')} জন
+                                </Badge>
+                            )}
+                        </div>
                         <Textarea 
                             placeholder="উদা: ১, ২, ৫, ১০, ১২..." 
                             className="min-h-[150px] text-lg font-black tracking-widest leading-relaxed focus:ring-primary"
@@ -952,4 +972,3 @@ export default function AttendancePage() {
         </div>
     );
 }
-
