@@ -16,7 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2 } from 'lucide-react';
 import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -358,7 +358,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
     );
 };
 
-// Fee Collection Component
+// Fee Collection Tab Component
 const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { studentsForYear: Student[], isLoading: boolean, onFeeCollected: () => void }) => {
     const [feeStudent, setFeeStudent] = useState<Student | null>(null);
 
@@ -821,8 +821,8 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
                 )}
             </CardContent>
         </Card>
-    )
-}
+    );
+};
 
 
 export default function AccountsPage() {
