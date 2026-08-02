@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -624,7 +623,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                             <p className="text-xs font-bold leading-tight mb-2">{proxy.subject}</p>
                                             <div className="flex flex-col gap-1 border-t pt-2">
                                                 <div className="flex items-center justify-between text-[9px]">
-                                                    <span className="text-muted-foreground">ছিল:</span>
+                                                    <span className="text-muted-foreground"> ছিল:</span>
                                                     <span className="font-bold text-red-500">{proxy.originalTeacher}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between text-[9px]">
@@ -1408,7 +1407,7 @@ export default function RoutinesPage() {
         <>
             <div className="flex min-h-screen w-full flex-col bg-fuchsia-100 no-print">
                 <Header />
-                <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
+                <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
                     <Card className="shadow-xl border-2 border-green-600">
                         <CardHeader className="bg-white/50">
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">

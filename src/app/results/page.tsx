@@ -974,7 +974,7 @@ export default function ResultsPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50 font-kalpurush">
             <Header />
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
+            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
                 <Card className="border-2 border-primary/10 shadow-xl overflow-hidden rounded-xl">
                     <CardHeader className="bg-white/70 border-b backdrop-blur-sm">
                         <CardTitle className="text-3xl font-black text-primary">ফলাফল ব্যবস্থাপনা</CardTitle>

@@ -10,7 +10,7 @@ export default function DocumentsPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
         <div className="mb-4">
             <h1 className="text-3xl font-black text-primary">অফিসিয়াল ডকুমেন্ট জেনারেটর</h1>
             <p className="text-muted-foreground">শিক্ষার্থীদের জন্য প্রয়োজনীয় কাগজপত্র তৈরি ও প্রিন্ট করুন</p>

@@ -478,7 +478,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
-                .filter((c): c is FeeCollection => f !== null)
+                .filter((c): c is FeeCollection => c !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
             
             setCollections(data);
@@ -576,7 +576,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// New Transaction Component (Includes Income and Expense Entry)
+// New Transaction Tab Component (Includes Income and Expense Entry)
 const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onTransactionAdded: () => void, initialType?: TransactionType }) => {
     const { toast } = useToast();
     const db = useFirestore();
@@ -692,7 +692,7 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
                                 <Label htmlFor="amount">টাকার পরিমাণ</Label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span>
-                                    <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="pl-8 text-lg font-black" />
+                                    <input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-8 text-lg font-black ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
                                 </div>
                             </div>
 
@@ -1018,7 +1018,7 @@ export default function AccountsPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-teal-100 font-kalpurush">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
+      <main className="p-4 md:p-8 pb-[500px]">
         <Card className="border-2 border-primary/10">
           <CardHeader>
              <CardTitle className="text-3xl font-black">হিসাব শাখা</CardTitle>

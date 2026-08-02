@@ -295,7 +295,7 @@ export default function StaffListPage() {
     <>
     <div className="flex min-h-screen w-full flex-col bg-orange-100 font-kalpurush">
       <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
         <Card className="border-2 border-orange-200 shadow-xl">
           <CardHeader className="bg-white/50 border-b">
              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

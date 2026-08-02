@@ -328,7 +328,7 @@ export default function MessagingPage() {
     return (
       <div className="flex min-h-screen w-full flex-col bg-lime-50 font-kalpurush">
         <Header />
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-[500px]">
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
             <Card className="md:col-span-2 lg:col-span-3 shadow-md">
               <CardHeader>
