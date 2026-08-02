@@ -96,7 +96,7 @@ export default function LoginPage() {
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-4 font-kalpurush text-black">
-            <div className="mb-8 flex flex-col items-center gap-4 text-center">
+            <div className="mb-8 flex flex-col items-center gap-2 text-center">
                 {isSchoolInfoLoading ? (
                     <>
                         <Skeleton className="h-20 w-20 rounded-full" />
@@ -110,11 +110,11 @@ export default function LoginPage() {
                                 alt="School Logo"
                                 width={110}
                                 height={110}
-                                className="rounded-full object-contain bg-white p-1 shadow-lg border-2 border-primary/20 mb-2"
+                                className="rounded-full object-contain bg-white p-1 shadow-lg border-2 border-primary/20"
                             />
                         )}
                         
-                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-6 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform">
+                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-6 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform mt-1">
                             <h1 className="text-2xl sm:text-[45px] font-black text-white leading-none tracking-tighter mb-2 [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
                                 {schoolInfo.name}
                             </h1>
