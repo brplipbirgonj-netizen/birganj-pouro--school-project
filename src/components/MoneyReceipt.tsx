@@ -45,7 +45,7 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
         .filter(([_, amount]) => amount && amount > 0);
 
     return (
-        <div className="money-receipt font-kalpurush w-[148mm] h-[210mm] p-6 bg-white text-black border-2 border-slate-300 border-l-[10px] border-l-primary relative overflow-hidden flex flex-col mx-auto my-4 shadow-sm print:m-0 print:border-slate-400 print:border-l-[10px] print:border-l-primary print:shadow-none box-border">
+        <div className="money-receipt font-kalpurush w-[148mm] h-[210mm] p-6 bg-white text-black border-2 border-black border-l-[10px] border-l-primary relative overflow-hidden flex flex-col mx-auto my-4 shadow-sm print:m-0 print:border-black print:border-l-[10px] print:border-l-primary print:shadow-none box-border">
             {/* Watermark */}
             {schoolInfo.logoUrl && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
@@ -72,7 +72,7 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
             </header>
 
             <main className="relative z-10 space-y-4 flex-grow">
-                <div className="grid grid-cols-2 gap-y-2 text-sm font-bold bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div className="grid grid-cols-2 gap-y-2 text-sm font-bold bg-slate-50 p-3 rounded-lg border border-black">
                     <div className="flex gap-2"><span className="text-slate-500">শিক্ষার্থীর নাম:</span> <span className="font-black">{student.studentNameBn}</span></div>
                     <div className="flex gap-2"><span className="text-slate-500">আইডি:</span> <span>{toBengaliNumber(student.generatedId || '-')}</span></div>
                     <div className="flex gap-2"><span className="text-slate-500">শ্রেণি:</span> <span>{classNamesMap[student.className] || student.className} শ্রেণি</span></div>
@@ -109,7 +109,7 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                     </div>
                 </div>
 
-                <div className="text-xs italic bg-slate-50 p-2 rounded border border-dashed border-slate-300">
+                <div className="text-xs italic bg-slate-50 p-2 rounded border border-dashed border-black/30">
                     <p><strong>কথায়:</strong> {collection.description || 'বিবিধ ফি আদায়'}</p>
                 </div>
             </main>
