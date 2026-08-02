@@ -15,7 +15,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar } from 'lucide-react';
 import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -737,17 +737,23 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
     const { toast } = useToast();
     const { user, hasPermission } = useAuth();
     const canManageTransactions = hasPermission('manage:transactions');
+    const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
     const cashbookData = useMemo(() => {
         let balance = 0;
-        return [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(tx => {
+        const sorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        const calculated = sorted.map(tx => {
             if (tx.accountHead === 'ব্যাংকে জমা (Cash to Bank)') balance -= tx.amount;
             else if (tx.accountHead === 'ব্যাংক থেকে উত্তোলন (Bank to Cash)') balance += tx.amount;
             else if (tx.type === 'income') balance += tx.amount;
             else balance -= tx.amount;
             return { ...tx, balance };
         });
-    }, [transactions]);
+
+        if (selectedMonth === 'all') return calculated;
+        return calculated.filter(tx => new Date(tx.date).getMonth().toString() === selectedMonth);
+    }, [transactions, selectedMonth]);
 
     const handleDelete = async (id: string) => {
         if(!db) return;
@@ -756,7 +762,25 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
 
     return (
         <Card className="border-none shadow-none animate-in fade-in duration-500">
-            <CardHeader className="px-0 pt-0"><CardTitle className="text-xl">ক্যাশবুক</CardTitle></CardHeader>
+            <CardHeader className="px-0 pt-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <CardTitle className="text-xl">ক্যাশবুক</CardTitle>
+                    <div className="flex items-center gap-2">
+                        <Label className="font-bold text-xs">মাস নির্বাচন:</Label>
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-40 bg-white h-9 text-xs font-bold border-2">
+                                <SelectValue placeholder="সকল মাস" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">সকল মাস</SelectItem>
+                                {BENGALI_MONTHS.map((m, i) => (
+                                    <SelectItem key={m} value={i.toString()}>{m}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </CardHeader>
             <CardContent className="px-0 pt-4">
                 <div className="table-container">
                     <Table className="min-w-[950px]">
@@ -808,20 +832,44 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
 
 // Ledger Tab Component
 const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], isLoading: boolean }) => {
+    const [selectedMonth, setSelectedMonth] = useState<string>('all');
+
     const ledgerData = useMemo(() => {
         const grouped: Record<string, { income: number, expense: number, items: Transaction[] }> = {};
-        transactions.forEach(tx => {
+        const filtered = selectedMonth === 'all' 
+            ? transactions 
+            : transactions.filter(tx => new Date(tx.date).getMonth().toString() === selectedMonth);
+
+        filtered.forEach(tx => {
             if (!grouped[tx.accountHead]) grouped[tx.accountHead] = { income: 0, expense: 0, items: [] };
             if (tx.type === 'income') grouped[tx.accountHead].income += tx.amount;
             else grouped[tx.accountHead].expense += tx.amount;
             grouped[tx.accountHead].items.push(tx);
         });
         return grouped;
-    }, [transactions]);
+    }, [transactions, selectedMonth]);
     
     return (
          <Card className="border-none shadow-none animate-in fade-in duration-500">
-             <CardHeader className="px-0 pt-0"><CardTitle className="text-xl">খতিয়ান (লেজার)</CardTitle></CardHeader>
+            <CardHeader className="px-0 pt-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <CardTitle className="text-xl">খতিয়ান (লেজার)</CardTitle>
+                    <div className="flex items-center gap-2">
+                        <Label className="font-bold text-xs">মাস নির্বাচন:</Label>
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-40 bg-white h-9 text-xs font-bold border-2">
+                                <SelectValue placeholder="সকল মাস" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">সকল মাস</SelectItem>
+                                {BENGALI_MONTHS.map((m, i) => (
+                                    <SelectItem key={m} value={i.toString()}>{m}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </CardHeader>
             <CardContent className="px-0 pt-4">
                 {isLoading ? <p className="text-center py-20 italic">লোড হচ্ছে...</p> : Object.keys(ledgerData).length === 0 ? <p className="text-center py-20 italic">তথ্য নেই</p> : (
                     <Accordion type="multiple" className="w-full space-y-3">
