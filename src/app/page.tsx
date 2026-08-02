@@ -983,6 +983,9 @@ export default function Home() {
     );
   }
 
+  const presentPercentage = totalStudents > 0 ? ((totalPresent / totalStudents) * 100).toFixed(1) : "০";
+  const absentPercentage = totalStudents > 0 ? ((totalAbsent / totalStudents) * 100).toFixed(1) : "০";
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-sky-100 font-kalpurush">
       <Header />
@@ -1027,7 +1030,12 @@ export default function Home() {
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-3xl font-black text-teal-950 mb-1">{totalPresent.toLocaleString('bn-BD')}</div>
+              <div className="flex items-baseline gap-2">
+                <div className="text-3xl font-black text-teal-950 mb-1">{totalPresent.toLocaleString('bn-BD')}</div>
+                <div className="text-sm font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-100">
+                  {toBengaliNumber(presentPercentage)}%
+                </div>
+              </div>
               <p className="text-xs text-teal-700 font-medium">
                 আজকের মোট উপস্থিত শিক্ষার্থী
               </p>
@@ -1047,7 +1055,12 @@ export default function Home() {
                 <Users className="h-4 w-4 text-red-700" />
               </div>
             </CardHeader>            <CardContent className="relative z-10">
-              <div className="text-3xl font-black text-red-950 mb-1">{totalAbsent.toLocaleString('bn-BD')}</div>
+              <div className="flex items-baseline gap-2">
+                <div className="text-3xl font-black text-red-950 mb-1">{totalAbsent.toLocaleString('bn-BD')}</div>
+                <div className="text-sm font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-100">
+                  {toBengaliNumber(absentPercentage)}%
+                </div>
+              </div>
               <p className="text-xs text-red-700 font-medium">
                 আজকের মোট অনুপস্থিত শিক্ষার্থী
               </p>
