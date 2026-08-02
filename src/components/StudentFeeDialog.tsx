@@ -14,7 +14,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -24,6 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { DatePicker } from './ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { Checkbox } from '@/components/ui/checkbox';
+import { MoneyReceipt } from './MoneyReceipt';
+import { useSchoolInfo } from '@/context/SchoolInfoContext';
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -323,6 +325,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
 
 export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }: { student: Student | null, open: boolean, onOpenChange: (open: boolean) => void, onFeeCollected: () => void }) {
     const db = useFirestore();
+    const { schoolInfo } = useSchoolInfo();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
     const { hasPermission } = useAuth();
@@ -333,6 +336,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingCollection, setEditingCollection] = useState<FeeCollection | null>(null);
+    const [printingCollection, setPrintingCollection] = useState<FeeCollection | null>(null);
     
     const studentId = student?.id;
 
@@ -353,6 +357,14 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     const handleEdit = (collection: FeeCollection) => {
         setEditingCollection(collection);
         setIsFormOpen(true);
+    };
+
+    const handlePrint = (collection: FeeCollection) => {
+        setPrintingCollection(collection);
+        setTimeout(() => {
+            window.print();
+            setPrintingCollection(null);
+        }, 300);
     };
 
     const handleAddNew = () => {
@@ -387,8 +399,9 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     };
     
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw]">
+            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] no-print">
                 <DialogHeader>
                     <div className="flex flex-col md:flex-row items-center gap-4">
                         {isLoading || !student ? (
@@ -423,20 +436,24 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                         <TableHead className="font-bold">আদায়ের তারিখ</TableHead>
                                         <TableHead className="font-bold">বিবরণ</TableHead>
                                         <TableHead className="text-right font-bold">মোট টাকা</TableHead>
-                                        <TableHead className="font-bold">আদায়কারী</TableHead>
+                                        <TableHead className="font-bold text-center">রসিদ</TableHead>
                                         {canManageTransactions && <TableHead className="text-right font-bold">কার্যক্রম</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {feeCollections.length === 0 ? (
-                                        <TableRow><TableCell colSpan={5} className="text-center h-32 italic text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={canManageTransactions ? 5 : 4} className="text-center h-32 italic text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
                                     ) : (
                                         feeCollections.map(collection => (
                                             <TableRow key={collection.id} className="hover:bg-primary/5 transition-colors">
                                                 <TableCell className="whitespace-nowrap font-medium">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
                                                 <TableCell>{collection.description || 'N/A'}</TableCell>
                                                 <TableCell className="text-right font-bold text-primary whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
-                                                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{collection.collectorName || '-'}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary" onClick={() => handlePrint(collection)}>
+                                                        <Printer className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
                                                 {canManageTransactions && (
                                                     <TableCell className="text-right">
                                                         <div className="flex gap-2 justify-end">
@@ -467,7 +484,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                         </div>
                     </div>
                     <div className="flex justify-end pt-2 border-t mt-auto">
-                        <Button onClick={handleAddNew} size="lg" className="shadow-lg hover:shadow-xl transition-all">নতুন ফি আদায় করুন</Button>
+                        <Button onClick={handleAddNew} size="lg" className="shadow-lg hover:shadow-xl transition-all font-black px-8 h-12">নতুন ফি আদায় করুন</Button>
                     </div>
 
                     {student && (
@@ -483,5 +500,17 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                 )}
             </DialogContent>
         </Dialog>
+
+        {/* Printable Area for Receipt */}
+        {student && printingCollection && (
+            <div className="hidden print:block printable-area bg-white">
+                <MoneyReceipt 
+                    collection={printingCollection} 
+                    student={student} 
+                    schoolInfo={schoolInfo} 
+                />
+            </div>
+        )}
+        </>
     );
 }

@@ -16,8 +16,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard } from 'lucide-react';
+import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -31,6 +31,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Badge } from '@/components/ui/badge';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, BarChart, Bar } from 'recharts';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -38,6 +39,195 @@ const BENGALI_MONTHS = [
 ];
 
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+
+// Accounts Dashboard Component
+const AccountsDashboardTab = ({ transactions, isLoading }: { transactions: Transaction[], isLoading: boolean }) => {
+    const stats = useMemo(() => {
+        const now = new Date();
+        let todayIncome = 0;
+        let monthlyIncome = 0;
+        let monthlyExpense = 0;
+        let totalBalance = 0;
+
+        transactions.forEach(t => {
+            const amount = Number(t.amount) || 0;
+            const tDate = new Date(t.date);
+            
+            if (t.type === 'income') {
+                totalBalance += amount;
+                if (isToday(tDate)) todayIncome += amount;
+                if (isSameMonth(tDate, now)) monthlyIncome += amount;
+            } else {
+                totalBalance -= amount;
+                if (isSameMonth(tDate, now)) monthlyExpense += amount;
+            }
+        });
+
+        return { todayIncome, monthlyIncome, monthlyExpense, totalBalance };
+    }, [transactions]);
+
+    const chartData = useMemo(() => {
+        return [
+            { name: 'আয়', value: stats.monthlyIncome, color: '#10b981' },
+            { name: 'ব্যয়', value: stats.monthlyExpense, color: '#ef4444' }
+        ];
+    }, [stats]);
+
+    const last7DaysData = useMemo(() => {
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return d;
+        }).reverse();
+
+        return last7Days.map(date => {
+            const dateStr = format(date, 'yyyy-MM-dd');
+            let income = 0;
+            let expense = 0;
+            transactions.forEach(t => {
+                if (format(new Date(t.date), 'yyyy-MM-dd') === dateStr) {
+                    if (t.type === 'income') income += t.amount;
+                    else expense += t.amount;
+                }
+            });
+            return {
+                label: format(date, 'd MMM', { locale: bn }),
+                income,
+                expense
+            };
+        });
+    }, [transactions]);
+
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> ডেটা লোড হচ্ছে...</div>;
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Quick Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-2 border-emerald-100 bg-emerald-50/20 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <Banknote className="h-24 w-24 text-emerald-900" />
+                    </div>
+                    <CardHeader className="pb-2 relative z-10">
+                        <CardTitle className="text-xs font-black uppercase text-emerald-700">আজকের মোট আদায়</CardTitle>
+                    </CardHeader>
+                    <CardContent className="relative z-10">
+                        <div className="text-3xl font-black text-emerald-950">{stats.todayIncome.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3" /> লাইভ আপডেট
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-2 border-primary/10 bg-primary/5 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <Wallet className="h-24 w-24 text-primary" />
+                    </div>
+                    <CardHeader className="pb-2 relative z-10">
+                        <CardTitle className="text-xs font-black uppercase text-primary">এই মাসের মোট আয়</CardTitle>
+                    </CardHeader>
+                    <CardContent className="relative z-10">
+                        <div className="text-3xl font-black text-slate-900">{stats.monthlyIncome.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-muted-foreground mt-1">{BENGALI_MONTHS[new Date().getMonth()]} মাস</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-2 border-rose-100 bg-rose-50/20 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <CreditCard className="h-24 w-24 text-rose-900" />
+                    </div>
+                    <CardHeader className="pb-2 relative z-10">
+                        <CardTitle className="text-xs font-black uppercase text-rose-700">এই মাসের মোট ব্যয়</CardTitle>
+                    </CardHeader>
+                    <CardContent className="relative z-10">
+                        <div className="text-3xl font-black text-rose-950">{stats.monthlyExpense.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-rose-600 mt-1">পরিচালনা ও অন্যান্য খরচ</p>
+                    </CardContent>
+                </Card>
+
+                <Card className={cn(
+                    "border-2 shadow-lg relative overflow-hidden group",
+                    stats.totalBalance >= 0 ? "border-amber-200 bg-amber-50/30" : "border-red-200 bg-red-50/30"
+                )}>
+                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <LayoutDashboard className="h-24 w-24 text-amber-900" />
+                    </div>
+                    <CardHeader className="pb-2 relative z-10">
+                        <CardTitle className="text-xs font-black uppercase text-amber-800">মোট ক্যাশ ব্যালেন্স (নগদ)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="relative z-10">
+                        <div className="text-3xl font-black text-amber-950">{stats.totalBalance.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-muted-foreground mt-1 italic">সিস্টেমের সকল আয়-ব্যয়ের জের</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Visual Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2 border-2 border-black/5 shadow-md">
+                    <CardHeader className="bg-primary/5 border-b">
+                        <CardTitle className="text-sm font-black flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4" /> গত ৭ দিনের আয়-ব্যয় চিত্র
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6 h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={last7DaysData}>
+                                <defs>
+                                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                                <YAxis hide />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
+                                    formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
+                                />
+                                <Area type="monotone" dataKey="income" name="আয়" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                                <Area type="monotone" dataKey="expense" name="ব্যয়" stroke="#ef4444" strokeWidth={3} fill="transparent" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-2 border-black/5 shadow-md">
+                    <CardHeader className="bg-primary/5 border-b">
+                        <CardTitle className="text-sm font-black flex items-center gap-2">
+                            <PieChartIcon className="h-4 w-4" /> এই মাসের আয়-ব্যয় তুলনা
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px] pt-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={chartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
+                                    formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
+                                />
+                                <Legend verticalAlign="bottom" align="center" iconType="circle" />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+};
 
 // Defaulters Tab Component
 const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], selectedYear: string }) => {
@@ -688,7 +878,7 @@ export default function AccountsPage() {
     return allStudents.filter(student => student.academicYear === selectedYear);
   }, [allStudents, selectedYear]);
 
-  const tabs = [];
+  const tabs = [{ value: "dashboard", label: "ড্যাশবোর্ড" }];
   if (canCollectFees) {
       tabs.push({ value: "fee-collection", label: "আদায়" });
       tabs.push({ value: "defaulters", label: "বকেয়া" });
@@ -712,11 +902,15 @@ export default function AccountsPage() {
           </CardHeader>
           <CardContent>
              {isClient ? (
-                <Tabs defaultValue={tabs[0]?.value || 'cashbook'}>
+                <Tabs defaultValue="dashboard">
                   <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
                     {tabs.map(tab => <TabsTrigger key={tab.value} value={tab.value} className="flex-1 min-w-[80px] font-bold">{tab.label}</TabsTrigger>)}
                   </TabsList>
                   
+                  <TabsContent value="dashboard" className="mt-4">
+                      <AccountsDashboardTab transactions={transactions} isLoading={isLoading} />
+                  </TabsContent>
+
                   {canCollectFees && (
                     <>
                     <TabsContent value="fee-collection" className="mt-4">
