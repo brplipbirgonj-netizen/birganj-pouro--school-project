@@ -5,7 +5,6 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student } from '@/lib/student-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
@@ -16,7 +15,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks } from 'lucide-react';
 import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -31,14 +30,14 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Badge } from '@/components/ui/badge';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ শ্রেণি', '7': 'সপ্তম শ্রেণি', '8': 'অষ্টম শ্রেণি', '9': 'নবম শ্রেণি', '10': 'দশম শ্রেণি' };
 
 // Accounts Dashboard Component
 const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { transactions: Transaction[], isLoading: boolean, onActionClick: (type: 'income' | 'expense') => void }) => {
@@ -104,7 +103,6 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
             let expense = 0;
             transactions.forEach(t => {
                 if (format(new Date(t.date), 'yyyy-MM-dd') === dateStr) {
-                    // Contra entries aren't counted as simple income/expense for the chart
                     if (t.accountHead.includes('উত্তোলন') || t.accountHead.includes('জমা')) return;
                     if (t.type === 'income') income += t.amount;
                     else expense += t.amount;
@@ -122,7 +120,6 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Quick Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-2 border-emerald-100 bg-emerald-50/20 shadow-sm relative overflow-hidden group">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
@@ -179,7 +176,6 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                 </Card>
             </div>
 
-            {/* Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Button onClick={() => onActionClick('income')} className="h-16 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-lg">
                     <PlusCircle className="mr-2 h-6 w-6" /> আয় যোগ করুন
@@ -189,7 +185,6 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                 </Button>
             </div>
 
-            {/* Visual Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2 border-2 border-black/5 shadow-md">
                     <CardHeader className="bg-primary/5 border-b">
@@ -298,7 +293,6 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
         }
         const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} এর ${selectedMonth} মাসের বিদ্যালয় ফি বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করুন। বীপৌউবি`;
         const encodedMsg = encodeURIComponent(msg);
-        
         const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
         const separator = isIOS ? '&' : '?';
         window.location.href = `sms:${mobile}${separator}body=${encodedMsg}`;
@@ -327,18 +321,13 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                     </div>
                 </CardHeader>
                 <CardContent className="p-0 sm:p-6">
-                    <Tabs defaultValue="6">
-                        <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap mb-6">
-                            {classes.map(cls => (
-                                <TabsTrigger key={cls} value={cls} className="py-2 font-bold">
-                                    {classNamesMap[cls]}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
+                    <div className="flex flex-col gap-8">
                         {classes.map(cls => {
                             const defaulters = getDefaultersForClass(cls);
+                            if (defaulters.length === 0) return null;
                             return (
-                                <TabsContent key={cls} value={cls} className="mt-0">
+                                <div key={cls} className="space-y-3">
+                                    <h3 className="font-black text-lg text-slate-800 border-l-4 border-red-500 pl-3">{classNamesMap[cls]}</h3>
                                     <div className="table-container">
                                         <Table>
                                             <TableHeader className="bg-muted/50">
@@ -350,35 +339,29 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {isLoading ? (
-                                                    <TableRow><TableCell colSpan={4} className="text-center py-12">লোড হচ্ছে...</TableCell></TableRow>
-                                                ) : defaulters.length === 0 ? (
-                                                    <TableRow><TableCell colSpan={4} className="text-center py-12 text-emerald-600 font-bold">অভিনন্দন! এই শ্রেণিতে কারো বেতন বকেয়া নেই।</TableCell></TableRow>
-                                                ) : (
-                                                    defaulters.map(student => (
-                                                        <TableRow key={student.id}>
-                                                            <TableCell className="text-center font-bold">{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                                            <TableCell className="font-bold">{student.studentNameBn}</TableCell>
-                                                            <TableCell className="text-xs">{student.guardianMobile || student.studentMobile || '-'}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleSendReminder(student)}>
-                                                                    <Smartphone className="h-4 w-4 mr-2" /> SMS পাঠান
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                )}
+                                                {defaulters.map(student => (
+                                                    <TableRow key={student.id}>
+                                                        <TableCell className="text-center font-bold">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                                        <TableCell className="font-bold">{student.studentNameBn}</TableCell>
+                                                        <TableCell className="text-xs">{student.guardianMobile || student.studentMobile || '-'}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleSendReminder(student)}>
+                                                                <Smartphone className="h-4 w-4 mr-2" /> SMS পাঠান
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
                                             </TableBody>
                                         </Table>
                                     </div>
-                                    <div className="mt-4 p-3 bg-muted/20 text-xs font-bold text-muted-foreground flex justify-between rounded-lg">
-                                        <span>মোট বকেয়া ({classNamesMap[cls]} শ্রেণি): {defaulters.length.toLocaleString('bn-BD')} জন</span>
-                                        <span className="text-primary">{selectedMonth} মাস</span>
-                                    </div>
-                                </TabsContent>
+                                </div>
                             )
                         })}
-                    </Tabs>
+                        {isLoading && <div className="text-center p-20 italic">তথ্য লোড হচ্ছে...</div>}
+                        {!isLoading && classes.every(cls => getDefaultersForClass(cls).length === 0) && (
+                            <div className="text-center py-20 text-emerald-600 font-black text-xl">অভিনন্দন! কারো বেতন বকেয়া নেই।</div>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -388,32 +371,34 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
 // Fee Collection Tab Component
 const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { studentsForYear: Student[], isLoading: boolean, onFeeCollected: () => void }) => {
     const [feeStudent, setFeeStudent] = useState<Student | null>(null);
-
+    const [selectedClass, setSelectedClass] = useState('6');
     const classes = ['6', '7', '8', '9', '10'];
 
-    const getStudentsByClass = (className: string): Student[] => {
-        return studentsForYear.filter((student) => student.className === className);
-    };
+    const filteredStudents = useMemo(() => {
+        return studentsForYear.filter((student) => student.className === selectedClass);
+    }, [studentsForYear, selectedClass]);
 
     return (
-        <>
-        <Tabs defaultValue="6">
-            <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap">
-            {classes.map((className) => (
-                <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm font-bold">
-                {classNamesMap[className]}
-                </TabsTrigger>
-            ))}
-            </TabsList>
-            {classes.map((className) => (
-            <TabsContent key={className} value={className}>
-                <Card>
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white/50 items-end">
+                <div className="space-y-2 flex-1">
+                    <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            <Card className="border-2 border-teal-100 shadow-lg">
                 <CardContent className="p-0">
                     <div className="table-container">
-                    <Table className="min-w-[600px]">
+                    <Table>
                         <TableHeader className="bg-muted/50 sticky top-0 z-10">
                         <TableRow>
-                            <TableHead>রোল</TableHead>
+                            <TableHead className="text-center w-20">রোল</TableHead>
                             <TableHead>শিক্ষার্থীর নাম</TableHead>
                             <TableHead>পিতার নাম</TableHead>
                             <TableHead className="text-right">কার্যক্রম</TableHead>
@@ -421,25 +406,17 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
                         </TableHeader>
                         <TableBody>
                         {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                    লোড হচ্ছে...
-                                </TableCell>
-                            </TableRow>
-                        ) : getStudentsByClass(className).length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                    এই শ্রেণিতে কোনো শিক্ষার্থী নেই।
-                                </TableCell>
-                            </TableRow>
+                            <TableRow><TableCell colSpan={4} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
+                        ) : filteredStudents.length === 0 ? (
+                            <TableRow><TableCell colSpan={4} className="text-center py-20 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</TableCell></TableRow>
                         ) : (
-                            getStudentsByClass(className).map((student) => (
+                            filteredStudents.map((student) => (
                             <TableRow key={student.id}>
-                                <TableCell className="font-medium">{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                <TableCell className="whitespace-nowrap font-bold">{student.studentNameBn}</TableCell>
-                                <TableCell className="whitespace-nowrap">{student.fatherNameBn}</TableCell>
+                                <TableCell className="font-black text-center">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                <TableCell className="whitespace-nowrap font-bold text-slate-800">{student.studentNameBn}</TableCell>
+                                <TableCell className="whitespace-nowrap text-muted-foreground">{student.fatherNameBn}</TableCell>
                                 <TableCell className="text-right">
-                                <Button onClick={() => setFeeStudent(student)} size="sm">বেতন আদায়</Button>
+                                <Button onClick={() => setFeeStudent(student)} size="sm" className="bg-teal-600 hover:bg-teal-700 font-bold">বেতন আদায়</Button>
                                 </TableCell>
                             </TableRow>
                             ))
@@ -448,12 +425,9 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
                     </Table>
                     </div>
                 </CardContent>
-                </Card>
-            </TabsContent>
-            ))}
-        </Tabs>
-        <StudentFeeDialog student={feeStudent} open={!!feeStudent} onOpenChange={() => setFeeStudent(null)} onFeeCollected={onFeeCollected} />
-        </>
+            </Card>
+            <StudentFeeDialog student={feeStudent} open={!!feeStudent} onOpenChange={() => setFeeStudent(null)} onFeeCollected={onFeeCollected} />
+        </div>
     )
 }
 
@@ -470,25 +444,17 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     useEffect(() => {
         if (!db || !user) return;
         setIsLoading(true);
-        const q = query(
-            collection(db, 'feeCollections'),
-            where('academicYear', '==', selectedYear)
-        );
-
+        const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
                 .filter((c): c is FeeCollection => c !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
-            
             setCollections(data);
             setIsLoading(false);
         }, (error: FirestoreError) => {
-            if (error.code === 'permission-denied') return;
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' }));
             setIsLoading(false);
         });
-
         return () => unsubscribe();
     }, [db, user, selectedYear]);
 
@@ -500,9 +466,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const uniqueCollectors = useMemo(() => {
         const collectors = new Set<string>();
-        collections.forEach(c => {
-            if (c.collectorName) collectors.add(c.collectorName);
-        });
+        collections.forEach(c => { if (c.collectorName) collectors.add(c.collectorName); });
         return Array.from(collectors).sort();
     }, [collections]);
 
@@ -515,8 +479,8 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     }, [collections, collectorFilter, dateFilter]);
 
     return (
-        <Card>
-            <CardHeader>
+        <Card className="border-none shadow-none">
+            <CardHeader className="px-0 pt-0">
                 <CardTitle>বেতন আদায়ের রিপোর্ট</CardTitle>
                 <div className="flex flex-col md:flex-row gap-4 mt-4 bg-muted/30 p-4 rounded-lg">
                     <div className="space-y-2 flex-1">
@@ -535,13 +499,13 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 pt-4">
                 <div className="table-container">
-                    <Table className="min-w-[850px]">
+                    <Table>
                         <TableHeader className="bg-muted/50 sticky top-0 z-10">
                             <TableRow>
                                 <TableHead>তারিখ</TableHead>
-                                <TableHead>রোল</TableHead>
+                                <TableHead className="text-center w-20">রোল</TableHead>
                                 <TableHead>নাম</TableHead>
                                 <TableHead>শ্রেণি</TableHead>
                                 <TableHead className="text-right">মোট আদায়</TableHead>
@@ -550,16 +514,16 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">লোড হচ্ছে...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={6} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
                             ) : filteredCollections.length === 0 ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={6} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                             ) : (
                                 filteredCollections.map(c => {
                                     const student = studentMap.get(c.studentId);
                                     return (
-                                        <TableRow key={c.id} className="hover:bg-accent/5 transition-colors">
+                                        <TableRow key={c.id} className="hover:bg-accent/5">
                                             <TableCell className="whitespace-nowrap">{format(c.collectionDate, 'PP', { locale: bn })}</TableCell>
-                                            <TableCell className="font-bold">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
+                                            <TableCell className="font-black text-center">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
                                             <TableCell className="whitespace-nowrap font-bold text-primary">{student?.studentNameBn || '-'}</TableCell>
                                             <TableCell className="whitespace-nowrap">{student ? (classNamesMap[student.className] || student.className) : '-'}</TableCell>
                                             <TableCell className="text-right font-black text-emerald-700">{(c.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
@@ -576,7 +540,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// New Transaction Tab Component (Includes Income and Expense Entry)
+// New Transaction Tab Component
 const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onTransactionAdded: () => void, initialType?: TransactionType }) => {
     const { toast } = useToast();
     const db = useFirestore();
@@ -595,141 +559,76 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
     const incomeHeads = ['বেতন (Tuition Fee)', 'পরীক্ষা ফি (Exam Fee)', 'ভর্তি ফি (Admission Fee)', 'সেশন ফি (Session Fee)', 'অনুদন (Donation)', 'ব্যাংক থেকে উত্তোলন (Bank to Cash)', 'অন্যান্য'];
     const expenseHeads = ['শিক্ষক/স্টাফ বেতন', 'বিদ্যুৎ ও ইউটিলিটি বিল', 'স্টেশনারি ও খাতা', 'মেরামত ও রক্ষণাবেক্ষণ', 'আপ্যায়ন খরচ', 'ব্যাংকে জমা (Cash to Bank)', 'অন্যান্য'];
 
-    useEffect(() => {
-        setType(initialType);
-        setAccountHead('');
-    }, [initialType]);
+    useEffect(() => { setType(initialType); setAccountHead(''); }, [initialType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!db || !user || !date || !type || !accountHead || !amount || amount <= 0) {
-            toast({ variant: 'destructive', title: 'অনুগ্রহ করে সকল তথ্য পূরণ করুন এবং টাকার পরিমাণ শূন্যের বেশি রাখুন।' });
+            toast({ variant: 'destructive', title: 'অনুগ্রহ করে সকল তথ্য পূরণ করুন।' });
             return;
         }
 
         const newTransaction: NewTransactionData = {
-            date,
-            type,
-            method,
-            accountHead,
-            description,
-            amount: Number(amount),
-            academicYear: selectedYear,
+            date, type, method, accountHead, description, amount: Number(amount), academicYear: selectedYear,
             voucherNo: type === 'expense' ? voucherNo : undefined,
             checkNo: method === 'bank' ? checkNo : undefined
         };
 
         try {
             await addTransaction(db, newTransaction);
-            toast({ title: type === 'income' ? 'আয় যোগ হয়েছে।' : 'ব্যয় যোগ হয়েছে।', description: method === 'bank' ? 'ব্যাংক লেনদেন হিসেবে রেকর্ড করা হয়েছে।' : 'নগদ লেনদেন হিসেবে রেকর্ড করা হয়েছে।' });
-            // Reset form
-            setDate(new Date());
-            setAccountHead('');
-            setDescription('');
-            setAmount('');
-            setVoucherNo('');
-            setCheckNo('');
-            onTransactionAdded(); // Notify parent to refetch transactions
-        } catch (error) {
-            // Error is handled by the global listener
-        }
+            toast({ title: 'লেনদেন সফলভাবে যোগ হয়েছে।' });
+            setAccountHead(''); setDescription(''); setAmount(''); setVoucherNo(''); setCheckNo('');
+            onTransactionAdded();
+        } catch (error) {}
     };
 
     return (
-        <div className="pb-40">
-            <Card className={cn("border-2", type === 'income' ? "border-emerald-100" : "border-rose-100")}>
-                <CardHeader className={cn(type === 'income' ? "bg-emerald-50/50" : "bg-rose-50/50")}>
-                    <CardTitle className="flex items-center gap-2">
-                        {type === 'income' ? <PlusCircle className="text-emerald-600" /> : <MinusCircle className="text-rose-600" />}
-                        নতুন {type === 'income' ? 'আয়' : 'ব্যয়'} এন্ট্রি করুন
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="date">তারিখ</Label>
-                                <DatePicker value={date} onChange={setDate} placeholder="তারিখ" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>লেনদেনের ধরণ</Label>
-                                <RadioGroup value={type} onValueChange={(v) => { setType(v as TransactionType); setAccountHead(''); }} className="flex items-center space-x-4 pt-2">
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="income" id="income" />
-                                        <Label htmlFor="income" className="font-bold text-emerald-700">আয়</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="expense" id="expense" />
-                                        <Label htmlFor="expense" className="font-bold text-rose-700">ব্যয়</Label>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>পেমেন্ট পদ্ধতি</Label>
-                                <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="cash" id="meth-cash" />
-                                        <Label htmlFor="meth-cash" className="font-bold">নগদ (Cash)</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="bank" id="meth-bank" />
-                                        <Label htmlFor="meth-bank" className="font-bold">ব্যাংক (Bank)</Label>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="account-head">খাত (Account Head)</Label>
-                                <Select value={accountHead} onValueChange={setAccountHead}>
-                                    <SelectTrigger id="account-head" className="bg-white font-bold"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
-                                    <SelectContent>
-                                        {(type === 'income' ? incomeHeads : expenseHeads).map(head => (
-                                            <SelectItem key={head} value={head}>{head}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="amount">টাকার পরিমাণ</Label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span>
-                                    <input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-8 text-lg font-black ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
-                                </div>
-                            </div>
-
-                            {type === 'expense' && (
-                                <div className="space-y-2 animate-in slide-in-from-top-2">
-                                    <Label htmlFor="voucherNo" className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-rose-500" /> ভাউচার নং
-                                    </Label>
-                                    <Input id="voucherNo" value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" className="font-bold" />
-                                </div>
-                            )}
-
-                            {method === 'bank' && (
-                                <div className="space-y-2 animate-in slide-in-from-top-2">
-                                    <Label htmlFor="checkNo" className="flex items-center gap-2">
-                                        <Hash className="h-4 w-4 text-blue-500" /> চেক নং (Check No)
-                                    </Label>
-                                    <Input id="checkNo" value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" className="font-bold" />
-                                </div>
-                            )}
-
-                            <div className="lg:col-span-3 space-y-2">
-                                <Label htmlFor="description">বিবরণ / মন্তব্য (ঐচ্ছিক)</Label>
-                                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." />
-                            </div>
+        <Card className={cn("border-2 shadow-lg", type === 'income' ? "border-emerald-100" : "border-rose-100")}>
+            <CardHeader className={cn("rounded-t-lg", type === 'income' ? "bg-emerald-50/50" : "bg-rose-50/50")}>
+                <CardTitle className="flex items-center gap-2">
+                    {type === 'income' ? <PlusCircle className="text-emerald-600" /> : <MinusCircle className="text-rose-600" />}
+                    নতুন {type === 'income' ? 'আয়' : 'ব্যয়'} এন্ট্রি করুন
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="space-y-2"><Label>তারিখ</Label><DatePicker value={date} onChange={setDate} /></div>
+                        <div className="space-y-2">
+                            <Label>লেনদেনের ধরণ</Label>
+                            <RadioGroup value={type} onValueChange={(v) => { setType(v as TransactionType); setAccountHead(''); }} className="flex items-center space-x-4 pt-2">
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="income" id="inc" /><Label htmlFor="inc" className="font-bold text-emerald-700">আয়</Label></div>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="expense" id="exp" /><Label htmlFor="exp" className="font-bold text-rose-700">ব্যয়</Label></div>
+                            </RadioGroup>
                         </div>
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg", type === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700")}>
-                                {type === 'income' ? 'আয় সেভ করুন' : 'ব্যয় সেভ করুন'}
-                            </Button>
+                        <div className="space-y-2">
+                            <Label>পেমেন্ট পদ্ধতি</Label>
+                            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="cash" id="m-cash" /><Label htmlFor="m-cash" className="font-bold">নগদ</Label></div>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="bank" id="m-bank" /><Label htmlFor="m-bank" className="font-bold">ব্যাংক</Label></div>
+                            </RadioGroup>
                         </div>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
-    )
-}
+                        <div className="space-y-2">
+                            <Label>খাত (Account Head)</Label>
+                            <Select value={accountHead} onValueChange={setAccountHead}>
+                                <SelectTrigger className="bg-white"><SelectValue placeholder="খাত নির্বাচন করুন" /></SelectTrigger>
+                                <SelectContent>{(type === 'income' ? incomeHeads : expenseHeads).map(head => <SelectItem key={head} value={head}>{head}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>টাকার পরিমাণ</Label>
+                            <div className="relative"><span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span><input type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-8 text-lg font-black ring-offset-background" /></div>
+                        </div>
+                        {type === 'expense' && <div className="space-y-2"><Label>ভাউচার নং</Label><Input value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" /></div>}
+                        {method === 'bank' && <div className="space-y-2"><Label>চেক নং</Label><Input value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" /></div>}
+                        <div className="lg:col-span-3 space-y-2"><Label>বিবরণ / মন্তব্য (ঐচ্ছিক)</Label><Input value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." /></div>
+                    </div>
+                    <div className="flex justify-end pt-4"><Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg", type === 'income' ? "bg-emerald-600" : "bg-rose-600")}>সেভ করুন</Button></div>
+                </form>
+            </CardContent>
+        </Card>
+    );
+};
 
 // Cashbook Tab Component
 const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Transaction[], isLoading: boolean, refetch: () => void }) => {
@@ -738,113 +637,61 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
     const { user, hasPermission } = useAuth();
     const canManageTransactions = hasPermission('manage:transactions');
 
-    const sortedTransactions = useMemo(() => {
-        return [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [transactions]);
-
     const cashbookData = useMemo(() => {
         let balance = 0;
-        return sortedTransactions.map(tx => {
-            // Check for Contra (Bank Transfers)
-            if (tx.accountHead === 'ব্যাংকে জমা (Cash to Bank)') {
-                balance -= tx.amount;
-            } else if (tx.accountHead === 'ব্যাংক থেকে উত্তোলন (Bank to Cash)') {
-                balance += tx.amount;
-            } else {
-                if (tx.type === 'income') {
-                    balance += tx.amount;
-                } else {
-                    balance -= tx.amount;
-                }
-            }
+        return [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(tx => {
+            if (tx.accountHead === 'ব্যাংকে জমা (Cash to Bank)') balance -= tx.amount;
+            else if (tx.accountHead === 'ব্যাংক থেকে উত্তোলন (Bank to Cash)') balance += tx.amount;
+            else if (tx.type === 'income') balance += tx.amount;
+            else balance -= tx.amount;
             return { ...tx, balance };
         });
-    }, [sortedTransactions]);
+    }, [transactions]);
 
     const handleDelete = async (id: string) => {
-        if(!db || !user) return;
-        try {
-            await deleteTransaction(db, id);
-            toast({ title: 'লেনদেন মুছে ফেলা হয়েছে।'});
-            refetch();
-        } catch (error) {
-            // error handled by listener
-        }
+        if(!db) return;
+        try { await deleteTransaction(db, id); toast({ title: 'লেনদেন মুছে ফেলা হয়েছে।' }); refetch(); } catch (error) {}
     }
 
     return (
-        <Card>
-             <CardHeader>
-                <CardTitle>ক্যাশবুক</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card className="border-none shadow-none">
+            <CardHeader className="px-0 pt-0"><CardTitle>ক্যাশবুক</CardTitle></CardHeader>
+            <CardContent className="px-0 pt-4">
                 <div className="table-container">
                     <Table className="min-w-[950px]">
                         <TableHeader className="bg-muted/50 sticky top-0 z-10">
                             <TableRow>
-                                <TableHead className="font-bold">তারিখ</TableHead>
-                                <TableHead className="font-bold">বিবরণ</TableHead>
-                                <TableHead className="text-center font-bold">পদ্ধতি</TableHead>
-                                <TableHead className="text-center font-bold">ভাউচার/চেক</TableHead>
-                                <TableHead className="text-right font-bold">আয়</TableHead>
-                                <TableHead className="text-right font-bold">ব্যয়</TableHead>
-                                <TableHead className="text-right font-bold">ব্য্যালেন্স</TableHead>
-                                {canManageTransactions && <TableHead className="text-right font-bold">কার্যক্রম</TableHead>}
+                                <TableHead>তারিখ</TableHead>
+                                <TableHead>বিবরণ</TableHead>
+                                <TableHead className="text-center">পদ্ধতি</TableHead>
+                                <TableHead className="text-center">ভাউচার/চেক</TableHead>
+                                <TableHead className="text-right">আয়</TableHead>
+                                <TableHead className="text-right">ব্যয়</TableHead>
+                                <TableHead className="text-right">ব্য্যালেন্স</TableHead>
+                                {canManageTransactions && <TableHead className="text-right">কার্যক্রম</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 8 : 7} className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></TableCell></TableRow>
+                                <TableRow><TableCell colSpan={8} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
                             ) : cashbookData.length === 0 ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 8 : 7} className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={8} className="text-center py-20 italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
                             ) : (
                                 [...cashbookData].reverse().map(tx => (
-                                    <TableRow key={tx.id} className="hover:bg-accent/5">
+                                    <TableRow key={tx.id}>
                                         <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
-                                        <TableCell>
-                                            <p className="font-bold">{tx.accountHead}</p>
-                                            {tx.description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{tx.description}</p>}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <Badge variant="outline" className={cn(
-                                                "text-[10px] font-bold px-2 py-0.5",
-                                                tx.method === 'bank' ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700"
-                                            )}>
-                                                {tx.method === 'bank' ? 'Bank' : 'Cash'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex flex-col gap-1 items-center">
-                                                {tx.voucherNo && <Badge variant="outline" className="bg-rose-50 text-rose-600 text-[9px] border-rose-100">V: {tx.voucherNo}</Badge>}
-                                                {tx.checkNo && <Badge variant="outline" className="bg-blue-50 text-blue-600 text-[9px] border-blue-100">C: {tx.checkNo}</Badge>}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right text-emerald-600 font-bold">
-                                            {tx.accountHead.includes('উত্তোলন') ? tx.amount.toLocaleString('bn-BD') : (tx.type === 'income' && !tx.accountHead.includes('জমা') ? tx.amount.toLocaleString('bn-BD') : '-')}
-                                        </TableCell>
-                                        <TableCell className="text-right text-rose-600 font-bold">
-                                            {tx.accountHead.includes('জমা') ? tx.amount.toLocaleString('bn-BD') : (tx.type === 'expense' && !tx.accountHead.includes('উত্তোলন') ? tx.amount.toLocaleString('bn-BD') : '-')}
-                                        </TableCell>
+                                        <TableCell><p className="font-bold">{tx.accountHead}</p><p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{tx.description}</p></TableCell>
+                                        <TableCell className="text-center"><Badge variant="outline" className={cn("text-[10px] font-black", tx.method === 'bank' ? "text-blue-700 bg-blue-50" : "text-amber-700 bg-amber-50")}>{tx.method === 'bank' ? 'Bank' : 'Cash'}</Badge></TableCell>
+                                        <TableCell className="text-center"><div className="flex flex-col gap-1 items-center">{tx.voucherNo && <Badge className="text-[8px] bg-rose-50 text-rose-600">V: {tx.voucherNo}</Badge>}{tx.checkNo && <Badge className="text-[8px] bg-blue-50 text-blue-600">C: {tx.checkNo}</Badge>}</div></TableCell>
+                                        <TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                        <TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                         <TableCell className="text-right font-black text-primary">{tx.balance.toLocaleString('bn-BD')} ৳</TableCell>
                                         {canManageTransactions && (
                                             <TableCell className="text-right">
-                                                <div className="flex justify-end">
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                <AlertDialogDescription>এই লেনদেনটি স্থায়ীভাবে মুছে যাবে।</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDelete(tx.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                    <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>মুছে ফেলতে চান?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx.id)}>হ্যাঁ</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         )}
                                     </TableRow>
@@ -855,77 +702,50 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                 </div>
             </CardContent>
         </Card>
-    )
-}
+    );
+};
 
 // Ledger Tab Component
 const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], isLoading: boolean }) => {
-    
     const ledgerData = useMemo(() => {
-        const grouped: { [key: string]: { income: number, expense: number, transactions: Transaction[] } } = {};
+        const grouped: Record<string, { income: number, expense: number, items: Transaction[] }> = {};
         transactions.forEach(tx => {
-            if (!grouped[tx.accountHead]) {
-                grouped[tx.accountHead] = { income: 0, expense: 0, transactions: [] };
-            }
-            if (tx.type === 'income') {
-                grouped[tx.accountHead].income += tx.amount;
-            } else {
-                grouped[tx.accountHead].expense += tx.amount;
-            }
-            grouped[tx.accountHead].transactions.push(tx);
+            if (!grouped[tx.accountHead]) grouped[tx.accountHead] = { income: 0, expense: 0, items: [] };
+            if (tx.type === 'income') grouped[tx.accountHead].income += tx.amount;
+            else grouped[tx.accountHead].expense += tx.amount;
+            grouped[tx.accountHead].items.push(tx);
         });
         return grouped;
     }, [transactions]);
     
     return (
-         <Card>
-             <CardHeader>
-                <CardTitle>খতিয়ান (লেজার)</CardTitle>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? (
-                    <p className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></p>
-                ) : Object.keys(ledgerData).length === 0 ? (
-                    <p className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</p>
-                ) : (
-                    <Accordion type="multiple" className="w-full space-y-2">
+         <Card className="border-none shadow-none">
+             <CardHeader className="px-0 pt-0"><CardTitle>খতিয়ান (লেজার)</CardTitle></CardHeader>
+            <CardContent className="px-0 pt-4">
+                {isLoading ? <p className="text-center py-20 italic">লোড হচ্ছে...</p> : Object.keys(ledgerData).length === 0 ? <p className="text-center py-20 italic">তথ্য নেই</p> : (
+                    <Accordion type="multiple" className="w-full space-y-3">
                         {Object.entries(ledgerData).map(([head, data]) => (
-                             <AccordionItem value={head} key={head} className="border-2 rounded-lg px-2 overflow-hidden">
-                                <AccordionTrigger className="hover:no-underline">
-                                    <div className="flex flex-col sm:flex-row justify-between w-full pr-4 text-left gap-2">
-                                        <span className="font-bold text-primary">{head}</span>
+                             <AccordionItem value={head} key={head} className="border-2 rounded-xl px-4 bg-white shadow-sm overflow-hidden">
+                                <AccordionTrigger className="hover:no-underline font-black text-lg py-4">
+                                    <div className="flex justify-between w-full pr-4 text-left">
+                                        <span>{head}</span>
                                         <div className="flex gap-4 text-xs">
-                                            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">আয়: {data.income.toLocaleString('bn-BD')}</span>
-                                            <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">ব্যয়: {data.expense.toLocaleString('bn-BD')}</span>
+                                            <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-100">আয়: {data.income.toLocaleString('bn-BD')}</Badge>
+                                            <Badge variant="outline" className="text-rose-700 bg-rose-50 border-rose-100">ব্যয়: {data.expense.toLocaleString('bn-BD')}</Badge>
                                         </div>
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="pt-2">
                                     <div className="table-container">
-                                        <Table className="min-w-[600px]">
-                                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                                                <TableRow>
-                                                    <TableHead>তারিখ</TableHead>
-                                                    <TableHead>বিবরণ</TableHead>
-                                                    <TableHead className="text-right">আয়</TableHead>
-                                                    <TableHead className="text-right">ব্যয়</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
+                                        <Table>
+                                            <TableHeader className="bg-muted/30"><TableRow><TableHead>তারিখ</TableHead><TableHead>বিবরণ</TableHead><TableHead className="text-right">আয়</TableHead><TableHead className="text-right">ব্যয়</TableHead></TableRow></TableHeader>
                                             <TableBody>
-                                                {data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
-                                                    <TableRow key={tx.id}>
-                                                        <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
-                                                        <TableCell className="max-w-[200px] truncate">
-                                                            {tx.description || '-'}
-                                                            {(tx.voucherNo || tx.checkNo) && (
-                                                                <div className="flex gap-1 mt-1">
-                                                                    {tx.voucherNo && <Badge variant="outline" className="text-[8px] font-black h-4">V: {tx.voucherNo}</Badge>}
-                                                                    {tx.checkNo && <Badge variant="outline" className="text-[8px] font-black h-4">C: {tx.checkNo}</Badge>}
-                                                                </div>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right text-emerald-600 font-medium">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
-                                                        <TableCell className="text-right text-rose-600 font-medium">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                                {data.items.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
+                                                    <TableRow key={tx.id} className="h-10">
+                                                        <TableCell>{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
+                                                        <TableCell className="text-[10px]">{tx.description || '-'}</TableCell>
+                                                        <TableCell className="text-right font-bold text-emerald-600">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                                        <TableCell className="text-right font-bold text-rose-600">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -941,7 +761,6 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
     );
 };
 
-
 export default function AccountsPage() {
   const [isClient, setIsClient] = useState(false);
   const db = useFirestore();
@@ -951,127 +770,97 @@ export default function AccountsPage() {
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
-  
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeSection, setActiveSection] = useState("dashboard");
   const [pendingEntryType, setPendingEntryType] = useState<TransactionType>('income');
-
-  const canCollectFees = hasPermission('collect:fees');
-  const canViewReports = hasPermission('view:collection-report');
-  const canManageTransactions = hasPermission('manage:transactions');
 
   const fetchTransactions = useCallback(async () => {
     if (!db || !user) return;
     setIsLoading(true);
-    const fetchedTransactions = await getTransactions(db, selectedYear);
-    setTransactions(fetchedTransactions);
+    const fetched = await getTransactions(db, selectedYear);
+    setTransactions(fetched);
     setIsLoading(false);
   }, [db, user, selectedYear]);
 
   const fetchStudents = useCallback(() => {
     if (!db || !user) return;
     setIsLoadingStudents(true);
-    const studentsQuery = query(collection(db, "students"), orderBy("roll"));
-    const unsubscribe = onSnapshot(studentsQuery, (querySnapshot) => {
-        const studentsData = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            dob: doc.data().dob?.toDate(),
-        })) as Student[];
-        setAllStudents(studentsData);
+    const unsubscribe = onSnapshot(query(collection(db, "students")), (snap) => {
+        setAllStudents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]);
         setIsLoadingStudents(false);
-    }, (error: FirestoreError) => {
-        if (error.code === 'permission-denied') return;
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
-        setIsLoadingStudents(false);
-    });
+    }, (error) => { setIsLoadingStudents(false); });
     return unsubscribe;
   }, [db, user]);
 
-  useEffect(() => {
-    setIsClient(true);
-    fetchTransactions();
-    const unsubStudents = fetchStudents();
-    return () => unsubStudents?.();
-  }, [fetchTransactions, fetchStudents]);
+  useEffect(() => { setIsClient(true); fetchTransactions(); const unsub = fetchStudents(); return () => unsub?.(); }, [fetchTransactions, fetchStudents]);
 
-  const studentsForYear = useMemo(() => {
-    return allStudents.filter(student => student.academicYear === selectedYear);
-  }, [allStudents, selectedYear]);
+  const canCollectFees = hasPermission('collect:fees');
+  const canViewReports = hasPermission('view:collection-report');
+  const canManageTransactions = hasPermission('manage:transactions');
 
-  const tabs = [{ value: "dashboard", label: "ড্যাশবোর্ড" }];
-  if (canCollectFees) {
-      tabs.push({ value: "fee-collection", label: "আদায়" });
-      tabs.push({ value: "defaulters", label: "বকেয়া" });
-  }
-  if (canViewReports) {
-      tabs.push({ value: "collection-report", label: "রিপোর্ট" });
-  }
-  tabs.push({ value: "cashbook", label: "ক্যাশবুক" });
-  tabs.push({ value: "ledger", label: "খতিয়ান" });
-  if (canManageTransactions) tabs.push({ value: "new-transaction", label: "আয়/ব্যয় এন্ট্রি" });
+  const sidebarItems = useMemo(() => {
+    const items = [{ id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
+    if (canCollectFees) {
+        items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' });
+        items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
+    }
+    if (canViewReports) items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
+    items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' });
+    items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' });
+    if (canManageTransactions) items.push({ id: 'new-transaction', label: 'আয়/ব্যয় এন্ট্রি', icon: PlusCircle, color: 'text-primary bg-primary/10' });
+    return items;
+  }, [canCollectFees, canViewReports, canManageTransactions]);
 
-  const handleDashboardAction = (type: TransactionType) => {
-    setPendingEntryType(type);
-    setActiveTab("new-transaction");
-  };
+  if (!isClient) return null;
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-teal-100 font-kalpurush">
+    <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
       <Header />
-      <main className="p-4 md:p-8 pb-[500px]">
-        <Card className="border-2 border-primary/10">
-          <CardHeader>
-             <CardTitle className="text-3xl font-black">হিসাব শাখা</CardTitle>
-            {isClient && <p className="text-sm font-medium text-muted-foreground">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
-          </CardHeader>
-          <CardContent>
-             {isClient ? (
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="inline-flex h-auto flex-wrap items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full mb-6">
-                    {tabs.map(tab => <TabsTrigger key={tab.value} value={tab.value} className="flex-1 min-w-[80px] font-bold">{tab.label}</TabsTrigger>)}
-                  </TabsList>
-                  
-                  <TabsContent value="dashboard" className="mt-4">
-                      <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={handleDashboardAction} />
-                  </TabsContent>
+      <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
+        
+        <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0">
+            <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হিসাব শাখা</h2>
+            <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                {sidebarItems.map(item => (
+                    <button
+                        key={item.id}
+                        onClick={() => setActiveSection(item.id)}
+                        className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                            activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                        )}
+                    >
+                        <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                            <item.icon className="h-3.5 w-3.5" />
+                        </div>
+                        <span className="text-xs">{item.label}</span>
+                        {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
+                    </button>
+                ))}
+            </div>
+        </aside>
 
-                  {canCollectFees && (
+        <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+            <div className="p-4 sm:p-6 lg:p-8 flex-1">
+                {isLoadingStudents && allStudents.length === 0 ? <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div> : (
                     <>
-                    <TabsContent value="fee-collection" className="mt-4">
-                        <FeeCollectionTab studentsForYear={studentsForYear} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />
-                    </TabsContent>
-                    <TabsContent value="defaulters" className="mt-4">
-                        <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />
-                    </TabsContent>
-                    </>
-                  )}
-                  
-                  {canViewReports && (
-                    <TabsContent value="collection-report" className="mt-4">
-                        <CollectionReportTab allStudents={allStudents} />
-                    </TabsContent>
-                  )}
+                        <div className="mb-6 border-b pb-4 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
+                                <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+                            </div>
+                        </div>
 
-                   <TabsContent value="cashbook" className="mt-4">
-                    <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />
-                  </TabsContent>
-                   <TabsContent value="ledger" className="mt-4">
-                    <LedgerTab transactions={transactions} isLoading={isLoading} />
-                  </TabsContent>
-                   {canManageTransactions && (
-                    <TabsContent value="new-transaction" className="mt-4">
-                      <NewTransactionTab onTransactionAdded={fetchTransactions} initialType={pendingEntryType} />
-                    </TabsContent>
-                   )}
-                </Tabs>
-             ) : (
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-full rounded-md" />
-                  <Skeleton className="h-64 w-full rounded-md" />
-                </div>
-             )}
-          </CardContent>
-        </Card>
+                        {activeSection === 'dashboard' && <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={(t) => { setPendingEntryType(t); setActiveSection('new-transaction'); }} />}
+                        {activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}
+                        {activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}
+                        {activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} />}
+                        {activeSection === 'cashbook' && <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />}
+                        {activeSection === 'ledger' && <LedgerTab transactions={transactions} isLoading={isLoading} />}
+                        {activeSection === 'new-transaction' && <NewTransactionTab onTransactionAdded={fetchTransactions} initialType={pendingEntryType} />}
+                    </>
+                )}
+            </div>
+        </div>
       </main>
     </div>
   );
