@@ -28,6 +28,8 @@ export interface Transaction {
   description: string;
   amount: number;
   academicYear: string;
+  voucherNo?: string;
+  checkNo?: string;
   feeCollectionId?: string;
   createdAt?: Timestamp;
 }
@@ -68,7 +70,7 @@ export const addTransaction = async (db: Firestore, transactionData: NewTransact
   };
 
   Object.keys(dataToSave).forEach(key => {
-    if (dataToSave[key] === undefined) {
+    if (dataToSave[key] === undefined || dataToSave[key] === '') {
       delete dataToSave[key];
     }
   });

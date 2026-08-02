@@ -16,7 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, CheckCircle2, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash } from 'lucide-react';
 import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,18 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
             const tDate = new Date(t.date);
             const method = t.method || 'cash';
             
+            // Handle Contra Entries (Transfers)
+            if (t.accountHead === 'ব্যাংকে জমা (Cash to Bank)') {
+                cashBalance -= amount;
+                bankBalance += amount;
+                return;
+            }
+            if (t.accountHead === 'ব্যাংক থেকে উত্তোলন (Bank to Cash)') {
+                cashBalance += amount;
+                bankBalance -= amount;
+                return;
+            }
+
             if (t.type === 'income') {
                 if (method === 'cash') cashBalance += amount;
                 else bankBalance += amount;
@@ -92,6 +104,8 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
             let expense = 0;
             transactions.forEach(t => {
                 if (format(new Date(t.date), 'yyyy-MM-dd') === dateStr) {
+                    // Contra entries aren't counted as simple income/expense for the chart
+                    if (t.accountHead.includes('উত্তোলন') || t.accountHead.includes('জমা')) return;
                     if (t.type === 'income') income += t.amount;
                     else expense += t.amount;
                 }
@@ -575,9 +589,11 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
     const [accountHead, setAccountHead] = useState('');
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState<number | ''>('');
+    const [voucherNo, setVoucherNo] = useState('');
+    const [checkNo, setCheckNo] = useState('');
 
-    const incomeHeads = ['বেতন (Tuition Fee)', 'পরীক্ষা ফি (Exam Fee)', 'ভর্তি ফি (Admission Fee)', 'সেশন ফি (Session Fee)', 'অনুদান (Donation)', 'অন্যান্য'];
-    const expenseHeads = ['শিক্ষক/স্টাফ বেতন', 'বিদ্যুৎ ও ইউটিলিটি বিল', 'স্টেশনারি ও খাতা', 'মেরামত ও রক্ষণাবেক্ষণ', 'আপ্যায়ন খরচ', 'অন্যান্য'];
+    const incomeHeads = ['বেতন (Tuition Fee)', 'পরীক্ষা ফি (Exam Fee)', 'ভর্তি ফি (Admission Fee)', 'সেশন ফি (Session Fee)', 'অনুদন (Donation)', 'ব্যাংক থেকে উত্তোলন (Bank to Cash)', 'অন্যান্য'];
+    const expenseHeads = ['শিক্ষক/স্টাফ বেতন', 'বিদ্যুৎ ও ইউটিলিটি বিল', 'স্টেশনারি ও খাতা', 'মেরামত ও রক্ষণাবেক্ষণ', 'আপ্যায়ন খরচ', 'ব্যাংকে জমা (Cash to Bank)', 'অন্যান্য'];
 
     useEffect(() => {
         setType(initialType);
@@ -598,7 +614,9 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
             accountHead,
             description,
             amount: Number(amount),
-            academicYear: selectedYear
+            academicYear: selectedYear,
+            voucherNo: type === 'expense' ? voucherNo : undefined,
+            checkNo: method === 'bank' ? checkNo : undefined
         };
 
         try {
@@ -609,6 +627,8 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
             setAccountHead('');
             setDescription('');
             setAmount('');
+            setVoucherNo('');
+            setCheckNo('');
             onTransactionAdded(); // Notify parent to refetch transactions
         } catch (error) {
             // Error is handled by the global listener
@@ -625,7 +645,7 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
             </CardHeader>
             <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="date">তারিখ</Label>
                             <DatePicker value={date} onChange={setDate} placeholder="তারিখ" />
@@ -674,7 +694,26 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
                                 <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="pl-8 text-lg font-black" />
                             </div>
                         </div>
-                        <div className="md:col-span-2 space-y-2">
+
+                        {type === 'expense' && (
+                            <div className="space-y-2 animate-in slide-in-from-top-2">
+                                <Label htmlFor="voucherNo" className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-rose-500" /> ভাউচার নং
+                                </Label>
+                                <Input id="voucherNo" value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" className="font-bold" />
+                            </div>
+                        )}
+
+                        {method === 'bank' && (
+                            <div className="space-y-2 animate-in slide-in-from-top-2">
+                                <Label htmlFor="checkNo" className="flex items-center gap-2">
+                                    <Hash className="h-4 w-4 text-blue-500" /> চেক নং (Check No)
+                                </Label>
+                                <Input id="checkNo" value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" className="font-bold" />
+                            </div>
+                        )}
+
+                        <div className="lg:col-span-3 space-y-2">
                             <Label htmlFor="description">বিবরণ / মন্তব্য (ঐচ্ছিক)</Label>
                             <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." />
                         </div>
@@ -704,10 +743,17 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
     const cashbookData = useMemo(() => {
         let balance = 0;
         return sortedTransactions.map(tx => {
-            if (tx.type === 'income') {
+            // Check for Contra (Bank Transfers)
+            if (tx.accountHead === 'ব্যাংকে জমা (Cash to Bank)') {
+                balance -= tx.amount;
+            } else if (tx.accountHead === 'ব্যাংক থেকে উত্তোলন (Bank to Cash)') {
                 balance += tx.amount;
             } else {
-                balance -= tx.amount;
+                if (tx.type === 'income') {
+                    balance += tx.amount;
+                } else {
+                    balance -= tx.amount;
+                }
             }
             return { ...tx, balance };
         });
@@ -731,12 +777,13 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
             </CardHeader>
             <CardContent>
                 <div className="table-container">
-                    <Table className="min-w-[750px]">
+                    <Table className="min-w-[950px]">
                         <TableHeader className="bg-muted/50 sticky top-0 z-10">
                             <TableRow>
                                 <TableHead className="font-bold">তারিখ</TableHead>
                                 <TableHead className="font-bold">বিবরণ</TableHead>
                                 <TableHead className="text-center font-bold">পদ্ধতি</TableHead>
+                                <TableHead className="text-center font-bold">ভাউচার/চেক</TableHead>
                                 <TableHead className="text-right font-bold">আয়</TableHead>
                                 <TableHead className="text-right font-bold">ব্যয়</TableHead>
                                 <TableHead className="text-right font-bold">ব্য্যালেন্স</TableHead>
@@ -745,9 +792,9 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 7 : 6} className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManageTransactions ? 8 : 7} className="text-center p-12 text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></TableCell></TableRow>
                             ) : cashbookData.length === 0 ? (
-                                <TableRow><TableCell colSpan={canManageTransactions ? 7 : 6} className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManageTransactions ? 8 : 7} className="text-center p-12 text-muted-foreground italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>
                             ) : (
                                 [...cashbookData].reverse().map(tx => (
                                     <TableRow key={tx.id} className="hover:bg-accent/5">
@@ -764,8 +811,18 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                                 {tx.method === 'bank' ? 'Bank' : 'Cash'}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
-                                        <TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex flex-col gap-1 items-center">
+                                                {tx.voucherNo && <Badge variant="outline" className="bg-rose-50 text-rose-600 text-[9px] border-rose-100">V: {tx.voucherNo}</Badge>}
+                                                {tx.checkNo && <Badge variant="outline" className="bg-blue-50 text-blue-600 text-[9px] border-blue-100">C: {tx.checkNo}</Badge>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right text-emerald-600 font-bold">
+                                            {tx.accountHead.includes('উত্তোলন') ? tx.amount.toLocaleString('bn-BD') : (tx.type === 'income' && !tx.accountHead.includes('জমা') ? tx.amount.toLocaleString('bn-BD') : '-')}
+                                        </TableCell>
+                                        <TableCell className="text-right text-rose-600 font-bold">
+                                            {tx.accountHead.includes('জমা') ? tx.amount.toLocaleString('bn-BD') : (tx.type === 'expense' && !tx.accountHead.includes('উত্তোলন') ? tx.amount.toLocaleString('bn-BD') : '-')}
+                                        </TableCell>
                                         <TableCell className="text-right font-black text-primary">{tx.balance.toLocaleString('bn-BD')} ৳</TableCell>
                                         {canManageTransactions && (
                                             <TableCell className="text-right">
@@ -856,7 +913,15 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
                                                 {data.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
                                                     <TableRow key={tx.id}>
                                                         <TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell>
-                                                        <TableCell className="max-w-[200px] truncate">{tx.description || '-'}</TableCell>
+                                                        <TableCell className="max-w-[200px] truncate">
+                                                            {tx.description || '-'}
+                                                            {(tx.voucherNo || tx.checkNo) && (
+                                                                <div className="flex gap-1 mt-1">
+                                                                    {tx.voucherNo && <Badge variant="outline" className="text-[8px] font-black h-4">V: {tx.voucherNo}</Badge>}
+                                                                    {tx.checkNo && <Badge variant="outline" className="text-[8px] font-black h-4">C: {tx.checkNo}</Badge>}
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell className="text-right text-emerald-600 font-medium">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                                         <TableCell className="text-right text-rose-600 font-medium">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                                     </TableRow>
@@ -949,7 +1014,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-teal-100">
+    <div className="flex min-h-screen w-full flex-col bg-teal-100 font-kalpurush">
       <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 pb-80">
         <Card className="border-2 border-primary/10">
