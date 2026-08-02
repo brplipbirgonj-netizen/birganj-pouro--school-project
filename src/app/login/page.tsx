@@ -26,12 +26,12 @@ function AuthFormFields({ email, password, setEmail, setPassword }: {
     return (
         <>
             <div className="space-y-2">
-                <Label htmlFor="email">ইমেইল</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Label htmlFor="email" className="font-bold text-xs">ইমেইল</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-10" />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="password">পাসওয়ার্ড</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Label htmlFor="password" throws="font-bold text-xs">পাসওয়ার্ড</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-10" />
             </div>
         </>
     );
@@ -94,9 +94,31 @@ export default function LoginPage() {
         }
     };
 
+    const ActionButtonRow = ({ role, action }: { role: UserRole, action: 'signIn' | 'signUp' }) => (
+        <div className="flex flex-row gap-2 mt-6">
+            <Link href="/public-results" className="flex-1">
+                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5">
+                    ফলাফল দেখুন
+                </Button>
+            </Link>
+            <Button 
+                type="submit" 
+                className="flex-1 h-11 font-black text-[10px] sm:text-xs px-1 shadow-lg" 
+                disabled={isLoading}
+            >
+                {isLoading ? '...' : (action === 'signIn' ? 'প্রবেশ করুন' : 'নিবন্ধন')}
+            </Button>
+            <Link href="/admission" className="flex-1">
+                <Button variant="outline" type="button" className="w-full h-11 font-bold text-[10px] sm:text-xs px-1 border-primary/20 hover:bg-primary/5">
+                    অনলাইন ভর্তি
+                </Button>
+            </Link>
+        </div>
+    );
+
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-4 font-kalpurush text-black">
-            <div className="mb-8 flex flex-col items-center gap-2 text-center">
+            <div className="mb-6 flex flex-col items-center gap-0 text-center">
                 {isSchoolInfoLoading ? (
                     <>
                         <Skeleton className="h-20 w-20 rounded-full" />
@@ -105,16 +127,18 @@ export default function LoginPage() {
                 ) : (
                     <>
                         {schoolInfo.logoUrl && (
-                            <Image
-                                src={schoolInfo.logoUrl}
-                                alt="School Logo"
-                                width={110}
-                                height={110}
-                                className="rounded-full object-contain bg-white p-1 shadow-lg border-2 border-primary/20"
-                            />
+                            <div className="relative z-10 -mb-2">
+                                <Image
+                                    src={schoolInfo.logoUrl}
+                                    alt="School Logo"
+                                    width={90}
+                                    height={90}
+                                    className="rounded-full object-contain bg-white p-1 shadow-lg border-2 border-primary/20"
+                                />
+                            </div>
                         )}
                         
-                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-6 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform mt-1">
+                        <div className="bg-[#2418ff] border-[5px] border-red-600 rounded-[2.5rem] px-8 py-6 flex flex-col items-center gap-0 shadow-[0_15px_30px_-5px_rgba(36,24,255,0.4)] animate-in zoom-in duration-500 transform hover:scale-[1.01] transition-transform relative z-0">
                             <h1 className="text-2xl sm:text-[45px] font-black text-white leading-none tracking-tighter mb-2 [text-shadow:2px_2px_4px_rgba(0,0,0,0.5)]">
                                 {schoolInfo.name}
                             </h1>
@@ -127,54 +151,45 @@ export default function LoginPage() {
             </div>
             
             <div className="w-full max-w-md space-y-6">
-                <Card className="shadow-2xl border-none">
-                    <CardHeader className="bg-primary/5 border-b text-center">
-                        <CardTitle className="text-xl">প্রবেশ করুন</CardTitle>
-                        <CardDescription className="font-bold">সিস্টেম ব্যবহারের জন্য আপনার ইমেইল ও পাসওয়ার্ড দিন</CardDescription>
+                <Card className="shadow-2xl border-2 border-white/50 overflow-hidden">
+                    <CardHeader className="bg-primary/5 border-b-2 border-primary/10 text-center py-3">
+                        <CardTitle className="text-lg font-black text-primary">প্রবেশ করুন</CardTitle>
+                        <CardDescription className="font-bold text-[11px] text-muted-foreground">সিস্টেম ব্যবহারের জন্য আপনার ইমেইল ও পাসওয়ার্ড দিন</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
                         <Tabs defaultValue="teacher-login">
-                            <TabsList className="grid w-full grid-cols-3 bg-muted p-1">
-                                <TabsTrigger value="teacher-login" className="font-bold text-xs">শিক্ষক</TabsTrigger>
-                                <TabsTrigger value="admin-login" className="font-bold text-xs">এডমিন</TabsTrigger>
-                                <TabsTrigger value="signup" className="font-bold text-xs">নিবন্ধন</TabsTrigger>
+                            <TabsList className="grid w-full grid-cols-3 bg-muted p-1 mb-4">
+                                <TabsTrigger value="teacher-login" className="font-bold text-xs h-8">শিক্ষক</TabsTrigger>
+                                <TabsTrigger value="admin-login" className="font-bold text-xs h-8">এডমিন</TabsTrigger>
+                                <TabsTrigger value="signup" className="font-bold text-xs h-8">নিবন্ধন</TabsTrigger>
                             </TabsList>
 
-                            <TabsContent value="teacher-login">
-                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'teacher'); }} className="space-y-4 pt-4">
+                            <TabsContent value="teacher-login" className="mt-0">
+                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'teacher'); }} className="space-y-4">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                    <Button type="submit" className="w-full h-11 font-black" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'লগইন করুন'}</Button>
+                                    <ActionButtonRow role="teacher" action="signIn" />
                                 </form>
                             </TabsContent>
                             
-                            <TabsContent value="admin-login">
-                            <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'admin'); }} className="space-y-4 pt-4">
+                            <TabsContent value="admin-login" className="mt-0">
+                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signIn', 'admin'); }} className="space-y-4">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                    <Button type="submit" className="w-full h-11 font-black" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'এডমিন লগইন'}</Button>
+                                    <ActionButtonRow role="admin" action="signIn" />
                                 </form>
                             </TabsContent>
                             
-                            <TabsContent value="signup">
-                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signUp', 'teacher'); }} className="space-y-4 pt-4">
+                            <TabsContent value="signup" className="mt-0">
+                                <form onSubmit={(e) => { e.preventDefault(); handleAuthAction('signUp', 'teacher'); }} className="space-y-4">
                                     <AuthFormFields email={email} password={password} setEmail={setEmail} setPassword={setPassword} />
-                                    <Button type="submit" className="w-full h-11 font-black" disabled={isLoading}>{isLoading ? 'লোড হচ্ছে...' : 'অ্যাকাউন্ট তৈরি করুন'}</Button>
+                                    <ActionButtonRow role="teacher" action="signUp" />
                                 </form>
                             </TabsContent>
                         </Tabs>
                     </CardContent>
                 </Card>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Link href="/public-results">
-                        <Button variant="default" className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-lg shadow-lg border-2 border-indigo-200">
-                            <BookOpen className="mr-2 h-6 w-6" /> ফলাফল দেখুন
-                        </Button>
-                    </Link>
-                    <Link href="/admission">
-                        <Button variant="outline" className="w-full h-14 border-primary text-primary hover:bg-primary/5 font-black text-lg shadow-sm">
-                            <UserPlus className="mr-2 h-6 w-6" /> অনলাইন ভর্তি
-                        </Button>
-                    </Link>
+                <div className="text-center">
+                    <p className="text-[10px] font-bold text-muted-foreground opacity-60">© ২০২৬ {schoolInfo.name}। সর্বস্বত্ব সংরক্ষিত।</p>
                 </div>
             </div>
         </div>
