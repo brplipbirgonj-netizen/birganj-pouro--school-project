@@ -15,7 +15,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed } from 'lucide-react';
 import { format, isToday, isSameMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Badge } from '@/components/ui/badge';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { MoneyReceipt } from '@/components/MoneyReceipt';
+import { useSchoolInfo } from '@/context/SchoolInfoContext';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -202,10 +205,10 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeights: 'bold' }} />
                                 <YAxis hide />
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
+                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeights: 'bold', fontSize: '12px' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
                                 <Area type="monotone" dataKey="income" name="আয়" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
@@ -238,7 +241,7 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                                     ))}
                                 </Pie>
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
+                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeights: 'bold', fontSize: '12px' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
                                 <Legend verticalAlign="bottom" align="center" iconType="circle" />
@@ -258,6 +261,9 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
     const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [collections, setCollections] = useState<FeeCollection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [reminderStudent, setReminderStudent] = useState<Student | null>(null);
+    const [reminderMsg, setReminderMsg] = useState('');
 
     const classes = ['6', '7', '8', '9', '10'];
 
@@ -285,17 +291,35 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
         }).sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
     };
 
-    const handleSendReminder = (student: Student) => {
+    const prepareReminder = (student: Student) => {
         const mobile = student.guardianMobile || student.studentMobile;
         if (!mobile) {
             toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
             return;
         }
         const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} এর ${selectedMonth} মাসের বিদ্যালয় ফি বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করুন। বীপৌউবি`;
-        const encodedMsg = encodeURIComponent(msg);
+        setReminderMsg(msg);
+        setReminderStudent(student);
+    };
+
+    const handleSendSMS = () => {
+        if (!reminderStudent) return;
+        const mobile = reminderStudent.guardianMobile || reminderStudent.studentMobile;
+        const encodedMsg = encodeURIComponent(reminderMsg);
         const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
         const separator = isIOS ? '&' : '?';
         window.location.href = `sms:${mobile}${separator}body=${encodedMsg}`;
+        setReminderStudent(null);
+    };
+
+    const handleSendWhatsApp = () => {
+        if (!reminderStudent) return;
+        const mobile = reminderStudent.guardianMobile || reminderStudent.studentMobile || '';
+        let cleanNum = mobile.replace(/[^\d]/g, '');
+        if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
+        if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
+        window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(reminderMsg)}`, '_blank');
+        setReminderStudent(null);
     };
 
     return (
@@ -345,8 +369,8 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                                                         <TableCell className="font-bold">{student.studentNameBn}</TableCell>
                                                         <TableCell className="text-xs">{student.guardianMobile || student.studentMobile || '-'}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs font-bold" onClick={() => handleSendReminder(student)}>
-                                                                <Smartphone className="h-3.5 w-3.5 mr-2" /> SMS পাঠান
+                                                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs font-bold" onClick={() => prepareReminder(student)}>
+                                                                <Smartphone className="h-3.5 w-3.5 mr-2" /> মেসেজ পাঠান
                                                             </Button>
                                                         </TableCell>
                                                     </TableRow>
@@ -364,6 +388,30 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Reminder Message Preview Dialog */}
+            <Dialog open={!!reminderStudent} onOpenChange={(o) => !o && setReminderStudent(null)}>
+                <DialogContent className="font-kalpurush">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-primary" /> রিমাইন্ডার মেসেজ প্রিভিউ</DialogTitle>
+                        <DialogDescription className="font-bold">{reminderStudent?.studentNameBn} এর অভিভাবককে মেসেজ পাঠান</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="p-4 bg-muted/30 rounded-lg border-2 border-dashed font-bold leading-relaxed text-slate-700">
+                            {reminderMsg}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic font-medium">*** নিচের যেকোনো একটি বাটন ক্লিক করলে আপনার ফোনের মেসেজ অ্যাপ বা হোয়াটসঅ্যাপ ওপেন হবে।</p>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" className="flex-1 font-bold h-11 border-blue-200 text-blue-700 hover:bg-blue-50" onClick={handleSendSMS}>
+                            <MessageSquareDashed className="mr-2 h-4 w-4" /> SMS ড্রাফট করুন
+                        </Button>
+                        <Button className="flex-1 font-black h-11 bg-emerald-600 hover:bg-emerald-700" onClick={handleSendWhatsApp}>
+                            <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp করুন
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
@@ -436,10 +484,14 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { user } = useAuth();
     const { selectedYear } = useAcademicYear();
+    const { schoolInfo } = useSchoolInfo();
     const [collections, setCollections] = useState<FeeCollection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
     const [collectorFilter, setCollectorFilter] = useState<string>('all');
+
+    const [printingCollection, setPrintingCollection] = useState<FeeCollection | null>(null);
+    const [printingStudent, setPrintingStudent] = useState<Student | null>(null);
 
     useEffect(() => {
         if (!db || !user) return;
@@ -478,6 +530,18 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         });
     }, [collections, collectorFilter, dateFilter]);
 
+    const handlePrintReceipt = (collection: FeeCollection) => {
+        const student = studentMap.get(collection.studentId);
+        if (!student) return;
+        setPrintingCollection(collection);
+        setPrintingStudent(student);
+        setTimeout(() => {
+            window.print();
+            setPrintingCollection(null);
+            setPrintingStudent(null);
+        }, 300);
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg">
@@ -511,14 +575,15 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <TableHead>নাম</TableHead>
                                     <TableHead>শ্রেণি</TableHead>
                                     <TableHead className="text-right">মোট আদায়</TableHead>
+                                    <TableHead className="text-center">রসিদ</TableHead>
                                     <TableHead>আদায়কারী</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
                                 ) : filteredCollections.length === 0 ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                                 ) : (
                                     filteredCollections.map(c => {
                                         const student = studentMap.get(c.studentId);
@@ -529,6 +594,11 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="whitespace-nowrap font-bold text-primary">{student?.studentNameBn || '-'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{student ? (classNamesMap[student.className] || student.className) : '-'}</TableCell>
                                                 <TableCell className="text-right font-black text-emerald-700">{(c.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary" onClick={() => handlePrintReceipt(c)}>
+                                                        <Printer className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
                                                 <TableCell className="whitespace-nowrap text-xs">{c.collectorName || '-'}</TableCell>
                                             </TableRow>
                                         );
@@ -539,6 +609,19 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Hidden Printable Area for Receipts */}
+            {printingCollection && printingStudent && (
+                <div className="hidden print:block printable-area bg-white">
+                    <div className="flex items-center justify-center min-h-[297mm]">
+                        <MoneyReceipt 
+                            collection={printingCollection} 
+                            student={printingStudent} 
+                            schoolInfo={schoolInfo} 
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -868,4 +951,10 @@ export default function AccountsPage() {
       </main>
     </div>
   );
+}
+
+function toBengaliNumber(str: string | number) {
+  if (!str && str !== 0) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }

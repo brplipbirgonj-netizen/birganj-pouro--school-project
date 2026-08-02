@@ -99,6 +99,13 @@ export default function MessagingPage() {
         window.location.href = smsUrl;
     };
 
+    const handleSingleWhatsApp = (mobile: string, content: string) => {
+        let cleanNum = mobile.replace(/[^\d]/g, '');
+        if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
+        if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
+        window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(content || 'নমস্কার')}`, '_blank');
+    };
+
     const handleLogAndSimulateMessage = async (type: any, recipientsCount: number) => {
         if (!db || !user || !messageContent.trim()) return;
         setIsLoading(true);
@@ -209,21 +216,54 @@ export default function MessagingPage() {
                             <Textarea value={messageContent} onChange={e => setMessageContent(e.target.value)} placeholder="বার্তা লিখুন..." className="min-h-[150px] text-base font-medium border-2 focus:ring-primary" />
                         </div>
 
-                        {activeSection === 'individual' && selectedClass && (
-                            <div className="border-2 rounded-xl overflow-hidden max-h-[300px] overflow-y-auto">
-                                <Table><TableHeader className="bg-muted/50"><TableRow><TableHead className="w-12"><Checkbox onCheckedChange={c => setSelectedStudentIds(c ? new Set(studentsInClass.map(s => s.id)) : new Set())} /></TableHead><TableHead className="text-xs font-black">রোল ও নাম</TableHead><TableHead className="text-right text-xs font-black">মোবাইল</TableHead></TableRow></TableHeader>
-                                <TableBody>{studentsInClass.map(s => (
-                                    <TableRow key={s.id} className="h-10 cursor-pointer" onClick={() => { const n = new Set(selectedStudentIds); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setSelectedStudentIds(n); }}>
-                                        <TableCell><Checkbox checked={selectedStudentIds.has(s.id)} /></TableCell>
-                                        <TableCell className="text-[11px] font-bold">{s.roll.toLocaleString('bn-BD')} - {s.studentNameBn}</TableCell>
-                                        <TableCell className="text-right text-[10px] font-medium">{s.guardianMobile || '-'}</TableCell>
-                                    </TableRow>
-                                ))}</TableBody></Table>
+                        {(activeSection === 'individual' || activeSection === 'class' || activeSection === 'absent') && selectedClass && (
+                            <div className="border-2 rounded-xl overflow-hidden max-h-[300px] overflow-y-auto bg-slate-50/30">
+                                <Table>
+                                    <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
+                                        <TableRow>
+                                            <TableHead className="w-12">
+                                                <Checkbox onCheckedChange={c => setSelectedStudentIds(c ? new Set(studentsInClass.map(s => s.id)) : new Set())} />
+                                            </TableHead>
+                                            <TableHead className="text-xs font-black">রোল ও নাম</TableHead>
+                                            <TableHead className="text-right text-xs font-black">মোবাইল ও কার্যক্রম</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {studentsInClass.map(s => (
+                                            <TableRow key={s.id} className="h-12 cursor-pointer hover:bg-white transition-colors" onClick={() => { const n = new Set(selectedStudentIds); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setSelectedStudentIds(n); }}>
+                                                <TableCell><Checkbox checked={selectedStudentIds.has(s.id)} /></TableCell>
+                                                <TableCell>
+                                                    <p className="text-[11px] font-black text-slate-800">{s.roll.toLocaleString('bn-BD')} - {s.studentNameBn}</p>
+                                                    <p className="text-[9px] font-bold text-muted-foreground italic">{s.guardianMobile || '-'}</p>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end items-center gap-1.5 no-print" onClick={e => e.stopPropagation()}>
+                                                        <a href={`tel:${s.guardianMobile || s.studentMobile}`} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                                            <Phone className="h-3.5 w-3.5" />
+                                                        </a>
+                                                        <button 
+                                                            onClick={() => handleSendDirectSMS(s.guardianMobile || '', messageContent)} 
+                                                            className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                                        >
+                                                            <MessageSquareDashed className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleSingleWhatsApp(s.guardianMobile || '', messageContent)} 
+                                                            className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                                                        >
+                                                            <MessageCircle className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </div>
                         )}
 
                         <Button className="w-full h-14 text-lg font-black shadow-xl" disabled={isLoading || !messageContent.trim() || (activeSection !== 'bulk' && !selectedClass)} onClick={() => handleLogAndSimulateMessage(activeSection, activeSection === 'bulk' ? allStudents.length : activeSection === 'class' ? studentsInClass.length : selectedStudentIds.size)}>
-                            <Send className="mr-2 h-6 w-6" /> {isLoading ? 'প্রসেস হচ্ছে...' : 'মেসেজ রেকর্ড ও প্রেরণ করুন'}
+                            <Send className="mr-2 h-6 w-6" /> {isLoading ? 'প্রসেস হচ্ছে...' : 'মেসেজ রেকর্ড ও একযোগে প্রেরণ করুন'}
                         </Button>
                     </div>
                 )}
