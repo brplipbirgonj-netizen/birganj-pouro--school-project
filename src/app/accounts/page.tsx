@@ -259,6 +259,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
     const db = useFirestore();
     const { toast } = useToast();
     const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
+    const [selectedClass, setSelectedClass] = useState<string>('all');
     const [collections, setCollections] = useState<FeeCollection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -326,27 +327,39 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
         <div className="space-y-6 animate-in fade-in duration-500">
             <Card className="border-red-200">
                 <CardHeader className="bg-red-50/50">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <CardTitle className="text-red-900 flex items-center gap-2">
                                 <AlertCircle className="h-5 w-5" /> বকেয়া তালিকা (শ্রেণিভিত্তিক)
                             </CardTitle>
                             <CardDescription>বেতন পরিশোধ করেনি এমন শিক্ষার্থীদের তালিকা দেখুন</CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Label className="font-bold whitespace-nowrap">মাস নির্বাচন:</Label>
-                            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                                <SelectTrigger className="w-44 bg-white shadow-sm font-bold text-primary h-9 text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <Label className="font-bold text-xs">শ্রেণি:</Label>
+                                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                    <SelectTrigger className="w-36 bg-white shadow-sm font-bold text-primary h-9 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">সকল শ্রেণি</SelectItem>
+                                        {classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Label className="font-bold text-xs">মাস:</Label>
+                                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                                    <SelectTrigger className="w-36 bg-white shadow-sm font-bold text-primary h-9 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0 sm:p-6">
                     <div className="flex flex-col gap-8">
-                        {classes.map(cls => {
+                        {classes.filter(c => selectedClass === 'all' || c === selectedClass).map(cls => {
                             const defaulters = getDefaultersForClass(cls);
                             if (defaulters.length === 0) return null;
                             return (
@@ -382,7 +395,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                             )
                         })}
                         {isLoading && <div className="text-center p-20 italic">তথ্য লোড হচ্ছে...</div>}
-                        {!isLoading && classes.every(cls => getDefaultersForClass(cls).length === 0) && (
+                        {!isLoading && classes.filter(c => selectedClass === 'all' || c === selectedClass).every(cls => getDefaultersForClass(cls).length === 0) && (
                             <div className="text-center py-20 text-emerald-600 font-black text-xl">অভিনন্দন! কারো বেতন বকেয়া নেই।</div>
                         )}
                     </div>
@@ -502,7 +515,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
-                .filter((c): c is FeeCollection => f !== null)
+                .filter((c): c is FeeCollection => c !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
             setCollections(data);
             setIsLoading(false);
