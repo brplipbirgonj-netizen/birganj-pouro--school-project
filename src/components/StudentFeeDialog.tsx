@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MoneyReceipt } from './MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
