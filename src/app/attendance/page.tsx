@@ -33,7 +33,13 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { 
+    '6': 'ষষ্ঠ শ্রেণি', 
+    '7': 'সপ্তম শ্রেণি', 
+    '8': 'অষ্টম শ্রেণি', 
+    '9': 'নবম শ্রেণি', 
+    '10': 'দশম শ্রেণি' 
+};
 
 // Digital Attendance sheet component
 const AttendanceSheet = ({ 
@@ -444,7 +450,7 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
                         <Select value={selectedClass} onValueChange={setSelectedClass}>
                             <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                                {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
+                                {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -483,7 +489,7 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
     );
 };
 
-// Monthly Summary Board Component (The new requested feature)
+// Monthly Summary Board Component
 const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
@@ -590,9 +596,9 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                         <Table className="min-w-[1000px] border-collapse">
                             <TableHeader className="bg-muted sticky top-0 z-30">
                                 <TableRow className="h-14">
-                                    <TableHead className="text-center font-black border-r w-16 bg-muted">তারিখ</TableHead>
+                                    <TableHead className="text-center font-black border-r w-44 bg-muted">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
-                                        <TableHead key={cls} className="text-center font-black border-r">{classNamesMap[cls]}</TableHead>
+                                        <TableHead key={cls} className="text-center font-black border-r text-[11px] leading-tight">{classNamesMap[cls]}</TableHead>
                                     ))}
                                     <TableHead className="text-center font-black border-r bg-indigo-50 text-indigo-900">মোট</TableHead>
                                     <TableHead className="text-center font-black border-r bg-emerald-50 text-emerald-900">শতকরা উপস্থিত</TableHead>
@@ -602,33 +608,39 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow><TableCell colSpan={9} className="text-center py-20 italic">বিশ্লেষণ করা হচ্ছে...</TableCell></TableRow>
-                                ) : boardData.map((row, i) => (
-                                    <TableRow key={i} className={cn(
-                                        "h-10 hover:bg-slate-50 transition-colors",
-                                        (row.isWeekend || row.isHolidayDay) ? "bg-rose-50/50" : ""
-                                    )}>
-                                        <TableCell className={cn(
-                                            "text-center font-black border-r text-lg",
-                                            (row.isWeekend || row.isHolidayDay) ? "text-rose-600 bg-rose-100/50" : "text-slate-600"
+                                ) : boardData.map((row, i) => {
+                                    const dateObj = new Date(row.dateStr);
+                                    const fullDateStr = format(dateObj, 'dd-MM-yyyy');
+                                    const dayName = format(dateObj, 'EEEE', { locale: bn });
+                                    
+                                    return (
+                                        <TableRow key={i} className={cn(
+                                            "h-10 hover:bg-slate-50 transition-colors",
+                                            (row.isWeekend || row.isHolidayDay) ? "bg-rose-50/50" : ""
                                         )}>
-                                            {toBengaliNumber(row.day)}
-                                        </TableCell>
-                                        {classes.map(cls => (
-                                            <TableCell key={cls} className="text-center font-bold border-r">
-                                                {row[cls] !== null ? toBengaliNumber(row[cls]) : '-'}
+                                            <TableCell className={cn(
+                                                "text-center font-black border-r text-xs whitespace-nowrap",
+                                                (row.isWeekend || row.isHolidayDay) ? "text-rose-600 bg-rose-100/50" : "text-slate-600"
+                                            )}>
+                                                {toBengaliNumber(fullDateStr)} {dayName}
                                             </TableCell>
-                                        ))}
-                                        <TableCell className="text-center font-black border-r bg-indigo-50/30 text-indigo-700">
-                                            {row.totalPresent > 0 ? toBengaliNumber(row.totalPresent) : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-center font-black border-r bg-emerald-50/30 text-emerald-700">
-                                            {row.totalPresent > 0 ? toBengaliNumber(row.presentPercent.toFixed(1)) + '%' : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-center font-black bg-rose-50/30 text-rose-700">
-                                            {row.totalPresent > 0 ? toBengaliNumber(row.absentPercent.toFixed(1)) + '%' : '-'}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                            {classes.map(cls => (
+                                                <TableCell key={cls} className="text-center font-bold border-r">
+                                                    {row[cls] !== null ? toBengaliNumber(row[cls]) : '-'}
+                                                </TableCell>
+                                            ))}
+                                            <TableCell className="text-center font-black border-r bg-indigo-50/30 text-indigo-700">
+                                                {row.totalPresent > 0 ? toBengaliNumber(row.totalPresent) : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-center font-black border-r bg-emerald-50/30 text-emerald-700">
+                                                {row.totalPresent > 0 ? toBengaliNumber(row.presentPercent.toFixed(1)) + '%' : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-center font-black bg-rose-50/30 text-rose-700">
+                                                {row.totalPresent > 0 ? toBengaliNumber(row.absentPercent.toFixed(1)) + '%' : '-'}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </div>
@@ -736,7 +748,7 @@ const MissedAttendanceTab = () => {
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
                         <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
+                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -839,9 +851,9 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <div className="space-y-2 flex-1">
                     <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
                         <SelectContent>
-                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}
+                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -1063,7 +1075,7 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1">
                             {classes.map((className) => (
                                 <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm font-black">
-                                    {classNamesMap[className]} শ্রেণি
+                                    {classNamesMap[className]}
                                 </TabsTrigger>
                             ))}
                         </TabsList>
