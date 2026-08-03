@@ -554,7 +554,7 @@ export default function StaffListPage() {
                                 <div className="p-8 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center">
                                     <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
                                     <h3 className="text-xl font-black text-blue-900">রিপোর্ট প্রস্তুত হয়েছে!</h3>
-                                    <p className="font-bold text-blue-700">নিচে সবার উপস্থিতির সংক্ষিপ্ত সারসংক্ষেপ দেওয়া হলো। পূর্ণাঙ্গ রিপোর্ট পেতে প্রিন্ট করুন।</p>
+                                    <p className="font-bold text-blue-700">উপরে 'প্রিন্ট' বাটনে ক্লিক করে সব পাতা প্রিন্ট করুন।</p>
                                 </div>
                                 <div className="bg-white border rounded-xl overflow-hidden shadow-md">
                                     <Table>
@@ -608,59 +608,62 @@ export default function StaffListPage() {
       <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
           <style jsx global>{`
               @media print {
-                  @page { size: A4 portrait; margin: 5mm; }
+                  @page { size: A4 portrait; margin: 3mm; }
                   html, body { height: auto; overflow: visible; }
                   .report-page { 
                       page-break-after: always; 
-                      width: 200mm; 
-                      min-height: 287mm; 
-                      padding: 5mm; 
+                      width: 204mm; 
+                      min-height: 290mm; 
+                      padding: 4mm; 
                       box-sizing: border-box;
                       display: flex;
                       flex-direction: column;
+                      background: white !important;
                   }
                   .report-header { 
                       border-bottom: 2px solid black; 
-                      padding-bottom: 8px; 
-                      margin-bottom: 10px; 
+                      padding-bottom: 6px; 
+                      margin-bottom: 8px; 
                       text-align: center;
                       display: flex;
                       flex-direction: column;
                       align-items: center;
                   }
-                  .report-table { border: 1px solid black !important; width: 100%; border-collapse: collapse; }
+                  .report-table { border: 1.5px solid black !important; width: 100%; border-collapse: collapse; }
                   .report-table th, .report-table td { 
                       border: 1px solid black !important; 
-                      padding: 3px 1px !important; 
+                      padding: 2px 1px !important; 
                       text-align: center; 
-                      font-size: 9px; 
-                      line-height: 1.1; 
+                      font-size: 8px; 
+                      line-height: 1.0; 
                   }
+                  .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; }
                   .holiday-text { color: #dc2626 !important; font-weight: bold; background-color: #fef2f2 !important; }
-                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 9px !important; }
-                  .report-footer { margin-top: auto; padding-top: 20px; }
+                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 8.5px !important; border-top: 1.5px solid black !important; }
+                  .report-footer { margin-top: auto; padding-top: 15px; }
+                  .sign-box { border-top: 1.5px solid black; width: 45mm; text-align: center; font-size: 9px; font-weight: 900; padding-top: 2px; }
               }
           `}</style>
           
           {reportPages.map((page, pageIdx) => (
               <div key={pageIdx} className="report-page">
                   <div className="report-header">
-                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" width="60" height="60" className="object-contain mb-1" />}
+                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={55} height={55} className="object-contain mb-1" />}
                       <h1 className="text-2xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
                       <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
-                      <div className="mt-2 inline-block border-[1.5px] border-black px-5 py-0.5 rounded-full bg-slate-50">
+                      <div className="mt-1.5 inline-block border-[1.5px] border-black px-5 py-0.5 rounded-full bg-slate-50">
                           <h2 className="text-sm font-black uppercase">হাজিরা ও ছুটির রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
                       </div>
-                      <p className="text-[8px] font-bold mt-0.5 text-slate-400 italic">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
+                      <p className="text-[7px] font-bold mt-0.5 text-slate-400 italic">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
                   </div>
 
                   <table className="report-table">
                       <thead>
                           <tr className="bg-slate-100">
-                              <th className="w-[120px] font-black py-1">তারিখ ও বার</th>
+                              <th className="w-[110px] font-black py-1">তারিখ ও বার</th>
                               {page.teachers.map(teacher => (
                                   <th key={teacher.id} className="py-1">
-                                      <p className="font-black text-[10px] text-blue-900">{teacher.nameEn || teacher.nameBn}</p>
+                                      <p className="font-black text-[9px] text-blue-900">{teacher.nameBn}</p>
                                       <p className="text-[7px] italic font-bold text-slate-600">{teacher.designation}</p>
                                   </th>
                               ))}
@@ -677,7 +680,7 @@ export default function StaffListPage() {
 
                               return (
                                   <tr key={dateStr} className={cn(isOffDay && "holiday-text")}>
-                                      <td className="text-left pl-2 font-bold text-[9px]">{toBengaliNumber(displayDate)}</td>
+                                      <td className="text-left pl-2 font-bold text-[8.5px]">{toBengaliNumber(displayDate)}</td>
                                       {page.teachers.map(teacher => {
                                           const record = rangeRecords.find(r => r.date === dateStr);
                                           const att = record?.attendance.find(a => a.staffId === teacher.id);
@@ -742,13 +745,13 @@ export default function StaffListPage() {
                       </tbody>
                   </table>
                   
-                  <div className="report-footer flex justify-between px-10 font-black text-[10px]">
-                      <div className="w-40 border-t-2 border-black pt-1 text-center">হিসাবরক্ষকের স্বাক্ষর</div>
-                      <div className="w-40 border-t-2 border-black pt-1 text-center">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+                  <div className="report-footer flex justify-between px-6">
+                      <div className="sign-box">হিসাবরক্ষকের স্বাক্ষর</div>
+                      <div className="sign-box">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
                   </div>
                   
-                  <div className="text-center text-[7px] text-slate-300 italic mt-4">
-                      রিপোর্ট জেনারেট: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Portal
+                  <div className="text-center text-[7px] text-slate-300 italic mt-3">
+                      রিপোর্ট তৈরির তারিখ: {format(new Date(), 'PPpp', { locale: bn })} | বীরগঞ্জ পৌর উচ্চ বিদ্যালয় পোর্টাল
                   </div>
               </div>
           ))}
