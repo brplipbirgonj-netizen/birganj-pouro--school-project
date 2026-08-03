@@ -602,7 +602,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <Badge variant="secondary" className="font-black px-3 text-xs">মোট: {results.length.toLocaleString('bn-BD')} জন</Badge>
                         </div>
                         <div className="table-container border-2 border-slate-400 relative rounded-b-lg !overflow-auto">
-                            <Table className="min-w-max border-separate border-spacing-0">
+                            <Table className="min-w-max border-collapse">
                                 <TableHeader className="z-30">
                                     <TableRow className="border-b-2 border-slate-400">
                                         <TableHead rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-0 top-0 z-40 w-14 text-[10px] p-1 shadow-[2px_0_0px_rgba(0,0,0,0.2)]">রোল</TableHead>
@@ -674,7 +674,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             })}
                                             <TableCell className="text-center font-black text-primary border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[240px] bg-[#f0fdfa] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[180px] bg-[#eef2ff] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[120px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[120px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", res.isPass ? "bg-[#fff1f2]" : "bg-rose-100 text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
                                             <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[60px] bg-[#fefce8] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-500 italic text-[8px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
                                             <TableCell className="text-center p-0.5 border-b border-slate-400 sticky right-0 bg-[#f8fafc] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
