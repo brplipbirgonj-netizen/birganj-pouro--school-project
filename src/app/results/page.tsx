@@ -597,7 +597,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
 
                 return (
                     <div key={gk} className="space-y-0">
-                        <div className="flex justify-between items-center bg-primary/10 p-2 rounded-t-lg border-x-2 border-t-2 border-black">
+                        <div className="flex justify-between items-center bg-primary/10 p-2 rounded-t-lg border-2 border-black">
                             <h3 className="font-black text-primary text-sm uppercase">শাখা: {groupNamesMap[gk] || gk}</h3>
                             <Badge variant="secondary" className="font-black px-3 text-xs">মোট: {results.length.toLocaleString('bn-BD')} জন</Badge>
                         </div>
@@ -605,27 +605,27 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <table className="min-w-max border-separate border-spacing-0 w-full">
                                 <thead className="z-30">
                                     <tr>
-                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black sticky left-0 top-0 z-50 w-[60px] text-[10px] p-1 h-[56px]">রোল</th>
-                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black sticky left-[60px] top-0 z-50 min-w-[180px] text-[10px] p-1 h-[56px]">শিক্ষার্থীর নাম</th>
+                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black sticky left-0 top-0 z-50 w-[60px] text-[10px] p-1 h-[56px] box-border">রোল</th>
+                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black sticky left-[60px] top-0 z-50 min-w-[180px] text-[10px] p-1 h-[56px] box-border">শিক্ষার্থীর নাম</th>
                                         {subs.map((s, idx) => (
                                             <th 
                                                 key={s.name} 
                                                 colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} 
                                                 className={cn(
-                                                    "text-center border-r-2 border-b-2 border-black font-black py-1 text-[9px] sticky top-0 z-30 px-2 h-[28px]",
+                                                    "text-center border-r-2 border-b-2 border-black font-black py-1 text-[9px] sticky top-0 z-30 px-2 h-[28px] box-border",
                                                     subBgColors[idx % subBgColors.length]
                                                 )}
                                             >
                                                 {s.name}
                                             </th>
                                         ))}
-                                        <th rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[240px] z-50 w-[60px] h-[56px]">মোট</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[180px] z-50 w-[60px] h-[56px]">GPA</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-50 w-[60px] h-[56px]">গ্রেড</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[60px] z-50 w-[60px] h-[56px]">মেধা</th>
-                                        <th rowSpan={2} className="text-center font-black border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-0 z-50 w-[60px] h-[56px]">প্রিন্ট</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[240px] z-50 w-[60px] h-[56px] box-border">মোট</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[180px] z-50 w-[60px] h-[56px] box-border">GPA</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-50 w-[60px] h-[56px] box-border">গ্রেড</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[60px] z-50 w-[60px] h-[56px] box-border">মেধা</th>
+                                        <th rowSpan={2} className="text-center font-black border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-0 z-50 w-[60px] h-[56px] box-border">প্রিন্ট</th>
                                     </tr>
-                                    <tr>
+                                    <tr className="h-[28px]">
                                         {subs.map((s, idx) => {
                                             const isEng = s.name.includes('ইংরেজি');
                                             const bgColor = subBgColors[idx % subBgColors.length];
@@ -633,14 +633,14 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <React.Fragment key={s.name}>
                                                     {!isEng && (
                                                         <>
-                                                            <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px]", bgColor)}>লিখিত</th>
-                                                            <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px]", bgColor)}>MCQ</th>
-                                                            {s.practical && <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px]", bgColor)}>ব্যবহারিক</th>}
+                                                            <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px] box-border", bgColor)}>লিখিত</th>
+                                                            <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px] box-border", bgColor)}>MCQ</th>
+                                                            {s.practical && <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px] box-border", bgColor)}>ব্যবহারিক</th>}
                                                         </>
                                                     )}
-                                                    <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-black bg-blue-200 text-blue-950 p-0.5 sticky top-[28px] z-30 w-12 h-[28px]", bgColor)}>প্রাপ্ত</th>
-                                                    <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-8 h-[28px]", bgColor)}>গ্রেড</th>
-                                                    <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px]", bgColor)}>পয়েন্ট</th>
+                                                    <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-black bg-blue-200 text-blue-950 p-0.5 sticky top-[28px] z-30 w-12 h-[28px] box-border", bgColor)}>প্রাপ্ত</th>
+                                                    <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-8 h-[28px] box-border", bgColor)}>গ্রেড</th>
+                                                    <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[28px] z-30 w-10 h-[28px] box-border", bgColor)}>পয়েন্ট</th>
                                                 </React.Fragment>
                                             )
                                         })}
@@ -649,8 +649,8 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <tbody>
                                     {results.map(res => (
                                         <tr key={res.student.id} className="h-8 hover:bg-slate-50 transition-colors">
-                                            <td className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b-2 border-black text-[10px] p-0.5 w-[60px]">{res.student.roll.toLocaleString('bn-BD')}</td>
-                                            <td className="font-bold sticky left-[60px] z-20 bg-white border-r-2 border-b-2 border-black text-[10px] p-0.5 px-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{res.student.studentNameBn}</td>
+                                            <td className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b-2 border-black text-[10px] p-0.5 w-[60px] h-[32px] box-border">{res.student.roll.toLocaleString('bn-BD')}</td>
+                                            <td className="font-bold sticky left-[60px] z-20 bg-white border-r-2 border-b-2 border-black text-[10px] p-0.5 px-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] h-[32px] box-border">{res.student.studentNameBn}</td>
                                             {subs.map((s, idx) => {
                                                 const sr = res.subjectResults.get(s.name);
                                                 const isEng = s.name.includes('ইংরেজি');
@@ -659,22 +659,22 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     <React.Fragment key={s.name}>
                                                         {!isEng && (
                                                             <>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-medium h-[28px]", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-' }</td>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-medium h-[28px]", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-' }</td>
-                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-medium h-[28px]", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-' }</td>}
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-medium h-[32px] box-border", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-' }</td>
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-medium h-[32px] box-border", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-' }</td>
+                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-medium h-[32px] box-border", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-' }</td>}
                                                             </>
                                                         )}
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[10px] p-0.5 h-[28px]", bgColor)}>{sr?.marks?.toLocaleString('bn-BD') ?? '-' }</td>
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] font-black p-0.5 h-[28px]", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100")}>{sr?.grade ?? '-' }</td>
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-bold h-[28px]", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-' }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[10px] p-0.5 h-[32px] box-border", bgColor)}>{sr?.marks?.toLocaleString('bn-BD') ?? '-' }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] font-black p-0.5 h-[32px] box-border", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100")}>{sr?.grade ?? '-' }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[9px] p-0.5 font-bold h-[32px] box-border", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-' }</td>
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <td className="text-center font-black text-primary border-r-2 border-b-2 border-black text-[10px] p-0.5 sticky right-[240px] bg-[#fff1f2] z-20 w-[60px] h-[28px]">{res.totalMarks.toLocaleString('bn-BD')}</td>
-                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[10px] p-0.5 sticky right-[180px] bg-[#fff1f2] z-20 w-[60px] h-[28px]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[9px] p-0.5 sticky right-[120px] bg-[#fff1f2] z-20 w-[60px] h-[28px]", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[9px] p-0.5 sticky right-[60px] bg-[#fff1f2] z-20 w-[60px] h-[28px]", !res.isPass && "text-rose-500 italic text-[8px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</td>
-                                            <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[60px] h-[28px]">
+                                            <td className="text-center font-black text-primary border-r-2 border-b-2 border-black text-[10px] p-0.5 sticky right-[240px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border">{res.totalMarks.toLocaleString('bn-BD')}</td>
+                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[10px] p-0.5 sticky right-[180px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[9px] p-0.5 sticky right-[120px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[9px] p-0.5 sticky right-[60px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border", !res.isPass && "text-rose-500 italic text-[8px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</td>
+                                            <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
                                                     <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-3 w-3 text-primary" /></Button>
                                                 </Link>
