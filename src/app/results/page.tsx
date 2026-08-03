@@ -256,9 +256,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableRow key={student.id} className="hover:bg-accent/5">
                                             <TableCell className="font-black text-center">{student.roll.toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.written || ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} className="h-9 font-bold" /></TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq || ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} className="h-9 font-bold" /></TableCell>
-                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical || ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} className="h-9 font-bold" /></TableCell>}
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.written || ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq || ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
+                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical || ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>}
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -420,7 +420,7 @@ const FullMarksTab = () => {
                                                                             type="number" 
                                                                             value={inputValue}
                                                                             onChange={(e) => setFullMarksInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
-                                                                            className="h-10 w-24 text-center font-black bg-white border-2 text-lg" 
+                                                                            className="h-10 w-24 text-center font-black bg-white border-2 border-black text-lg" 
                                                                             disabled={!isPermitted} 
                                                                         />
                                                                         <Button 
@@ -612,7 +612,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 key={s.name} 
                                                 colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} 
                                                 className={cn(
-                                                    "text-center border-r-2 border-b-2 border-black font-black py-1 text-[11px] sticky top-0 z-30 px-2 h-[32px] box-border",
+                                                    "text-center border-r-2 border-b-2 border-black font-black py-1 text-[12px] sticky top-0 z-30 px-2 h-[32px] box-border",
                                                     subBgColors[idx % subBgColors.length]
                                                 )}
                                             >
@@ -633,14 +633,14 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <React.Fragment key={s.name}>
                                                     {!isEng && (
                                                         <>
-                                                            <th className={cn("text-[10px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>লিখিত</th>
-                                                            <th className={cn("text-[10px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>MCQ</th>
-                                                            {s.practical && <th className={cn("text-[10px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>ব্যবহারিক</th>}
+                                                            <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>লিখিত</th>
+                                                            <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>MCQ</th>
+                                                            {s.practical && <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>ব্যবহারিক</th>}
                                                         </>
                                                     )}
-                                                    <th className={cn("text-[10px] text-center border-r-2 border-b-2 border-black font-black bg-blue-200 text-blue-950 p-0.5 sticky top-[32px] z-30 w-14 h-[32px] box-border", bgColor)}>প্রাপ্ত</th>
-                                                    <th className={cn("text-[10px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-10 h-[32px] box-border", bgColor)}>গ্রেড</th>
-                                                    <th className={cn("text-[10px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>পয়েন্ট</th>
+                                                    <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-black bg-blue-200 text-blue-950 p-0.5 sticky top-[32px] z-30 w-14 h-[32px] box-border", bgColor)}>প্রাপ্ত</th>
+                                                    <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-10 h-[32px] box-border", bgColor)}>গ্রেড</th>
+                                                    <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>পয়েন্ট</th>
                                                 </React.Fragment>
                                             )
                                         })}
@@ -659,21 +659,21 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     <React.Fragment key={s.name}>
                                                         {!isEng && (
                                                             <>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[11px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-' }</td>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[11px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-' }</td>
-                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[11px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-' }</td>}
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{sr?.written?.toLocaleString('bn-BD') ?? '-' }</td>
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{sr?.mcq?.toLocaleString('bn-BD') ?? '-' }</td>
+                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{sr?.practical?.toLocaleString('bn-BD') ?? '-' }</td>}
                                                             </>
                                                         )}
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[12px] p-0.5 h-[40px] box-border", bgColor)}>{sr?.marks?.toLocaleString('bn-BD') ?? '-' }</td>
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[11px] font-black p-0.5 h-[40px] box-border", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100")}>{sr?.grade ?? '-' }</td>
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[11px] p-0.5 font-bold h-[40px] box-border", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-' }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[13px] p-0.5 h-[40px] box-border", bgColor)}>{sr?.marks?.toLocaleString('bn-BD') ?? '-' }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] font-black p-0.5 h-[40px] box-border", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100")}>{sr?.grade ?? '-' }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-bold h-[40px] box-border", bgColor)}>{sr?.point?.toFixed(2).toLocaleString('bn-BD') ?? '-' }</td>
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[280px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">{res.totalMarks.toLocaleString('bn-BD')}</td>
-                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[210px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[12px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[12px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border", !res.isPass && "text-rose-500 italic text-[10px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</td>
+                                            <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[280px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">{res.totalMarks.toLocaleString('bn-BD')}</td>
+                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[210px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border", !res.isPass && "text-rose-500 italic text-[11px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</td>
                                             <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
                                                     <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-4 w-4 text-primary" /></Button>
