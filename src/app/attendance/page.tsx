@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student } from '@/lib/student-data';
-import { getAttendanceFromStorage, DailyAttendance, saveDailyAttendance, getAttendanceForClassAndDate, StudentAttendance, AttendanceStatus, getConsecutiveAbsences } from '@/lib/attendance-data';
+import { getAttendanceFromStorage, DailyAttendance, saveDailyAttendance, getAttendanceForClassAndDate, StudentAttendance, AttendanceStatus, getConsecutiveAbsences, StudentConsecutiveAbsence } from '@/lib/attendance-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,6 +27,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useSchoolInfo } from '@/context/SchoolInfoContext';
+import Image from 'next/image';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -80,16 +82,12 @@ const AttendanceSheet = ({
             const existingAttendance = await getAttendanceForClassAndDate(db, dateStr, classId, selectedYear);
             setSavedAttendance(existingAttendance);
             
-            // If new attendance or switching dates, we should reset local map if it's for today vs past
-            // For simplicity, we just clear and populate from saved if exists
             const nextMap = new Map<string, AttendanceStatus>();
             if (existingAttendance) {
                 existingAttendance.attendance.forEach(item => {
                     onStatusChange(item.studentId, item.status);
                     nextMap.set(item.studentId, item.status);
                 });
-            } else {
-                // Pre-populate with nothing or maybe all present if desired
             }
 
             const holidayToday = await isHoliday(db, dateStr);
@@ -369,7 +367,6 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
     const [rollsInput, setRollsInput] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Real-time counter logic
     const rollCount = useMemo(() => {
         if (!rollsInput.trim()) return 0;
         const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
@@ -494,9 +491,26 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
     );
 };
 
+// Printable Header Helper
+const SchoolPrintHeader = ({ title, schoolInfo }: { title: string, schoolInfo: any }) => (
+    <div className="hidden print:block text-black mb-8 border-b-4 border-emerald-800 pb-4 font-kalpurush">
+        <div className="flex items-center gap-6 justify-center">
+            {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={70} height={70} className="object-contain" />}
+            <div className="text-center">
+                <h1 className="text-3xl font-black uppercase text-emerald-950">{schoolInfo.name}</h1>
+                <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
+                    <h2 className="text-lg font-black uppercase">{title}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 // Monthly Summary Board Component
 const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
+    const { schoolInfo } = useSchoolInfo();
     const { selectedYear } = useAcademicYear();
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
     const [attendanceData, setAttendanceData] = useState<DailyAttendance[]>([]);
@@ -590,17 +604,17 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                 </Button>
             </div>
 
-            <Card className="border-2 border-primary/20 shadow-xl overflow-hidden printable-area bg-white">
-                <CardHeader className="bg-primary/5 border-b flex flex-row justify-between items-center print:bg-white print:border-black">
-                    <CardTitle className="text-xl font-black text-primary flex items-center gap-2 print:text-black">
-                        <ListChecks className="h-6 w-6 no-print" /> মাসিক হাজিরা সারাংশ ({BENGALI_MONTHS[parseInt(selectedMonth)]} {toBengaliNumber(selectedYear)})
-                    </CardTitle>
-                </CardHeader>
+            <Card className="border-2 border-primary/20 shadow-xl overflow-hidden printable-area bg-white text-black p-0 sm:p-10">
+                <SchoolPrintHeader 
+                    title={`মাসিক হাজিরা সারাংশ - ${BENGALI_MONTHS[parseInt(selectedMonth)]} ${toBengaliNumber(selectedYear)}`} 
+                    schoolInfo={schoolInfo} 
+                />
+                
                 <CardContent className="p-0">
-                    <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible">
-                        <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full">
+                    <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible border-black">
+                        <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full print:border-black">
                             <TableHeader className="bg-muted sticky top-0 z-30 print:bg-white print:static">
-                                <TableRow className="h-14 print:h-10">
+                                <TableRow className="h-14 print:h-10 print:border-black">
                                     <TableHead className="text-center font-black border-r border-b w-44 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
                                         <TableHead key={cls} className="text-center font-black border-r border-b text-[11px] leading-tight print:border-black">{classNamesMap[cls]}</TableHead>
@@ -621,7 +635,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                     
                                     return (
                                         <TableRow key={i} className={cn(
-                                            "h-10 transition-colors",
+                                            "h-10 transition-colors print:border-black",
                                             isOff ? "bg-red-100 hover:bg-red-200 print:bg-gray-100" : "hover:bg-slate-50"
                                         )}>
                                             <TableCell className={cn(
@@ -666,7 +680,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold' }} />
                             <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold' }} />
                             <Tooltip 
-                                contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontFamily: 'var(--font-noto-sans-bengali)' }}
+                                contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold' }}
                                 formatter={(value: number) => [`${value}%`, 'উপস্থিতি']}
                             />
                             <Legend />
@@ -975,6 +989,132 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
+// Absence Alerts Tab Component ( restaurated )
+const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const { toast } = useToast();
+    const [selectedClass, setSelectedClass] = useState('6');
+    const [alerts, setAlerts] = useState<StudentConsecutiveAbsence[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const fetchAlerts = useCallback(async () => {
+        if (!db || !selectedClass) return;
+        setIsLoading(true);
+        const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
+        setAlerts(data);
+        setIsLoading(false);
+    }, [db, selectedClass, selectedYear]);
+
+    useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
+
+    const handleAction = (type: 'call' | 'sms' | 'whatsapp', alert: StudentConsecutiveAbsence) => {
+        const student = allStudents.find(s => s.id === alert.studentId);
+        if (!student) return;
+        const mobile = student.guardianMobile || student.studentMobile;
+        if (!mobile) {
+            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            return;
+        }
+        
+        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} টানা ${toBengaliNumber(alert.absentDays)} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অনুপস্থিতির কারণ জানান। বীপৌউবি`;
+        
+        if (type === 'call') window.location.href = `tel:${mobile}`;
+        else if (type === 'sms') {
+            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const separator = isIOS ? '&' : '?';
+            window.location.href = `sms:${mobile}${separator}body=${encodeURIComponent(msg)}`;
+        } else if (type === 'whatsapp') {
+            let cleanNum = mobile.replace(/[^\d]/g, '');
+            if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
+            if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
+            window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex items-center gap-4 p-4 border rounded-lg bg-white/50 no-print">
+                <div className="space-y-2 flex-1">
+                    <Label className="font-bold text-primary">শ্রেণি নির্বাচন করুন</Label>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button onClick={fetchAlerts} disabled={isLoading} className="h-9 font-black text-xs">রিফ্রেশ করুন</Button>
+            </div>
+
+            <Card className="border-2 border-red-100 shadow-lg overflow-hidden">
+                <CardHeader className="bg-red-50/50 border-b">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle className="text-red-900 flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5" /> অনুপস্থিতি সতর্কবার্তা (Absence Alerts)
+                            </CardTitle>
+                            <CardDescription>টানা ৩ দিন বা তার বেশি অনুপস্থিত শিক্ষার্থীদের তালিকা</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {isLoading ? (
+                        <div className="p-20 text-center italic">বিশ্লেষণ করা হচ্ছে...</div>
+                    ) : alerts.length === 0 ? (
+                        <div className="p-20 text-center text-emerald-600 font-black text-lg italic">টানা অনুপস্থিত কোনো শিক্ষার্থী পাওয়া যায়নি।</div>
+                    ) : (
+                        <div className="table-container">
+                            <Table>
+                                <TableHeader className="bg-muted/50">
+                                    <TableRow>
+                                        <TableHead className="w-16 text-center font-black">ক্রমিক</TableHead>
+                                        <TableHead className="w-16 text-center font-black">রোল</TableHead>
+                                        <TableHead className="font-black">নাম ও মোবাইল</TableHead>
+                                        <TableHead className="text-center font-black">অনুপস্থিতি (টানা)</TableHead>
+                                        <TableHead className="text-right font-black pr-6">কার্যক্রম</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {alerts.map((alert, idx) => {
+                                        const student = allStudents.find(s => s.id === alert.studentId);
+                                        return (
+                                            <TableRow key={alert.studentId} className="h-14 hover:bg-rose-50/50">
+                                                <TableCell className="text-center font-bold">{toBengaliNumber(idx + 1)}</TableCell>
+                                                <TableCell className="text-center font-black text-lg">{toBengaliNumber(student?.roll || '-')}</TableCell>
+                                                <TableCell>
+                                                    <p className="font-black text-slate-800">{student?.studentNameBn}</p>
+                                                    <p className="text-[10px] font-bold text-muted-foreground">{student?.guardianMobile || '-'}</p>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant="destructive" className="font-black text-sm px-4 h-7">{toBengaliNumber(alert.absentDays)} দিন</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right pr-6">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-200" onClick={() => handleAction('call', alert)}>
+                                                            <Phone className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-indigo-600 border-indigo-200" onClick={() => handleAction('sms', alert)}>
+                                                            <MessageSquareDashed className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-emerald-600 border-emerald-200" onClick={() => handleAction('whatsapp', alert)}>
+                                                            <MessageCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 // Attendance Report sheet
 interface StudentReport {
     student: Student;
@@ -985,6 +1125,7 @@ interface StudentReport {
 const ReportSheet = ({ classId, students, startDate, endDate }: { classId: string, students: Student[], startDate?: Date, endDate?: Date }) => {
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
+    const { schoolInfo } = useSchoolInfo();
     const { user } = useAuth();
     const [reportData, setReportData] = useState<StudentReport[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -1048,39 +1189,46 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
 
 
     return (
-        <div className="table-container printable-area bg-white">
-            <Table className="border-collapse print:border-black print:border">
-                <TableHeader className="bg-muted/50 sticky top-0 z-10 print:static print:bg-white">
-                    <TableRow className="print:border-black">
-                        <TableHead className="w-20 text-center font-black print:border-black print:border">রোল</TableHead>
-                        <TableHead className="font-black print:border-black print:border">শিক্ষার্থীর নাম ও মোবাইল</TableHead>
-                        <TableHead className="text-center font-black print:border-black print:border">মোট কার্যদিবস</TableHead>
-                        <TableHead className="text-center font-black print:border-black print:border">উপস্থিত</TableHead>
-                        <TableHead className="text-center font-black print:border-black print:border">অনুপস্থিত</TableHead>
-                        <TableHead className="text-right font-black print:border-black print:border">উপস্থিতি (%)</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {reportData.map(report => (
-                        <TableRow key={report.student.id} className="hover:bg-accent/5 transition-colors print:border-black">
-                            <TableCell className="text-center font-black print:border-black print:border">{report.student.roll.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="print:border-black print:border">
-                                <p className="font-bold text-slate-700">{report.student.studentNameBn}</p>
-                                <p className="text-[10px] text-muted-foreground font-bold">{report.student.guardianMobile || '-'}</p>
-                            </TableCell>
-                            <TableCell className="text-center font-medium print:border-black print:border">{report.totalDays.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-center text-emerald-600 font-black print:border-black print:border">{report.presentDays.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-center text-rose-600 font-black print:border-black print:border">{report.absentDays.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-right font-black text-emerald-700 print:border-black print:border">
-                                {report.totalDays > 0 ? 
-                                    toBengaliNumber(((report.presentDays / report.totalDays) * 100).toFixed(1)) + '%' 
-                                    : 'N/A'
-                                }
-                            </TableCell>
+        <div className="p-0 sm:p-10 bg-white text-black font-kalpurush">
+            <SchoolPrintHeader 
+                title={`${classNamesMap[classId]} শ্রেণির হাজিরা রিপোর্ট`} 
+                schoolInfo={schoolInfo} 
+            />
+            
+            <div className="table-container printable-area bg-white border-black">
+                <Table className="border-collapse border-black print:border-black print:border">
+                    <TableHeader className="bg-muted/50 sticky top-0 z-10 print:static print:bg-white">
+                        <TableRow className="print:border-black">
+                            <TableHead className="w-20 text-center font-black print:border-black print:border">রোল</TableHead>
+                            <TableHead className="font-black print:border-black print:border">শিক্ষার্থীর নাম ও মোবাইল</TableHead>
+                            <TableHead className="text-center font-black print:border-black print:border">মোট কার্যদিবস</TableHead>
+                            <TableHead className="text-center font-black print:border-black print:border">উপস্থিত</TableHead>
+                            <TableHead className="text-center font-black print:border-black print:border">অনুপস্থিত</TableHead>
+                            <TableHead className="text-right font-black print:border-black print:border">উপস্থিতি (%)</TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {reportData.map(report => (
+                            <TableRow key={report.student.id} className="hover:bg-accent/5 transition-colors print:border-black">
+                                <TableCell className="text-center font-black print:border-black print:border">{toBengaliNumber(report.student.roll)}</TableCell>
+                                <TableCell className="print:border-black print:border">
+                                    <p className="font-bold text-slate-700">{report.student.studentNameBn}</p>
+                                    <p className="text-[10px] text-muted-foreground font-bold">{report.student.guardianMobile || '-'}</p>
+                                </TableCell>
+                                <TableCell className="text-center font-medium print:border-black print:border">{toBengaliNumber(report.totalDays)}</TableCell>
+                                <TableCell className="text-center text-emerald-600 font-black print:border-black print:border">{toBengaliNumber(report.presentDays)}</TableCell>
+                                <TableCell className="text-center text-rose-600 font-black print:border-black print:border">{toBengaliNumber(report.absentDays)}</TableCell>
+                                <TableCell className="text-right font-black text-emerald-700 print:border-black print:border">
+                                    {report.totalDays > 0 ? 
+                                        toBengaliNumber(((report.presentDays / report.totalDays) * 100).toFixed(1)) + '%' 
+                                        : 'N/A'
+                                    }
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     );
 };
@@ -1139,7 +1287,7 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </TabsList>
                         {classes.map((className) => (
                             <TabsContent key={className} value={className}>
-                                <Card className="border-2 border-primary/5 shadow-md">
+                                <Card className="border-2 border-primary/5 shadow-md bg-white">
                                     <CardContent className="p-0">
                                         <ReportSheet classId={className} students={getStudentsByClass(className)} startDate={startDate} endDate={endDate} />
                                     </CardContent>
