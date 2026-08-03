@@ -1183,6 +1183,10 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
         fetchAttendance();
     }, [classId, students, selectedYear, db, user, startDate, endDate]);
 
+    const dateRangeStr = startDate && endDate 
+        ? `(${toBengaliNumber(format(startDate, 'dd/MM/yyyy'))} হতে ${toBengaliNumber(format(endDate, 'dd/MM/yyyy'))} পর্যন্ত)`
+        : '';
+
      if (isLoading) return <p className="text-center p-8 italic">রিপোর্ট তৈরি হচ্ছে...</p>;
 
     if (students.length === 0) return <p className="text-center text-muted-foreground p-8">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>;
@@ -1190,7 +1194,7 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
     return (
         <div className="p-0 sm:p-10 bg-white text-black font-kalpurush printable-area min-h-screen">
             <SchoolPrintHeader 
-                title={`${classNamesMap[classId]} শ্রেণির হাজিরা রিপোর্ট`} 
+                title={`${classNamesMap[classId]} শ্রেণির হাজিরা রিপোর্ট ${dateRangeStr}`} 
                 schoolInfo={schoolInfo} 
             />
             
