@@ -228,7 +228,7 @@ function MarksheetContent() {
             {/* Printable Marksheet Card */}
             <div className="printable-area marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                 {schoolInfo.logoUrl && (
-                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-[0.05] print:opacity-[0.05]">
+                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-[0.1] print:opacity-[0.1]">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="object-contain" />
                     </div>
                 )}
@@ -294,7 +294,7 @@ function MarksheetContent() {
                             <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                         </div>
                         <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
-                            <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
+                            <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameEn || student.motherNameBn}</div>
                             <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
                         </div>
                         <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
