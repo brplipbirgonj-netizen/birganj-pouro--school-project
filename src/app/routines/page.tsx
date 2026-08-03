@@ -17,7 +17,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, FilePen, FilePlus, Users, Info, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -32,6 +32,7 @@ import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { getProxyClasses, saveProxyClass, deleteProxyClass, ProxyClass, NewProxyData } from '@/lib/proxy-data';
 import { getStaff, Staff } from '@/lib/staff-data';
+import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { collection, query, where, onSnapshot, writeBatch, doc } from 'firebase/firestore';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
@@ -376,9 +377,11 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [absentTeacher, setAbsentTeacher] = useState<string>('');
     const [allStaff, setAllStaff] = useState<Staff[]>([]);
+    const [leaveTeachers, setLeaveTeachers] = useState<{id: string, name: string}[]>([]);
     const [proxies, setProxies] = useState<ProxyClass[]>([]);
     const [selections, setSelections] = useState<Map<string, string>>(new Map());
     const [isSaving, setIsSaving] = useState<string | null>(null);
+    const [isFetchingLeave, setIsFetchingLeave] = useState(false);
 
     const canManageProxy = hasPermission('manage:proxy-classes');
     const dayName = selectedDate ? dayMap[selectedDate.getDay()] : '';
@@ -418,6 +421,35 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     useEffect(() => {
         if (!db || !selectedDate) return;
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        setIsFetchingLeave(true);
+
+        const fetchLeaveAndStaff = async () => {
+            try {
+                const [attRecord, allStaffData] = await Promise.all([
+                    getStaffAttendanceByDate(db, dateStr),
+                    getStaff(db)
+                ]);
+                setAllStaff(allStaffData);
+
+                if (attRecord) {
+                    const leaveList = attRecord.attendance
+                        .filter(a => a.status === 'leave')
+                        .map(l => {
+                            const s = allStaffData.find(st => st.id === l.staffId);
+                            return { id: l.staffId, name: s?.nameBn || 'অজানা' };
+                        });
+                    setLeaveTeachers(leaveList);
+                } else {
+                    setLeaveTeachers([]);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            setIsFetchingLeave(false);
+        };
+
+        fetchLeaveAndStaff();
+
         const q = query(
             collection(db, 'proxyClasses'),
             where("date", "==", dateStr),
@@ -430,8 +462,6 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                 return { id: doc.id, ...data } as ProxyClass;
             }));
         });
-
-        getStaff(db).then(setAllStaff);
 
         return () => unsubscribe();
     }, [db, selectedDate, academicYear]);
@@ -512,26 +542,67 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                     <DatePicker value={selectedDate} onChange={setSelectedDate} />
                     {isWeekend && <p className="text-[10px] text-red-600 font-bold">আজ সাপ্তাহিক ছুটি!</p>}
                 </div>
-                <div className="space-y-2">
-                    <Label className="font-bold text-red-600 flex items-center gap-2"><UserMinus className="h-4 w-4" /> অনুপস্থিত শিক্ষক</Label>
-                    <Select value={absentTeacher} onValueChange={setAbsentTeacher} disabled={isWeekend}>
-                        <SelectTrigger><SelectValue placeholder="শিক্ষকের নাম" /></SelectTrigger>
-                        <SelectContent>
-                            {availableTeachersInRoutine.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex items-end text-xs text-muted-foreground italic font-medium pb-2">
-                    {dayName ? `${dayName} দিনের রুটিন অনুযায়ী ক্লাসগুলো নিচে দেখা যাবে।` : 'তারিখ সিলেক্ট করুন।'}
+                
+                <div className="space-y-4 md:col-span-2">
+                    <div className="space-y-2">
+                        <Label className="font-bold text-red-600 flex items-center gap-2">
+                            <UserX className="h-4 w-4" /> অনুপস্থিত শিক্ষক নির্বাচন করুন
+                        </Label>
+                        
+                        {/* Auto-suggest from attendance */}
+                        {leaveTeachers.length > 0 && (
+                            <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg space-y-2">
+                                <p className="text-[10px] font-black text-rose-700 uppercase tracking-wider flex items-center gap-1">
+                                    <Info className="h-3 w-3" /> হাজিরা অনুযায়ী ছুটিতে আছেন:
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {leaveTeachers.map(t => (
+                                        <Button 
+                                            key={t.id} 
+                                            variant={absentTeacher === t.name ? "default" : "outline"}
+                                            size="sm" 
+                                            className={cn(
+                                                "h-8 text-xs font-black shadow-sm transition-all",
+                                                absentTeacher === t.name ? "bg-rose-600 hover:bg-rose-700" : "bg-white border-rose-200 text-rose-700 hover:bg-rose-100"
+                                            )}
+                                            onClick={() => setAbsentTeacher(t.name)}
+                                        >
+                                            {t.name}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-2">
+                            <Select value={absentTeacher} onValueChange={setAbsentTeacher} disabled={isWeekend}>
+                                <SelectTrigger className="flex-1 bg-white">
+                                    <SelectValue placeholder={isFetchingLeave ? "লোড হচ্ছে..." : "শিক্ষক নির্বাচন করুন (ম্যানুয়ালি)"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableTeachersInRoutine.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            {absentTeacher && (
+                                <Button variant="ghost" onClick={() => setAbsentTeacher('')} className="text-[10px] h-10 font-bold">ক্লিয়ার</Button>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic font-medium">
+                            {dayName ? `${dayName} দিনের রুটিন অনুযায়ী ক্লাসগুলো নিচে দেখা যাবে।` : 'তারিখ সিলেক্ট করুন।'}
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {absentTeacher && classesToProxy.length > 0 && (
                 <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
-                    <CardHeader>
-                        <CardTitle className="text-lg">নতুন বদলি ক্লাস এসাইন করুন ({absentTeacher})</CardTitle>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Plus className="h-5 w-5" /> বদলি ক্লাস এসাইন করুন: <span className="text-rose-700 font-black">{absentTeacher}</span>
+                        </CardTitle>
+                        <CardDescription>নিচে {absentTeacher} এর সকল ক্লাস পিরিয়ড অনুযায়ী দেখা যাচ্ছে।</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {classesToProxy.map((item, idx) => {
                                 const selectionKey = `${item.className}-${item.periodIndex}`;
@@ -552,19 +623,19 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                 return (
                                     <div key={idx} className="p-4 border rounded-lg bg-white space-y-3 shadow-sm transition-all hover:ring-2 hover:ring-primary/20">
                                         <div className="flex justify-between items-start">
-                                            <Badge variant="outline" className="bg-primary/5 text-primary">{periodLabels[item.periodIndex]} পিরিয়ড</Badge>
-                                            <span className="text-xs font-bold text-muted-foreground">{classNamesMap[item.className]} শ্রেণি</span>
+                                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black">{periodLabels[item.periodIndex]} পিরিয়ড</Badge>
+                                            <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">{classNamesMap[item.className]} শ্রেণি</span>
                                         </div>
-                                        <p className="font-bold text-sm">{item.subject}</p>
+                                        <p className="font-bold text-sm bg-muted/20 p-2 rounded">{item.subject}</p>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px] uppercase font-black text-muted-foreground">বদলি শিক্ষক (ফ্রি শিক্ষকদের তালিকা)</Label>
+                                            <Label className="text-[10px] uppercase font-black text-muted-foreground">বদলি শিক্ষক (যারা ফ্রি আছেন)</Label>
                                             <Select 
                                                 disabled={isAssigned || isSaving === selectionKey || !canManageProxy}
                                                 value={selections.get(selectionKey) || ""}
                                                 onValueChange={(val) => setSelections(prev => new Map(prev).set(selectionKey, val))}
                                             >
-                                                <SelectTrigger className="h-8 text-xs">
-                                                    <SelectValue placeholder={isAssigned ? "ইতিমধ্যে নিয়োগকৃত" : "ফ্রি শিক্ষক নির্বাচন করুন"} />
+                                                <SelectTrigger className="h-9 text-xs border-2">
+                                                    <SelectValue placeholder={isAssigned ? "ইতিমধ্যে নিয়োগকৃত" : "ফ্রি শিক্ষক নির্বাচন"} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {freeTeachers.length === 0 ? (
@@ -581,7 +652,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                         {!isAssigned ? (
                                             <Button 
                                                 size="sm" 
-                                                className="w-full h-8 text-xs gap-2"
+                                                className="w-full h-9 text-xs gap-2 font-black shadow-md"
                                                 onClick={() => handleAssignProxy(item)}
                                                 disabled={isSaving === selectionKey || !selections.get(selectionKey) || !canManageProxy}
                                             >
@@ -589,7 +660,10 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                                 নিয়োগ নিশ্চিত করুন
                                             </Button>
                                         ) : (
-                                            <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> ইতিমধ্যে এসাইন করা হয়েছে</p>
+                                            <div className="p-2 bg-emerald-50 rounded border border-emerald-100 flex items-center justify-center gap-2">
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                <span className="text-[10px] text-emerald-700 font-black">নিয়োগ সম্পন্ন হয়েছে</span>
+                                            </div>
                                         )}
                                     </div>
                                 );
@@ -600,47 +674,49 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
             )}
 
             <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-black text-primary flex items-center gap-2">
-                        <LayoutGrid className="h-5 w-5" /> আজকের বদলি ক্লাস বোর্ড (কানবান)
+                <div className="flex items-center justify-between px-2">
+                    <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                        <LayoutGrid className="h-5 w-5 text-primary" /> বদলি ক্লাস বোর্ড (পিরিয়ড ভিত্তিক)
                     </h3>
-                    <Badge variant="secondary" className="font-bold">{proxies.length.toLocaleString('bn-BD')} টি ক্লাস নির্ধারিত</Badge>
+                    <Badge variant="outline" className="font-black border-primary text-primary bg-primary/5">
+                        মোট {toBengaliNumber(proxies.length)} টি ক্লাস
+                    </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 overflow-x-auto pb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 overflow-x-auto pb-6 scrollbar-thin">
                     {boardData.map((col) => (
                         <div key={col.idx} className="flex flex-col gap-3 min-w-[200px]">
-                            <div className="p-3 bg-muted rounded-lg font-black text-sm text-center border-b-2 border-primary/20">
+                            <div className="p-3 bg-slate-800 text-white rounded-lg font-black text-sm text-center shadow-md">
                                 {col.label} পিরিয়ড
                             </div>
                             <div className="flex flex-col gap-3">
                                 {col.items.length === 0 ? (
-                                    <div className="h-20 border-2 border-dashed rounded-lg flex items-center justify-center text-[10px] text-muted-foreground bg-slate-50/50 italic text-center px-4">
-                                        কোনো বদলি ক্লাস নেই
+                                    <div className="h-24 border-2 border-dashed rounded-xl flex items-center justify-center text-[10px] text-muted-foreground bg-white/50 italic text-center px-6">
+                                        কোনো বদলি ক্লাস নির্ধারিত নেই
                                     </div>
                                 ) : (
                                     col.items.map(proxy => (
-                                        <div key={proxy.id} className="p-3 border-2 border-emerald-100 rounded-lg bg-white shadow-sm relative group animate-in slide-in-from-bottom-2">
+                                        <div key={proxy.id} className="p-4 border-2 border-emerald-200 rounded-xl bg-white shadow-lg relative group animate-in slide-in-from-bottom-2 duration-300">
                                             {canManageProxy && (
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-100 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-100 text-red-600 shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-200"
                                                     onClick={() => handleDeleteProxy(proxy.id)}
                                                 >
-                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             )}
-                                            <div className="text-[10px] font-black text-primary mb-1 uppercase">{classNamesMap[proxy.className]} শ্রেণি</div>
-                                            <p className="text-xs font-bold leading-tight mb-2">{proxy.subject}</p>
-                                            <div className="flex flex-col gap-1 border-t pt-2">
-                                                <div className="flex items-center justify-between text-[9px]">
-                                                    <span className="text-muted-foreground"> ছিল:</span>
-                                                    <span className="font-bold text-red-500">{proxy.originalTeacher}</span>
+                                            <div className="text-[10px] font-black text-primary mb-2 uppercase border-b pb-1">{classNamesMap[proxy.className]} শ্রেণি</div>
+                                            <p className="text-xs font-black leading-tight text-slate-900 mb-3">{proxy.subject}</p>
+                                            <div className="space-y-1.5 pt-2 border-t border-dashed">
+                                                <div className="flex items-center justify-between text-[9px] font-bold">
+                                                    <span className="text-muted-foreground">মূল শিক্ষক:</span>
+                                                    <span className="text-rose-600">{proxy.originalTeacher}</span>
                                                 </div>
-                                                <div className="flex items-center justify-between text-[9px]">
-                                                    <span className="text-muted-foreground">এখন:</span>
-                                                    <span className="font-black text-emerald-700">{proxy.proxyTeacher}</span>
+                                                <div className="flex items-center justify-between text-[9px] font-black">
+                                                    <span className="text-muted-foreground">বদলি শিক্ষক:</span>
+                                                    <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">{proxy.proxyTeacher}</span>
                                                 </div>
                                             </div>
                                         </div>
