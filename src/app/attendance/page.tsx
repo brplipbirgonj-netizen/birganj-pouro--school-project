@@ -16,7 +16,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday, getHolidays } from '@/lib/holiday-data';
-import { format, eachDayOfInterval } from 'date-fns';
+import { format, eachDayOfInterval, isAfter } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,6 +29,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import Image from 'next/image';
+
+// --- Constants ---
+const BENGALI_MONTHS = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+];
 
 const classNamesMap: { [key: string]: string } = { 
     '6': 'ষষ্ঠ শ্রেণি', 
@@ -111,7 +117,6 @@ const AttendanceSheet = ({
                 
                 if (existingAttendance) {
                     existingAttendance.attendance.forEach(item => {
-                        // Only sync if different to prevent loops
                         if (currentAttendance.get(item.studentId) !== item.status) {
                             onStatusChange(item.studentId, item.status);
                         }
@@ -533,7 +538,6 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     const classes = ['6', '7', '8', '9', '10'];
-    const BENGALI_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 
     const fetchSummaryData = useCallback(async () => {
         if (!db) return;
@@ -595,13 +599,6 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
             return row;
         });
     }, [days, attendanceData, holidays, selectedYear, selectedMonth, allStudents, classes]);
-
-    const chartData = useMemo(() => {
-        return boardData.filter(d => !d.isWeekend && !d.isHolidayDay).map(d => ({
-            name: toBengaliNumber(d.day),
-            'উপস্থিতি (%)': parseFloat(d.presentPercent.toFixed(1))
-        }));
-    }, [boardData]);
 
     return (
         <div className="mt-4 space-y-8 animate-in fade-in duration-500">
@@ -692,27 +689,36 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
     const { toast } = useToast();
     const { hasPermission } = useAuth();
     const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [selectedMonth, setSelectedMonth] = useState<string>(['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'][new Date().getMonth()]);
+    const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [missedDays, setMissedDays] = useState<Date[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isClient, setIsClient] = useState(false);
 
-    const BENGALI_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
     const canTakeMissedAttendance = hasPermission('input:missed-attendance');
 
     useEffect(() => { setIsClient(true); }, []);
 
     const fetchMissedAttendance = useCallback(async () => {
-        if (!db) return;
+        if (!db || !isClient) return;
         setIsLoading(true);
         try {
             const monthIndex = BENGALI_MONTHS.indexOf(selectedMonth);
             const year = parseInt(selectedYear);
+            
+            // Logic to calculate missed days
             const start = new Date(year, monthIndex, 1);
             const end = new Date(year, monthIndex + 1, 0);
             const today = new Date();
-            const realEnd = end > today ? today : end;
+            today.setHours(23, 59, 59, 999);
 
+            // If the month is in the future, don't show any missed attendance
+            if (start > today) {
+                setMissedDays([]);
+                setIsLoading(false);
+                return;
+            }
+
+            const realEnd = end > today ? today : end;
             const startStr = format(start, 'yyyy-MM-dd');
             const endStr = format(realEnd, 'yyyy-MM-dd');
 
@@ -743,7 +749,7 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
             toast({ variant: 'destructive', title: 'তথ্য আনা সম্ভব হয়নি' });
         }
         setIsLoading(false);
-    }, [db, selectedClass, selectedMonth, selectedYear, toast, BENGALI_MONTHS]);
+    }, [db, isClient, selectedClass, selectedMonth, selectedYear, toast]);
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
@@ -791,7 +797,10 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="p-12 text-center italic text-muted-foreground">বিশ্লেষণ করা হচ্ছে...</div>
+                        <div className="p-12 text-center italic text-muted-foreground flex flex-col items-center gap-2">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            <span>বিশ্লেষণ করা হচ্ছে...</span>
+                        </div>
                     ) : missedDays.length === 0 ? (
                         <div className="p-12 text-center text-emerald-600 font-black text-lg">
                             অসাধারণ! এই মাসে এখন পর্যন্ত সকল কার্যদিবসের হাজিরা সম্পন্ন হয়েছে।
@@ -839,7 +848,6 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
-    const BENGALI_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
     const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [selectedClass, setSelectedClass] = useState<string>('6');
     const [absentData, setAbsentData] = useState<{student: Student, count: number}[]>([]);
@@ -880,7 +888,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
             console.error(e);
         }
         setIsLoading(false);
-    }, [db, selectedClass, selectedMonth, selectedYear, allStudents, BENGALI_MONTHS]);
+    }, [db, selectedClass, selectedMonth, selectedYear, allStudents]);
 
     useEffect(() => { fetchAbsentees(); }, [fetchAbsentees]);
 
@@ -940,7 +948,10 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="p-20 text-center italic text-muted-foreground">বিশ্লেষণ করা হচ্ছে...</div>
+                        <div className="p-20 text-center italic text-muted-foreground flex flex-col items-center gap-2">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            <span>বিশ্লেষণ করা হচ্ছে...</span>
+                        </div>
                     ) : absentData.length === 0 ? (
                         <div className="p-20 text-center text-emerald-600 font-black text-lg italic">
                             এই মাসে কোনো শিক্ষার্থী অনুপস্থিত ছিল না।
@@ -1062,7 +1073,10 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="p-20 text-center italic">বিশ্লেষণ করা হচ্ছে...</div>
+                        <div className="p-20 text-center italic flex flex-col items-center gap-2">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            <span>বিশ্লেষণ করা হচ্ছে...</span>
+                        </div>
                     ) : alerts.length === 0 ? (
                         <div className="p-20 text-center text-emerald-600 font-black text-lg italic">টানা অনুপস্থিত কোনো শিক্ষার্থী পাওয়া যায়নি।</div>
                     ) : (
@@ -1116,13 +1130,6 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
         </div>
     );
 };
-
-interface StudentReport {
-    student: Student;
-    presentDays: number;
-    absentDays: number;
-    totalDays: number;
-}
 
 const ReportSheet = ({ classId, students, startDate, endDate }: { classId: string, students: Student[], startDate?: Date, endDate?: Date }) => {
     const { selectedYear } = useAcademicYear();
@@ -1427,4 +1434,11 @@ export default function AttendancePage() {
             </main>
         </div>
     );
+}
+
+interface StudentReport {
+    student: Student;
+    presentDays: number;
+    absentDays: number;
+    totalDays: number;
 }
