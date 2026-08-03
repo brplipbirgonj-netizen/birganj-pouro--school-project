@@ -47,6 +47,7 @@ function MarksheetContent() {
     const { user } = useAuth();
     const { schoolInfo } = useSchoolInfo();
 
+    const [student, setStudent] = setAllStudentsInClass] = useState<Student[]>([]);
     const [student, setStudent] = useState<Student | null>(null);
     const [allStudentsInClass, setAllStudentsInClass] = useState<Student[]>([]);
     const [resultsBySubject, setResultsBySubject] = useState<ClassResult[]>([]);
@@ -231,8 +232,8 @@ function MarksheetContent() {
             {/* Printable Marksheet Card */}
             <div className="printable-area marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                 {schoolInfo.logoUrl && (
-                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-[0.03]" />
+                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-[0.02] print:opacity-[0.01]">
+                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="object-contain" />
                     </div>
                 )}
                 
