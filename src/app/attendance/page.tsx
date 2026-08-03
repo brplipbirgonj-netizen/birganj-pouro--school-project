@@ -20,7 +20,7 @@ import { format, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX, Printer, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -45,12 +45,14 @@ const classNamesMap: { [key: string]: string } = {
 const AttendanceSheet = ({ 
     classId, 
     students, 
+    date,
     currentAttendance, 
     onStatusChange, 
     onRefresh 
 }: { 
     classId: string, 
     students: Student[], 
+    date: Date,
     currentAttendance: Map<string, AttendanceStatus>,
     onStatusChange: (studentId: string, status: AttendanceStatus) => void,
     onRefresh: () => void
@@ -59,9 +61,8 @@ const AttendanceSheet = ({
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { user } = useAuth();
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const dayOfWeek = today.getDay(); 
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dayOfWeek = date.getDay(); 
 
     const [savedAttendance, setSavedAttendance] = useState<DailyAttendance | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
@@ -75,29 +76,36 @@ const AttendanceSheet = ({
         if (!db || !user) return;
         
         const checkExistingData = async () => {
-            const existingAttendance = await getAttendanceForClassAndDate(db, todayStr, classId, selectedYear);
+            setIsLoading(true);
+            const existingAttendance = await getAttendanceForClassAndDate(db, dateStr, classId, selectedYear);
             setSavedAttendance(existingAttendance);
             
-            if (existingAttendance && currentAttendance.size === 0) {
+            // If new attendance or switching dates, we should reset local map if it's for today vs past
+            // For simplicity, we just clear and populate from saved if exists
+            const nextMap = new Map<string, AttendanceStatus>();
+            if (existingAttendance) {
                 existingAttendance.attendance.forEach(item => {
                     onStatusChange(item.studentId, item.status);
+                    nextMap.set(item.studentId, item.status);
                 });
+            } else {
+                // Pre-populate with nothing or maybe all present if desired
             }
 
-            const holidayToday = await isHoliday(db, todayStr);
+            const holidayToday = await isHoliday(db, dateStr);
             setActiveHoliday(holidayToday);
             
             setIsLoading(false);
         }
 
         checkExistingData();
-    }, [classId, todayStr, selectedYear, db, user, currentAttendance.size, onStatusChange]);
+    }, [classId, dateStr, selectedYear, db, user]);
 
     const handleSaveAttendance = () => {
         if (!db || !user) return;
         
         if (isWeekend) {
-            toast({ variant: "destructive", title: "আজ সাপ্তাহিক ছুটি। হাজিরা গ্রহণ সম্ভব নয়।" });
+            toast({ variant: "destructive", title: "সাপ্তাহিক ছুটির দিনে হাজিরা গ্রহণ সম্ভব নয়।" });
             return;
         }
         if (activeHoliday) {
@@ -111,7 +119,7 @@ const AttendanceSheet = ({
         }));
 
         const dailyAttendance: DailyAttendance = {
-            date: todayStr,
+            date: dateStr,
             academicYear: selectedYear,
             className: classId,
             attendance: attendanceData,
@@ -130,9 +138,9 @@ const AttendanceSheet = ({
 
     if (isLoading) return <p className="text-center p-8 italic">লোড হচ্ছে...</p>;
 
-    if (isWeekend) return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">আজ সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>;
+    if (isWeekend) return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">{format(date, 'PPP', { locale: bn })} সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>;
 
-    if (activeHoliday) return <p className="text-center text-amber-700 font-bold p-12 bg-amber-50 rounded-lg border-2 border-dashed border-amber-200">আজ {activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
+    if (activeHoliday) return <p className="text-center text-amber-700 font-bold p-12 bg-amber-50 rounded-lg border-2 border-dashed border-amber-200">{format(date, 'PPP', { locale: bn })} {activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
     
     if (savedAttendance && !isEditing) {
         const savedMap = new Map(savedAttendance.attendance.map(item => [item.studentId, item.status]));
@@ -143,7 +151,7 @@ const AttendanceSheet = ({
             <div className="p-4 space-y-6 animate-in fade-in duration-500">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/20 p-4 rounded-lg border">
                     <div>
-                        <h3 className="font-black text-xl text-primary">আজকের হাজিরা সম্পন্ন হয়েছে</h3>
+                        <h3 className="font-black text-xl text-primary">{format(date, 'PPP', { locale: bn })} এর হাজিরা সম্পন্ন হয়েছে</h3>
                         <div className="mt-1 flex flex-wrap gap-4 text-sm font-bold">
                             <Badge variant="outline" className="bg-white">মোট: {(presentCount + absentCount).toLocaleString('bn-BD')}</Badge>
                             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">উপস্থিত: {presentCount.toLocaleString('bn-BD')}</Badge>
@@ -191,7 +199,7 @@ const AttendanceSheet = ({
         <div className="animate-in fade-in duration-500">
             <div className="p-4 bg-muted/30 border-b flex justify-between items-center">
                 <span className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Edit2 className="h-3 w-3" /> {isEditing ? 'হাজিরা সংশোধন' : 'নতুন হাজিরা নিন'}
+                    <Edit2 className="h-3 w-3" /> {isEditing ? 'হাজিরা সংশোধন' : 'নতুন হাজিরা নিন'} ({format(date, 'PPP', { locale: bn })})
                 </span>
                 {isEditing && (
                     <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-8 text-xs font-bold text-rose-600">
@@ -265,7 +273,7 @@ const AttendanceSheet = ({
     );
 };
 
-const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
+const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date, onDateChange: (d: Date) => void }) => {
     const { selectedYear } = useAcademicYear();
     const [classAttendance, setClassAttendance] = useState<Record<string, Map<string, AttendanceStatus>>>({
         '6': new Map(), '7': new Map(), '8': new Map(), '9': new Map(), '10': new Map()
@@ -298,16 +306,21 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
         return count;
     };
 
-    const today = new Date();
-    const formattedDate = format(today, "EEEE, d MMMM yyyy", { locale: bn });
+    const formattedDate = format(date, "EEEE, d MMMM yyyy", { locale: bn });
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between bg-primary/5 p-3 rounded-lg border-2 border-primary/10">
-                <p className="text-sm font-black text-primary flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4" /> আজকের তারিখ: {formattedDate}
-                </p>
-                <p className="text-[10px] font-bold text-muted-foreground italic hidden sm:block">বাটন ক্লিক করে হাজিরা নিশ্চিত করুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</p>
+            <div className="flex flex-col sm:flex-row items-center justify-between bg-primary/5 p-4 rounded-lg border-2 border-primary/10 gap-4">
+                <div className="space-y-1">
+                    <p className="text-sm font-black text-primary flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4" /> হাজিরা তারিখ: {formattedDate}
+                    </p>
+                    <p className="text-[10px] font-bold text-muted-foreground italic hidden sm:block">বাটন ক্লিক করে হাজিরা নিশ্চিত করুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Label className="font-bold text-xs whitespace-nowrap">তারিখ পরিবর্তন:</Label>
+                    <DatePicker value={date} onChange={(d) => d && onDateChange(d)} />
+                </div>
             </div>
             <Tabs defaultValue="6">
                 <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1">
@@ -331,6 +344,7 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <AttendanceSheet 
                                         classId={className} 
                                         students={getStudentsByClass(className)} 
+                                        date={date}
                                         currentAttendance={classAttendance[className]}
                                         onStatusChange={(sId, status) => handleStatusChange(className, sId, status)}
                                         onRefresh={() => {}}
@@ -345,7 +359,7 @@ const DigitalAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
+const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date, onDateChange: (d: Date) => void }) => {
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { toast } = useToast();
@@ -373,8 +387,7 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
         
         setIsProcessing(true);
         try {
-            const today = new Date();
-            const todayStr = format(today, 'yyyy-MM-dd');
+            const dateStr = format(date, 'yyyy-MM-dd');
             const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === selectedClass);
             
             if (classStudents.length === 0) {
@@ -401,7 +414,7 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
             }));
 
             const dailyAttendance: DailyAttendance = {
-                date: todayStr,
+                date: dateStr,
                 academicYear: selectedYear,
                 className: selectedClass,
                 attendance: attendanceData,
@@ -428,17 +441,23 @@ const QuickRollAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => 
                     <CardTitle className="text-xl flex items-center gap-2">
                         <Plus className="h-5 w-5" /> রোল ইনপুট দিয়ে দ্রুত হাজিরা
                     </CardTitle>
-                    <CardDescription>শ্রেণি সিলেক্ট করে উপস্থিত শিক্ষার্থীদের রোল নম্বরগুলো লিখুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</CardDescription>
+                    <CardDescription>তারিখ ও শ্রেণি সিলেক্ট করে উপস্থিত শিক্ষার্থীদের রোল নম্বরগুলো লিখুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
-                    <div className="max-w-md space-y-2">
-                        <Label className="font-black text-primary">শ্রেণি নির্বাচন করুন</Label>
-                        <Select value={selectedClass} onValueChange={setSelectedClass}>
-                            <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                        <div className="space-y-2">
+                            <Label className="font-black text-primary">তারিখ নির্বাচন</Label>
+                            <DatePicker value={date} onChange={(d) => d && onDateChange(d)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-black text-primary">শ্রেণি নির্বাচন করুন</Label>
+                            <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
@@ -556,34 +575,39 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="mt-4 space-y-8 animate-in fade-in duration-500">
-            <div className="max-w-md p-4 bg-white border-2 border-primary/10 rounded-xl shadow-sm">
-                <Label className="font-black text-primary mb-2 block">মাস নির্বাচন করুন</Label>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="bg-white font-bold h-12"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        {BENGALI_MONTHS.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+            <div className="flex flex-col sm:flex-row justify-between items-end gap-4 p-4 bg-white border-2 border-primary/10 rounded-xl shadow-sm no-print">
+                <div className="space-y-2 flex-1 w-full max-w-xs">
+                    <Label className="font-black text-primary block">মাস নির্বাচন করুন</Label>
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <SelectTrigger className="bg-white font-bold h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {BENGALI_MONTHS.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button onClick={() => window.print()} className="font-black h-10 px-8 shadow-md">
+                    <Printer className="mr-2 h-4 w-4" /> বোর্ড প্রিন্ট করুন
+                </Button>
             </div>
 
-            <Card className="border-2 border-primary/20 shadow-xl overflow-hidden">
-                <CardHeader className="bg-primary/5 border-b flex flex-row justify-between items-center">
-                    <CardTitle className="text-xl font-black text-primary flex items-center gap-2">
-                        <ListChecks className="h-6 w-6" /> মাসিক হাজিরা সারাংশ ({BENGALI_MONTHS[parseInt(selectedMonth)]})
+            <Card className="border-2 border-primary/20 shadow-xl overflow-hidden printable-area bg-white">
+                <CardHeader className="bg-primary/5 border-b flex flex-row justify-between items-center print:bg-white print:border-black">
+                    <CardTitle className="text-xl font-black text-primary flex items-center gap-2 print:text-black">
+                        <ListChecks className="h-6 w-6 no-print" /> মাসিক হাজিরা সারাংশ ({BENGALI_MONTHS[parseInt(selectedMonth)]} {toBengaliNumber(selectedYear)})
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="table-container max-h-[600px]">
-                        <Table className="min-w-[1000px] border-separate border-spacing-0">
-                            <TableHeader className="bg-muted sticky top-0 z-30">
-                                <TableRow className="h-14">
-                                    <TableHead className="text-center font-black border-r border-b w-44 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)]">তারিখ ও বার</TableHead>
+                    <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible">
+                        <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full">
+                            <TableHeader className="bg-muted sticky top-0 z-30 print:bg-white print:static">
+                                <TableRow className="h-14 print:h-10">
+                                    <TableHead className="text-center font-black border-r border-b w-44 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
-                                        <TableHead key={cls} className="text-center font-black border-r border-b text-[11px] leading-tight">{classNamesMap[cls]}</TableHead>
+                                        <TableHead key={cls} className="text-center font-black border-r border-b text-[11px] leading-tight print:border-black">{classNamesMap[cls]}</TableHead>
                                     ))}
-                                    <TableHead className="text-center font-black border-r border-b bg-indigo-50 text-indigo-900">মোট</TableHead>
-                                    <TableHead className="text-center font-black border-r border-b bg-emerald-50 text-emerald-900">শতকরা উপস্থিত</TableHead>
-                                    <TableHead className="text-center font-black border-b bg-rose-50 text-rose-900">শতকরা অনুপস্থিত</TableHead>
+                                    <TableHead className="text-center font-black border-r border-b bg-indigo-50 text-indigo-900 print:bg-white print:text-black print:border-black">মোট</TableHead>
+                                    <TableHead className="text-center font-black border-r border-b bg-emerald-50 text-emerald-900 print:bg-white print:text-black print:border-black">শতকরা উপস্থিত</TableHead>
+                                    <TableHead className="text-center font-black border-b bg-rose-50 text-rose-900 print:bg-white print:text-black print:border-black">শতকরা অনুপস্থিত</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -598,26 +622,26 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                     return (
                                         <TableRow key={i} className={cn(
                                             "h-10 transition-colors",
-                                            isOff ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"
+                                            isOff ? "bg-red-100 hover:bg-red-200 print:bg-gray-100" : "hover:bg-slate-50"
                                         )}>
                                             <TableCell className={cn(
-                                                "text-center font-black border-r text-xs whitespace-nowrap sticky left-0 z-20 shadow-[2px_0_0px_rgba(0,0,0,0.1)]",
-                                                isOff ? "text-red-700 bg-red-200" : "text-slate-600 bg-white"
+                                                "text-center font-black border-r text-xs whitespace-nowrap sticky left-0 z-20 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:shadow-none print:border-black",
+                                                isOff ? "text-red-700 bg-red-200 print:bg-gray-100" : "text-slate-600 bg-white"
                                             )}>
                                                 {toBengaliNumber(fullDateStr)} {dayName}
                                             </TableCell>
                                             {classes.map(cls => (
-                                                <TableCell key={cls} className="text-center font-bold border-r border-b">
+                                                <TableCell key={cls} className="text-center font-bold border-r border-b print:border-black">
                                                     {row[cls] !== null ? toBengaliNumber(row[cls]) : '-'}
                                                 </TableCell>
                                             ))}
-                                            <TableCell className="text-center font-black border-r border-b bg-indigo-50/30 text-indigo-700">
+                                            <TableCell className="text-center font-black border-r border-b bg-indigo-50/30 text-indigo-700 print:bg-white print:text-black print:border-black">
                                                 {row.totalPresent > 0 ? toBengaliNumber(row.totalPresent) : '-'}
                                             </TableCell>
-                                            <TableCell className="text-center font-black border-r border-b bg-emerald-50/30 text-emerald-700">
+                                            <TableCell className="text-center font-black border-r border-b bg-emerald-50/30 text-emerald-700 print:bg-white print:text-black print:border-black">
                                                 {row.totalPresent > 0 ? toBengaliNumber(row.presentPercent.toFixed(1)) + '%' : '-'}
                                             </TableCell>
-                                            <TableCell className="text-center font-black border-b bg-rose-50/30 text-rose-700">
+                                            <TableCell className="text-center font-black border-b bg-rose-50/30 text-rose-700 print:bg-white print:text-black print:border-black">
                                                 {row.totalPresent > 0 ? toBengaliNumber(row.absentPercent.toFixed(1)) + '%' : '-'}
                                             </TableCell>
                                         </TableRow>
@@ -629,7 +653,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                 </CardContent>
             </Card>
 
-            <Card className="border-2 border-primary/10 shadow-lg">
+            <Card className="border-2 border-primary/10 shadow-lg no-print">
                 <CardHeader className="bg-primary/5">
                     <CardTitle className="text-lg font-black flex items-center gap-2">
                         <BarChart3 className="h-5 w-5" /> উপস্থিতির গ্রাফিকাল চিত্র
@@ -656,7 +680,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
 };
 
 // Missed Attendance Tab Component
-const MissedAttendanceTab = () => {
+const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Date) => void }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
@@ -719,7 +743,7 @@ const MissedAttendanceTab = () => {
 
     return (
         <div className="mt-4 space-y-6 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-white/50 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-white/50 items-end no-print">
                 <div className="space-y-2">
                     <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -769,7 +793,7 @@ const MissedAttendanceTab = () => {
                                     <TableHead className="w-20 text-center">ক্রমিক</TableHead>
                                     <TableHead>তারিখ</TableHead>
                                     <TableHead>বার</TableHead>
-                                    <TableHead className="text-right">স্ট্যাটাস</TableHead>
+                                    <TableHead className="text-right">কার্যক্রম</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -779,7 +803,9 @@ const MissedAttendanceTab = () => {
                                         <TableCell className="font-black text-slate-700">{format(date, 'd MMMM yyyy', { locale: bn })}</TableCell>
                                         <TableCell className="font-bold text-muted-foreground">{format(date, 'EEEE', { locale: bn })}</TableCell>
                                         <TableCell className="text-right">
-                                            <Badge variant="destructive" className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100">হাজিরা নেওয়া হয়নি</Badge>
+                                            <Button size="sm" onClick={() => onTakeAttendance(date)} className="bg-amber-600 hover:bg-amber-700 font-bold h-8 text-[10px]">
+                                                <Plus className="h-3 w-3 mr-1" /> পুনরায় হাজিরা নিন
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -866,7 +892,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="mt-4 space-y-6 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-white/50 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-white/50 items-end no-print">
                 <div className="space-y-2">
                     <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
                     <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -908,7 +934,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <TableHeader className="bg-muted/50">
                                     <TableRow>
                                         <TableHead className="w-16 text-center font-black">রোল</TableHead>
-                                        <TableHead className="font-black">নাম</TableHead>
+                                        <TableHead className="font-black">নাম ও মোবাইল</TableHead>
                                         <TableHead className="text-center font-black">অনুপস্থিত দিন</TableHead>
                                         <TableHead className="text-right font-black pr-6">যোগাযোগ</TableHead>
                                     </TableRow>
@@ -942,142 +968,6 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </TableBody>
                             </Table>
                         </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    );
-};
-
-// Risks/Alerts Tab
-const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
-    const db = useFirestore();
-    const { selectedYear } = useAcademicYear();
-    const { toast } = useToast();
-    const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [alerts, setAlerts] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const fetchAlerts = useCallback(async () => {
-        if (!db) return;
-        setIsLoading(true);
-        try {
-            const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
-            setAlerts(data);
-        } catch (e) {
-            console.error(e);
-        }
-        setIsLoading(false);
-    }, [db, selectedClass, selectedYear]);
-
-    useEffect(() => {
-        fetchAlerts();
-    }, [fetchAlerts]);
-
-    const studentMap = useMemo(() => {
-        const map = new Map<string, Student>();
-        allStudents.forEach(s => map.set(s.id, s));
-        return map;
-    }, [allStudents]);
-
-    const handleAction = (type: 'call' | 'sms' | 'whatsapp', alert: any) => {
-        const student = studentMap.get(alert.studentId);
-        if (!student) return;
-        const mobile = student.guardianMobile || student.studentMobile;
-        if (!mobile) {
-            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
-            return;
-        }
-        
-        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} টানা ${toBengaliNumber(alert.absentDays)} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অতিসত্বর বিদ্যালয়ের সাথে যোগাযোগ করুন। বীপৌউবি`;
-        
-        if (type === 'call') {
-            window.location.href = `tel:${mobile}`;
-        } else if (type === 'sms') {
-            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const separator = isIOS ? '&' : '?';
-            window.location.href = `sms:${mobile}${separator}body=${encodeURIComponent(msg)}`;
-        } else if (type === 'whatsapp') {
-            let cleanNum = mobile.replace(/[^\d]/g, '');
-            if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
-            if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
-            window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-    };
-
-    return (
-        <div className="mt-4 space-y-6 animate-in fade-in duration-500">
-            <div className="flex flex-col sm:flex-row gap-4 p-4 border rounded-lg bg-white/50 items-end">
-                <div className="space-y-2 flex-1">
-                    <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
-                        <SelectContent>
-                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <Button onClick={fetchAlerts} disabled={isLoading} className="h-9 font-black text-xs">আপডেট দেখুন</Button>
-            </div>
-
-            <Card className="border-2 border-rose-100 shadow-md">
-                <CardHeader className="bg-rose-50/30 border-b">
-                    <CardTitle className="text-rose-700 flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5" /> অনুপস্থিতি সতর্কবার্তা
-                    </CardTitle>
-                    <CardDescription>টানা ৩ দিনের বেশি অনুপস্থিত শিক্ষার্থীদের তালিকা</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {isLoading ? (
-                        <div className="p-12 text-center text-muted-foreground">লোড হচ্ছে...</div>
-                    ) : alerts.length === 0 ? (
-                        <div className="p-12 text-center text-red-600 font-black text-xl animate-in fade-in zoom-in duration-500">
-                            এই শ্রেণিতে বর্তমানে তিন দিনের বেশি অনুপস্থিত শিক্ষার্থী নেই।
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader className="bg-muted/50">
-                                <TableRow>
-                                    <TableHead className="w-16 text-center font-black">ক্রমিক</TableHead>
-                                    <TableHead className="w-20 text-center font-black">রোল</TableHead>
-                                    <TableHead className="font-black">নাম</TableHead>
-                                    <TableHead className="text-center font-black">অনুপস্থিতি দিন</TableHead>
-                                    <TableHead className="text-center font-black">শেষ তারিখ</TableHead>
-                                    <TableHead className="text-right font-black pr-6">যোগাযোগ</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {alerts.map((alert, idx) => {
-                                    const student = studentMap.get(alert.studentId);
-                                    return (
-                                        <TableRow key={alert.studentId} className="hover:bg-rose-50 transition-colors h-14">
-                                            <TableCell className="text-center font-bold">{(idx + 1).toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="text-center font-black">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
-                                            <TableCell className="font-bold text-rose-900">{student?.studentNameBn || '-'}</TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="destructive" className="font-black px-3">{alert.absentDays.toLocaleString('bn-BD')} দিন</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-center text-xs font-bold text-muted-foreground">
-                                                {format(new Date(alert.lastAbsentDate), 'PP', { locale: bn })}
-                                            </TableCell>
-                                            <TableCell className="text-right pr-6">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="outline" size="icon" title="কল করুন" className="h-8 w-8 text-blue-600 border-blue-200 bg-white hover:bg-blue-50" onClick={() => handleAction('call', alert)}>
-                                                        <Phone className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="outline" size="icon" title="SMS পাঠান" className="h-8 w-8 text-indigo-600 border-indigo-200 bg-white hover:bg-indigo-50" onClick={() => handleAction('sms', alert)}>
-                                                        <MessageSquareDashed className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="outline" size="icon" title="WhatsApp করুন" className="h-8 w-8 text-emerald-600 border-emerald-200 bg-white hover:bg-emerald-50" onClick={() => handleAction('whatsapp', alert)}>
-                                                        <MessageCircle className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
                     )}
                 </CardContent>
             </Card>
@@ -1158,36 +1048,32 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
 
 
     return (
-        <div className="table-container">
-            <Table>
-                <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                    <TableRow>
-                        <TableHead className="w-20 text-center font-black">রোল</TableHead>
-                        <TableHead className="font-black">শিক্ষার্থীর নাম</TableHead>
-                        <TableHead className="text-center font-black">মোট কার্যদিবস</TableHead>
-                        <TableHead className="text-center font-black">উপস্থিত</TableHead>
-                        <TableHead className="text-center font-black">অনুপস্থিত</TableHead>
-                        <TableHead className="text-right font-black">উপস্থিতি (%)</TableHead>
-                        <TableHead className="text-right font-black">অনুপস্থিতি (%)</TableHead>
+        <div className="table-container printable-area bg-white">
+            <Table className="border-collapse print:border-black print:border">
+                <TableHeader className="bg-muted/50 sticky top-0 z-10 print:static print:bg-white">
+                    <TableRow className="print:border-black">
+                        <TableHead className="w-20 text-center font-black print:border-black print:border">রোল</TableHead>
+                        <TableHead className="font-black print:border-black print:border">শিক্ষার্থীর নাম ও মোবাইল</TableHead>
+                        <TableHead className="text-center font-black print:border-black print:border">মোট কার্যদিবস</TableHead>
+                        <TableHead className="text-center font-black print:border-black print:border">উপস্থিত</TableHead>
+                        <TableHead className="text-center font-black print:border-black print:border">অনুপস্থিত</TableHead>
+                        <TableHead className="text-right font-black print:border-black print:border">উপস্থিতি (%)</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {reportData.map(report => (
-                        <TableRow key={report.student.id} className="hover:bg-accent/5 transition-colors">
-                            <TableCell className="text-center font-black">{report.student.roll.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="font-bold text-slate-700">{report.student.studentNameBn}</TableCell>
-                            <TableCell className="text-center font-medium">{report.totalDays.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-center text-emerald-600 font-black">{report.presentDays.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-center text-rose-600 font-black">{report.absentDays.toLocaleString('bn-BD')}</TableCell>
-                            <TableCell className="text-right font-black text-emerald-700">
+                        <TableRow key={report.student.id} className="hover:bg-accent/5 transition-colors print:border-black">
+                            <TableCell className="text-center font-black print:border-black print:border">{report.student.roll.toLocaleString('bn-BD')}</TableCell>
+                            <TableCell className="print:border-black print:border">
+                                <p className="font-bold text-slate-700">{report.student.studentNameBn}</p>
+                                <p className="text-[10px] text-muted-foreground font-bold">{report.student.guardianMobile || '-'}</p>
+                            </TableCell>
+                            <TableCell className="text-center font-medium print:border-black print:border">{report.totalDays.toLocaleString('bn-BD')}</TableCell>
+                            <TableCell className="text-center text-emerald-600 font-black print:border-black print:border">{report.presentDays.toLocaleString('bn-BD')}</TableCell>
+                            <TableCell className="text-center text-rose-600 font-black print:border-black print:border">{report.absentDays.toLocaleString('bn-BD')}</TableCell>
+                            <TableCell className="text-right font-black text-emerald-700 print:border-black print:border">
                                 {report.totalDays > 0 ? 
                                     toBengaliNumber(((report.presentDays / report.totalDays) * 100).toFixed(1)) + '%' 
-                                    : 'N/A'
-                                }
-                            </TableCell>
-                            <TableCell className="text-right font-black text-rose-700">
-                                {report.totalDays > 0 ? 
-                                    toBengaliNumber(((report.absentDays / report.totalDays) * 100).toFixed(1)) + '%' 
                                     : 'N/A'
                                 }
                             </TableCell>
@@ -1220,7 +1106,7 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     return (
         <div className="mt-4 space-y-6 animate-in fade-in duration-500">
             <Tabs value={reportType} onValueChange={(v: any) => setReportType(v)}>
-                <TabsList className="bg-slate-200/50 p-1 mb-4 h-12 w-full max-w-md">
+                <TabsList className="bg-slate-200/50 p-1 mb-4 h-12 w-full max-w-md no-print">
                     <TabsTrigger value="monthly" className="font-black flex-1 h-full">মাসিক হাজিরা বোর্ড</TabsTrigger>
                     <TabsTrigger value="class" className="font-black flex-1 h-full">শ্রেণিভিত্তিক রিপোর্ট</TabsTrigger>
                 </TabsList>
@@ -1230,18 +1116,21 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </TabsContent>
 
                 <TabsContent value="class" className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border-2 border-dashed rounded-lg items-end bg-white/50">
-                        <div className="w-full space-y-2">
+                    <div className="flex flex-col sm:flex-row gap-4 p-4 border-2 border-dashed rounded-lg items-end bg-white/50 no-print">
+                        <div className="w-full space-y-2 flex-1">
                             <Label className="font-bold text-primary flex items-center gap-2">শুরুর তারিখ</Label>
                             <DatePicker value={startDate} onChange={setStartDate} placeholder="শুরুর তারিখ" />
                         </div>
-                        <div className="w-full space-y-2">
+                        <div className="w-full space-y-2 flex-1">
                             <Label className="font-bold text-primary flex items-center gap-2">শেষের তারিখ</Label>
                             <DatePicker value={endDate} onChange={setEndDate} placeholder="শেষের তারিখ" />
                         </div>
+                        <Button onClick={() => window.print()} className="font-black h-10 px-8 shadow-md">
+                            <Printer className="mr-2 h-4 w-4" /> রিপোর্ট প্রিন্ট
+                        </Button>
                     </div>
                     <Tabs defaultValue="6">
-                        <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1">
+                        <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1 no-print">
                             {classes.map((className) => (
                                 <TabsTrigger key={className} value={className} className="py-2 text-xs sm:text-sm font-black">
                                     {classNamesMap[className]}
@@ -1274,6 +1163,7 @@ export default function AttendancePage() {
     const [isClient, setIsClient] = useState(false);
     
     const [activeSection, setActiveSection] = useState('digital-attendance');
+    const [attendanceDate, setAttendanceDate] = useState<Date>(new Date());
 
     useEffect(() => { setIsClient(true); }, []);
 
@@ -1296,6 +1186,12 @@ export default function AttendancePage() {
     }, [db, user]);
 
     const canInputQuickRoll = hasPermission('input:quick-roll-attendance');
+
+    const handleTakeMissedAttendance = (date: Date) => {
+        setAttendanceDate(date);
+        setActiveSection('digital-attendance');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const sidebarItems = useMemo(() => {
         const items = [
@@ -1352,18 +1248,18 @@ export default function AttendancePage() {
                             </div>
                         ) : (
                             <>
-                                <div className="mb-6 border-b pb-4">
+                                <div className="mb-6 border-b pb-4 no-print">
                                     <h2 className="text-2xl font-black text-slate-800">
                                         {sidebarItems.find(i => i.id === activeSection)?.label}
                                     </h2>
                                     {isClient && <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
                                 </div>
 
-                                {activeSection === 'digital-attendance' && <DigitalAttendanceTab allStudents={allStudents} />}
-                                {activeSection === 'quick-roll' && <QuickRollAttendanceTab allStudents={allStudents} />}
+                                {activeSection === 'digital-attendance' && <DigitalAttendanceTab allStudents={allStudents} date={attendanceDate} onDateChange={setAttendanceDate} />}
+                                {activeSection === 'quick-roll' && <QuickRollAttendanceTab allStudents={allStudents} date={attendanceDate} onDateChange={setAttendanceDate} />}
                                 {activeSection === 'report' && <AttendanceReportTab allStudents={allStudents} />}
                                 {activeSection === 'absent-list' && <AbsentStudentListTab allStudents={allStudents} />}
-                                {activeSection === 'missed-attendance' && <MissedAttendanceTab />}
+                                {activeSection === 'missed-attendance' && <MissedAttendanceTab onTakeAttendance={handleTakeMissedAttendance} />}
                                 {activeSection === 'alerts' && <AbsenceAlertsTab allStudents={allStudents} />}
                             </>
                         )}
