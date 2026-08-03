@@ -104,7 +104,6 @@ export default function StaffListPage() {
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   
-  // Steps for attendance input: 0=Initial, 1=Status Selected, 2=Time/Leave Set, 3=Saved
   const [staffSteps, setAttendanceSteps] = useState<Record<string, number>>({});
   const [editStates, setEditStates] = useState<Record<string, boolean>>({});
 
@@ -143,7 +142,6 @@ export default function StaffListPage() {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const record = await getStaffAttendanceByDate(db, dateStr);
     setDailyAttendance(record || { date: dateStr, attendance: [] });
-    // Reset states
     setAttendanceSteps({});
     setEditStates({});
     setIsAttendanceLoading(false);
@@ -194,6 +192,21 @@ export default function StaffListPage() {
         setAttendanceSteps(prev => ({ ...prev, [staffId]: 3 }));
         setEditStates(prev => ({ ...prev, [staffId]: false }));
     } catch (e) {}
+  };
+
+  const handleDeleteAttendance = async (staffId: string) => {
+      if (!db || !dailyAttendance) return;
+      try {
+          const nextAtt = dailyAttendance.attendance.filter(a => a.staffId !== staffId);
+          const updatedRecord = { ...dailyAttendance, attendance: nextAtt };
+          await saveStaffAttendance(db, updatedRecord);
+          setDailyAttendance(updatedRecord);
+          setAttendanceSteps(prev => ({ ...prev, [staffId]: 0 }));
+          setEditStates(prev => ({ ...prev, [staffId]: false }));
+          toast({ title: 'হাজিরা মুছে ফেলা হয়েছে' });
+      } catch (e) {
+          toast({ variant: 'destructive', title: 'ত্রুটি', description: 'মুছে ফেলা সম্ভব হয়নি' });
+      }
   };
 
   const fetchReport = useCallback(async () => {
@@ -251,7 +264,7 @@ export default function StaffListPage() {
       return items;
   }, [canManageAttendance, canViewAttendanceReport]);
 
-  const StaffTable = ({ data, startIdx = 0 }: { data: Staff[], startIdx?: number }) => (
+  const StaffTable = ({ data, startIdx = 0, colorClass }: { data: Staff[], startIdx?: number, colorClass: string }) => (
     <div className="table-container mb-8">
         <Table>
             <TableHeader className="bg-muted/50 sticky top-0 z-20">
@@ -271,7 +284,7 @@ export default function StaffListPage() {
                     <TableCell>
                         <Image src={staff.photoUrl || 'https://picsum.photos/seed/staff/40/40'} alt={staff.nameBn} width={40} height={40} className="rounded-full object-cover border" />
                     </TableCell>
-                    <TableCell className="whitespace-nowrap font-black text-primary text-base">{staff.nameBn}</TableCell>
+                    <TableCell className={cn("whitespace-nowrap font-black text-base", colorClass)}>{staff.nameBn}</TableCell>
                     <TableCell className="whitespace-nowrap font-bold text-xs">{staff.designation}</TableCell>
                     <TableCell className="text-xs font-bold">{toBengaliNumber(staff.mobile)}</TableCell>
                     <TableCell className="text-right">
@@ -362,17 +375,17 @@ export default function StaffListPage() {
                     <div className="space-y-8 animate-in fade-in duration-500 no-print">
                         <section>
                             <div className="flex items-center gap-2 mb-4 px-2">
-                                <div className="h-6 w-1 bg-orange-500 rounded-full" />
+                                <div className="h-6 w-1.5 bg-orange-500 rounded-full" />
                                 <h3 className="text-lg font-black text-orange-950">| শিক্ষকবৃন্দের তালিকা ({toBengaliNumber(sortedTeachers.length)} জন)</h3>
                             </div>
-                            <StaffTable data={sortedTeachers} />
+                            <StaffTable data={sortedTeachers} colorClass="text-blue-700" />
                         </section>
                         <section>
                             <div className="flex items-center gap-2 mb-4 px-2">
-                                <div className="h-6 w-1 bg-blue-500 rounded-full" />
+                                <div className="h-6 w-1.5 bg-blue-500 rounded-full" />
                                 <h3 className="text-lg font-black text-blue-950">| কর্মচারীবৃন্দের তালিকা ({toBengaliNumber(sortedEmployees.length)} জন)</h3>
                             </div>
-                            <StaffTable data={sortedEmployees} />
+                            <StaffTable data={sortedEmployees} colorClass="text-primary" />
                         </section>
                     </div>
                 )}
@@ -408,7 +421,7 @@ export default function StaffListPage() {
                                         const currentStep = isEditing ? 0 : step;
 
                                         return (
-                                            <TableRow key={staff.id} className="h-20">
+                                            <TableRow key={staff.id} className="h-24">
                                                 <TableCell>
                                                     <div className="font-black text-sm text-slate-800">{staff.nameBn}</div>
                                                     <div className="text-[10px] font-bold text-muted-foreground italic">{staff.designation}</div>
@@ -426,14 +439,14 @@ export default function StaffListPage() {
                                                                 <Badge className={cn("px-4 py-1 font-black", att?.status === 'present' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>
                                                                     {att?.status === 'present' ? 'উপস্থিতি সিলেক্টেড' : 'ছুটি সিলেক্টেড'}
                                                                 </Badge>
-                                                                <Button size="sm" variant="outline" className="h-9 px-8 font-black border-2 border-primary text-primary" onClick={() => handleSaveStatus(staff.id)}>পরবর্তী ধাপ (Save Status)</Button>
+                                                                <Button size="sm" variant="outline" className="h-9 px-8 font-black border-2 border-primary text-primary" onClick={() => handleSaveStatus(staff.id)}>সেভ করুন (Save Status)</Button>
                                                             </div>
                                                         )}
                                                         {currentStep === 2 && (
                                                             <div className="flex flex-col gap-3 w-full max-w-[250px] bg-slate-50 p-3 rounded-lg border-2 border-dashed border-primary/20">
                                                                 {att?.status === 'present' ? (
                                                                     <div className="space-y-2">
-                                                                        <Label className="text-[10px] font-black text-primary">আগমনের সময় (উদা: ১০:৩০ AM)</Label>
+                                                                        <Label className="text-[10px] font-black text-primary text-left block">আগমনের সময় (উদা: ১০:৩০ AM)</Label>
                                                                         <div className="flex gap-1">
                                                                             <Input type="text" placeholder="১০:৩০" className="h-8 text-xs font-bold text-center" value={att?.checkIn?.replace(/\s?(AM|PM)/i, '') || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkIn', `${e.target.value} ${att?.checkIn?.slice(-2) || 'AM'}`)} />
                                                                             <Select value={att?.checkIn?.slice(-2) === 'PM' ? 'PM' : 'AM'} onValueChange={v => {
@@ -447,29 +460,41 @@ export default function StaffListPage() {
                                                                     </div>
                                                                 ) : (
                                                                     <div className="space-y-2">
-                                                                        <Label className="text-[10px] font-black text-rose-700">ছুটির ধরন</Label>
+                                                                        <Label className="text-[10px] font-black text-rose-700 text-left block">ছুটির ধরন</Label>
                                                                         <Select value={att?.leaveType || ""} onValueChange={val => handleAttendanceDetailChange(staff.id, 'leaveType', val as LeaveType)}>
                                                                             <SelectTrigger className="h-8 text-[10px] font-bold"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
                                                                             <SelectContent>{LEAVE_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
                                                                         </Select>
                                                                     </div>
                                                                 )}
-                                                                <Button size="sm" className="w-full h-8 font-black shadow-md" onClick={() => handleFinalSave(staff.id)}>সংরক্ষণ করুন</Button>
+                                                                <Button size="sm" className="w-full h-8 font-black shadow-md bg-primary text-white" onClick={() => handleFinalSave(staff.id)}>সেভ ও সম্পন্ন করুন</Button>
                                                             </div>
                                                         )}
                                                         {currentStep === 3 && (
                                                             <div className="flex flex-col gap-2 w-full max-w-[200px]">
                                                                 {att?.status === 'present' && (
                                                                     <div className="space-y-1">
-                                                                         <Label className="text-[10px] font-black text-slate-500">প্রস্থানের সময়</Label>
+                                                                         <Label className="text-[10px] font-black text-slate-500 text-left block">প্রস্থানের সময় (উদা: ০৪:০০ PM)</Label>
                                                                          <div className="flex gap-1">
                                                                             <Input type="text" placeholder="০৪:০০ PM" className="h-8 text-[10px] font-bold" value={att?.checkOut || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkOut', e.target.value)} />
-                                                                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 border-emerald-200" onClick={() => handleFinalSave(staff.id)}><Save className="h-3 w-3 text-emerald-600" /></Button>
+                                                                            <Button size="sm" className="h-8 w-8 p-0 bg-emerald-600" onClick={() => handleFinalSave(staff.id)}><Save className="h-3.5 w-3.5 text-white" /></Button>
                                                                          </div>
                                                                     </div>
                                                                 )}
-                                                                <div className="flex justify-center gap-2">
-                                                                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-blue-600" onClick={() => { setAttendanceSteps(prev => ({ ...prev, [staff.id]: 0 })); setEditStates(prev => ({ ...prev, [staff.id]: true })); }}><Edit2 className="h-3 w-3 mr-1" /> এডিট</Button>
+                                                                <div className="flex justify-center gap-2 mt-1">
+                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-bold text-blue-600 border-blue-200" onClick={() => { setAttendanceSteps(prev => ({ ...prev, [staff.id]: 0 })); setEditStates(prev => ({ ...prev, [staff.id]: true })); }}><Edit2 className="h-3 w-3 mr-1" /> এডিট</Button>
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-bold text-rose-600 border-rose-200"><Trash2 className="h-3 w-3 mr-1" /> ডিলিট</Button>
+                                                                        </AlertDialogTrigger>
+                                                                        <AlertDialogContent className="font-kalpurush">
+                                                                            <AlertDialogHeader><AlertDialogTitle>হাজিরা মুছুন</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই শিক্ষকের আজকের হাজিরা মুছে ফেলতে চান?</AlertDialogDescription></AlertDialogHeader>
+                                                                            <AlertDialogFooter>
+                                                                                <AlertDialogCancel>না</AlertDialogCancel>
+                                                                                <AlertDialogAction onClick={() => handleDeleteAttendance(staff.id)} className="bg-destructive text-destructive-foreground">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                            </AlertDialogFooter>
+                                                                        </AlertDialogContent>
+                                                                    </AlertDialog>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -526,6 +551,24 @@ export default function StaffListPage() {
                                 <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
                                 <h3 className="text-xl font-black text-blue-900">রিপোর্ট প্রস্তুত হয়েছে!</h3>
                                 <p className="font-bold text-blue-700">উপরে 'প্রিন্ট' বাটনে ক্লিক করে সব পাতা প্রিন্ট করুন।</p>
+                                <div className="mt-6 border-t pt-4 text-left">
+                                    <p className="text-sm font-bold text-slate-600 mb-2">প্রিভিউ (প্রথম ৩ জন):</p>
+                                    <div className="bg-white border rounded overflow-hidden">
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>নাম</TableHead><TableHead className="text-center">উপস্থিতি</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {[...sortedTeachers, ...sortedEmployees].slice(0, 3).map(s => (
+                                                    <TableRow key={s.id}>
+                                                        <TableCell className="font-bold text-xs">{s.nameBn}</TableCell>
+                                                        <TableCell className="text-center text-xs font-black text-emerald-600">
+                                                            {toBengaliNumber(rangeRecords.filter(r => r.attendance.some(a => a.staffId === s.id && a.status === 'present')).length)} দিন
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -534,43 +577,62 @@ export default function StaffListPage() {
         </div>
       </main>
 
-      {/* --- Full Report Printing Area --- */}
+      {/* --- Full Report Printing Area (Portrait Mode) --- */}
       <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
           <style jsx global>{`
               @media print {
-                  @page { size: A4 portrait; margin: 8mm; }
-                  .report-page { page-break-after: always; width: 100%; min-height: 297mm; position: relative; }
-                  .report-header { border-bottom: 2px solid black; padding-bottom: 8px; margin-bottom: 10px; }
-                  .report-table { border: 1px solid black !important; }
-                  .report-table th, .report-table td { border: 1px solid black !important; padding: 2px !important; text-align: center; font-size: 9px; line-height: 1.2; }
-                  .holiday-text { color: red !important; font-weight: bold; }
+                  @page { size: A4 portrait; margin: 0; }
+                  html, body { height: auto; overflow: visible; }
+                  .report-page { 
+                      page-break-after: always; 
+                      width: 210mm; 
+                      min-height: 297mm; 
+                      padding: 10mm; 
+                      box-sizing: border-box;
+                      position: relative; 
+                  }
+                  .report-header { 
+                      border-bottom: 3px solid black; 
+                      padding-bottom: 10px; 
+                      margin-bottom: 15px; 
+                      text-align: center;
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                  }
+                  .report-table { border: 1px solid black !important; width: 100%; border-collapse: collapse; }
+                  .report-table th, .report-table td { 
+                      border: 1px solid black !important; 
+                      padding: 4px 2px !important; 
+                      text-align: center; 
+                      font-size: 10px; 
+                      line-height: 1.2; 
+                  }
+                  .holiday-text { color: #dc2626 !important; font-weight: bold; }
+                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 11px !important; }
               }
           `}</style>
           
           {reportPages.map((page, pageIdx) => (
               <div key={pageIdx} className="report-page">
-                  <div className="report-header flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                          {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" width="50" height="50" className="object-contain" />}
-                          <div className="text-left">
-                              <h1 className="text-xl font-black uppercase text-emerald-950">{schoolInfo.name}</h1>
-                              <p className="text-[9px] font-bold text-slate-700">{schoolInfo.address}</p>
-                          </div>
+                  <div className="report-header">
+                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" width="70" height="70" className="object-contain mb-2" />}
+                      <h1 className="text-3xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
+                      <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                      <div className="mt-3 inline-block border-2 border-black px-6 py-1 rounded-full bg-slate-50">
+                          <h2 className="text-base font-black uppercase">হাজিরা ও ছুটির রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
                       </div>
-                      <div className="text-right">
-                          <h2 className="text-sm font-black underline">হাজিরা রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
-                          <p className="text-[8px] font-bold">পৃষ্ঠা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
-                      </div>
+                      <p className="text-[10px] font-bold mt-1 text-slate-500">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
                   </div>
 
-                  <table className="w-full report-table border-collapse">
+                  <table className="report-table">
                       <thead>
                           <tr className="bg-slate-100">
-                              <th className="w-[120px]">তারিখ ও বার</th>
+                              <th className="w-[140px] font-black py-2">তারিখ ও বার</th>
                               {page.teachers.map(teacher => (
-                                  <th key={teacher.id}>
-                                      <p className="font-black text-[10px]">{teacher.nameBn}</p>
-                                      <p className="text-[8px] italic font-bold">{teacher.designation}</p>
+                                  <th key={teacher.id} className="py-2">
+                                      <p className="font-black text-[11px] text-blue-900">{teacher.nameBn}</p>
+                                      <p className="text-[8px] italic font-bold text-slate-600">{teacher.designation}</p>
                                   </th>
                               ))}
                           </tr>
@@ -586,7 +648,7 @@ export default function StaffListPage() {
 
                               return (
                                   <tr key={dateStr} className={cn(isOffDay && "bg-slate-50")}>
-                                      <td className={cn("text-left pl-1 font-bold", isOffDay && "holiday-text")}>{toBengaliNumber(displayDate)}</td>
+                                      <td className={cn("text-left pl-2 font-bold", isOffDay && "holiday-text")}>{toBengaliNumber(displayDate)}</td>
                                       {page.teachers.map(teacher => {
                                           const record = rangeRecords.find(r => r.date === dateStr);
                                           const att = record?.attendance.find(a => a.staffId === teacher.id);
@@ -607,7 +669,11 @@ export default function StaffListPage() {
                                           }
 
                                           return (
-                                              <td key={teacher.id} className={cn(cellText === "অনুপস্থিত" && "text-rose-600 font-bold")}>
+                                              <td key={teacher.id} className={cn(
+                                                  "font-medium",
+                                                  cellText === "অনুপস্থিত" && "text-rose-600 font-bold",
+                                                  (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400"
+                                              )}>
                                                   {toBengaliNumber(cellText)}
                                               </td>
                                           );
@@ -615,17 +681,17 @@ export default function StaffListPage() {
                                   </tr>
                               );
                           })}
-                      </tbody>
-                      <tfoot>
-                          <tr className="bg-slate-50 font-black">
-                              <td className="text-right pr-2">উপস্থিত (মোট)</td>
+                          
+                          {/* Summary Footer Rows */}
+                          <tr className="summary-row">
+                              <td className="text-right pr-4 font-black">উপস্থিত (মোট)</td>
                               {page.teachers.map(teacher => {
                                   const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
-                                  return <td key={teacher.id}>{toBengaliNumber(count)}</td>;
+                                  return <td key={teacher.id} className="text-emerald-700 font-black">{toBengaliNumber(count)} দিন</td>;
                               })}
                           </tr>
-                          <tr className="bg-slate-50 font-black">
-                              <td className="text-right pr-2">অনুপস্থিত (মোট)</td>
+                          <tr className="summary-row">
+                              <td className="text-right pr-4 font-black">অনুপস্থিত (মোট)</td>
                               {page.teachers.map(teacher => {
                                   const count = page.days.filter(d => {
                                       const ds = format(d, 'yyyy-MM-dd');
@@ -634,22 +700,26 @@ export default function StaffListPage() {
                                       const a = r?.attendance.find(at => at.staffId === teacher.id);
                                       return !a || (a.status !== 'present' && a.status !== 'leave');
                                   }).length;
-                                  return <td key={teacher.id}>{toBengaliNumber(count)}</td>;
+                                  return <td key={teacher.id} className="text-rose-700 font-black">{toBengaliNumber(count)} দিন</td>;
                               })}
                           </tr>
-                          <tr className="bg-slate-50 font-black">
-                              <td className="text-right pr-2">ছুটি (মোট)</td>
+                          <tr className="summary-row">
+                              <td className="text-right pr-4 font-black">ছুটি (মোট)</td>
                               {page.teachers.map(teacher => {
                                   const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'leave')).length;
-                                  return <td key={teacher.id}>{toBengaliNumber(count)}</td>;
+                                  return <td key={teacher.id} className="text-blue-700 font-black">{toBengaliNumber(count)} দিন</td>;
                               })}
                           </tr>
-                      </tfoot>
+                      </tbody>
                   </table>
                   
-                  <div className="mt-10 flex justify-between px-10 font-black text-[10px]">
-                      <div className="w-40 border-t border-black pt-1 text-center">হিসাবরক্ষকের স্বাক্ষর</div>
-                      <div className="w-40 border-t border-black pt-1 text-center">প্রধান শিক্ষকের স্বাক্ষর</div>
+                  <div className="mt-16 flex justify-between px-10 font-black text-[12px]">
+                      <div className="w-48 border-t-2 border-black pt-1 text-center">হিসাবরক্ষকের স্বাক্ষর</div>
+                      <div className="w-48 border-t-2 border-black pt-1 text-center">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+                  </div>
+                  
+                  <div className="absolute bottom-4 left-0 right-0 text-center text-[8px] text-slate-400 italic">
+                      রিপোর্ট জেনারেট করার সময়: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Portal
                   </div>
               </div>
           ))}
@@ -684,4 +754,3 @@ export default function StaffListPage() {
     </div>
   );
 }
-
