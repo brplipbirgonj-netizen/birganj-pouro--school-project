@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
-import { Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, Printer, Save, RotateCcw, Edit2 } from 'lucide-react';
+import { Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX } from 'lucide-react';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -79,6 +79,12 @@ const STAFF_ORDER = [
     'মোছা: নুর নেহার বেগম'
 ];
 
+function toBengaliNumber(str: string | number) {
+  if (!str && str !== 0) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+}
+
 export default function StaffListPage() {
   const [allStaff, setAllStaff] = useState<Staff[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +104,7 @@ export default function StaffListPage() {
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   
-  // Steps for attendance input: 0=Initial, 1=Status Selected, 2=Time/Leave Set
+  // Steps for attendance input: 0=Initial, 1=Status Selected, 2=Time/Leave Set, 3=Saved
   const [staffSteps, setAttendanceSteps] = useState<Record<string, number>>({});
   const [editStates, setEditStates] = useState<Record<string, boolean>>({});
 
@@ -137,6 +143,9 @@ export default function StaffListPage() {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const record = await getStaffAttendanceByDate(db, dateStr);
     setDailyAttendance(record || { date: dateStr, attendance: [] });
+    // Reset steps when date changes
+    setAttendanceSteps({});
+    setEditStates({});
     setIsAttendanceLoading(false);
   }, [db, selectedDate]);
 
@@ -181,7 +190,7 @@ export default function StaffListPage() {
     if (!db || !dailyAttendance) return;
     try {
         await saveStaffAttendance(db, dailyAttendance);
-        toast({ title: 'সংরক্ষিত হয়েছে' });
+        toast({ title: 'সংরক্ষণ সম্পন্ন হয়েছে' });
         setAttendanceSteps(prev => ({ ...prev, [staffId]: 3 }));
         setEditStates(prev => ({ ...prev, [staffId]: false }));
     } catch (e) {}
@@ -645,7 +654,6 @@ export default function StaffListPage() {
           ))}
       </div>
 
-      {/* View Staff Dialog (Existing from f6678b4) */}
       <Dialog open={!!staffToView} onOpenChange={(isOpen) => !isOpen && setStaffToView(null)}>
         <DialogContent className="max-w-xl font-kalpurush">
              {staffToView && (
@@ -674,10 +682,4 @@ export default function StaffListPage() {
       </Dialog>
     </div>
   );
-}
-
-function toBengaliNumber(str: string | number) {
-  if (!str && str !== 0) return '';
-  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
