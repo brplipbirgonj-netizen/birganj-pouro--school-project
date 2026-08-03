@@ -30,11 +30,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import Image from 'next/image';
 
-const BENGALI_MONTHS = [
-    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
-];
-
 const classNamesMap: { [key: string]: string } = { 
     '6': 'ষষ্ঠ শ্রেণি', 
     '7': 'সপ্তম শ্রেণি', 
@@ -42,6 +37,12 @@ const classNamesMap: { [key: string]: string } = {
     '9': 'নবম শ্রেণি', 
     '10': 'দশম শ্রেণি' 
 };
+
+function toBengaliNumber(str: string | number) {
+  if (!str && str !== 0) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+}
 
 // --- Helper Components ---
 
@@ -67,7 +68,7 @@ const SchoolPrintHeader = ({ title, schoolInfo, startDate, endDate }: { title: s
     </div>
 );
 
-// --- Individual Tabs ---
+// --- Sub Tabs Components ---
 
 const AttendanceSheet = ({ 
     classId, 
@@ -104,25 +105,31 @@ const AttendanceSheet = ({
         
         const checkExistingData = async () => {
             setIsLoading(true);
-            const existingAttendance = await getAttendanceForClassAndDate(db, dateStr, classId, selectedYear);
-            setSavedAttendance(existingAttendance);
-            
-            const nextMap = new Map<string, AttendanceStatus>();
-            if (existingAttendance) {
-                existingAttendance.attendance.forEach(item => {
-                    onStatusChange(item.studentId, item.status);
-                    nextMap.set(item.studentId, item.status);
-                });
-            }
+            try {
+                const existingAttendance = await getAttendanceForClassAndDate(db, dateStr, classId, selectedYear);
+                setSavedAttendance(existingAttendance);
+                
+                if (existingAttendance) {
+                    existingAttendance.attendance.forEach(item => {
+                        // Only sync if different to prevent loops
+                        if (currentAttendance.get(item.studentId) !== item.status) {
+                            onStatusChange(item.studentId, item.status);
+                        }
+                    });
+                }
 
-            const holidayToday = await isHoliday(db, dateStr);
-            setActiveHoliday(holidayToday);
-            
-            setIsLoading(false);
+                const holidayToday = await isHoliday(db, dateStr);
+                setActiveHoliday(holidayToday);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsLoading(false);
+            }
         }
 
         checkExistingData();
-    }, [classId, dateStr, selectedYear, db, user, onStatusChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [classId, dateStr, selectedYear, db, user]);
 
     const handleSaveAttendance = () => {
         if (!db || !user) return;
@@ -159,7 +166,7 @@ const AttendanceSheet = ({
         }).catch(() => {});
     };
 
-    if (isLoading) return <p className="text-center p-8 italic">লোড হচ্ছে...</p>;
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> লোড হচ্ছে...</div>;
 
     if (isWeekend) return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">{format(date, 'PPP', { locale: bn })} সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>;
 
@@ -176,9 +183,9 @@ const AttendanceSheet = ({
                     <div>
                         <h3 className="font-black text-xl text-primary">{format(date, 'PPP', { locale: bn })} এর হাজিরা সম্পন্ন হয়েছে</h3>
                         <div className="mt-1 flex flex-wrap gap-4 text-sm font-bold">
-                            <Badge variant="outline" className="bg-white">মোট: {(presentCount + absentCount).toLocaleString('bn-BD')}</Badge>
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">উপস্থিত: {presentCount.toLocaleString('bn-BD')}</Badge>
-                            <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">অনুপস্থিত: {absentCount.toLocaleString('bn-BD')}</Badge>
+                            <Badge variant="outline" className="bg-white">মোট: {toBengaliNumber(presentCount + absentCount)}</Badge>
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">উপস্থিত: {toBengaliNumber(presentCount)}</Badge>
+                            <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">অনুপস্থিত: {toBengaliNumber(absentCount)}</Badge>
                         </div>
                     </div>
                     {isAdmin && (
@@ -199,7 +206,7 @@ const AttendanceSheet = ({
                         <TableBody>
                             {students.map(student => (
                                 <TableRow key={student.id} className="hover:bg-muted/10 h-14">
-                                    <TableCell className="text-center font-black">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="text-center font-black">{toBengaliNumber(student.roll)}</TableCell>
                                     <TableCell className="font-bold">{student.studentNameBn}</TableCell>
                                     <TableCell className="text-right">
                                          <span className={cn(
@@ -244,7 +251,7 @@ const AttendanceSheet = ({
                             const currentStatus = currentAttendance.get(student.id);
                             return (
                                 <TableRow key={student.id} className="hover:bg-accent/5 h-16 transition-colors">
-                                    <TableCell className="text-center font-black text-lg">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="text-center font-black text-lg">{toBengaliNumber(student.roll)}</TableCell>
                                     <TableCell className="font-black text-slate-700">{student.studentNameBn}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end items-center gap-3">
@@ -352,7 +359,7 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
                         return (
                             <TabsTrigger key={className} value={className} className="py-2.5 text-xs sm:text-sm font-black flex flex-col sm:flex-row items-center gap-1">
                                 <span>{classNamesMap[className]}</span>
-                                {count > 0 && <Badge variant="secondary" className="bg-emerald-600 text-white text-[10px] px-2 h-5 ml-1 shadow-sm">({count.toLocaleString('bn-BD')})</Badge>}
+                                {count > 0 && <Badge variant="secondary" className="bg-emerald-600 text-white text-[10px] px-2 h-5 ml-1 shadow-sm">({toBengaliNumber(count)})</Badge>}
                             </TabsTrigger>
                         );
                     })}
@@ -446,7 +453,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
             
             toast({ 
                 title: 'হাজিরা সফলভাবে সংরক্ষিত হয়েছে', 
-                description: `${inputRolls.length.toLocaleString('bn-BD')} জন উপস্থিত এবং বাকিরা অনুপস্থিত হিসেবে গণ্য হয়েছে।` 
+                description: `${toBengaliNumber(inputRolls.length)} জন উপস্থিত এবং বাকিরা অনুপস্থিত হিসেবে গণ্য হয়েছে।` 
             });
             setRollsInput('');
         } catch (e) {
@@ -487,7 +494,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                             <Label className="font-black text-primary">উপস্থিত রোল নম্বরসমূহ (কমা বা স্পেস দিয়ে লিখুন)</Label>
                             {rollCount > 0 && (
                                 <Badge className="bg-emerald-600 font-black animate-in zoom-in duration-300">
-                                    মোট: {rollCount.toLocaleString('bn-BD')} জন
+                                    মোট: {toBengaliNumber(rollCount)} জন
                                 </Badge>
                             )}
                         </div>
@@ -516,7 +523,6 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
     );
 };
 
-// Monthly Summary Board Component
 const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { schoolInfo } = useSchoolInfo();
@@ -527,6 +533,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     const classes = ['6', '7', '8', '9', '10'];
+    const BENGALI_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 
     const fetchSummaryData = useCallback(async () => {
         if (!db) return;
@@ -675,45 +682,22 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 </CardContent>
             </Card>
-
-            <Card className="border-2 border-primary/10 shadow-lg no-print">
-                <CardHeader className="bg-primary/5">
-                    <CardTitle className="text-lg font-black flex items-center gap-2">
-                        <BarChart3 className="h-5 w-5" /> উপস্থিতির গ্রাফিকাল চিত্র
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="h-[350px] pt-6">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold' }} />
-                            <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold' }} />
-                            <Tooltip 
-                                contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold' }}
-                                formatter={(value: number) => [`${value}%`, 'উপস্থিতি']}
-                            />
-                            <Legend />
-                            <Bar name="উপস্থিতির হার (%)" dataKey="উপস্থিতি (%)" fill="#2563eb" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
         </div>
     );
 };
 
-// Missed Attendance Tab Component
 const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Date) => void }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
     const { hasPermission } = useAuth();
     const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
+    const [selectedMonth, setSelectedMonth] = useState<string>(['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'][new Date().getMonth()]);
     const [missedDays, setMissedDays] = useState<Date[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isClient, setIsClient] = useState(false);
 
+    const BENGALI_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
     const canTakeMissedAttendance = hasPermission('input:missed-attendance');
 
     useEffect(() => { setIsClient(true); }, []);
@@ -759,7 +743,7 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
             toast({ variant: 'destructive', title: 'তথ্য আনা সম্ভব হয়নি' });
         }
         setIsLoading(false);
-    }, [db, selectedClass, selectedMonth, selectedYear, toast]);
+    }, [db, selectedClass, selectedMonth, selectedYear, toast, BENGALI_MONTHS]);
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
@@ -801,7 +785,7 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
                             <CardDescription>স্কুল খোলা থাকা সত্ত্বেও যেসব দিনে হাজিরা নেওয়া হয়নি</CardDescription>
                         </div>
                         <Badge variant="outline" className="bg-white text-amber-800 border-amber-200 font-black h-8 px-4">
-                            মোট বকেয়া: {missedDays.length.toLocaleString('bn-BD')} দিন
+                            মোট বকেয়া: {toBengaliNumber(missedDays.length)} দিন
                         </Badge>
                     </div>
                 </CardHeader>
@@ -825,7 +809,7 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
                             <TableBody>
                                 {missedDays.map((date, idx) => (
                                     <TableRow key={date.getTime()} className="hover:bg-amber-50/50 h-12">
-                                        <TableCell className="text-center font-bold">{(idx + 1).toLocaleString('bn-BD')}</TableCell>
+                                        <TableCell className="text-center font-bold">{toBengaliNumber(idx + 1)}</TableCell>
                                         <TableCell className="font-black text-slate-700">{format(date, 'd MMMM yyyy', { locale: bn })}</TableCell>
                                         <TableCell className="font-bold text-muted-foreground">{format(date, 'EEEE', { locale: bn })}</TableCell>
                                         <TableCell className="text-right">
@@ -851,11 +835,11 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
     );
 };
 
-// Absent Student List Tab Component
 const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
+    const BENGALI_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
     const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [selectedClass, setSelectedClass] = useState<string>('6');
     const [absentData, setAbsentData] = useState<{student: Student, count: number}[]>([]);
@@ -896,7 +880,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
             console.error(e);
         }
         setIsLoading(false);
-    }, [db, selectedClass, selectedMonth, selectedYear, allStudents]);
+    }, [db, selectedClass, selectedMonth, selectedYear, allStudents, BENGALI_MONTHS]);
 
     useEffect(() => { fetchAbsentees(); }, [fetchAbsentees]);
 
@@ -1008,7 +992,6 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// Absence Alerts Tab Component
 const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
@@ -1134,13 +1117,13 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// Attendance Report sheet
 interface StudentReport {
     student: Student;
     presentDays: number;
     absentDays: number;
     totalDays: number;
 }
+
 const ReportSheet = ({ classId, students, startDate, endDate }: { classId: string, students: Student[], startDate?: Date, endDate?: Date }) => {
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
@@ -1154,53 +1137,53 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
 
         const fetchAttendance = async () => {
             setIsLoading(true);
-            const allAttendanceFromDb = await getAttendanceFromStorage(db);
-            const allAttendanceForClass = allAttendanceFromDb.filter(
-                att => att.academicYear === selectedYear && att.className === classId
-            );
+            try {
+                const allAttendanceFromDb = await getAttendanceFromStorage(db);
+                const allAttendanceForClass = allAttendanceFromDb.filter(
+                    att => att.academicYear === selectedYear && att.className === classId
+                );
 
-            const allAttendance = allAttendanceForClass.filter(att => {
-                 if (!startDate || !endDate) return true;
-                try {
+                const allAttendance = allAttendanceForClass.filter(att => {
+                    if (!startDate || !endDate) return true;
                     const attDate = new Date(att.date);
                     const start = new Date(startDate);
                     start.setHours(0, 0, 0, 0);
                     const end = new Date(endDate);
                     end.setHours(23, 59, 59, 999);
                     return attDate >= start && attDate <= end;
-                } catch(e) {
-                    return false;
-                }
-            });
-            
-            const studentReports = students.map(student => {
-                let presentDays = 0;
-                let absentDays = 0;
+                });
+                
+                const studentReports = students.map(student => {
+                    let presentDays = 0;
+                    let absentDays = 0;
 
-                allAttendance.forEach(dailyRecord => {
-                    const studentAttendance = dailyRecord.attendance.find(a => a.studentId === student.id);
-                    if (studentAttendance) {
-                        if (studentAttendance.status === 'present') presentDays++;
-                        else absentDays++;
-                    }
+                    allAttendance.forEach(dailyRecord => {
+                        const studentAttendance = dailyRecord.attendance.find(a => a.studentId === student.id);
+                        if (studentAttendance) {
+                            if (studentAttendance.status === 'present') presentDays++;
+                            else absentDays++;
+                        }
+                    });
+
+                    return {
+                        student: student,
+                        presentDays,
+                        absentDays,
+                        totalDays: allAttendance.length,
+                    };
                 });
 
-                return {
-                    student: student,
-                    presentDays,
-                    absentDays,
-                    totalDays: allAttendance.length,
-                };
-            });
-
-            setReportData(studentReports);
+                setReportData(studentReports);
+            } catch (e) {
+                console.error(e);
+            }
             setIsLoading(false);
         }
 
         fetchAttendance();
     }, [classId, students, selectedYear, db, user, startDate, endDate]);
 
-    if (isLoading) return <p className="text-center p-8 italic">রিপোর্ট তৈরি হচ্ছে...</p>;
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> রিপোর্ট তৈরি হচ্ছে...</div>;
 
     if (students.length === 0) return <p className="text-center text-muted-foreground p-8">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>;
 
@@ -1319,7 +1302,8 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// Main Page Component
+// --- Main Page Component ---
+
 export default function AttendancePage() {
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -1382,6 +1366,8 @@ export default function AttendancePage() {
         return items;
     }, [canInputQuickRoll, canViewMissedAttendance, canViewAbsentList]);
     
+    if (!isClient) return null;
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
@@ -1414,7 +1400,7 @@ export default function AttendancePage() {
                 {/* Content Area */}
                 <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
                     <div className="p-4 sm:p-6 lg:p-8 flex-1">
-                        {isLoading ? (
+                        {isLoading && allStudents.length === 0 ? (
                             <div className="space-y-4">
                                 <Skeleton className="h-12 w-full" />
                                 <Skeleton className="h-64 w-full" />
@@ -1425,7 +1411,7 @@ export default function AttendancePage() {
                                     <h2 className="text-2xl font-black text-slate-800">
                                         {sidebarItems.find(i => i.id === activeSection)?.label}
                                     </h2>
-                                    {isClient && <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>}
+                                    {isClient && <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</p>}
                                 </div>
 
                                 {activeSection === 'digital-attendance' && <DigitalAttendanceTab allStudents={allStudents} date={attendanceDate} onDateChange={setAttendanceDate} />}
@@ -1441,10 +1427,4 @@ export default function AttendancePage() {
             </main>
         </div>
     );
-}
-
-function toBengaliNumber(str: string | number) {
-  if (!str && str !== 0) return '';
-  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
