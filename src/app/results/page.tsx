@@ -619,11 +619,11 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 {s.name}
                                             </TableHead>
                                         ))}
-                                        <TableHead rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#f0fdfa] p-1 sticky top-0 right-[240px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মোট</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#eef2ff] p-1 sticky top-0 right-[180px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">GPA</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[240px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মোট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[180px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">GPA</TableHead>
                                         <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">গ্রেড</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fefce8] p-1 sticky top-0 right-[60px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মেধা</TableHead>
-                                        <TableHead rowSpan={2} className="text-center font-black border-b-2 border-slate-400 text-[9px] bg-[#f8fafc] p-1 sticky top-0 right-0 z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">প্রিন্ট</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[60px] z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">মেধা</TableHead>
+                                        <TableHead rowSpan={2} className="text-center font-black border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-0 z-30 min-w-[50px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">প্রিন্ট</TableHead>
                                     </TableRow>
                                     <TableRow className="border-b-2 border-slate-400">
                                         {subs.map((s, idx) => {
@@ -672,11 +672,11 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <TableCell className="text-center font-black text-primary border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[240px] bg-[#f0fdfa] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[180px] bg-[#eef2ff] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[120px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", res.isPass ? "bg-[#fff1f2]" : "bg-rose-100 text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
-                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[60px] bg-[#fefce8] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-500 italic text-[8px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
-                                            <TableCell className="text-center p-0.5 border-b border-slate-400 sticky right-0 bg-[#f8fafc] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">
+                                            <TableCell className="text-center font-black text-primary border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[240px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.totalMarks.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="text-center font-black border-r-2 border-b border-slate-400 text-[10px] p-0.5 sticky right-[180px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[120px] shadow-[-2px_0_0px_rgba(0,0,0,0.2)] bg-[#fff1f2]", !res.isPass && "bg-rose-100 text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</TableCell>
+                                            <TableCell className={cn("text-center font-black border-r-2 border-b border-slate-400 text-[9px] p-0.5 sticky right-[60px] bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]", !res.isPass && "text-rose-500 italic text-[8px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</TableCell>
+                                            <TableCell className="text-center p-0.5 border-b border-slate-400 sticky right-0 bg-[#fff1f2] z-10 shadow-[-2px_0_0px_rgba(0,0,0,0.2)]">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
                                                     <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-3 w-3 text-primary" /></Button>
                                                 </Link>
