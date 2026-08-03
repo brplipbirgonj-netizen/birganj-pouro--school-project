@@ -20,7 +20,7 @@ import { format, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -792,6 +792,163 @@ const MissedAttendanceTab = () => {
     );
 };
 
+// Absent Student List Tab Component
+const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const { toast } = useToast();
+    const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [absentData, setAbsentData] = useState<{student: Student, count: number}[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const fetchAbsentees = useCallback(async () => {
+        if (!db || !selectedClass) return;
+        setIsLoading(true);
+        try {
+            const monthIndex = BENGALI_MONTHS.indexOf(selectedMonth);
+            const year = parseInt(selectedYear);
+            const start = format(new Date(year, monthIndex, 1), 'yyyy-MM-dd');
+            const end = format(new Date(year, monthIndex + 1, 0), 'yyyy-MM-dd');
+
+            const q = query(
+                collection(db, 'attendance'),
+                where('academicYear', '==', selectedYear),
+                where('className', '==', selectedClass)
+            );
+            const snap = await getDocs(q);
+            const records = snap.docs
+                .map(doc => doc.data() as DailyAttendance)
+                .filter(r => r.date >= start && r.date <= end);
+
+            const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === selectedClass);
+            
+            const results = studentsInClass.map(student => {
+                let count = 0;
+                records.forEach(r => {
+                    const att = r.attendance.find(a => a.studentId === student.id);
+                    if (att?.status === 'absent') count++;
+                });
+                return { student, count };
+            }).filter(res => res.count > 0).sort((a, b) => b.count - a.count);
+
+            setAbsentData(results);
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    }, [db, selectedClass, selectedMonth, selectedYear, allStudents]);
+
+    useEffect(() => { fetchAbsentees(); }, [fetchAbsentees]);
+
+    const handleAction = (type: 'call' | 'sms' | 'whatsapp', student: Student, count: number) => {
+        const mobile = student.guardianMobile || student.studentMobile;
+        if (!mobile) {
+            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            return;
+        }
+        
+        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} এই মাসে মোট ${toBengaliNumber(count)} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অনুপস্থিতির কারণ জানানোর জন্য অনুরোধ করা হলো। বীপৌউবি`;
+        
+        if (type === 'call') {
+            window.location.href = `tel:${mobile}`;
+        } else if (type === 'sms') {
+            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const separator = isIOS ? '&' : '?';
+            window.location.href = `sms:${mobile}${separator}body=${encodeURIComponent(msg)}`;
+        } else if (type === 'whatsapp') {
+            let cleanNum = mobile.replace(/[^\d]/g, '');
+            if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
+            if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
+            window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+    };
+
+    return (
+        <div className="mt-4 space-y-6 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-white/50 items-end">
+                <div className="space-y-2">
+                    <Label className="font-bold text-primary">শ্রেণি নির্বাচন</Label>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold text-primary">মাস নির্বাচন</Label>
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button onClick={fetchAbsentees} disabled={isLoading} className="h-9 font-black text-xs">তথ্য রিফ্রেশ করুন</Button>
+            </div>
+
+            <Card className="border-2 border-rose-100 shadow-md">
+                <CardHeader className="bg-rose-50/30 border-b">
+                    <CardTitle className="text-rose-700 flex items-center gap-2">
+                        <UserX className="h-5 w-5" /> অনুপস্থিত শিক্ষার্থীর তালিকা ({selectedMonth})
+                    </CardTitle>
+                    <CardDescription>মাসে অন্তত ১ দিন অনুপস্থিত শিক্ষার্থীদের তালিকা</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {isLoading ? (
+                        <div className="p-20 text-center italic text-muted-foreground">বিশ্লেষণ করা হচ্ছে...</div>
+                    ) : absentData.length === 0 ? (
+                        <div className="p-20 text-center text-emerald-600 font-black text-lg italic">
+                            এই মাসে কোনো শিক্ষার্থী অনুপস্থিত ছিল না।
+                        </div>
+                    ) : (
+                        <div className="table-container">
+                            <Table>
+                                <TableHeader className="bg-muted/50">
+                                    <TableRow>
+                                        <TableHead className="w-16 text-center font-black">রোল</TableHead>
+                                        <TableHead className="font-black">নাম</TableHead>
+                                        <TableHead className="text-center font-black">অনুপস্থিত দিন</TableHead>
+                                        <TableHead className="text-right font-black pr-6">যোগাযোগ</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {absentData.map(({ student, count }) => (
+                                        <TableRow key={student.id} className="hover:bg-rose-50 transition-colors h-14">
+                                            <TableCell className="text-center font-black text-lg">{toBengaliNumber(student.roll)}</TableCell>
+                                            <TableCell>
+                                                <p className="font-black text-slate-800">{student.studentNameBn}</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground">{student.guardianMobile || '-'}</p>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="destructive" className="font-black px-4 h-7 text-sm">{toBengaliNumber(count)} দিন</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right pr-6">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="outline" size="icon" title="কল করুন" className="h-8 w-8 text-blue-600 border-blue-200 bg-white hover:bg-blue-50" onClick={() => handleAction('call', student, count)}>
+                                                        <Phone className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="outline" size="icon" title="SMS পাঠান" className="h-8 w-8 text-indigo-600 border-indigo-200 bg-white hover:bg-indigo-50" onClick={() => handleAction('sms', student, count)}>
+                                                        <MessageSquareDashed className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="outline" size="icon" title="WhatsApp করুন" className="h-8 w-8 text-emerald-600 border-emerald-200 bg-white hover:bg-emerald-50" onClick={() => handleAction('whatsapp', student, count)}>
+                                                        <MessageCircle className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 // Risks/Alerts Tab
 const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
@@ -1109,6 +1266,7 @@ export default function AttendancePage() {
         }
         items.push(
             { id: 'report', label: 'রিপোর্ট ও বোর্ড', icon: ListChecks, color: 'text-violet-600 bg-violet-50' },
+            { id: 'absent-list', label: 'অনুপস্থিত শিক্ষার্থীর তালিকা', icon: UserX, color: 'text-rose-600 bg-rose-50' },
             { id: 'missed-attendance', label: 'বকেয়া হাজিরা', icon: CalendarX, color: 'text-amber-600 bg-amber-50' },
             { id: 'alerts', label: 'সতর্কবার্তা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' },
         );
@@ -1164,6 +1322,7 @@ export default function AttendancePage() {
                                 {activeSection === 'digital-attendance' && <DigitalAttendanceTab allStudents={allStudents} />}
                                 {activeSection === 'quick-roll' && <QuickRollAttendanceTab allStudents={allStudents} />}
                                 {activeSection === 'report' && <AttendanceReportTab allStudents={allStudents} />}
+                                {activeSection === 'absent-list' && <AbsentStudentListTab allStudents={allStudents} />}
                                 {activeSection === 'missed-attendance' && <MissedAttendanceTab />}
                                 {activeSection === 'alerts' && <AbsenceAlertsTab allStudents={allStudents} />}
                             </>
