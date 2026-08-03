@@ -683,7 +683,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                     </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 overflow-x-auto pb-6 scrollbar-thin">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 scrollbar-thin">
                     {boardData.map((col) => (
                         <div key={col.idx} className="flex flex-col gap-3 min-w-[200px]">
                             <div className="p-3 bg-slate-800 text-white rounded-lg font-black text-sm text-center shadow-md">
