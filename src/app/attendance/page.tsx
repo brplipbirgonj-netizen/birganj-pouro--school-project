@@ -713,7 +713,7 @@ const MissedAttendanceTab = () => {
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
-    }, [fetchMissedAttendance, isClient]);
+    }, [fetchMissedAttendance, iSClient]);
 
     if (!isClient) return null;
 
@@ -953,6 +953,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
 const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
+    const { toast } = useToast();
     const [selectedClass, setSelectedClass] = useState<string>('6');
     const [alerts, setAlerts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -978,6 +979,31 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
         allStudents.forEach(s => map.set(s.id, s));
         return map;
     }, [allStudents]);
+
+    const handleAction = (type: 'call' | 'sms' | 'whatsapp', alert: any) => {
+        const student = studentMap.get(alert.studentId);
+        if (!student) return;
+        const mobile = student.guardianMobile || student.studentMobile;
+        if (!mobile) {
+            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            return;
+        }
+        
+        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} টানা ${toBengaliNumber(alert.absentDays)} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অতিসত্বর বিদ্যালয়ের সাথে যোগাযোগ করুন। বীপৌউবি`;
+        
+        if (type === 'call') {
+            window.location.href = `tel:${mobile}`;
+        } else if (type === 'sms') {
+            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const separator = isIOS ? '&' : '?';
+            window.location.href = `sms:${mobile}${separator}body=${encodeURIComponent(msg)}`;
+        } else if (type === 'whatsapp') {
+            let cleanNum = mobile.replace(/[^\d]/g, '');
+            if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
+            if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
+            window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+    };
 
     return (
         <div className="mt-4 space-y-6 animate-in fade-in duration-500">
@@ -1016,22 +1042,36 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <TableHead className="w-20 text-center font-black">রোল</TableHead>
                                     <TableHead className="font-black">নাম</TableHead>
                                     <TableHead className="text-center font-black">অনুপস্থিতি দিন</TableHead>
-                                    <TableHead className="text-right font-black pr-6">শেষ তারিখ</TableHead>
+                                    <TableHead className="text-center font-black">শেষ তারিখ</TableHead>
+                                    <TableHead className="text-right font-black pr-6">যোগাযোগ</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {alerts.map((alert, idx) => {
                                     const student = studentMap.get(alert.studentId);
                                     return (
-                                        <TableRow key={alert.studentId} className="hover:bg-rose-50 transition-colors">
+                                        <TableRow key={alert.studentId} className="hover:bg-rose-50 transition-colors h-14">
                                             <TableCell className="text-center font-bold">{(idx + 1).toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="text-center font-black">{student?.roll.toLocaleString('bn-BD') || '-'}</TableCell>
                                             <TableCell className="font-bold text-rose-900">{student?.studentNameBn || '-'}</TableCell>
                                             <TableCell className="text-center">
                                                 <Badge variant="destructive" className="font-black px-3">{alert.absentDays.toLocaleString('bn-BD')} দিন</Badge>
                                             </TableCell>
-                                            <TableCell className="text-right text-xs font-bold text-muted-foreground pr-6">
+                                            <TableCell className="text-center text-xs font-bold text-muted-foreground">
                                                 {format(new Date(alert.lastAbsentDate), 'PP', { locale: bn })}
+                                            </TableCell>
+                                            <TableCell className="text-right pr-6">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="outline" size="icon" title="কল করুন" className="h-8 w-8 text-blue-600 border-blue-200 bg-white hover:bg-blue-50" onClick={() => handleAction('call', alert)}>
+                                                        <Phone className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="outline" size="icon" title="SMS পাঠান" className="h-8 w-8 text-indigo-600 border-indigo-200 bg-white hover:bg-indigo-50" onClick={() => handleAction('sms', alert)}>
+                                                        <MessageSquareDashed className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="outline" size="icon" title="WhatsApp করুন" className="h-8 w-8 text-emerald-600 border-emerald-200 bg-white hover:bg-emerald-50" onClick={() => handleAction('whatsapp', alert)}>
+                                                        <MessageCircle className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     );
