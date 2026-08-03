@@ -232,7 +232,7 @@ function MarksheetContent() {
             <div className="printable-area marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-10" />
+                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-[0.03]" />
                     </div>
                 )}
                 
