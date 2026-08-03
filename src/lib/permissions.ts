@@ -5,7 +5,9 @@ export const availablePermissions = [
   { id: 'view:dashboard', label: 'ড্যাসবোর্ড দেখুন' },
   
   { id: 'view:students', label: 'শিক্ষার্থী তালিকা দেখুন' },
-  { id: 'manage:students', label: 'শিক্ষার্থী ম্যানেজ করুন (যোগ, এডিট, ডিলিট)' },
+  { id: 'manage:students', label: 'শিক্ষার্থী যোগ করার অনুমতি' },
+  { id: 'special:edit-student', label: 'স্পেশাল পারমিশন: শিক্ষার্থী এডিট করুন' },
+  { id: 'special:delete-student', label: 'স্পেশাল পারমিশন: শিক্ষার্থী ডিলিট করুন' },
   { id: 'upload:students', label: 'এক্সেল দিয়ে শিক্ষার্থী আপলোড (ভর্তি)' },
   { id: 'view:student-profile', label: 'শিক্ষার্থী প্রোফাইল সার্চ করুন' },
 
@@ -18,6 +20,9 @@ export const availablePermissions = [
 
   { id: 'manage:attendance', label: 'শিক্ষার্থীর হাজিরা ম্যানেজ করুন' },
   { id: 'input:quick-roll-attendance', label: 'রোল ইনপুট দিয়ে দ্রুত হাজিরা' },
+  { id: 'view:missed-attendance', label: 'বকেয়া হাজিরা দেখুন' },
+  { id: 'input:missed-attendance', label: 'বকেয়া হাজিরা গ্রহণ করুন' },
+  { id: 'view:absent-student-list', label: 'অনুপস্থিত শিক্ষার্থীর তালিকা দেখুন' },
 
   { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
   { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
@@ -28,6 +33,8 @@ export const availablePermissions = [
   
   { id: 'view:accounts', label: 'হিসাব শাখা দেখুন' },
   { id: 'collect:fees', label: 'বেতন আদায় করুন' },
+  { id: 'special:edit-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় এডিট করুন' },
+  { id: 'special:delete-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় ডিলিট করুন' },
   { id: 'view:collection-report', label: 'বেতন আদায়ের রিপোর্ট দেখুন' },
   { id: 'view:accounts-monthly-report', label: 'মাসিক আয়-ব্যয় রিপোর্ট দেখুন' },
   { id: 'view:cashbook-ledger', label: 'ক্যাশবুক ও খতিয়ান দেখুন' },
@@ -36,6 +43,8 @@ export const availablePermissions = [
   { id: 'manage:documents', label: 'ডকুমেন্ট ম্যানেজ করুন' },
   { id: 'view:routines', label: 'রুটিন দেখুন' },
   { id: 'manage:routines', label: 'রুটিন ম্যানেজ করুন' },
+  { id: 'view:proxy-classes', label: 'বদলি ক্লাস দেখুন' },
+  { id: 'manage:proxy-classes', label: 'বদলি ক্লাস ম্যানেজ করুন' },
 
   { id: 'send:messaging', label: 'মেসেজ পাঠানো' },
   { id: 'manage:messaging', label: 'মেসেজ ম্যানেজ করুন' },
@@ -55,6 +64,8 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:staff-attendance-report',
     'manage:attendance',
     'input:quick-roll-attendance',
+    'view:missed-attendance',
+    'view:absent-student-list',
     'input:results', 
     'view:merit-list',
     'view:accounts',
@@ -63,6 +74,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:accounts-monthly-report',
     'view:cashbook-ledger',
     'view:routines',
+    'view:proxy-classes',
     'manage:documents',
     'send:messaging'
   ],

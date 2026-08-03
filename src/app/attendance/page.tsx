@@ -45,7 +45,7 @@ const classNamesMap: { [key: string]: string } = {
 
 // --- Helper Components ---
 
-const SchoolPrintHeader = ({ title, schoolInfo }: { title: string, schoolInfo: any }) => (
+const SchoolPrintHeader = ({ title, schoolInfo, startDate, endDate }: { title: string, schoolInfo: any, startDate?: Date, endDate?: Date }) => (
     <div className="hidden print:block text-black mb-8 border-b-4 border-emerald-800 pb-4 font-kalpurush">
         <div className="flex items-center gap-6 justify-center">
             {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={70} height={70} className="object-contain" />}
@@ -53,7 +53,14 @@ const SchoolPrintHeader = ({ title, schoolInfo }: { title: string, schoolInfo: a
                 <h1 className="text-3xl font-black uppercase text-emerald-950">{schoolInfo.name}</h1>
                 <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
                 <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
-                    <h2 className="text-lg font-black uppercase">{title}</h2>
+                    <h2 className="text-lg font-black uppercase">
+                        {title}
+                        {startDate && endDate && (
+                            <span className="ml-2">
+                                ({format(startDate, 'dd/MM/yyyy', { locale: bn })} হতে {format(endDate, 'dd/MM/yyyy', { locale: bn })} পর্যন্ত)
+                            </span>
+                        )}
+                    </h2>
                 </div>
             </div>
         </div>
@@ -115,7 +122,7 @@ const AttendanceSheet = ({
         }
 
         checkExistingData();
-    }, [classId, dateStr, selectedYear, db, user]);
+    }, [classId, dateStr, selectedYear, db, user, onStatusChange]);
 
     const handleSaveAttendance = () => {
         if (!db || !user) return;
@@ -305,13 +312,13 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
         return studentsForYear.filter((student) => student.className === className);
     };
 
-    const handleStatusChange = (className: string, studentId: string, status: AttendanceStatus) => {
+    const handleStatusChange = useCallback((className: string, studentId: string, status: AttendanceStatus) => {
         setClassAttendance(prev => {
             const nextMap = new Map(prev[className]);
             nextMap.set(studentId, status);
             return { ...prev, [className]: nextMap };
         });
-    };
+    }, []);
 
     const getPresentCount = (className: string) => {
         const map = classAttendance[className];
@@ -700,11 +707,14 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
+    const { hasPermission } = useAuth();
     const [selectedClass, setSelectedClass] = useState<string>('6');
     const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
     const [missedDays, setMissedDays] = useState<Date[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isClient, setIsClient] = useState(false);
+
+    const canTakeMissedAttendance = hasPermission('input:missed-attendance');
 
     useEffect(() => { setIsClient(true); }, []);
 
@@ -819,7 +829,14 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
                                         <TableCell className="font-black text-slate-700">{format(date, 'd MMMM yyyy', { locale: bn })}</TableCell>
                                         <TableCell className="font-bold text-muted-foreground">{format(date, 'EEEE', { locale: bn })}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button size="sm" onClick={() => onTakeAttendance(date)} className="bg-amber-600 hover:bg-amber-700 font-bold h-8 text-[10px]">
+                                            <Button 
+                                                size="sm" 
+                                                onClick={() => {
+                                                    if (canTakeMissedAttendance) onTakeAttendance(date);
+                                                    else toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+                                                }} 
+                                                className="bg-amber-600 hover:bg-amber-700 font-bold h-8 text-[10px]"
+                                            >
                                                 <Plus className="h-3 w-3 mr-1" /> পুনরায় হাজিরা নিন
                                             </Button>
                                         </TableCell>
@@ -1183,19 +1200,17 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
         fetchAttendance();
     }, [classId, students, selectedYear, db, user, startDate, endDate]);
 
-    const dateRangeStr = startDate && endDate 
-        ? `(${toBengaliNumber(format(startDate, 'dd/MM/yyyy'))} হতে ${toBengaliNumber(format(endDate, 'dd/MM/yyyy'))} পর্যন্ত)`
-        : '';
-
-     if (isLoading) return <p className="text-center p-8 italic">রিপোর্ট তৈরি হচ্ছে...</p>;
+    if (isLoading) return <p className="text-center p-8 italic">রিপোর্ট তৈরি হচ্ছে...</p>;
 
     if (students.length === 0) return <p className="text-center text-muted-foreground p-8">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>;
 
     return (
         <div className="p-0 sm:p-10 bg-white text-black font-kalpurush printable-area min-h-screen">
             <SchoolPrintHeader 
-                title={`${classNamesMap[classId]} শ্রেণির হাজিরা রিপোর্ট ${dateRangeStr}`} 
+                title={`${classNamesMap[classId]} শ্রেণির হাজিরা রিপোর্ট`} 
                 schoolInfo={schoolInfo} 
+                startDate={startDate}
+                endDate={endDate}
             />
             
             <div className="table-container !max-h-none !overflow-visible border-black">
@@ -1337,6 +1352,8 @@ export default function AttendancePage() {
     }, [db, user]);
 
     const canInputQuickRoll = hasPermission('input:quick-roll-attendance');
+    const canViewMissedAttendance = hasPermission('view:missed-attendance');
+    const canViewAbsentList = hasPermission('view:absent-student-list');
 
     const handleTakeMissedAttendance = (date: Date) => {
         setAttendanceDate(date);
@@ -1351,14 +1368,19 @@ export default function AttendancePage() {
         if (canInputQuickRoll) {
             items.push({ id: 'quick-roll', label: 'রোল ইনপুট', icon: Plus, color: 'text-emerald-600 bg-emerald-50' });
         }
-        items.push(
-            { id: 'report', label: 'রিপোর্ট ও বোর্ড', icon: ListChecks, color: 'text-violet-600 bg-violet-50' },
-            { id: 'absent-list', label: 'অনুপস্থিত শিক্ষার্থীর তালিকা', icon: UserX, color: 'text-rose-600 bg-rose-50' },
-            { id: 'missed-attendance', label: 'বকেয়া হাজিরা', icon: CalendarX, color: 'text-amber-600 bg-amber-50' },
-            { id: 'alerts', label: 'সতর্কবার্তা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' },
-        );
+        items.push({ id: 'report', label: 'রিপোর্ট ও বোর্ড', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
+        
+        if (canViewAbsentList) {
+            items.push({ id: 'absent-list', label: 'অনুপস্থিত শিক্ষার্থীর তালিকা', icon: UserX, color: 'text-rose-600 bg-rose-50' });
+        }
+        if (canViewMissedAttendance) {
+            items.push({ id: 'missed-attendance', label: 'বকেয়া হাজিরা', icon: CalendarX, color: 'text-amber-600 bg-amber-50' });
+        }
+        
+        items.push({ id: 'alerts', label: 'সতর্কবার্তা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
+        
         return items;
-    }, [canInputQuickRoll]);
+    }, [canInputQuickRoll, canViewMissedAttendance, canViewAbsentList]);
     
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">

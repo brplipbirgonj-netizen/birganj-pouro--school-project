@@ -372,6 +372,7 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
 const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record<string, Record<string, string[]>>, academicYear: string }) => {
     const db = useFirestore();
     const { toast } = useToast();
+    const { hasPermission } = useAuth();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [absentTeacher, setAbsentTeacher] = useState<string>('');
     const [allStaff, setAllStaff] = useState<Staff[]>([]);
@@ -379,6 +380,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     const [selections, setSelections] = useState<Map<string, string>>(new Map());
     const [isSaving, setIsSaving] = useState<string | null>(null);
 
+    const canManageProxy = hasPermission('manage:proxy-classes');
     const dayName = selectedDate ? dayMap[selectedDate.getDay()] : '';
     const isWeekend = dayName === 'শুক্রবার' || dayName === 'শনিবার';
     
@@ -453,6 +455,11 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     const handleAssignProxy = (item: any) => {
         if (!db || !selectedDate) return;
         
+        if (!canManageProxy) {
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            return;
+        }
+
         const selectionKey = `${item.className}-${item.periodIndex}`;
         const proxyTeacher = selections.get(selectionKey);
 
@@ -480,6 +487,10 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
 
     const handleDeleteProxy = (id: string) => {
         if (!db) return;
+        if (!canManageProxy) {
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            return;
+        }
         deleteProxyClass(db, id);
         toast({ title: 'বদলি নিয়োগ বাতিল করা হয়েছে' });
     };
@@ -548,7 +559,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                         <div className="space-y-1">
                                             <Label className="text-[10px] uppercase font-black text-muted-foreground">বদলি শিক্ষক (ফ্রি শিক্ষকদের তালিকা)</Label>
                                             <Select 
-                                                disabled={isAssigned || isSaving === selectionKey}
+                                                disabled={isAssigned || isSaving === selectionKey || !canManageProxy}
                                                 value={selections.get(selectionKey) || ""}
                                                 onValueChange={(val) => setSelections(prev => new Map(prev).set(selectionKey, val))}
                                             >
@@ -572,7 +583,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                                 size="sm" 
                                                 className="w-full h-8 text-xs gap-2"
                                                 onClick={() => handleAssignProxy(item)}
-                                                disabled={isSaving === selectionKey || !selections.get(selectionKey)}
+                                                disabled={isSaving === selectionKey || !selections.get(selectionKey) || !canManageProxy}
                                             >
                                                 {isSaving === selectionKey ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                                                 নিয়োগ নিশ্চিত করুন
@@ -610,14 +621,16 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                                 ) : (
                                     col.items.map(proxy => (
                                         <div key={proxy.id} className="p-3 border-2 border-emerald-100 rounded-lg bg-white shadow-sm relative group animate-in slide-in-from-bottom-2">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-100 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onClick={() => handleDeleteProxy(proxy.id)}
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
+                                            {canManageProxy && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-100 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => handleDeleteProxy(proxy.id)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
                                             <div className="text-[10px] font-black text-primary mb-1 uppercase">{classNamesMap[proxy.className]} শ্রেণি</div>
                                             <p className="text-xs font-bold leading-tight mb-2">{proxy.subject}</p>
                                             <div className="flex flex-col gap-1 border-t pt-2">
@@ -671,8 +684,8 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
     const subjectRows = [
         { key: 'বাংলা প্রথম', display: 'বাংলা ১ম' },
         { key: 'বাংলা দ্বিতীয়', display: 'বাংলা ২য়' },
-        { key: 'ইংরেজি প্রথম', display: 'ইংরেজি ১ম' },
-        { key: 'ইংরেজি দ্বিতীয়', display: 'ইংরেজি ২য়' },
+        { key: 'ইংরেজি প্রথম', english: 'English 1st', display: 'ইংরেজি ১ম' },
+        { key: 'ইংরেজি দ্বিতীয়', english: 'English 2nd', display: 'ইংরেজি ২য়' },
         { key: 'গণিত', display: 'গণিত' },
         { key: 'ধর্ম ও নৈতিক শিক্ষা', display: 'ধর্ম ও নৈতিক শিক্ষা' },
         { key: 'সাধারণ বিজ্ঞান', display: 'সাধারণ বিজ্ঞান' },
@@ -977,9 +990,12 @@ export default function RoutinesPage() {
     const [activeSection, setActiveSection] = useState('class-routine');
 
     const [targetYear, setTargetYear] = useState('');
-    const { schoolInfo, isLoading: isSchoolInfoLoading } = useSchoolInfo();
+    const { schoolInfo } = useSchoolInfo();
     const { user, hasPermission } = useAuth();
+    
     const canManageRoutines = hasPermission('manage:routines');
+    const canViewProxy = hasPermission('view:proxy-classes');
+    const canManageProxy = hasPermission('manage:proxy-classes');
     const isAdmin = user?.role === 'admin';
 
     const fetchData = useCallback(async () => {
@@ -1035,6 +1051,10 @@ export default function RoutinesPage() {
 
     const handleSaveChanges = () => {
         if (!db) return;
+        if (!canManageRoutines) {
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            return;
+        }
         
         const routinesToSave: ClassRoutine[] = [];
         Object.keys(routineData).forEach(className => {
@@ -1114,9 +1134,12 @@ export default function RoutinesPage() {
     const sidebarItems = useMemo(() => {
         const items = [
             { id: 'class-routine', label: 'ক্লাস রুটিন', icon: CalendarClock, color: 'text-indigo-600 bg-indigo-50' },
-            { id: 'proxy-management', label: 'বদলি ক্লাস (Proxy)', icon: Users, color: 'text-emerald-600 bg-emerald-50' },
-            { id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' },
         ];
+        if (canViewProxy || canManageProxy) {
+            items.push({ id: 'proxy-management', label: 'বদলি ক্লাস (Proxy)', icon: Users, color: 'text-emerald-600 bg-emerald-50' });
+        }
+        items.push({ id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' });
+        
         if (isAdmin) {
             items.push({ id: 'copy-routine', label: 'রুটিন কপি করুন', icon: Copy, color: 'text-amber-600 bg-amber-50' });
             items.push({ id: 'blank-routine', label: 'ফাঁকা রুটিন', icon: FilePlus, color: 'text-slate-600 bg-slate-50' });
@@ -1124,7 +1147,7 @@ export default function RoutinesPage() {
             items.push({ id: 'upload', label: 'এক্সেল আপলোড', icon: FileUp, color: 'text-rose-600 bg-rose-50' });
         }
         return items;
-    }, [isAdmin]);
+    }, [isAdmin, canViewProxy, canManageProxy]);
 
     if (!isClient) return null;
 

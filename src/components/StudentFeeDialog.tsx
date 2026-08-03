@@ -247,10 +247,10 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw]">
+            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] font-kalpurush">
                 <DialogHeader>
                     <DialogTitle>{existingCollection ? 'ফি আদায় এডিট করুন' : 'নতুন ফি আদায়'}</DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="font-bold">
                         {student.studentNameBn} (রোল: {student.roll.toLocaleString('bn-BD')}) এর জন্য ফি আদায় করুন।
                     </DialogDescription>
                 </DialogHeader>
@@ -268,7 +268,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                                     onValueChange={(month) => month && setDescription(`${month} মাসের বেতন`)}
                                     defaultValue={bengaliMonths[new Date().getMonth()]}
                                 >
-                                    <SelectTrigger className="w-[120px] sm:w-[180px]">
+                                    <SelectTrigger className="w-[120px] sm:w-[180px] bg-white">
                                         <SelectValue placeholder="মাস" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -277,7 +277,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="flex-1" />
+                                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="flex-1 bg-white" />
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -298,12 +298,13 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {feeFields.map(field => (
                                 <div key={field.key} className="space-y-2">
-                                    <Label htmlFor={field.key}>{field.label}</Label>
+                                    <Label htmlFor={field.key} className="font-bold text-xs">{field.label}</Label>
                                     <Input
                                         id={field.key}
                                         type="number"
                                         value={breakdown[field.key] || ''}
                                         onChange={(e) => handleFeeChange(field.key, e.target.value)}
+                                        className="h-9 font-black"
                                     />
                                 </div>
                             ))}
@@ -317,12 +318,12 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                                 checked={shouldSendSMS} 
                                 onCheckedChange={(checked) => setShouldSendSMS(!!checked)} 
                             />
-                            <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer text-sm">
+                            <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer text-sm font-bold">
                                 <Smartphone className="h-4 w-4 text-primary" />
                                 সেভ করার পর ফোনে মেসেজ ড্রাফট করুন
                             </Label>
                         </div>
-                        <div className="text-[10px] sm:text-xs text-muted-foreground italic">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground italic font-medium">
                             আদায়কারী: {collectorName || 'লোড হচ্ছে...'}
                         </div>
                     </div>
@@ -330,10 +331,10 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
 
                 <DialogFooter className="pt-4 border-t -mx-6 px-6 pb-6 mt-auto">
                     <div className="flex flex-col sm:flex-row justify-between w-full items-center gap-4">
-                        <p className="font-bold text-xl text-primary">মোট: {totalAmount.toLocaleString('bn-BD')} ৳</p>
+                        <p className="font-black text-xl text-primary">মোট: {totalAmount.toLocaleString('bn-BD')} ৳</p>
                         <div className="flex gap-2 w-full sm:w-auto">
-                             <DialogClose asChild><Button variant="ghost" className="flex-1 sm:flex-none">বাতিল</Button></DialogClose>
-                            <Button onClick={handleSave} className="flex-1 sm:flex-none min-w-[120px]">
+                             <DialogClose asChild><Button variant="ghost" className="flex-1 sm:flex-none font-bold">বাতিল</Button></DialogClose>
+                            <Button onClick={handleSave} className="flex-1 sm:flex-none min-w-[120px] font-black shadow-lg">
                                 {shouldSendSMS ? 'সেভ ও মেসেজ' : 'শুধুমাত্র সেভ'}
                             </Button>
                         </div>
@@ -350,7 +351,9 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
     const { hasPermission } = useAuth();
-    const canManageTransactions = hasPermission('manage:transactions');
+    
+    const canEditTransaction = hasPermission('special:edit-transaction');
+    const canDeleteTransaction = hasPermission('special:delete-transaction');
 
     const [feeCollections, setFeeCollections] = useState<FeeCollection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -376,6 +379,10 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     }, [open, studentId, fetchFeeData]);
 
     const handleEdit = (collection: FeeCollection) => {
+        if (!canEditTransaction) {
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            return;
+        }
         setEditingCollection(collection);
         setIsFormOpen(true);
     };
@@ -395,6 +402,10 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
 
     const handleDelete = async (collection: FeeCollection) => {
         if(!db) return;
+        if (!canDeleteTransaction) {
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            return;
+        }
 
         const batch = writeBatch(db);
         const feeCollectionRef = doc(db, 'feeCollections', collection.id);
@@ -422,7 +433,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     return (
         <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] no-print">
+            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] no-print font-kalpurush">
                 <DialogHeader>
                     <div className="flex flex-col md:flex-row items-center gap-4">
                         {isLoading || !student ? (
@@ -431,12 +442,12 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                              student.photoUrl && <Image src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} alt="Student photo" width={80} height={80} className="rounded-lg border object-cover shadow-sm" />
                         )}
                         <div className="flex-1 text-center md:text-left space-y-1">
-                            <DialogTitle className="text-xl sm:text-2xl font-bold">বেতন আদায়ের তথ্য</DialogTitle>
+                            <DialogTitle className="text-xl sm:text-2xl font-black">বেতন আদায়ের তথ্য</DialogTitle>
                             {isLoading || !student ? (
                                 <Skeleton className="h-4 w-1/2 mx-auto md:mx-0" />
                             ) : (
-                                <DialogDescription className="text-md font-medium text-foreground">
-                                    <span className="text-primary font-bold">{student.studentNameBn}</span> (রোল: {student.roll.toLocaleString('bn-BD')}, শ্রেণি: {classNamesMap[student.className] || student.className})
+                                <DialogDescription className="text-md font-bold text-foreground">
+                                    <span className="text-primary font-black">{student.studentNameBn}</span> (রোল: {student.roll.toLocaleString('bn-BD')}, শ্রেণি: {classNamesMap[student.className] || student.className})
                                 </DialogDescription>
                             )}
                         </div>
@@ -454,58 +465,60 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                             <Table className="min-w-[750px]">
                                 <TableHeader className="sticky top-0 bg-muted z-10">
                                     <TableRow>
-                                        <TableHead className="font-bold">আদায়ের তারিখ</TableHead>
-                                        <TableHead className="font-bold">বিবরণ</TableHead>
-                                        <TableHead className="text-center font-bold">পদ্ধতি</TableHead>
-                                        <TableHead className="text-right font-bold">মোট টাকা</TableHead>
-                                        <TableHead className="font-bold text-center">রসিদ</TableHead>
-                                        {canManageTransactions && <TableHead className="text-right font-bold">কার্যক্রম</TableHead>}
+                                        <TableHead className="font-black">আদায়ের তারিখ</TableHead>
+                                        <TableHead className="font-black">বিবরণ</TableHead>
+                                        <TableHead className="text-center font-black">পদ্ধতি</TableHead>
+                                        <TableHead className="text-right font-black">মোট টাকা</TableHead>
+                                        <TableHead className="font-black text-center">রসিদ</TableHead>
+                                        <TableHead className="text-right font-black">কার্যক্রম</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {feeCollections.length === 0 ? (
-                                        <TableRow><TableCell colSpan={canManageTransactions ? 6 : 5} className="text-center h-32 italic text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={6} className="text-center h-32 italic font-bold text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
                                     ) : (
                                         feeCollections.map(collection => (
                                             <TableRow key={collection.id} className="hover:bg-primary/5 transition-colors">
-                                                <TableCell className="whitespace-nowrap font-medium">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
-                                                <TableCell>{collection.description || 'N/A'}</TableCell>
+                                                <TableCell className="whitespace-nowrap font-bold">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
+                                                <TableCell className="font-medium">{collection.description || 'N/A'}</TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge variant="outline" className={cn(
-                                                        "text-[10px] font-bold",
+                                                        "text-[10px] font-black px-3",
                                                         collection.method === 'bank' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50"
                                                     )}>
                                                         {collection.method === 'bank' ? 'Bank' : 'Cash'}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right font-bold text-primary whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
+                                                <TableCell className="text-right font-black text-primary whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
                                                 <TableCell className="text-center">
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary" onClick={() => handlePrint(collection)}>
                                                         <Printer className="h-4 w-4" />
                                                     </Button>
                                                 </TableCell>
-                                                {canManageTransactions && (
-                                                    <TableCell className="text-right">
-                                                        <div className="flex gap-2 justify-end">
-                                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(collection)}>
+                                                <TableCell className="text-right">
+                                                    <div className="flex gap-2 justify-end">
+                                                        {canEditTransaction && (
+                                                            <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-100 hover:bg-blue-50" onClick={() => handleEdit(collection)}>
                                                                 <FilePen className="h-4 w-4" />
                                                             </Button>
+                                                        )}
+                                                        {canDeleteTransaction && (
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                                <AlertDialogContent>
+                                                                <AlertDialogContent className="font-kalpurush">
                                                                     <AlertDialogHeader>
                                                                         <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>এই লেনদেনটি স্থায়ীভাবে মুছে যাবে। এটি ক্যাশবুক থেকেও স্বয়ংক্রিয়ভাবে মুছে যাবে।</AlertDialogDescription>
+                                                                        <AlertDialogDescription className="font-bold">এই লেনদেনটি স্থায়ীভাবে মুছে যাবে। এটি ক্যাশবুক থেকেও স্বয়ংক্রিয়ভাবে মুছে যাবে।</AlertDialogDescription>
                                                                     </AlertDialogHeader>
                                                                     <AlertDialogFooter>
-                                                                        <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => handleDelete(collection)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
+                                                                        <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDelete(collection)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">মুছে ফেলুন</AlertDialogAction>
                                                                     </AlertDialogFooter>
                                                                 </AlertDialogContent>
                                                             </AlertDialog>
-                                                        </div>
-                                                    </TableCell>
-                                                )}
+                                                        )}
+                                                    </div>
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     )}

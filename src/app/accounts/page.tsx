@@ -15,7 +15,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen } from 'lucide-react';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -205,10 +205,10 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeights: 'bold' }} />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
                                 <YAxis hide />
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeights: 'bold', fontSize: '12px' }}
+                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
                                 <Area type="monotone" dataKey="income" name="আয়" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
@@ -241,7 +241,7 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                                     ))}
                                 </Pie>
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeights: 'bold', fontSize: '12px' }}
+                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
                                 <Legend verticalAlign="bottom" align="center" iconType="circle" />
@@ -641,7 +641,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// Monthly Report Component (New Feature)
+// Monthly Report Component
 const MonthlyReportTab = ({ transactions, selectedYear }: { transactions: Transaction[], selectedYear: string }) => {
     const { schoolInfo } = useSchoolInfo();
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
@@ -867,7 +867,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
     const db = useFirestore();
     const { toast } = useToast();
     const { user, hasPermission } = useAuth();
-    const canManageTransactions = hasPermission('manage:transactions');
+    const canDeleteTransaction = hasPermission('special:delete-transaction');
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
     const cashbookData = useMemo(() => {
@@ -888,6 +888,10 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
 
     const handleDelete = async (id: string) => {
         if(!db) return;
+        if (!canDeleteTransaction) {
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            return;
+        }
         try { await deleteTransaction(db, id); toast({ title: 'লেনদেন মুছে ফেলা হয়েছে।' }); refetch(); } catch (error) {}
     }
 
@@ -924,7 +928,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                 <TableHead className="text-right">আয়</TableHead>
                                 <TableHead className="text-right">ব্যয়</TableHead>
                                 <TableHead className="text-right">ব্য্যালেন্স</TableHead>
-                                {canManageTransactions && <TableHead className="text-right">কার্যক্রম</TableHead>}
+                                <TableHead className="text-right">কার্যক্রম</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -942,14 +946,23 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                         <TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                         <TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell>
                                         <TableCell className="text-right font-black text-primary">{tx.balance.toLocaleString('bn-BD')} ৳</TableCell>
-                                        {canManageTransactions && (
-                                            <TableCell className="text-right">
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                    <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>মুছে ফেলতে চান?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx.id)}>হ্যাঁ</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
-                                        )}
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-1">
+                                                {hasPermission('special:edit-transaction') && !tx.feeCollectionId && (
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500">
+                                                        <FilePen className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                {canDeleteTransaction && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                        <AlertDialogContent className="font-kalpurush">
+                                                            <AlertDialogHeader><AlertDialogTitle>মুছে ফেলতে চান?</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই লেনদেনটি মুছে ফেলতে চান?</AlertDialogDescription></AlertDialogHeader>
+                                                            <AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
