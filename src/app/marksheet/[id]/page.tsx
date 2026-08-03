@@ -11,12 +11,9 @@ import { Printer, Loader2, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, getDocs, where, limit, doc, getDoc } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { collection, query, getDocs, where, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 
 const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten' };
 const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce' };
@@ -47,7 +44,6 @@ function MarksheetContent() {
     const { user } = useAuth();
     const { schoolInfo } = useSchoolInfo();
 
-    const [student, setStudent] = setAllStudentsInClass] = useState<Student[]>([]);
     const [student, setStudent] = useState<Student | null>(null);
     const [allStudentsInClass, setAllStudentsInClass] = useState<Student[]>([]);
     const [resultsBySubject, setResultsBySubject] = useState<ClassResult[]>([]);
