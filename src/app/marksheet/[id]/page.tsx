@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -65,7 +64,7 @@ function MarksheetContent() {
 
             setIsLoading(true);
             try {
-                // 1. Fetch the specific student (Works for both public and private)
+                // 1. Fetch the specific student
                 const studentDoc = await getDoc(doc(db, 'students', studentId));
                 if (!studentDoc.exists()) {
                     setIsLoading(false);
@@ -75,8 +74,6 @@ function MarksheetContent() {
                 setStudent(studentData);
 
                 // 2. Fetch all students in the same class (Needed for Merit calculation)
-                // Note: For public portal, merit will only work if the parent knows the credentials.
-                // We fetch all to calculate the rank locally.
                 const classQuery = query(
                     collection(db, 'students'),
                     where('academicYear', '==', academicYear),
@@ -210,6 +207,8 @@ function MarksheetContent() {
                         left: 0;
                         display: flex !important;
                         flex-direction: column !important;
+                        z-index: 9999 !important;
+                        visibility: visible !important;
                     }
                 }
             `}</style>
@@ -230,7 +229,7 @@ function MarksheetContent() {
             </div>
             
             {/* Printable Marksheet Card */}
-            <div className="marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
+            <div className="printable-area marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                 {schoolInfo.logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                         <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="opacity-10" />
@@ -346,7 +345,7 @@ function MarksheetContent() {
                                     const displayFullMarks = matchingRecord?.fullMarks ?? subject.fullMarks;
 
                                     return (
-                                        <tr key={subject.code} className={cn("border-b border-black last:border-b-0", isFail ? "bg-red-50/30" : "")}>
+                                        <tr key={subject.code} className={cn("border-b border-black last:border-0", isFail ? "bg-red-50/30" : "")}>
                                             <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
                                             <td className="border-r border-black p-1 px-4 font-semibold">
                                                 {subject.englishName}
