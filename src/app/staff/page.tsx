@@ -761,6 +761,16 @@ export default function StaffListPage() {
                           
                           {/* Summary Footer Rows */}
                           <tr className="summary-row">
+                              <td className="text-right pr-4 font-black">মোট কর্মদিবস</td>
+                              {page.teachers.map(teacher => {
+                                  const totalWorkDays = page.days.filter(d => {
+                                      const ds = format(d, 'yyyy-MM-dd');
+                                      return !((d.getDay() === 5 || d.getDay() === 6) || holidays.includes(ds));
+                                  }).length;
+                                  return <td key={teacher.id} className="text-blue-900 font-black">{toBengaliNumber(totalWorkDays)} দিন</td>;
+                              })}
+                          </tr>
+                          <tr className="summary-row">
                               <td className="text-right pr-4 font-black">উপস্থিত (মোট)</td>
                               {page.teachers.map(teacher => {
                                   const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
