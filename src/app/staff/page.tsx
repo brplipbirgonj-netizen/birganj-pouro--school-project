@@ -1,14 +1,17 @@
-
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { deleteStaff, Staff, staffFromDoc, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/staff-data';
-import { Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX } from 'lucide-react';
+import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
+import { 
+    Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, 
+    Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, 
+    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX 
+} from 'lucide-react';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -30,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, FirestoreError, getDocs, where, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, FirestoreError, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from 'date-fns';
@@ -249,7 +252,7 @@ export default function StaffListPage() {
           if (indexB === -1) return -1;
           return indexA - indexB;
       });
-}, [allStaff]);
+  }, [allStaff]);
 
   const sidebarItems = useMemo(() => {
       const items = [
@@ -547,27 +550,51 @@ export default function StaffListPage() {
                         </div>
 
                         {rangeRecords.length > 0 && (
-                            <div className="p-8 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center">
-                                <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-                                <h3 className="text-xl font-black text-blue-900">রিপোর্ট প্রস্তুত হয়েছে!</h3>
-                                <p className="font-bold text-blue-700">উপরে 'প্রিন্ট' বাটনে ক্লিক করে সব পাতা প্রিন্ট করুন।</p>
-                                <div className="mt-6 border-t pt-4 text-left">
-                                    <p className="text-sm font-bold text-slate-600 mb-2">প্রিভিউ (প্রথম ৩ জন):</p>
-                                    <div className="bg-white border rounded overflow-hidden">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>নাম</TableHead><TableHead className="text-center">উপস্থিতি</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {[...sortedTeachers, ...sortedEmployees].slice(0, 3).map(s => (
+                            <div className="space-y-4">
+                                <div className="p-8 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center">
+                                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
+                                    <h3 className="text-xl font-black text-blue-900">রিপোর্ট প্রস্তুত হয়েছে!</h3>
+                                    <p className="font-bold text-blue-700">নিচে সবার উপস্থিতির সংক্ষিপ্ত সারসংক্ষেপ দেওয়া হলো। পূর্ণাঙ্গ রিপোর্ট পেতে প্রিন্ট করুন।</p>
+                                </div>
+                                <div className="bg-white border rounded-xl overflow-hidden shadow-md">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead className="font-black">নাম ও পদবি</TableHead>
+                                                <TableHead className="text-center font-black">মোট উপস্থিতি</TableHead>
+                                                <TableHead className="text-center font-black">অনুপস্থিতি</TableHead>
+                                                <TableHead className="text-center font-black">ছুটি</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {[...sortedTeachers, ...sortedEmployees].filter(s => s.isActive).map(s => {
+                                                const presentCount = rangeRecords.filter(r => r.attendance.some(a => a.staffId === s.id && a.status === 'present')).length;
+                                                const leaveCount = rangeRecords.filter(r => r.attendance.some(a => a.staffId === s.id && a.status === 'leave')).length;
+                                                const daysInMonth = eachDayOfInterval({ 
+                                                    start: startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 
+                                                    end: endOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))) 
+                                                }).length;
+                                                const offDays = eachDayOfInterval({ 
+                                                    start: startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 
+                                                    end: endOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))) 
+                                                }).filter(d => isWeekend(d) || holidays.includes(format(d, 'yyyy-MM-dd'))).length;
+                                                const workDays = daysInMonth - offDays;
+                                                const absentCount = workDays - presentCount - leaveCount;
+
+                                                return (
                                                     <TableRow key={s.id}>
-                                                        <TableCell className="font-bold text-xs">{s.nameBn}</TableCell>
-                                                        <TableCell className="text-center text-xs font-black text-emerald-600">
-                                                            {toBengaliNumber(rangeRecords.filter(r => r.attendance.some(a => a.staffId === s.id && a.status === 'present')).length)} দিন
+                                                        <TableCell>
+                                                            <p className="font-bold text-xs">{s.nameBn}</p>
+                                                            <p className="text-[9px] text-muted-foreground">{s.designation}</p>
                                                         </TableCell>
+                                                        <TableCell className="text-center text-xs font-black text-emerald-600">{toBengaliNumber(presentCount)} দিন</TableCell>
+                                                        <TableCell className="text-center text-xs font-black text-rose-600">{toBengaliNumber(Math.max(0, absentCount))} দিন</TableCell>
+                                                        <TableCell className="text-center text-xs font-black text-blue-600">{toBengaliNumber(leaveCount)} দিন</TableCell>
                                                     </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             </div>
                         )}
@@ -581,20 +608,21 @@ export default function StaffListPage() {
       <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
           <style jsx global>{`
               @media print {
-                  @page { size: A4 portrait; margin: 0; }
+                  @page { size: A4 portrait; margin: 5mm; }
                   html, body { height: auto; overflow: visible; }
                   .report-page { 
                       page-break-after: always; 
-                      width: 210mm; 
-                      min-height: 297mm; 
-                      padding: 10mm; 
+                      width: 200mm; 
+                      min-height: 287mm; 
+                      padding: 5mm; 
                       box-sizing: border-box;
-                      position: relative; 
+                      display: flex;
+                      flex-direction: column;
                   }
                   .report-header { 
-                      border-bottom: 3px solid black; 
-                      padding-bottom: 10px; 
-                      margin-bottom: 15px; 
+                      border-bottom: 2px solid black; 
+                      padding-bottom: 8px; 
+                      margin-bottom: 10px; 
                       text-align: center;
                       display: flex;
                       flex-direction: column;
@@ -603,36 +631,37 @@ export default function StaffListPage() {
                   .report-table { border: 1px solid black !important; width: 100%; border-collapse: collapse; }
                   .report-table th, .report-table td { 
                       border: 1px solid black !important; 
-                      padding: 4px 2px !important; 
+                      padding: 3px 1px !important; 
                       text-align: center; 
-                      font-size: 10px; 
-                      line-height: 1.2; 
+                      font-size: 9px; 
+                      line-height: 1.1; 
                   }
-                  .holiday-text { color: #dc2626 !important; font-weight: bold; }
-                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 11px !important; }
+                  .holiday-text { color: #dc2626 !important; font-weight: bold; background-color: #fef2f2 !important; }
+                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 9px !important; }
+                  .report-footer { margin-top: auto; padding-top: 20px; }
               }
           `}</style>
           
           {reportPages.map((page, pageIdx) => (
               <div key={pageIdx} className="report-page">
                   <div className="report-header">
-                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" width="70" height="70" className="object-contain mb-2" />}
-                      <h1 className="text-3xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
-                      <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
-                      <div className="mt-3 inline-block border-2 border-black px-6 py-1 rounded-full bg-slate-50">
-                          <h2 className="text-base font-black uppercase">হাজিরা ও ছুটির রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
+                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" width="60" height="60" className="object-contain mb-1" />}
+                      <h1 className="text-2xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
+                      <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
+                      <div className="mt-2 inline-block border-[1.5px] border-black px-5 py-0.5 rounded-full bg-slate-50">
+                          <h2 className="text-sm font-black uppercase">হাজিরা ও ছুটির রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
                       </div>
-                      <p className="text-[10px] font-bold mt-1 text-slate-500">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
+                      <p className="text-[8px] font-bold mt-0.5 text-slate-400 italic">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
                   </div>
 
                   <table className="report-table">
                       <thead>
                           <tr className="bg-slate-100">
-                              <th className="w-[140px] font-black py-2">তারিখ ও বার</th>
+                              <th className="w-[120px] font-black py-1">তারিখ ও বার</th>
                               {page.teachers.map(teacher => (
-                                  <th key={teacher.id} className="py-2">
-                                      <p className="font-black text-[11px] text-blue-900">{teacher.nameBn}</p>
-                                      <p className="text-[8px] italic font-bold text-slate-600">{teacher.designation}</p>
+                                  <th key={teacher.id} className="py-1">
+                                      <p className="font-black text-[10px] text-blue-900">{teacher.nameEn || teacher.nameBn}</p>
+                                      <p className="text-[7px] italic font-bold text-slate-600">{teacher.designation}</p>
                                   </th>
                               ))}
                           </tr>
@@ -647,8 +676,8 @@ export default function StaffListPage() {
                               const displayDate = format(day, "dd-MM-yyyy EEEE", { locale: bn });
 
                               return (
-                                  <tr key={dateStr} className={cn(isOffDay && "bg-slate-50")}>
-                                      <td className={cn("text-left pl-2 font-bold", isOffDay && "holiday-text")}>{toBengaliNumber(displayDate)}</td>
+                                  <tr key={dateStr} className={cn(isOffDay && "holiday-text")}>
+                                      <td className="text-left pl-2 font-bold text-[9px]">{toBengaliNumber(displayDate)}</td>
                                       {page.teachers.map(teacher => {
                                           const record = rangeRecords.find(r => r.date === dateStr);
                                           const att = record?.attendance.find(a => a.staffId === teacher.id);
@@ -672,7 +701,7 @@ export default function StaffListPage() {
                                               <td key={teacher.id} className={cn(
                                                   "font-medium",
                                                   cellText === "অনুপস্থিত" && "text-rose-600 font-bold",
-                                                  (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400"
+                                                  (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400 font-normal"
                                               )}>
                                                   {toBengaliNumber(cellText)}
                                               </td>
@@ -684,14 +713,14 @@ export default function StaffListPage() {
                           
                           {/* Summary Footer Rows */}
                           <tr className="summary-row">
-                              <td className="text-right pr-4 font-black">উপস্থিত (মোট)</td>
+                              <td className="text-right pr-3 font-black">উপস্থিত (মোট)</td>
                               {page.teachers.map(teacher => {
                                   const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
                                   return <td key={teacher.id} className="text-emerald-700 font-black">{toBengaliNumber(count)} দিন</td>;
                               })}
                           </tr>
                           <tr className="summary-row">
-                              <td className="text-right pr-4 font-black">অনুপস্থিত (মোট)</td>
+                              <td className="text-right pr-3 font-black">অনুপস্থিত (মোট)</td>
                               {page.teachers.map(teacher => {
                                   const count = page.days.filter(d => {
                                       const ds = format(d, 'yyyy-MM-dd');
@@ -704,7 +733,7 @@ export default function StaffListPage() {
                               })}
                           </tr>
                           <tr className="summary-row">
-                              <td className="text-right pr-4 font-black">ছুটি (মোট)</td>
+                              <td className="text-right pr-3 font-black">ছুটি (মোট)</td>
                               {page.teachers.map(teacher => {
                                   const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'leave')).length;
                                   return <td key={teacher.id} className="text-blue-700 font-black">{toBengaliNumber(count)} দিন</td>;
@@ -713,13 +742,13 @@ export default function StaffListPage() {
                       </tbody>
                   </table>
                   
-                  <div className="mt-16 flex justify-between px-10 font-black text-[12px]">
-                      <div className="w-48 border-t-2 border-black pt-1 text-center">হিসাবরক্ষকের স্বাক্ষর</div>
-                      <div className="w-48 border-t-2 border-black pt-1 text-center">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+                  <div className="report-footer flex justify-between px-10 font-black text-[10px]">
+                      <div className="w-40 border-t-2 border-black pt-1 text-center">হিসাবরক্ষকের স্বাক্ষর</div>
+                      <div className="w-40 border-t-2 border-black pt-1 text-center">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
                   </div>
                   
-                  <div className="absolute bottom-4 left-0 right-0 text-center text-[8px] text-slate-400 italic">
-                      রিপোর্ট জেনারেট করার সময়: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Portal
+                  <div className="text-center text-[7px] text-slate-300 italic mt-4">
+                      রিপোর্ট জেনারেট: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Portal
                   </div>
               </div>
           ))}
