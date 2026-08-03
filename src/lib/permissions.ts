@@ -64,7 +64,6 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:cashbook-ledger',
     'view:routines',
     'manage:documents',
-    'send:messaging',
-    'manage:messaging'
+    'send:messaging'
   ],
 };

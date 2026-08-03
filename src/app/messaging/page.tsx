@@ -57,7 +57,8 @@ export default function MessagingPage() {
     const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
     const canSendMessages = hasPermission('send:messaging');
-    const canManageMessages = hasPermission('manage:messaging');
+    // Only admins can delete message history
+    const canManageMessages = user?.role === 'admin';
 
     const fetchLogs = useCallback(async () => {
         if (!db || !user) return;
@@ -282,7 +283,25 @@ export default function MessagingPage() {
                             <p className="text-[11px] font-bold text-slate-800 leading-relaxed line-clamp-2">{log.content}</p>
                             <div className="flex justify-between items-center pt-1 border-t border-dashed">
                                 <span className="text-[9px] text-muted-foreground">প্রেরক: {log.senderName}</span>
-                                {canManageMessages && <Button variant="ghost" size="icon" className="h-5 w-5 text-red-400 opacity-0 group-hover:opacity-100" onClick={() => deleteMessageLog(db!, log.id).then(fetchLogs)}><Trash2 className="h-3 w-3" /></Button>}
+                                {canManageMessages && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="font-kalpurush">
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>ইতিহাস মুছুন</AlertDialogTitle>
+                                                <AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই রেকর্ডটি মুছে ফেলতে চান?</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => deleteMessageLog(db!, log.id).then(fetchLogs)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
                             </div>
                         </div>
                     ))}
