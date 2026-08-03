@@ -619,7 +619,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 {s.name}
                                             </th>
                                         ))}
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[240px] z-50 w-[60px] h-[56px] box-border">মোট</th>
+                                        <th rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[240px] z-50 w-[60px] h-[56px] box-border">মোট</th>
                                         <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[180px] z-50 w-[60px] h-[56px] box-border">GPA</th>
                                         <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-50 w-[60px] h-[56px] box-border">গ্রেড</th>
                                         <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[60px] z-50 w-[60px] h-[56px] box-border">মেধা</th>
@@ -670,7 +670,7 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <td className="text-center font-black text-primary border-r-2 border-b-2 border-black text-[10px] p-0.5 sticky right-[240px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border">{res.totalMarks.toLocaleString('bn-BD')}</td>
+                                            <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[10px] p-0.5 sticky right-[240px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border">{res.totalMarks.toLocaleString('bn-BD')}</td>
                                             <td className="text-center font-black border-r-2 border-b-2 border-black text-[10px] p-0.5 sticky right-[180px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border">{res.gpa.toFixed(2).toLocaleString('bn-BD')}</td>
                                             <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[9px] p-0.5 sticky right-[120px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</td>
                                             <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[9px] p-0.5 sticky right-[60px] bg-[#fff1f2] z-20 w-[60px] h-[32px] box-border", !res.isPass && "text-rose-500 italic text-[8px]")}>{res.isPass ? (res.meritPosition?.toLocaleString('bn-BD') || '-') : 'ফেল'}</td>
@@ -1053,4 +1053,10 @@ export default function ResultsPage() {
             </main>
         </div>
     );
+}
+
+function toBengaliNumber(str: string | number) {
+  if (!str && str !== 0) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
