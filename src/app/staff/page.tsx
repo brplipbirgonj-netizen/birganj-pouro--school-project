@@ -36,7 +36,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, orderBy, FirestoreError, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isAfter } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -328,9 +328,15 @@ export default function StaffListPage() {
           chunks.push(activeTeachers.slice(i, i + 3));
       }
       
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
       const monthStart = startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth)));
       const monthEnd = endOfMonth(monthStart);
-      const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      
+      // Filter out future dates so they don't appear in the report
+      const days = allDaysInMonth.filter(day => !isAfter(day, today));
       
       return chunks.map(chunk => ({ teachers: chunk, days }));
   }, [sortedTeachers, sortedEmployees, reportMonth, reportYear]);
@@ -650,7 +656,7 @@ export default function StaffListPage() {
                   .report-table { border: 1.5px solid black !important; width: 100%; border-collapse: collapse; }
                   .report-table th, .report-table td { 
                       border: 1px solid black !important; 
-                      padding: 2.5px 1px !important; 
+                      padding: 4.5px 1px !important; 
                       text-align: center; 
                       font-size: 8.5px; 
                       line-height: 1.2; 
