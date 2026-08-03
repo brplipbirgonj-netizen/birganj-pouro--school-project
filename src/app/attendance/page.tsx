@@ -16,11 +16,11 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday, getHolidays } from '@/lib/holiday-data';
-import { format, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX, Printer, ArrowRight } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX, Printer } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,7 +43,25 @@ const classNamesMap: { [key: string]: string } = {
     '10': 'দশম শ্রেণি' 
 };
 
-// Digital Attendance sheet component
+// --- Helper Components ---
+
+const SchoolPrintHeader = ({ title, schoolInfo }: { title: string, schoolInfo: any }) => (
+    <div className="hidden print:block text-black mb-8 border-b-4 border-emerald-800 pb-4 font-kalpurush">
+        <div className="flex items-center gap-6 justify-center">
+            {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={70} height={70} className="object-contain" />}
+            <div className="text-center">
+                <h1 className="text-3xl font-black uppercase text-emerald-950">{schoolInfo.name}</h1>
+                <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
+                    <h2 className="text-lg font-black uppercase">{title}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+// --- Individual Tabs ---
+
 const AttendanceSheet = ({ 
     classId, 
     students, 
@@ -490,22 +508,6 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
         </div>
     );
 };
-
-// Printable Header Helper
-const SchoolPrintHeader = ({ title, schoolInfo }: { title: string, schoolInfo: any }) => (
-    <div className="hidden print:block text-black mb-8 border-b-4 border-emerald-800 pb-4 font-kalpurush">
-        <div className="flex items-center gap-6 justify-center">
-            {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={70} height={70} className="object-contain" />}
-            <div className="text-center">
-                <h1 className="text-3xl font-black uppercase text-emerald-950">{schoolInfo.name}</h1>
-                <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
-                <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
-                    <h2 className="text-lg font-black uppercase">{title}</h2>
-                </div>
-            </div>
-        </div>
-    </div>
-);
 
 // Monthly Summary Board Component
 const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
@@ -989,7 +991,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-// Absence Alerts Tab Component ( restaurated )
+// Absence Alerts Tab Component
 const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { selectedYear } = useAcademicYear();
@@ -1185,17 +1187,14 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
 
     if (students.length === 0) return <p className="text-center text-muted-foreground p-8">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>;
 
-    if (reportData.length === 0 || reportData[0].totalDays === 0) return <p className="text-center text-muted-foreground p-8 italic">এই নির্বাচনি সীমার মধ্যে কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</p>;
-
-
     return (
-        <div className="p-0 sm:p-10 bg-white text-black font-kalpurush">
+        <div className="p-0 sm:p-10 bg-white text-black font-kalpurush printable-area min-h-screen">
             <SchoolPrintHeader 
                 title={`${classNamesMap[classId]} শ্রেণির হাজিরা রিপোর্ট`} 
                 schoolInfo={schoolInfo} 
             />
             
-            <div className="table-container printable-area bg-white border-black">
+            <div className="table-container !max-h-none !overflow-visible border-black">
                 <Table className="border-collapse border-black print:border-black print:border">
                     <TableHeader className="bg-muted/50 sticky top-0 z-10 print:static print:bg-white">
                         <TableRow className="print:border-black">
