@@ -187,14 +187,21 @@ export default function StaffListPage() {
     });
   };
 
-  const handleFinalSave = async (staffId: string) => {
+  const handleLocalEntrySave = (staffId: string) => {
+      setAttendanceSteps(prev => ({ ...prev, [staffId]: 3 }));
+      setEditStates(prev => ({ ...prev, [staffId]: false }));
+      toast({ title: 'এন্ট্রি গ্রহণ করা হয়েছে', description: 'নিচ থেকে ফাইনাল সেভ করুন।' });
+  };
+
+  const handleGlobalFinalSave = async () => {
     if (!db || !dailyAttendance) return;
+    setIsAttendanceLoading(true);
     try {
         await saveStaffAttendance(db, dailyAttendance);
-        toast({ title: 'সংরক্ষণ সম্পন্ন হয়েছে' });
-        setAttendanceSteps(prev => ({ ...prev, [staffId]: 3 }));
-        setEditStates(prev => ({ ...prev, [staffId]: false }));
+        toast({ title: 'পুরো দিনের হাজিরা সফলভাবে সংরক্ষিত হয়েছে' });
+        fetchAttendance();
     } catch (e) {}
+    setIsAttendanceLoading(false);
   };
 
   const handleDeleteAttendance = async (staffId: string) => {
@@ -202,14 +209,11 @@ export default function StaffListPage() {
       try {
           const nextAtt = dailyAttendance.attendance.filter(a => a.staffId !== staffId);
           const updatedRecord = { ...dailyAttendance, attendance: nextAtt };
-          await saveStaffAttendance(db, updatedRecord);
           setDailyAttendance(updatedRecord);
           setAttendanceSteps(prev => ({ ...prev, [staffId]: 0 }));
           setEditStates(prev => ({ ...prev, [staffId]: false }));
-          toast({ title: 'হাজিরা মুছে ফেলা হয়েছে' });
-      } catch (e) {
-          toast({ variant: 'destructive', title: 'ত্রুটি', description: 'মুছে ফেলা সম্ভব হয়নি' });
-      }
+          toast({ title: 'হাজিরা বাটন থেকে সরানো হয়েছে', description: 'ফাইনাল সেভ দিতে ভুলবেন না।' });
+      } catch (e) {}
   };
 
   const fetchReport = useCallback(async () => {
@@ -470,7 +474,7 @@ export default function StaffListPage() {
                                                                         </Select>
                                                                     </div>
                                                                 )}
-                                                                <Button size="sm" className="w-full h-8 font-black shadow-md bg-primary text-white" onClick={() => handleFinalSave(staff.id)}>সেভ ও সম্পন্ন করুন</Button>
+                                                                <Button size="sm" className="w-full h-8 font-black shadow-md bg-primary text-white" onClick={() => handleLocalEntrySave(staff.id)}>সেভ করুন</Button>
                                                             </div>
                                                         )}
                                                         {currentStep === 3 && (
@@ -480,7 +484,7 @@ export default function StaffListPage() {
                                                                          <Label className="text-[10px] font-black text-slate-500 text-left block">প্রস্থানের সময় (উদা: ০৪:০০ PM)</Label>
                                                                          <div className="flex gap-1">
                                                                             <Input type="text" placeholder="০৪:০০ PM" className="h-8 text-[10px] font-bold" value={att?.checkOut || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkOut', e.target.value)} />
-                                                                            <Button size="sm" className="h-8 w-8 p-0 bg-emerald-600" onClick={() => handleFinalSave(staff.id)}><Save className="h-3.5 w-3.5 text-white" /></Button>
+                                                                            <Button size="sm" className="h-8 w-8 p-0 bg-emerald-600" onClick={() => handleLocalEntrySave(staff.id)}><Save className="h-3.5 w-3.5 text-white" /></Button>
                                                                          </div>
                                                                     </div>
                                                                 )}
@@ -491,7 +495,7 @@ export default function StaffListPage() {
                                                                             <Button variant="outline" size="sm" className="h-7 text-[9px] font-bold text-rose-600 border-rose-200"><Trash2 className="h-3 w-3 mr-1" /> ডিলিট</Button>
                                                                         </AlertDialogTrigger>
                                                                         <AlertDialogContent className="font-kalpurush">
-                                                                            <AlertDialogHeader><AlertDialogTitle>হাজিরা মুছুন</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই শিক্ষকের আজকের হাজিরা মুছে ফেলতে চান?</AlertDialogDescription></AlertDialogHeader>
+                                                                            <AlertDialogHeader><AlertDialogTitle>হাজিরা মুছুন</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই শিক্ষকের আজকের হাজিরা সরাতে চান? (ফাইনাল সেভ দিতে হবে)</AlertDialogDescription></AlertDialogHeader>
                                                                             <AlertDialogFooter>
                                                                                 <AlertDialogCancel>না</AlertDialogCancel>
                                                                                 <AlertDialogAction onClick={() => handleDeleteAttendance(staff.id)} className="bg-destructive text-destructive-foreground">হ্যাঁ, মুছুন</AlertDialogAction>
@@ -522,6 +526,18 @@ export default function StaffListPage() {
                                     })}
                                 </TableBody>
                             </Table>
+                        </div>
+                        
+                        <div className="flex justify-center pt-8 border-t">
+                            <Button 
+                                onClick={handleGlobalFinalSave} 
+                                size="lg" 
+                                disabled={isAttendanceLoading}
+                                className="px-12 h-14 text-xl font-black shadow-2xl bg-primary hover:bg-primary/90"
+                            >
+                                {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                                পুরো দিনের হাজিরা ফাইনাল সেভ করুন
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -609,50 +625,52 @@ export default function StaffListPage() {
           <style jsx global>{`
               @media print {
                   @page { size: A4 portrait; margin: 3mm; }
-                  html, body { height: auto; overflow: visible; }
+                  html, body { height: auto; overflow: visible; background: white !important; }
                   .report-page { 
                       page-break-after: always; 
                       width: 204mm; 
                       min-height: 290mm; 
-                      padding: 4mm; 
+                      padding: 2mm; 
                       box-sizing: border-box;
                       display: flex;
                       flex-direction: column;
                       background: white !important;
+                      margin: 0 auto;
                   }
                   .report-header { 
                       border-bottom: 2px solid black; 
-                      padding-bottom: 6px; 
-                      margin-bottom: 8px; 
+                      padding-bottom: 4px; 
+                      margin-bottom: 6px; 
                       text-align: center;
                       display: flex;
                       flex-direction: column;
                       align-items: center;
+                      width: 100%;
                   }
                   .report-table { border: 1.5px solid black !important; width: 100%; border-collapse: collapse; }
                   .report-table th, .report-table td { 
                       border: 1px solid black !important; 
-                      padding: 2px 1px !important; 
+                      padding: 1.5px 1px !important; 
                       text-align: center; 
-                      font-size: 8px; 
+                      font-size: 7.5px; 
                       line-height: 1.0; 
                   }
                   .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; }
                   .holiday-text { color: #dc2626 !important; font-weight: bold; background-color: #fef2f2 !important; }
-                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 8.5px !important; border-top: 1.5px solid black !important; }
-                  .report-footer { margin-top: auto; padding-top: 15px; }
-                  .sign-box { border-top: 1.5px solid black; width: 45mm; text-align: center; font-size: 9px; font-weight: 900; padding-top: 2px; }
+                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 8px !important; border-top: 1.5px solid black !important; }
+                  .report-footer { margin-top: auto; padding-top: 10px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; }
+                  .sign-box { border-top: 1.5px solid black; width: 45mm; text-align: center; font-size: 8.5px; font-weight: 900; padding-top: 2px; }
               }
           `}</style>
           
           {reportPages.map((page, pageIdx) => (
               <div key={pageIdx} className="report-page">
                   <div className="report-header">
-                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={55} height={55} className="object-contain mb-1" />}
+                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={50} height={50} className="object-contain mb-1" />}
                       <h1 className="text-2xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
                       <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
-                      <div className="mt-1.5 inline-block border-[1.5px] border-black px-5 py-0.5 rounded-full bg-slate-50">
-                          <h2 className="text-sm font-black uppercase">হাজিরা ও ছুটির রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
+                      <div className="mt-1 inline-block border-[1.5px] border-black px-5 py-0.5 rounded-full bg-slate-50">
+                          <h2 className="text-xs font-black uppercase tracking-tight">হাজিরা ও ছুটির রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
                       </div>
                       <p className="text-[7px] font-bold mt-0.5 text-slate-400 italic">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
                   </div>
@@ -660,11 +678,11 @@ export default function StaffListPage() {
                   <table className="report-table">
                       <thead>
                           <tr className="bg-slate-100">
-                              <th className="w-[110px] font-black py-1">তারিখ ও বার</th>
+                              <th className="w-[100px] font-black py-1">তারিখ ও বার</th>
                               {page.teachers.map(teacher => (
                                   <th key={teacher.id} className="py-1">
-                                      <p className="font-black text-[9px] text-blue-900">{teacher.nameBn}</p>
-                                      <p className="text-[7px] italic font-bold text-slate-600">{teacher.designation}</p>
+                                      <p className="font-black text-[8.5px] text-blue-900">{teacher.nameBn}</p>
+                                      <p className="text-[6.5px] italic font-bold text-slate-600">{teacher.designation}</p>
                                   </th>
                               ))}
                           </tr>
@@ -676,11 +694,11 @@ export default function StaffListPage() {
                               const isHolidayDay = holidays.includes(dateStr);
                               const isOffDay = isWeekendDay || isHolidayDay;
                               
-                              const displayDate = format(day, "dd-MM-yyyy EEEE", { locale: bn });
+                              const displayDate = toBengaliNumber(format(day, "dd-MM-yyyy", { locale: bn })) + " " + format(day, "EEEE", { locale: bn });
 
                               return (
                                   <tr key={dateStr} className={cn(isOffDay && "holiday-text")}>
-                                      <td className="text-left pl-2 font-bold text-[8.5px]">{toBengaliNumber(displayDate)}</td>
+                                      <td className="text-left pl-2 font-bold text-[8px]">{displayDate}</td>
                                       {page.teachers.map(teacher => {
                                           const record = rangeRecords.find(r => r.date === dateStr);
                                           const att = record?.attendance.find(a => a.staffId === teacher.id);
@@ -745,13 +763,13 @@ export default function StaffListPage() {
                       </tbody>
                   </table>
                   
-                  <div className="report-footer flex justify-between px-6">
+                  <div className="report-footer">
                       <div className="sign-box">হিসাবরক্ষকের স্বাক্ষর</div>
                       <div className="sign-box">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
                   </div>
                   
-                  <div className="text-center text-[7px] text-slate-300 italic mt-3">
-                      রিপোর্ট তৈরির তারিখ: {format(new Date(), 'PPpp', { locale: bn })} | বীরগঞ্জ পৌর উচ্চ বিদ্যালয় পোর্টাল
+                  <div className="text-center text-[7px] text-slate-300 italic mt-2">
+                      রিপোর্ট তৈরির তারিখ: {toBengaliNumber(format(new Date(), 'dd-MM-yyyy p', { locale: bn }))} | বীরগঞ্জ পৌর উচ্চ বিদ্যালয় পোর্টাল
                   </div>
               </div>
           ))}
@@ -771,10 +789,10 @@ export default function StaffListPage() {
                     <div className="max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin">
                         <div className="space-y-4 py-4 text-sm font-bold text-slate-700">
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">নাম (ইংরেজি):</span> <span>{staffToView.nameEn || 'N/A'}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">জন্ম তারিখ:</span> <span>{staffToView.dob ? format(new Date(staffToView.dob), "d MMMM yyyy", { locale: bn }) : 'N/A'}</span></p>
+                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">জন্ম তারিখ:</span> <span>{staffToView.dob ? toBengaliNumber(format(new Date(staffToView.dob), "dd-MM-yyyy", { locale: bn })) : 'N/A'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">বিষয়:</span> <span>{staffToView.subject || 'N/A'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">মোবাইল:</span> <span>{toBengaliNumber(staffToView.mobile)}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">যোগদানের তারিখ:</span> <span>{staffToView.joinDate ? format(new Date(staffToView.joinDate), "d MMMM yyyy", { locale: bn }) : 'N/A'}</span></p>
+                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">যোগদানের তারিখ:</span> <span>{staffToView.joinDate ? toBengaliNumber(format(new Date(staffToView.joinDate), "dd-MM-yyyy", { locale: bn })) : 'N/A'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">শিক্ষাগত যোগ্যতা:</span> <span>{staffToView.education || 'N/A'}</span></p>
                             <p className="flex flex-col border-b pb-1.5"><span className="text-muted-foreground mb-1 font-medium">ঠিকানা:</span> <span>{staffToView.address || 'N/A'}</span></p>
                         </div>
