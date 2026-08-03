@@ -111,8 +111,9 @@ export default function StaffListPage() {
   const [staffSteps, setAttendanceSteps] = useState<Record<string, number>>({});
   const [editStates, setEditStates] = useState<Record<string, boolean>>({});
 
-  const [reportMonth, setReportMonth] = useState(new Date().getMonth().toString());
-  const [reportYear, setReportYear] = useState(new Date().getFullYear().toString());
+  // Date Range Report States
+  const [reportStartDate, setReportStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [reportEndDate, setReportEndDate] = useState<Date | undefined>(new Date());
   const [rangeRecords, setRangeRecords] = useState<StaffDailyAttendance[]>([]);
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [holidays, setHolidays] = useState<string[]>([]);
@@ -218,20 +219,24 @@ export default function StaffListPage() {
   };
 
   const fetchReport = useCallback(async () => {
-    if (!db) return;
+    if (!db || !reportStartDate || !reportEndDate) {
+        toast({ variant: 'destructive', title: 'তারিখ নির্বাচন করুন' });
+        return;
+    }
     setIsReportLoading(true);
     try {
-        const start = format(startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 'yyyy-MM-dd');
-        const end = format(endOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 'yyyy-MM-dd');
+        const start = format(reportStartDate, 'yyyy-MM-dd');
+        const end = format(reportEndDate, 'yyyy-MM-dd');
         const [records, holidayList] = await Promise.all([
             getStaffAttendanceForRange(db, start, end),
             getHolidays(db)
         ]);
         setRangeRecords(records);
         setHolidays(holidayList.map(h => h.date));
+        toast({ title: 'রিপোর্ট প্রস্তুত হয়েছে' });
     } catch (e) {}
     setIsReportLoading(false);
-  }, [db, reportMonth, reportYear]);
+  }, [db, reportStartDate, reportEndDate, toast]);
 
   const sortedTeachers = useMemo(() => {
       return allStaff
@@ -267,7 +272,7 @@ export default function StaffListPage() {
           items.push({ id: 'attendance', label: 'দৈনিক হাজিরা ও ছুটি', icon: ClipboardCheck, color: 'text-emerald-600 bg-emerald-50' });
       }
       if (canViewAttendanceReport) {
-          items.push({ id: 'report', label: 'ছুটির রিপোর্ট', icon: FileBarChart, color: 'text-blue-600 bg-blue-50' });
+          items.push({ id: 'report', label: 'হাজিরা ও ছুটির রিপোর্ট', icon: FileBarChart, color: 'text-blue-600 bg-blue-50' });
       }
       return items;
   }, [canManageAttendance, canViewAttendanceReport]);
@@ -290,7 +295,7 @@ export default function StaffListPage() {
                 <TableRow key={staff.id} className="hover:bg-muted/10 h-14">
                     <TableCell className="font-bold">{toBengaliNumber(startIdx + index + 1)}</TableCell>
                     <TableCell>
-                        <Image src={staff.photoUrl || 'https://picsum.photos/seed/staff/40/40'} alt={staff.nameBn} width={40} height={40} className="rounded-full object-cover border" />
+                        <Image src={staff.photoUrl || 'https://picsum.photos/seed/staff/40/40'} alt={staff.nameBn} width={40} height={40} className="rounded-full object-cover border shadow-sm" />
                     </TableCell>
                     <TableCell className={cn("whitespace-nowrap font-black text-base", colorClass)}>{staff.nameBn}</TableCell>
                     <TableCell className="whitespace-nowrap font-bold text-xs">{staff.designation}</TableCell>
@@ -323,6 +328,8 @@ export default function StaffListPage() {
   );
 
   const reportPages = useMemo(() => {
+      if (!reportStartDate || !reportEndDate) return [];
+      
       const activeTeachers = [...sortedTeachers, ...sortedEmployees].filter(s => s.isActive);
       const chunks = [];
       for (let i = 0; i < activeTeachers.length; i += 3) {
@@ -332,14 +339,137 @@ export default function StaffListPage() {
       const today = new Date();
       today.setHours(23, 59, 59, 999);
 
-      const monthStart = startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth)));
-      const monthEnd = endOfMonth(monthStart);
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      
-      const days = allDaysInMonth.filter(day => !isAfter(day, today));
+      const allDaysInRange = eachDayOfInterval({ start: reportStartDate, end: reportEndDate });
+      const days = allDaysInRange.filter(day => !isAfter(day, today));
       
       return chunks.map(chunk => ({ teachers: chunk, days }));
-  }, [sortedTeachers, sortedEmployees, reportMonth, reportYear]);
+  }, [sortedTeachers, sortedEmployees, reportStartDate, reportEndDate]);
+
+  const renderReportPage = (page: any, pageIdx: number) => {
+      const displayRange = reportStartDate && reportEndDate ? 
+          `${toBengaliNumber(format(reportStartDate, "dd-MM-yyyy", { locale: bn }))} হতে ${toBengaliNumber(format(reportEndDate, "dd-MM-yyyy", { locale: bn }))}` : "";
+
+      return (
+          <div key={pageIdx} className="report-page bg-white flex flex-col h-full border border-black/5 p-4 sm:p-2">
+              <div className="report-header text-center flex flex-col items-center border-b-2 border-black pb-2 mb-4">
+                  {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={55} height={55} className="object-contain mb-1" />}
+                  <h1 className="text-2xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
+                  <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
+                  <div className="mt-2 inline-block border-[1.5px] border-black px-6 py-0.5 rounded-full bg-slate-50">
+                      <h2 className="text-[11px] font-black uppercase tracking-tight">হাজিরা ও ছুটির রিপোর্ট: {displayRange}</h2>
+                  </div>
+                  <p className="text-[8px] font-bold mt-1 text-slate-400 italic">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
+              </div>
+
+              <table className="report-table w-full border-collapse border border-black">
+                  <thead>
+                      <tr className="bg-slate-100">
+                          <th className="w-[110px] font-black py-2 border border-black text-[9px]">তারিখ ও বার</th>
+                          {page.teachers.map((teacher: any) => (
+                              <th key={teacher.id} className="py-2 border border-black">
+                                  <p className="font-black text-[9px] text-blue-900">{teacher.nameBn}</p>
+                                  <p className="text-[7px] italic font-bold text-slate-600">{teacher.designation}</p>
+                              </th>
+                          ))}
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {page.days.map((day: any) => {
+                          const dateStr = format(day, 'yyyy-MM-dd');
+                          const isWeekendDay = day.getDay() === 5 || day.getDay() === 6;
+                          const isHolidayDay = holidays.includes(dateStr);
+                          const isOffDay = isWeekendDay || isHolidayDay;
+                          
+                          const displayDate = toBengaliNumber(format(day, "dd-MM-yyyy", { locale: bn })) + " " + format(day, "EEEE", { locale: bn });
+
+                          return (
+                              <tr key={dateStr} className={cn("h-8 border border-black", isOffDay && "bg-rose-50/50")}>
+                                  <td className="text-left pl-3 font-bold text-[8.5px] border border-black">{displayDate}</td>
+                                  {page.teachers.map((teacher: any) => {
+                                      const record = rangeRecords.find(r => r.date === dateStr);
+                                      const att = record?.attendance.find(a => a.staffId === teacher.id);
+                                      
+                                      let cellText = "";
+                                      if (att) {
+                                          if (att.status === 'present') {
+                                              cellText = att.checkIn ? `${att.checkIn}${att.checkOut ? ` - ${att.checkOut}` : ''}` : 'উপস্থিত';
+                                          } else {
+                                              cellText = att.leaveType || 'ছুটি';
+                                          }
+                                      } else if (isHolidayDay) {
+                                          cellText = "সরকারি ছুটি";
+                                      } else if (isWeekendDay) {
+                                          cellText = "সাপ্তাহিক ছুটি";
+                                      } else {
+                                          cellText = "অনুপস্থিত";
+                                      }
+
+                                      return (
+                                          <td key={teacher.id} className={cn(
+                                              "font-medium border border-black text-center text-[8.5px]",
+                                              cellText === "অনুপস্থিত" && "text-rose-600 font-black",
+                                              (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400 font-normal"
+                                          )}>
+                                              {toBengaliNumber(cellText)}
+                                          </td>
+                                      );
+                                  })}
+                              </tr>
+                          );
+                      })}
+                      
+                      {/* Summary Footer Rows */}
+                      <tr className="summary-row font-black bg-slate-50 border-t-2 border-black h-9">
+                          <td className="text-right pr-4 border border-black text-[9px]">মোট কর্মদিবস</td>
+                          {page.teachers.map((teacher: any) => {
+                              const totalWorkDays = page.days.filter((d: any) => {
+                                  const ds = format(d, 'yyyy-MM-dd');
+                                  return !((d.getDay() === 5 || d.getDay() === 6) || holidays.includes(ds));
+                              }).length;
+                              return <td key={teacher.id} className="text-blue-900 border border-black text-center text-[9px]">{toBengaliNumber(totalWorkDays)} দিন</td>;
+                          })}
+                      </tr>
+                      <tr className="summary-row font-black h-9">
+                          <td className="text-right pr-4 border border-black text-[9px]">উপস্থিত (মোট)</td>
+                          {page.teachers.map((teacher: any) => {
+                              const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
+                              return <td key={teacher.id} className="text-emerald-700 border border-black text-center text-[9px]">{toBengaliNumber(count)} দিন</td>;
+                          })}
+                      </tr>
+                      <tr className="summary-row font-black h-9">
+                          <td className="text-right pr-4 border border-black text-[9px]">অনুপস্থিত (মোট)</td>
+                          {page.teachers.map((teacher: any) => {
+                              const count = page.days.filter((d: any) => {
+                                  const ds = format(d, 'yyyy-MM-dd');
+                                  if (holidays.includes(ds) || (d.getDay() === 5 || d.getDay() === 6)) return false;
+                                  const r = rangeRecords.find(rec => rec.date === ds);
+                                  const a = r?.attendance.find(at => at.staffId === teacher.id);
+                                  return !a || (a.status !== 'present' && a.status !== 'leave');
+                              }).length;
+                              return <td key={teacher.id} className="text-rose-700 border border-black text-center text-[9px]">{toBengaliNumber(count)} দিন</td>;
+                          })}
+                      </tr>
+                      <tr className="summary-row font-black h-9">
+                          <td className="text-right pr-4 border border-black text-[9px]">ছুটি (মোট)</td>
+                          {page.teachers.map((teacher: any) => {
+                              const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'leave')).length;
+                              return <td key={teacher.id} className="text-blue-700 border border-black text-center text-[9px]">{toBengaliNumber(count)} দিন</td>;
+                          })}
+                      </tr>
+                  </tbody>
+              </table>
+              
+              <div className="report-footer flex justify-between items-end mt-auto pt-10 px-8 pb-4">
+                  <div className="sign-box w-44 border-t border-black text-center pt-1 font-black text-[9px]">হিসাবরক্ষকের স্বাক্ষর</div>
+                  <div className="sign-box w-44 border-t border-black text-center pt-1 font-black text-[9px]">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+              </div>
+              
+              <div className="text-center text-[7px] text-slate-300 italic pt-1 border-t border-dashed no-print">
+                  রিপোর্ট তৈরির তারিখ: {toBengaliNumber(format(new Date(), 'dd-MM-yyyy p', { locale: bn }))}
+              </div>
+          </div>
+      );
+  };
 
   if (!isClient) return null;
 
@@ -570,22 +700,19 @@ export default function StaffListPage() {
                 )}
 
                 {activeSection === 'report' && (
-                    <div className="space-y-6 animate-in fade-in duration-500 no-print">
+                    <div className="space-y-8 animate-in fade-in duration-500 no-print">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 border-2 border-blue-100 rounded-xl bg-white shadow-sm items-end">
                             <div className="space-y-2">
-                                <Label className="font-black text-primary">মাস</Label>
-                                <Select value={reportMonth} onValueChange={setReportMonth}>
-                                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                                    <SelectContent>{BENGALI_MONTHS.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}</SelectContent>
-                                </Select>
+                                <Label className="font-black text-primary">হতে (শুরুর তারিখ)</Label>
+                                <DatePicker value={reportStartDate} onChange={setReportStartDate} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-black text-primary">বছর</Label>
-                                <Input type="number" value={reportYear} onChange={e => setReportYear(e.target.value)} className="bg-white" />
+                                <Label className="font-black text-primary">পর্যন্ত (শেষের তারিখ)</Label>
+                                <DatePicker value={reportEndDate} onChange={setReportEndDate} />
                             </div>
-                            <Button className="font-black h-10 shadow-sm" onClick={fetchReport} disabled={isReportLoading}>
+                            <Button className="font-black h-10 shadow-sm" onClick={fetchReport} disabled={isReportLoading || !reportStartDate || !reportEndDate}>
                                 {isReportLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                                রিপোর্ট জেনারেট করুন
+                                রিপোর্ট তৈরি করুন
                             </Button>
                             <Button variant="outline" className="font-black h-10 border-primary text-primary" onClick={() => window.print()} disabled={rangeRecords.length === 0}>
                                 <Printer className="mr-2 h-4 w-4" /> রিপোর্ট প্রিন্ট
@@ -593,51 +720,21 @@ export default function StaffListPage() {
                         </div>
 
                         {rangeRecords.length > 0 && (
-                            <div className="space-y-4">
-                                <div className="p-8 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center">
-                                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-                                    <h3 className="text-xl font-black text-blue-900">রিপোর্ট প্রস্তুত হয়েছে!</h3>
-                                    <p className="font-bold text-blue-700">উপরে 'রিপোর্ট প্রিন্ট' বাটনে ক্লিক করে সব পাতা প্রিন্ট করুন।</p>
+                            <div className="space-y-8">
+                                <div className="p-4 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center no-print">
+                                    <Badge className="bg-emerald-600 px-6 py-1 text-sm font-black shadow-lg mb-2">রিপোর্ট প্রস্তুত হয়েছে!</Badge>
+                                    <p className="font-bold text-blue-700">নিচে প্রফেশনাল প্রিভিউ দেখা যাচ্ছে। আপনি চাইলে সরাসরি প্রিন্ট করতে পারেন।</p>
                                 </div>
-                                <div className="bg-white border rounded-xl overflow-hidden shadow-md">
-                                    <Table>
-                                        <TableHeader className="bg-muted/50">
-                                            <TableRow>
-                                                <TableHead className="font-black">নাম ও পদবি</TableHead>
-                                                <TableHead className="text-center font-black">মোট উপস্থিতি</TableHead>
-                                                <TableHead className="text-center font-black">অনুপস্থিতি</TableHead>
-                                                <TableHead className="text-center font-black">ছুটি</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {[...sortedTeachers, ...sortedEmployees].filter(s => s.isActive).map(s => {
-                                                const presentCount = rangeRecords.filter(r => r.attendance.some(a => a.staffId === s.id && a.status === 'present')).length;
-                                                const leaveCount = rangeRecords.filter(r => r.attendance.some(a => a.staffId === s.id && a.status === 'leave')).length;
-                                                const daysInMonth = eachDayOfInterval({ 
-                                                    start: startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 
-                                                    end: endOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))) 
-                                                }).length;
-                                                const offDays = eachDayOfInterval({ 
-                                                    start: startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 
-                                                    end: endOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))) 
-                                                }).filter(d => (d.getDay() === 5 || d.getDay() === 6) || holidays.includes(format(d, 'yyyy-MM-dd'))).length;
-                                                const workDays = daysInMonth - offDays;
-                                                const absentCount = workDays - presentCount - leaveCount;
-
-                                                return (
-                                                    <TableRow key={s.id}>
-                                                        <TableCell>
-                                                            <p className="font-bold text-xs">{s.nameBn}</p>
-                                                            <p className="text-[9px] text-muted-foreground">{s.designation}</p>
-                                                        </TableCell>
-                                                        <TableCell className="text-center text-xs font-black text-emerald-600">{toBengaliNumber(presentCount)} দিন</TableCell>
-                                                        <TableCell className="text-center text-xs font-black text-rose-600">{toBengaliNumber(Math.max(0, absentCount))} দিন</TableCell>
-                                                        <TableCell className="text-center text-xs font-black text-blue-600">{toBengaliNumber(leaveCount)} দিন</TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                                
+                                {/* HIGH-FIDELITY PREVIEW SECTION */}
+                                <div className="flex flex-col gap-12 items-center bg-slate-100 p-4 sm:p-10 rounded-3xl border-2 border-slate-200 shadow-inner overflow-x-auto">
+                                    {reportPages.map((page, pageIdx) => (
+                                        <div key={pageIdx} className="bg-white shadow-2xl shrink-0 overflow-hidden transform scale-95 sm:scale-100 origin-top">
+                                            <div style={{ width: '210mm', minHeight: '297mm', padding: '10mm' }} className="box-border">
+                                                {renderReportPage(page, pageIdx)}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -674,7 +771,7 @@ export default function StaffListPage() {
                       align-items: center;
                       width: 100%;
                   }
-                  .report-table { border: 1.5px solid black !important; width: 100%; border-collapse: collapse; }
+                  .report-table { border: 1.2px solid black !important; width: 100%; border-collapse: collapse; }
                   .report-table th, .report-table td { 
                       border: 1px solid black !important; 
                       padding: 4.5px 1px !important; 
@@ -683,7 +780,6 @@ export default function StaffListPage() {
                       line-height: 1.2; 
                   }
                   .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; }
-                  .holiday-text { color: #dc2626 !important; font-weight: bold; background-color: #fef2f2 !important; }
                   .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 9px !important; border-top: 1.5px solid black !important; }
                   .report-footer { margin-top: auto; padding-top: 15px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 10px; }
                   .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 9px; font-weight: 900; padding-top: 3px; }
@@ -692,122 +788,7 @@ export default function StaffListPage() {
           
           {reportPages.map((page, pageIdx) => (
               <div key={pageIdx} className="report-page">
-                  <div className="report-header">
-                      {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={55} height={55} className="object-contain mb-1" />}
-                      <h1 className="text-2xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
-                      <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
-                      <div className="mt-2 inline-block border-[1.5px] border-black px-6 py-0.5 rounded-full bg-slate-50">
-                          <h2 className="text-sm font-black uppercase tracking-tight">হাজিরা ও ছুটির রিপোর্ট: {BENGALI_MONTHS[parseInt(reportMonth)]} {toBengaliNumber(reportYear)}</h2>
-                      </div>
-                      <p className="text-[8px] font-bold mt-1 text-slate-400 italic">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
-                  </div>
-
-                  <table className="report-table">
-                      <thead>
-                          <tr className="bg-slate-100">
-                              <th className="w-[110px] font-black py-2">তারিখ ও বার</th>
-                              {page.teachers.map(teacher => (
-                                  <th key={teacher.id} className="py-2">
-                                      <p className="font-black text-[9px] text-blue-900">{teacher.nameBn}</p>
-                                      <p className="text-[7px] italic font-bold text-slate-600">{teacher.designation}</p>
-                                  </th>
-                              ))}
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {page.days.map(day => {
-                              const dateStr = format(day, 'yyyy-MM-dd');
-                              const isWeekendDay = day.getDay() === 5 || day.getDay() === 6;
-                              const isHolidayDay = holidays.includes(dateStr);
-                              const isOffDay = isWeekendDay || isHolidayDay;
-                              
-                              const displayDate = toBengaliNumber(format(day, "dd-MM-yyyy", { locale: bn })) + " " + format(day, "EEEE", { locale: bn });
-
-                              return (
-                                  <tr key={dateStr} className={cn(isOffDay && "holiday-text")}>
-                                      <td className="text-left pl-3 font-bold text-[8.5px]">{displayDate}</td>
-                                      {page.teachers.map(teacher => {
-                                          const record = rangeRecords.find(r => r.date === dateStr);
-                                          const att = record?.attendance.find(a => a.staffId === teacher.id);
-                                          
-                                          let cellText = "";
-                                          if (att) {
-                                              if (att.status === 'present') {
-                                                  cellText = att.checkIn ? `${att.checkIn}${att.checkOut ? ` - ${att.checkOut}` : ''}` : 'উপস্থিত';
-                                              } else {
-                                                  cellText = att.leaveType || 'ছুটি';
-                                              }
-                                          } else if (isHolidayDay) {
-                                              cellText = "সরকারি ছুটি";
-                                          } else if (isWeekendDay) {
-                                              cellText = "সাপ্তাহিক ছুটি";
-                                          } else {
-                                              cellText = "অনুপস্থিত";
-                                          }
-
-                                          return (
-                                              <td key={teacher.id} className={cn(
-                                                  "font-medium",
-                                                  cellText === "অনুপস্থিত" && "text-rose-600 font-bold",
-                                                  (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400 font-normal"
-                                              )}>
-                                                  {toBengaliNumber(cellText)}
-                                              </td>
-                                          );
-                                      })}
-                                  </tr>
-                              );
-                          })}
-                          
-                          {/* Summary Footer Rows */}
-                          <tr className="summary-row">
-                              <td className="text-right pr-4 font-black">মোট কর্মদিবস</td>
-                              {page.teachers.map(teacher => {
-                                  const totalWorkDays = page.days.filter(d => {
-                                      const ds = format(d, 'yyyy-MM-dd');
-                                      return !((d.getDay() === 5 || d.getDay() === 6) || holidays.includes(ds));
-                                  }).length;
-                                  return <td key={teacher.id} className="text-blue-900 font-black">{toBengaliNumber(totalWorkDays)} দিন</td>;
-                              })}
-                          </tr>
-                          <tr className="summary-row">
-                              <td className="text-right pr-4 font-black">উপস্থিত (মোট)</td>
-                              {page.teachers.map(teacher => {
-                                  const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
-                                  return <td key={teacher.id} className="text-emerald-700 font-black">{toBengaliNumber(count)} দিন</td>;
-                              })}
-                          </tr>
-                          <tr className="summary-row">
-                              <td className="text-right pr-4 font-black">অনুপস্থিত (মোট)</td>
-                              {page.teachers.map(teacher => {
-                                  const count = page.days.filter(d => {
-                                      const ds = format(d, 'yyyy-MM-dd');
-                                      if (holidays.includes(ds) || (d.getDay() === 5 || d.getDay() === 6)) return false;
-                                      const r = rangeRecords.find(rec => rec.date === ds);
-                                      const a = r?.attendance.find(at => at.staffId === teacher.id);
-                                      return !a || (a.status !== 'present' && a.status !== 'leave');
-                                  }).length;
-                                  return <td key={teacher.id} className="text-rose-700 font-black">{toBengaliNumber(count)} দিন</td>;
-                              })}
-                          </tr>
-                          <tr className="summary-row">
-                              <td className="text-right pr-4 font-black">ছুটি (মোট)</td>
-                              {page.teachers.map(teacher => {
-                                  const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'leave')).length;
-                                  return <td key={teacher.id} className="text-blue-700 font-black">{toBengaliNumber(count)} দিন</td>;
-                              })}
-                          </tr>
-                      </tbody>
-                  </table>
-                  
-                  <div className="report-footer">
-                      <div className="sign-box">হিসাবরক্ষকের স্বাক্ষর</div>
-                      <div className="sign-box">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
-                  </div>
-                  
-                  <div className="text-center text-[8px] text-slate-300 italic mt-auto pt-2 border-t border-dashed">
-                      রিপোর্ট তৈরির তারিখ: {toBengaliNumber(format(new Date(), 'dd-MM-yyyy p', { locale: bn }))} | বীরগঞ্জ পৌর উচ্চ বিদ্যালয় পোর্টাল
-                  </div>
+                  {renderReportPage(page, pageIdx)}
               </div>
           ))}
       </div>
