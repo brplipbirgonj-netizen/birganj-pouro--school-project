@@ -37,7 +37,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, orderBy, FirestoreError, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isAfter } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isAfter } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -461,7 +461,14 @@ export default function StaffListPage() {
                                                                     <div className="space-y-2 text-left">
                                                                         <Label className="text-[10px] font-black text-primary block">আগমনের সময় (উদা: ১০:৩০ AM)</Label>
                                                                         <div className="flex gap-1">
-                                                                            <Input type="text" placeholder="১০:৩০" className="h-8 text-xs font-bold text-center" value={att?.checkIn?.replace(/\s?(AM|PM)/i, '') || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkIn', `${e.target.value} ${att?.checkIn?.slice(-2) || 'AM'}`)} />
+                                                                            <Input 
+                                                                                type="text" 
+                                                                                placeholder="১০:৩০" 
+                                                                                className="h-8 text-xs font-bold text-center" 
+                                                                                value={att?.checkIn?.replace(/\s?(AM|PM)/i, '') || ''} 
+                                                                                onChange={e => handleAttendanceDetailChange(staff.id, 'checkIn', `${e.target.value} ${att?.checkIn?.slice(-2) || 'AM'}`)} 
+                                                                                onKeyDown={e => e.key === 'Enter' && handleLocalEntrySave(staff.id)}
+                                                                            />
                                                                             <Select value={att?.checkIn?.slice(-2) === 'PM' ? 'PM' : 'AM'} onValueChange={v => {
                                                                                 const current = att?.checkIn?.replace(/\s?(AM|PM)/i, '') || '';
                                                                                 handleAttendanceDetailChange(staff.id, 'checkIn', `${current} ${v}`);
@@ -489,7 +496,14 @@ export default function StaffListPage() {
                                                                     <div className="space-y-2 text-left">
                                                                          <Label className="text-[10px] font-black text-emerald-700 block">প্রস্থানের সময় (উদা: ০৪:০০ PM)</Label>
                                                                          <div className="flex gap-1">
-                                                                            <Input type="text" placeholder="০৪:০০" className="h-8 text-xs font-bold text-center" value={att?.checkOut?.replace(/\s?(AM|PM)/i, '') || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkOut', `${e.target.value} ${att?.checkOut?.slice(-2) || 'PM'}`)} />
+                                                                            <Input 
+                                                                                type="text" 
+                                                                                placeholder="০৪:০০" 
+                                                                                className="h-8 text-xs font-bold text-center" 
+                                                                                value={att?.checkOut?.replace(/\s?(AM|PM)/i, '') || ''} 
+                                                                                onChange={e => handleAttendanceDetailChange(staff.id, 'checkOut', `${e.target.value} ${att?.checkOut?.slice(-2) || 'PM'}`)} 
+                                                                                onKeyDown={e => e.key === 'Enter' && handleLocalEntrySave(staff.id)}
+                                                                            />
                                                                             <Select value={att?.checkOut?.slice(-2) === 'AM' ? 'AM' : 'PM'} onValueChange={v => {
                                                                                 const current = att?.checkOut?.replace(/\s?(AM|PM)/i, '') || '';
                                                                                 handleAttendanceDetailChange(staff.id, 'checkOut', `${current} ${v}`);
@@ -606,7 +620,7 @@ export default function StaffListPage() {
                                                 const offDays = eachDayOfInterval({ 
                                                     start: startOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))), 
                                                     end: endOfMonth(new Date(parseInt(reportYear), parseInt(reportMonth))) 
-                                                }).filter(d => isWeekend(d) || holidays.includes(format(d, 'yyyy-MM-dd'))).length;
+                                                }).filter(d => (d.getDay() === 5 || d.getDay() === 6) || holidays.includes(format(d, 'yyyy-MM-dd'))).length;
                                                 const workDays = daysInMonth - offDays;
                                                 const absentCount = workDays - presentCount - leaveCount;
 
@@ -703,7 +717,7 @@ export default function StaffListPage() {
                       <tbody>
                           {page.days.map(day => {
                               const dateStr = format(day, 'yyyy-MM-dd');
-                              const isWeekendDay = isWeekend(day);
+                              const isWeekendDay = day.getDay() === 5 || day.getDay() === 6;
                               const isHolidayDay = holidays.includes(dateStr);
                               const isOffDay = isWeekendDay || isHolidayDay;
                               
@@ -758,7 +772,7 @@ export default function StaffListPage() {
                               {page.teachers.map(teacher => {
                                   const count = page.days.filter(d => {
                                       const ds = format(d, 'yyyy-MM-dd');
-                                      if (holidays.includes(ds) || isWeekend(d)) return false;
+                                      if (holidays.includes(ds) || (d.getDay() === 5 || d.getDay() === 6)) return false;
                                       const r = rangeRecords.find(rec => rec.date === ds);
                                       const a = r?.attendance.find(at => at.staffId === teacher.id);
                                       return !a || (a.status !== 'present' && a.status !== 'leave');
