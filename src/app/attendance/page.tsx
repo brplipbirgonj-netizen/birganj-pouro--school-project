@@ -713,7 +713,7 @@ const MissedAttendanceTab = () => {
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
-    }, [fetchMissedAttendance, iSClient]);
+    }, [fetchMissedAttendance, isClient]);
 
     if (!isClient) return null;
 
