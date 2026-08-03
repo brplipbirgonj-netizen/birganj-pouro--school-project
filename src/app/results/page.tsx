@@ -602,11 +602,11 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <Badge variant="secondary" className="font-black px-3 text-xs">মোট: {results.length.toLocaleString('bn-BD')} জন</Badge>
                         </div>
                         <div className="table-container !border-2 !border-slate-400 relative rounded-b-lg !overflow-auto">
-                            <table className="min-w-max border-collapse border-spacing-0 w-full">
+                            <table className="min-w-max border-separate border-spacing-0 w-full">
                                 <thead className="z-30">
-                                    <tr className="border-b-2 border-slate-400">
-                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-slate-400 sticky left-0 top-0 z-40 w-[60px] text-[10px] p-1">রোল</th>
-                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-slate-400 sticky left-[60px] top-0 z-40 min-w-[180px] text-[10px] p-1">শিক্ষার্থীর নাম</th>
+                                    <tr>
+                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-0 top-0 z-40 w-[60px] text-[10px] p-1">রোল</th>
+                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-slate-400 sticky left-[60px] top-0 z-40 min-w-[180px] text-[10px] p-1">শিক্ষার্থীর নাম</th>
                                         {subs.map((s, idx) => (
                                             <th 
                                                 key={s.name} 
@@ -619,13 +619,13 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 {s.name}
                                             </th>
                                         ))}
-                                        <th rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[240px] z-30 w-[60px]">মোট</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[180px] z-30 w-[60px]">GPA</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-30 w-[60px]">গ্রেড</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[60px] z-30 w-[60px]">মেধা</th>
-                                        <th rowSpan={2} className="text-center font-black border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-0 z-30 w-[60px]">প্রিন্ট</th>
+                                        <th rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[240px] z-40 w-[60px]">মোট</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[180px] z-40 w-[60px]">GPA</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[120px] z-40 w-[60px]">গ্রেড</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-[60px] z-40 w-[60px]">মেধা</th>
+                                        <th rowSpan={2} className="text-center font-black border-b-2 border-slate-400 text-[9px] bg-[#fff1f2] p-1 sticky top-0 right-0 z-40 w-[60px]">প্রিন্ট</th>
                                     </tr>
-                                    <tr className="border-b-2 border-slate-400">
+                                    <tr>
                                         {subs.map((s, idx) => {
                                             const isEng = s.name.includes('ইংরেজি');
                                             const bgColor = subBgColors[idx % subBgColors.length];
@@ -633,14 +633,14 @@ const ResultSheetTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <React.Fragment key={s.name}>
                                                     {!isEng && (
                                                         <>
-                                                            <th className={cn("text-[8px] text-center border-r border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>লিখিত</th>
-                                                            <th className={cn("text-[8px] text-center border-r border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>MCQ</th>
-                                                            {s.practical && <th className={cn("text-[8px] text-center border-r border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>ব্যবহারিক</th>}
+                                                            <th className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>লিখিত</th>
+                                                            <th className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>MCQ</th>
+                                                            {s.practical && <th className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>ব্যবহারিক</th>}
                                                         </>
                                                     )}
-                                                    <th className={cn("text-[8px] text-center border-r border-slate-400 font-black bg-blue-200 text-blue-950 p-0.5 sticky top-7 z-20 w-12", bgColor)}>প্রাপ্ত</th>
-                                                    <th className={cn("text-[8px] text-center border-r border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-8", bgColor)}>গ্রেড</th>
-                                                    <th className={cn("text-[8px] text-center border-r-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>পয়েন্ট</th>
+                                                    <th className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-black bg-blue-200 text-blue-950 p-0.5 sticky top-7 z-20 w-12", bgColor)}>প্রাপ্ত</th>
+                                                    <th className={cn("text-[8px] text-center border-r border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-8", bgColor)}>গ্রেড</th>
+                                                    <th className={cn("text-[8px] text-center border-r-2 border-b-2 border-slate-400 font-bold p-0.5 sticky top-7 z-20 w-10", bgColor)}>পয়েন্ট</th>
                                                 </React.Fragment>
                                             )
                                         })}
