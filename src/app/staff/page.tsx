@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -335,7 +336,6 @@ export default function StaffListPage() {
       const monthEnd = endOfMonth(monthStart);
       const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
       
-      // Filter out future dates so they don't appear in the report
       const days = allDaysInMonth.filter(day => !isAfter(day, today));
       
       return chunks.map(chunk => ({ teachers: chunk, days }));
@@ -434,7 +434,7 @@ export default function StaffListPage() {
                                         const currentStep = isEditing ? 0 : step;
 
                                         return (
-                                            <TableRow key={staff.id} className="h-24">
+                                            <TableRow key={staff.id} className="h-28">
                                                 <TableCell>
                                                     <div className="font-black text-sm text-slate-800">{staff.nameBn}</div>
                                                     <div className="text-[10px] font-bold text-muted-foreground italic">{staff.designation}</div>
@@ -449,17 +449,17 @@ export default function StaffListPage() {
                                                         )}
                                                         {currentStep === 1 && (
                                                             <div className="flex flex-col items-center gap-2">
-                                                                <Badge className={cn("px-4 py-1 font-black", att?.status === 'present' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>
+                                                                <Badge className={cn("px-4 py-1 font-black shadow-sm", att?.status === 'present' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>
                                                                     {att?.status === 'present' ? 'উপস্থিতি সিলেক্টেড' : 'ছুটি সিলেক্টেড'}
                                                                 </Badge>
-                                                                <Button size="sm" variant="outline" className="h-9 px-8 font-black border-2 border-primary text-primary" onClick={() => handleSaveStatus(staff.id)}>সেভ করুন (Save Status)</Button>
+                                                                <Button size="sm" variant="outline" className="h-9 px-8 font-black border-2 border-primary text-primary" onClick={() => handleSaveStatus(staff.id)}>সেভ করুন</Button>
                                                             </div>
                                                         )}
                                                         {currentStep === 2 && (
                                                             <div className="flex flex-col gap-3 w-full max-w-[250px] bg-slate-50 p-3 rounded-lg border-2 border-dashed border-primary/20">
                                                                 {att?.status === 'present' ? (
-                                                                    <div className="space-y-2">
-                                                                        <Label className="text-[10px] font-black text-primary text-left block">আগমনের সময় (উদা: ১০:৩০ AM)</Label>
+                                                                    <div className="space-y-2 text-left">
+                                                                        <Label className="text-[10px] font-black text-primary block">আগমনের সময় (উদা: ১০:৩০ AM)</Label>
                                                                         <div className="flex gap-1">
                                                                             <Input type="text" placeholder="১০:৩০" className="h-8 text-xs font-bold text-center" value={att?.checkIn?.replace(/\s?(AM|PM)/i, '') || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkIn', `${e.target.value} ${att?.checkIn?.slice(-2) || 'AM'}`)} />
                                                                             <Select value={att?.checkIn?.slice(-2) === 'PM' ? 'PM' : 'AM'} onValueChange={v => {
@@ -472,29 +472,36 @@ export default function StaffListPage() {
                                                                         </div>
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="space-y-2">
-                                                                        <Label className="text-[10px] font-black text-rose-700 text-left block">ছুটির ধরন</Label>
+                                                                    <div className="space-y-2 text-left">
+                                                                        <Label className="text-[10px] font-black text-rose-700 block">ছুটির ধরন</Label>
                                                                         <Select value={att?.leaveType || ""} onValueChange={val => handleAttendanceDetailChange(staff.id, 'leaveType', val as LeaveType)}>
                                                                             <SelectTrigger className="h-8 text-[10px] font-bold"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
                                                                             <SelectContent>{LEAVE_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
                                                                         </Select>
                                                                     </div>
                                                                 )}
-                                                                <Button size="sm" className="w-full h-8 font-black shadow-md bg-primary text-white" onClick={() => handleLocalEntrySave(staff.id)}>সেভ করুন</Button>
+                                                                <Button size="sm" className="w-full h-8 font-black shadow-md bg-primary text-white" onClick={() => handleLocalEntrySave(staff.id)}>নিশ্চিত করুন</Button>
                                                             </div>
                                                         )}
                                                         {currentStep === 3 && (
-                                                            <div className="flex flex-col gap-2 w-full max-w-[200px]">
+                                                            <div className="flex flex-col gap-2 w-full max-w-[250px] bg-slate-50 p-3 rounded-lg border-2 border-dashed border-primary/20">
                                                                 {att?.status === 'present' && (
-                                                                    <div className="space-y-1">
-                                                                         <Label className="text-[10px] font-black text-slate-500 text-left block">প্রস্থানের সময় (উদা: ০৪:০০ PM)</Label>
+                                                                    <div className="space-y-2 text-left">
+                                                                         <Label className="text-[10px] font-black text-emerald-700 block">প্রস্থানের সময় (উদা: ০৪:০০ PM)</Label>
                                                                          <div className="flex gap-1">
-                                                                            <Input type="text" placeholder="০৪:০০ PM" className="h-8 text-[10px] font-bold" value={att?.checkOut || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkOut', e.target.value)} />
-                                                                            <Button size="sm" className="h-8 w-8 p-0 bg-emerald-600" onClick={() => handleLocalEntrySave(staff.id)}><Save className="h-3.5 w-3.5 text-white" /></Button>
+                                                                            <Input type="text" placeholder="০৪:০০" className="h-8 text-xs font-bold text-center" value={att?.checkOut?.replace(/\s?(AM|PM)/i, '') || ''} onChange={e => handleAttendanceDetailChange(staff.id, 'checkOut', `${e.target.value} ${att?.checkOut?.slice(-2) || 'PM'}`)} />
+                                                                            <Select value={att?.checkOut?.slice(-2) === 'AM' ? 'AM' : 'PM'} onValueChange={v => {
+                                                                                const current = att?.checkOut?.replace(/\s?(AM|PM)/i, '') || '';
+                                                                                handleAttendanceDetailChange(staff.id, 'checkOut', `${current} ${v}`);
+                                                                            }}>
+                                                                                <SelectTrigger className="h-8 w-16 text-[10px] font-black"><SelectValue /></SelectTrigger>
+                                                                                <SelectContent><SelectItem value="AM">AM</SelectItem><SelectItem value="PM">PM</SelectItem></SelectContent>
+                                                                            </Select>
+                                                                            <Button size="sm" className="h-8 w-8 p-0 bg-emerald-600 shrink-0" onClick={() => handleLocalEntrySave(staff.id)} title="প্রস্থান সেভ"><Save className="h-3.5 w-3.5 text-white" /></Button>
                                                                          </div>
                                                                     </div>
                                                                 )}
-                                                                <div className="flex justify-center gap-2 mt-1">
+                                                                <div className="flex justify-center gap-2 mt-1 border-t pt-2 border-slate-200">
                                                                     <Button variant="outline" size="sm" className="h-7 text-[9px] font-bold text-blue-600 border-blue-200" onClick={() => { setAttendanceSteps(prev => ({ ...prev, [staff.id]: 0 })); setEditStates(prev => ({ ...prev, [staff.id]: true })); }}><Edit2 className="h-3 w-3 mr-1" /> এডিট</Button>
                                                                     <AlertDialog>
                                                                         <AlertDialogTrigger asChild>
@@ -519,8 +526,8 @@ export default function StaffListPage() {
                                                             <Badge className={cn("font-black text-[10px] px-3", att.status === 'present' ? "bg-emerald-600" : "bg-rose-600")}>
                                                                 {att.status === 'present' ? 'উপস্থিত' : 'ছুটি'}
                                                             </Badge>
-                                                            {att.checkIn && <span className="text-[9px] font-bold text-muted-foreground italic">প্রবেশ: {att.checkIn}</span>}
-                                                            {att.checkOut && <span className="text-[9px] font-bold text-muted-foreground italic">প্রস্থান: {att.checkOut}</span>}
+                                                            {att.checkIn && <span className="text-[9px] font-bold text-slate-700 italic">প্রবেশ: {att.checkIn}</span>}
+                                                            {att.checkOut && <span className="text-[9px] font-bold text-emerald-700 italic">প্রস্থান: {att.checkOut}</span>}
                                                             {att.leaveType && <span className="text-[9px] font-black text-rose-700">ধরন: {LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>}
                                                         </div>
                                                     ) : (
@@ -576,7 +583,7 @@ export default function StaffListPage() {
                                 <div className="p-8 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center">
                                     <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
                                     <h3 className="text-xl font-black text-blue-900">রিপোর্ট প্রস্তুত হয়েছে!</h3>
-                                    <p className="font-bold text-blue-700">উপরে 'প্রিন্ট' বাটনে ক্লিক করে সব পাতা প্রিন্ট করুন।</p>
+                                    <p className="font-bold text-blue-700">উপরে 'রিপোর্ট প্রিন্ট' বাটনে ক্লিক করে সব পাতা প্রিন্ট করুন।</p>
                                 </div>
                                 <div className="bg-white border rounded-xl overflow-hidden shadow-md">
                                     <Table>
@@ -646,7 +653,7 @@ export default function StaffListPage() {
                   .report-header { 
                       border-bottom: 2px solid black; 
                       padding-bottom: 4px; 
-                      margin-bottom: 6px; 
+                      margin-bottom: 8px; 
                       text-align: center;
                       display: flex;
                       flex-direction: column;
@@ -664,7 +671,7 @@ export default function StaffListPage() {
                   .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; }
                   .holiday-text { color: #dc2626 !important; font-weight: bold; background-color: #fef2f2 !important; }
                   .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 9px !important; border-top: 1.5px solid black !important; }
-                  .report-footer { margin-top: auto; padding-top: 15px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 20px; }
+                  .report-footer { margin-top: auto; padding-top: 15px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 10px; }
                   .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 9px; font-weight: 900; padding-top: 3px; }
               }
           `}</style>
