@@ -11,7 +11,7 @@ import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
 import { 
     Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, 
     Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, 
-    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users, LogIn, LogOut 
+    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users, LogIn, LogOut, AlertTriangle 
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -42,14 +42,13 @@ import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StaffDailyAttendance, StaffMemberAttendance, getStaffAttendanceByDate, saveStaffAttendance, getStaffAttendanceForRange, LeaveType } from '@/lib/staff-attendance-data';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { getHolidays } from '@/lib/holiday-data';
+import { getHolidays, isHoliday, Holiday } from '@/lib/holiday-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
@@ -103,6 +102,7 @@ export default function StaffListPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
+  const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
   
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [currentAction, setCurrentAction] = useState<'arrival' | 'departure' | 'leave'>('arrival');
@@ -141,6 +141,11 @@ export default function StaffListPage() {
     if (!db || !selectedDate) return;
     setIsAttendanceLoading(true);
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    
+    // Check if it's a holiday
+    const holidayToday = await isHoliday(db, dateStr);
+    setActiveHoliday(holidayToday);
+
     const record = await getStaffAttendanceByDate(db, dateStr);
     setDailyAttendance(record || { date: dateStr, attendance: [] });
     setSelectedStaffId('');
@@ -154,7 +159,11 @@ export default function StaffListPage() {
     }
   }, [fetchAttendance, canManageAttendance, activeSection]);
 
+  const isWeekend = selectedDate ? (selectedDate.getDay() === 5 || selectedDate.getDay() === 6) : false;
+  const isOffDay = isWeekend || !!activeHoliday;
+
   const handleStaffSelect = (id: string) => {
+      if (isOffDay) return;
       setSelectedStaffId(id);
       const existing = dailyAttendance?.attendance.find(a => a.staffId === id);
       if (existing) {
@@ -185,7 +194,7 @@ export default function StaffListPage() {
   };
 
   const handleSaveIndividualAttendance = async () => {
-      if (!db || !dailyAttendance || !tempEntry || !selectedStaffId) return;
+      if (!db || !dailyAttendance || !tempEntry || !selectedStaffId || isOffDay) return;
       
       setIsAttendanceLoading(true);
       try {
@@ -202,7 +211,6 @@ export default function StaffListPage() {
               } else if (currentAction === 'departure') {
                   updatedEntry = { ...prev, ...tempEntry, exitTime: prev.exitTime || nowTime };
               } else {
-                  // marked as leave
                   updatedEntry = { ...tempEntry, entryTime: prev.entryTime || nowTime };
               }
               nextAtt[idx] = updatedEntry;
@@ -545,7 +553,10 @@ export default function StaffListPage() {
 
                 {activeSection === 'attendance' && (
                     <div className="space-y-8 animate-in fade-in duration-500 no-print">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm items-end">
+                        <div className={cn(
+                            "grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 rounded-xl bg-white shadow-sm items-end transition-all duration-300",
+                            selectedDate ? "border-primary ring-2 ring-primary/5" : "border-orange-100"
+                        )}>
                             <div className="space-y-2">
                                 <Label className="font-black text-primary flex items-center gap-2"><Calendar className="h-4 w-4" /> তারিখ নির্বাচন</Label>
                                 <DatePicker value={selectedDate} onChange={setSelectedDate} />
@@ -555,9 +566,13 @@ export default function StaffListPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন করুন</Label>
-                                <Select value={selectedStaffId} onValueChange={handleStaffSelect}>
+                                <Select 
+                                    value={selectedStaffId} 
+                                    onValueChange={handleStaffSelect}
+                                    disabled={isOffDay}
+                                >
                                     <SelectTrigger className="h-10 bg-slate-50 border-2 border-primary/10 font-bold">
-                                        <SelectValue placeholder="নাম সিলেক্ট করুন" />
+                                        <SelectValue placeholder={isOffDay ? "ছুটির দিনে হাজিরা বন্ধ" : "নাম সিলেক্ট করুন"} />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-[300px]">
                                         {activeStaffList.map(s => (
@@ -568,7 +583,17 @@ export default function StaffListPage() {
                             </div>
                         </div>
 
-                        {selectedStaffId && tempEntry && currentSelectedStaff && (
+                        {isOffDay && (
+                            <div className="p-10 border-4 border-dashed border-rose-300 bg-rose-50 rounded-[32px] flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-500">
+                                <AlertTriangle className="h-16 w-16 text-rose-500 mb-4 animate-pulse" />
+                                <h3 className="text-2xl font-black text-rose-900 mb-2">আজ ছুটির দিন!</h3>
+                                <p className="text-rose-700 font-bold max-w-md">
+                                    {activeHoliday ? `${activeHoliday.description} উপলক্ষে আজ বিদ্যালয় বন্ধ।` : 'আজ সাপ্তাহিক ছুটি।'} ছুটির দিনে কোনো ধরনের হাজিরা গ্রহণ করা সম্ভব নয়।
+                                </p>
+                            </div>
+                        )}
+
+                        {!isOffDay && selectedStaffId && tempEntry && currentSelectedStaff && (
                             <Card className="border-4 border-primary rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                                 <CardHeader className="bg-primary/5 border-b-2 border-primary/10">
                                     <div className="flex items-center gap-4">
@@ -604,8 +629,9 @@ export default function StaffListPage() {
                                                 </Button>
                                                 <Button 
                                                     size="lg" 
-                                                    className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
-                                                    onClick={() => handleActionChange('departure')}
+                                                    disabled={true}
+                                                    title="আগমণ সেভ করা ছাড়া প্রস্থান দেওয়া যাবে না"
+                                                    className="flex-1 h-14 text-lg font-black bg-white text-slate-300 border-2 border-slate-200 cursor-not-allowed opacity-50"
                                                 >
                                                     <LogOut className="h-5 w-5" /> প্রস্থান
                                                 </Button>
