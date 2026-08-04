@@ -1,4 +1,3 @@
-
 'use client';
 import {
   collection,
@@ -23,6 +22,8 @@ export interface StaffMemberAttendance {
   checkIn?: string;
   checkOut?: string;
   note?: string;
+  entryTime?: string; // System time when marked
+  exitTime?: string;  // System time when checkout saved
 }
 
 export interface StaffDailyAttendance {
@@ -68,6 +69,8 @@ export const saveStaffAttendance = (db: Firestore, record: StaffDailyAttendance)
         if (a.checkIn) item.checkIn = a.checkIn;
         if (a.checkOut) item.checkOut = a.checkOut;
         if (a.note) item.note = a.note;
+        if (a.entryTime) item.entryTime = a.entryTime;
+        if (a.exitTime) item.exitTime = a.exitTime;
         return item;
     });
 

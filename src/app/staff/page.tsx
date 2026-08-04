@@ -183,12 +183,30 @@ export default function StaffListPage() {
       
       setIsAttendanceLoading(true);
       try {
+          const nowTime = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
           const nextAtt = [...dailyAttendance.attendance];
           const idx = nextAtt.findIndex(a => a.staffId === selectedStaffId);
+          
+          let updatedEntry = { ...tempEntry };
+          
           if (idx > -1) {
-              nextAtt[idx] = { ...tempEntry };
+              const prev = nextAtt[idx];
+              // Keep old entryTime if exists, else set now
+              updatedEntry.entryTime = prev.entryTime || nowTime;
+              
+              // If checkOut changed and is not empty, set exitTime to now
+              if (updatedEntry.checkOut && updatedEntry.checkOut !== prev.checkOut) {
+                  updatedEntry.exitTime = nowTime;
+              } else {
+                  updatedEntry.exitTime = prev.exitTime;
+              }
+              
+              nextAtt[idx] = updatedEntry;
           } else {
-              nextAtt.push({ ...tempEntry });
+              // Entirely new record for today
+              updatedEntry.entryTime = nowTime;
+              if (updatedEntry.checkOut) updatedEntry.exitTime = nowTime;
+              nextAtt.push(updatedEntry);
           }
           
           const updatedRecord = { ...dailyAttendance, attendance: nextAtt };
@@ -633,13 +651,14 @@ export default function StaffListPage() {
                                             <TableHead className="font-black">নাম ও পদবি</TableHead>
                                             <TableHead className="text-center font-black">অবস্থা</TableHead>
                                             <TableHead className="text-center font-black">সময় / ছুটির ধরন</TableHead>
+                                            <TableHead className="text-center font-black">রেকর্ড সময়</TableHead>
                                             <TableHead className="text-right font-black">কার্যক্রম</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {dailyAttendance?.attendance.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center py-16 italic font-bold text-muted-foreground">
+                                                <TableCell colSpan={6} className="text-center py-16 italic font-bold text-muted-foreground">
                                                     আজকের কোনো হাজিরা এখনো নেওয়া হয়নি।
                                                 </TableCell>
                                             </TableRow>
@@ -666,6 +685,12 @@ export default function StaffListPage() {
                                                             ) : (
                                                                 <span className="text-xs font-black text-rose-700">{LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>
                                                             )}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex flex-col items-center gap-0.5">
+                                                                <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">আগমণ: {toBengaliNumber(att.entryTime || '-')}</span>
+                                                                <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">প্রস্থান: {toBengaliNumber(att.exitTime || '-')}</span>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex justify-end gap-2">
