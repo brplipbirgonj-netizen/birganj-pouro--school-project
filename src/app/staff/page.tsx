@@ -7,6 +7,7 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
 import { 
     Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, 
