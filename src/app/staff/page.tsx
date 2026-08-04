@@ -162,7 +162,7 @@ export default function StaffListPage() {
           if (existing.status === 'leave') {
               setCurrentAction('leave');
           } else if (existing.checkIn) {
-              setCurrentAction('departure'); // Default to departure if check-in exists
+              setCurrentAction('departure'); 
           } else {
               setCurrentAction('arrival');
           }
@@ -202,12 +202,13 @@ export default function StaffListPage() {
               } else if (currentAction === 'departure') {
                   updatedEntry = { ...prev, ...tempEntry, exitTime: prev.exitTime || nowTime };
               } else {
-                  updatedEntry = { ...tempEntry };
+                  // marked as leave
+                  updatedEntry = { ...tempEntry, entryTime: prev.entryTime || nowTime };
               }
               nextAtt[idx] = updatedEntry;
           } else {
               updatedEntry = { ...tempEntry };
-              if (currentAction === 'arrival') updatedEntry.entryTime = nowTime;
+              if (currentAction === 'arrival' || currentAction === 'leave') updatedEntry.entryTime = nowTime;
               if (currentAction === 'departure') updatedEntry.exitTime = nowTime;
               nextAtt.push(updatedEntry);
           }
@@ -739,8 +740,12 @@ export default function StaffListPage() {
                                                         </TableCell>
                                                         <TableCell className="text-center">
                                                             <div className="flex flex-col items-center gap-0.5">
-                                                                <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">আগমণ: {toBengaliNumber(att.entryTime || '-')}</span>
-                                                                <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">প্রস্থান: {toBengaliNumber(att.exitTime || '-')}</span>
+                                                                <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">
+                                                                    {att.status === 'leave' ? 'রেকর্ড:' : 'আগমণ:'} {toBengaliNumber(att.entryTime || '-')}
+                                                                </span>
+                                                                {att.status !== 'leave' && (
+                                                                    <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">প্রস্থান: {toBengaliNumber(att.exitTime || '-')}</span>
+                                                                )}
                                                             </div>
                                                         </TableCell>
                                                         <TableCell className="text-right">
