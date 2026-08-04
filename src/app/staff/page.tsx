@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -158,9 +159,13 @@ export default function StaffListPage() {
       const existing = dailyAttendance?.attendance.find(a => a.staffId === id);
       if (existing) {
           setTempEntry({ ...existing });
-          if (existing.status === 'leave') setCurrentAction('leave');
-          else if (existing.checkOut) setCurrentAction('departure');
-          else setCurrentAction('arrival');
+          if (existing.status === 'leave') {
+              setCurrentAction('leave');
+          } else if (existing.checkIn) {
+              setCurrentAction('departure'); // Default to departure if check-in exists
+          } else {
+              setCurrentAction('arrival');
+          }
       } else {
           setTempEntry({ staffId: id, status: 'present', checkIn: '১০:৩০ AM' });
           setCurrentAction('arrival');
@@ -470,6 +475,11 @@ export default function StaffListPage() {
     return activeStaffList.find(s => s.id === selectedStaffId);
   }, [activeStaffList, selectedStaffId]);
 
+  const existingInToday = useMemo(() => {
+    if (!dailyAttendance || !selectedStaffId) return null;
+    return dailyAttendance.attendance.find(a => a.staffId === selectedStaffId);
+  }, [dailyAttendance, selectedStaffId]);
+
   if (!isClient) return null;
 
   return (
@@ -577,13 +587,16 @@ export default function StaffListPage() {
                                 </CardHeader>
                                 <CardContent className="p-8 space-y-8">
                                     <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                        <Button 
-                                            size="lg" 
-                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
-                                            onClick={() => handleActionChange('arrival')}
-                                        >
-                                            <LogIn className="h-5 w-5" /> আগমণ
-                                        </Button>
+                                        {/* Hiding arrival button if already saved */}
+                                        {!existingInToday?.checkIn && (
+                                            <Button 
+                                                size="lg" 
+                                                className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
+                                                onClick={() => handleActionChange('arrival')}
+                                            >
+                                                <LogIn className="h-5 w-5" /> আগমণ
+                                            </Button>
+                                        )}
                                         <Button 
                                             size="lg" 
                                             className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
