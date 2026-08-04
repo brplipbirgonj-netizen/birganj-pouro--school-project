@@ -50,6 +50,7 @@ import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { getHolidays } from '@/lib/holiday-data';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
     { id: 'CL', label: 'নৈমিত্তিক (CL)', color: 'bg-blue-100 text-blue-700' },
@@ -450,6 +451,10 @@ export default function StaffListPage() {
       );
   };
 
+  const currentSelectedStaff = useMemo(() => {
+    return activeStaffList.find(s => s.id === selectedStaffId);
+  }, [activeStaffList, selectedStaffId]);
+
   if (!isClient) return null;
 
   return (
@@ -537,17 +542,20 @@ export default function StaffListPage() {
                             </div>
                         </div>
 
-                        {selectedStaffId && tempEntry && (
+                        {selectedStaffId && tempEntry && currentSelectedStaff && (
                             <Card className="border-4 border-primary rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                                 <CardHeader className="bg-primary/5 border-b-2 border-primary/10">
                                     <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-white rounded-2xl shadow-sm border-2 border-primary/20">
-                                            <ClipboardCheck className="h-8 w-8 text-primary" />
-                                        </div>
+                                        <Avatar className="h-16 w-16 border-4 border-white shadow-md">
+                                            <AvatarImage src={currentSelectedStaff.photoUrl} />
+                                            <AvatarFallback className="font-black text-xl bg-muted text-muted-foreground">
+                                                {currentSelectedStaff.nameBn?.charAt(0)}
+                                            </AvatarFallback>
+                                        </Avatar>
                                         <div>
-                                            <CardTitle className="text-xl font-black">হাজিরা ও ছুটির বক্স</CardTitle>
-                                            <CardDescription className="text-slate-800 font-bold">
-                                                {activeStaffList.find(s => s.id === selectedStaffId)?.nameBn}
+                                            <CardTitle className="text-2xl font-black text-slate-900">{currentSelectedStaff.nameBn}</CardTitle>
+                                            <CardDescription className="text-primary font-bold text-base">
+                                                {currentSelectedStaff.designation}
                                             </CardDescription>
                                         </div>
                                     </div>
