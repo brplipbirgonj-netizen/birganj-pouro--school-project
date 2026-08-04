@@ -11,7 +11,7 @@ import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
 import { 
     Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, 
     Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, 
-    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX 
+    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users 
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -108,8 +108,9 @@ export default function StaffListPage() {
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   
-  const [staffSteps, setAttendanceSteps] = useState<Record<string, number>>({});
-  const [editStates, setEditStates] = useState<Record<string, boolean>>({});
+  // New States for Dropdown UI
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
+  const [tempEntry, setTempEntry] = useState<StaffMemberAttendance | null>(null);
 
   // Date Range Report States
   const [reportStartDate, setReportStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
@@ -147,8 +148,8 @@ export default function StaffListPage() {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const record = await getStaffAttendanceByDate(db, dateStr);
     setDailyAttendance(record || { date: dateStr, attendance: [] });
-    setAttendanceSteps({});
-    setEditStates({});
+    setSelectedStaffId('');
+    setTempEntry(null);
     setIsAttendanceLoading(false);
   }, [db, selectedDate]);
 
@@ -158,64 +159,63 @@ export default function StaffListPage() {
     }
   }, [fetchAttendance, canManageAttendance, activeSection]);
 
-  const handleStatusSelect = (staffId: string, status: 'present' | 'leave') => {
-    setDailyAttendance(prev => {
-        if (!prev) return null;
-        const nextAtt = [...prev.attendance];
-        const idx = nextAtt.findIndex(a => a.staffId === staffId);
-        if (idx > -1) {
-            nextAtt[idx] = { ...nextAtt[idx], status };
-        } else {
-            nextAtt.push({ staffId, status });
-        }
-        return { ...prev, attendance: nextAtt };
-    });
-    setAttendanceSteps(prev => ({ ...prev, [staffId]: 1 }));
+  const handleStaffSelect = (id: string) => {
+      setSelectedStaffId(id);
+      const existing = dailyAttendance?.attendance.find(a => a.staffId === id);
+      if (existing) {
+          setTempEntry({ ...existing });
+      } else {
+          setTempEntry({ staffId: id, status: 'present', checkIn: '১০:৩০ AM', checkOut: '০৪:০০ PM' });
+      }
   };
 
-  const handleSaveStatus = (staffId: string) => {
-    setAttendanceSteps(prev => ({ ...prev, [staffId]: 2 }));
+  const handleTempStatusChange = (status: 'present' | 'leave') => {
+      if (!tempEntry) return;
+      if (status === 'present') {
+          setTempEntry({ ...tempEntry, status, leaveType: undefined, checkIn: '১০:৩০ AM', checkOut: '০৪:০০ PM' });
+      } else {
+          setTempEntry({ ...tempEntry, status, checkIn: undefined, checkOut: undefined, leaveType: 'CL' });
+      }
   };
 
-  const handleAttendanceDetailChange = (staffId: string, field: keyof StaffMemberAttendance, value: string) => {
-    setDailyAttendance(prev => {
-        if (!prev) return null;
-        const nextAtt = [...prev.attendance];
-        const idx = nextAtt.findIndex(a => a.staffId === staffId);
-        if (idx > -1) {
-            nextAtt[idx] = { ...nextAtt[idx], [field]: value };
-        }
-        return { ...prev, attendance: nextAtt };
-    });
+  const handleSaveIndividualAttendance = async () => {
+      if (!db || !dailyAttendance || !tempEntry || !selectedStaffId) return;
+      
+      setIsAttendanceLoading(true);
+      try {
+          const nextAtt = [...dailyAttendance.attendance];
+          const idx = nextAtt.findIndex(a => a.staffId === selectedStaffId);
+          if (idx > -1) {
+              nextAtt[idx] = { ...tempEntry };
+          } else {
+              nextAtt.push({ ...tempEntry });
+          }
+          
+          const updatedRecord = { ...dailyAttendance, attendance: nextAtt };
+          await saveStaffAttendance(db, updatedRecord);
+          
+          setDailyAttendance(updatedRecord);
+          setSelectedStaffId('');
+          setTempEntry(null);
+          toast({ title: 'হাজিরা সংরক্ষিত হয়েছে' });
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsAttendanceLoading(false);
+      }
   };
 
-  const handleLocalEntrySave = (staffId: string) => {
-      setAttendanceSteps(prev => ({ ...prev, [staffId]: 3 }));
-      setEditStates(prev => ({ ...prev, [staffId]: false }));
-      toast({ title: 'এন্ট্রি গ্রহণ করা হয়েছে', description: 'নিচ থেকে ফাইনাল সেভ করুন।' });
-  };
-
-  const handleGlobalFinalSave = async () => {
+  const handleDeleteEntry = async (staffId: string) => {
     if (!db || !dailyAttendance) return;
     setIsAttendanceLoading(true);
     try {
-        await saveStaffAttendance(db, dailyAttendance);
-        toast({ title: 'পুরো দিনের হাজিরা সফলভাবে সংরক্ষিত হয়েছে' });
-        fetchAttendance();
+        const nextAtt = dailyAttendance.attendance.filter(a => a.staffId !== staffId);
+        const updatedRecord = { ...dailyAttendance, attendance: nextAtt };
+        await saveStaffAttendance(db, updatedRecord);
+        setDailyAttendance(updatedRecord);
+        toast({ title: 'হাজিরা মুছে ফেলা হয়েছে' });
     } catch (e) {}
     setIsAttendanceLoading(false);
-  };
-
-  const handleDeleteAttendance = async (staffId: string) => {
-      if (!db || !dailyAttendance) return;
-      try {
-          const nextAtt = dailyAttendance.attendance.filter(a => a.staffId !== staffId);
-          const updatedRecord = { ...dailyAttendance, attendance: nextAtt };
-          setDailyAttendance(updatedRecord);
-          setAttendanceSteps(prev => ({ ...prev, [staffId]: 0 }));
-          setEditStates(prev => ({ ...prev, [staffId]: false }));
-          toast({ title: 'হাজিরা বাটন থেকে সরানো হয়েছে', description: 'ফাইনাল সেভ দিতে ভুলবেন না।' });
-      } catch (e) {}
   };
 
   const fetchReport = useCallback(async () => {
@@ -263,6 +263,8 @@ export default function StaffListPage() {
           return indexA - indexB;
       });
   }, [allStaff]);
+
+  const activeStaffList = useMemo(() => [...sortedTeachers, ...sortedEmployees].filter(s => s.isActive), [sortedTeachers, sortedEmployees]);
 
   const sidebarItems = useMemo(() => {
       const items = [
@@ -329,28 +331,24 @@ export default function StaffListPage() {
 
   const reportPages = useMemo(() => {
       if (!reportStartDate || !reportEndDate) return [];
-      
-      const activeTeachers = [...sortedTeachers, ...sortedEmployees].filter(s => s.isActive);
+      const activeTeachers = activeStaffList;
       const chunks = [];
       for (let i = 0; i < activeTeachers.length; i += 3) {
           chunks.push(activeTeachers.slice(i, i + 3));
       }
-      
       const today = new Date();
       today.setHours(23, 59, 59, 999);
-
       const allDaysInRange = eachDayOfInterval({ start: reportStartDate, end: reportEndDate });
       const days = allDaysInRange.filter(day => !isAfter(day, today));
-      
       return chunks.map(chunk => ({ teachers: chunk, days }));
-  }, [sortedTeachers, sortedEmployees, reportStartDate, reportEndDate]);
+  }, [activeStaffList, reportStartDate, reportEndDate]);
 
   const renderReportPage = (page: any, pageIdx: number) => {
       const displayRange = reportStartDate && reportEndDate ? 
           `${toBengaliNumber(format(reportStartDate, "dd-MM-yyyy", { locale: bn }))} হতে ${toBengaliNumber(format(reportEndDate, "dd-MM-yyyy", { locale: bn }))}` : "";
 
       return (
-          <div key={pageIdx} className="report-page bg-white flex flex-col h-full border border-black/5 p-4 sm:p-2">
+          <div key={pageIdx} className="report-page bg-white flex flex-col h-full border border-black/5 p-2">
               <div className="report-header text-center flex flex-col items-center border-b-2 border-black pb-2 mb-4">
                   {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={55} height={55} className="object-contain mb-1" />}
                   <h1 className="text-2xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
@@ -358,7 +356,6 @@ export default function StaffListPage() {
                   <div className="mt-2 inline-block border-[1.5px] border-black px-6 py-0.5 rounded-full bg-slate-50">
                       <h2 className="text-[11px] font-black uppercase tracking-tight">হাজিরা ও ছুটির রিপোর্ট: {displayRange}</h2>
                   </div>
-                  <p className="text-[8px] font-bold mt-1 text-slate-400 italic">পাতা: {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(reportPages.length)}</p>
               </div>
 
               <table className="report-table w-full border-collapse border border-black">
@@ -379,7 +376,6 @@ export default function StaffListPage() {
                           const isWeekendDay = day.getDay() === 5 || day.getDay() === 6;
                           const isHolidayDay = holidays.includes(dateStr);
                           const isOffDay = isWeekendDay || isHolidayDay;
-                          
                           const displayDate = toBengaliNumber(format(day, "dd-MM-yyyy", { locale: bn })) + " " + format(day, "EEEE", { locale: bn });
 
                           return (
@@ -388,7 +384,6 @@ export default function StaffListPage() {
                                   {page.teachers.map((teacher: any) => {
                                       const record = rangeRecords.find(r => r.date === dateStr);
                                       const att = record?.attendance.find(a => a.staffId === teacher.id);
-                                      
                                       let cellText = "";
                                       if (att) {
                                           if (att.status === 'present') {
@@ -396,13 +391,9 @@ export default function StaffListPage() {
                                           } else {
                                               cellText = att.leaveType || 'ছুটি';
                                           }
-                                      } else if (isHolidayDay) {
-                                          cellText = "সরকারি ছুটি";
-                                      } else if (isWeekendDay) {
-                                          cellText = "সাপ্তাহিক ছুটি";
-                                      } else {
-                                          cellText = "অনুপস্থিত";
-                                      }
+                                      } else if (isHolidayDay) { cellText = "সরকারি ছুটি"; }
+                                      else if (isWeekendDay) { cellText = "সাপ্তাহিক ছুটি"; }
+                                      else { cellText = "অনুপস্থিত"; }
 
                                       return (
                                           <td key={teacher.id} className={cn(
@@ -418,7 +409,6 @@ export default function StaffListPage() {
                           );
                       })}
                       
-                      {/* Summary Footer Rows */}
                       <tr className="summary-row font-black bg-slate-50 border-t-2 border-black h-9">
                           <td className="text-right pr-4 border border-black text-[9px]">মোট কর্মদিবস</td>
                           {page.teachers.map((teacher: any) => {
@@ -449,23 +439,12 @@ export default function StaffListPage() {
                               return <td key={teacher.id} className="text-rose-700 border border-black text-center text-[9px]">{toBengaliNumber(count)} দিন</td>;
                           })}
                       </tr>
-                      <tr className="summary-row font-black h-9">
-                          <td className="text-right pr-4 border border-black text-[9px]">ছুটি (মোট)</td>
-                          {page.teachers.map((teacher: any) => {
-                              const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'leave')).length;
-                              return <td key={teacher.id} className="text-blue-700 border border-black text-center text-[9px]">{toBengaliNumber(count)} দিন</td>;
-                          })}
-                      </tr>
                   </tbody>
               </table>
               
               <div className="report-footer flex justify-between items-end mt-auto pt-10 px-8 pb-4">
                   <div className="sign-box w-44 border-t border-black text-center pt-1 font-black text-[9px]">হিসাবরক্ষকের স্বাক্ষর</div>
                   <div className="sign-box w-44 border-t border-black text-center pt-1 font-black text-[9px]">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
-              </div>
-              
-              <div className="text-center text-[7px] text-slate-300 italic pt-1 border-t border-dashed no-print">
-                  রিপোর্ট তৈরির তারিখ: {toBengaliNumber(format(new Date(), 'dd-MM-yyyy p', { locale: bn }))}
               </div>
           </div>
       );
@@ -505,7 +484,7 @@ export default function StaffListPage() {
                 <div className="mb-6 border-b pb-4 flex justify-between items-center no-print">
                     <div>
                         <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
-                        <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">বীরগঞ্জ পৌর উচ্চ বিদ্যালয়</p>
+                        <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">{schoolInfo.name}</p>
                     </div>
                     {activeSection === 'list' && canManageStaff && (
                         <Link href="/add-staff">
@@ -534,167 +513,164 @@ export default function StaffListPage() {
                 )}
 
                 {activeSection === 'attendance' && (
-                    <div className="space-y-6 animate-in fade-in duration-500 no-print">
-                        <div className="flex flex-col sm:flex-row gap-4 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm items-center">
-                            <div className="space-y-2 flex-1 w-full">
+                    <div className="space-y-8 animate-in fade-in duration-500 no-print">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm">
+                            <div className="space-y-2">
                                 <Label className="font-black text-primary flex items-center gap-2"><Calendar className="h-4 w-4" /> তারিখ নির্বাচন</Label>
                                 <DatePicker value={selectedDate} onChange={setSelectedDate} />
-                            </div>
-                            <div className="flex-1 text-center sm:text-left">
-                                <p className="text-lg font-black text-muted-foreground italic">
+                                <p className="text-sm font-black text-muted-foreground mt-2 italic">
                                     {selectedDate ? format(selectedDate, 'EEEE, d MMMM yyyy', { locale: bn }) : ''}
                                 </p>
                             </div>
+                            <div className="space-y-2">
+                                <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন করুন</Label>
+                                <Select value={selectedStaffId} onValueChange={handleStaffSelect}>
+                                    <SelectTrigger className="h-12 bg-slate-50 border-2 border-primary/10 font-bold">
+                                        <SelectValue placeholder="নাম সিলেক্ট করুন" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[300px]">
+                                        {activeStaffList.map(s => (
+                                            <SelectItem key={s.id} value={s.id} className="font-bold">{s.nameBn} ({s.designation})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
-                        <div className="table-container">
-                            <Table>
-                                <TableHeader className="bg-muted/50">
-                                    <TableRow>
-                                        <TableHead className="font-black">নাম ও পদবি</TableHead>
-                                        <TableHead className="text-center font-black">হাজিরা কার্যক্রম</TableHead>
-                                        <TableHead className="text-right font-black">অবস্থা</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {[...sortedTeachers, ...sortedEmployees].filter(s => s.isActive).map(staff => {
-                                        const att = dailyAttendance?.attendance.find(a => a.staffId === staff.id);
-                                        const step = staffSteps[staff.id] || (att ? 3 : 0);
-                                        const isEditing = editStates[staff.id];
-                                        const currentStep = isEditing ? 0 : step;
+                        {selectedStaffId && tempEntry && (
+                            <Card className="border-4 border-primary rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                                <CardHeader className="bg-primary/5 border-b-2 border-primary/10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-white rounded-2xl shadow-sm border-2 border-primary/20">
+                                            <ClipboardCheck className="h-8 w-8 text-primary" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-xl font-black">হাজিরা ও ছুটির বক্স</CardTitle>
+                                            <CardDescription className="text-slate-800 font-bold">
+                                                {activeStaffList.find(s => s.id === selectedStaffId)?.nameBn}
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-8 space-y-6">
+                                    <div className="flex justify-center gap-4 mb-6">
+                                        <Button 
+                                            size="lg" 
+                                            className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'present' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
+                                            onClick={() => handleTempStatusChange('present')}
+                                        >
+                                            <CheckCircle2 className="mr-2" /> উপস্থিত
+                                        </Button>
+                                        <Button 
+                                            size="lg" 
+                                            className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'leave' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
+                                            onClick={() => handleTempStatusChange('leave')}
+                                        >
+                                            <UserX className="mr-2" /> ছুটি
+                                        </Button>
+                                    </div>
 
-                                        return (
-                                            <TableRow key={staff.id} className="h-28">
-                                                <TableCell>
-                                                    <div className="font-black text-sm text-slate-800">{staff.nameBn}</div>
-                                                    <div className="text-[10px] font-bold text-muted-foreground italic">{staff.designation}</div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="flex flex-col gap-3 items-center justify-center">
-                                                        {currentStep === 0 && (
-                                                            <div className="flex gap-2">
-                                                                <Button size="sm" className="h-10 px-6 font-black bg-emerald-600 hover:bg-emerald-700" onClick={() => handleStatusSelect(staff.id, 'present')}>উপস্থিত</Button>
-                                                                <Button size="sm" className="h-10 px-6 font-black bg-rose-600 hover:bg-rose-700" onClick={() => handleStatusSelect(staff.id, 'leave')}>ছুটি</Button>
-                                                            </div>
-                                                        )}
-                                                        {currentStep === 1 && (
-                                                            <div className="flex flex-col items-center gap-2">
-                                                                <Badge className={cn("px-4 py-1 font-black shadow-sm", att?.status === 'present' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>
-                                                                    {att?.status === 'present' ? 'উপস্থিতি সিলেক্টেড' : 'ছুটি সিলেক্টেড'}
-                                                                </Badge>
-                                                                <Button size="sm" variant="outline" className="h-9 px-8 font-black border-2 border-primary text-primary" onClick={() => handleSaveStatus(staff.id)}>সেভ করুন</Button>
-                                                            </div>
-                                                        )}
-                                                        {currentStep === 2 && (
-                                                            <div className="flex flex-col gap-3 w-full max-w-[250px] bg-slate-50 p-3 rounded-lg border-2 border-dashed border-primary/20">
-                                                                {att?.status === 'present' ? (
-                                                                    <div className="space-y-2 text-left">
-                                                                        <Label className="text-[10px] font-black text-primary block">আগমনের সময় (উদা: ১০:৩০ AM)</Label>
-                                                                        <div className="flex gap-1">
-                                                                            <Input 
-                                                                                type="text" 
-                                                                                placeholder="১০:৩০" 
-                                                                                className="h-8 text-xs font-bold text-center" 
-                                                                                value={att?.checkIn?.replace(/\s?(AM|PM)/i, '') || ''} 
-                                                                                onChange={e => handleAttendanceDetailChange(staff.id, 'checkIn', `${e.target.value} ${att?.checkIn?.slice(-2) || 'AM'}`)} 
-                                                                                onKeyDown={e => e.key === 'Enter' && handleLocalEntrySave(staff.id)}
-                                                                            />
-                                                                            <Select value={att?.checkIn?.slice(-2) === 'PM' ? 'PM' : 'AM'} onValueChange={v => {
-                                                                                const current = att?.checkIn?.replace(/\s?(AM|PM)/i, '') || '';
-                                                                                handleAttendanceDetailChange(staff.id, 'checkIn', `${current} ${v}`);
-                                                                            }}>
-                                                                                <SelectTrigger className="h-8 w-16 text-[10px] font-black"><SelectValue /></SelectTrigger>
-                                                                                <SelectContent><SelectItem value="AM">AM</SelectItem><SelectItem value="PM">PM</SelectItem></SelectContent>
-                                                                            </Select>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="space-y-2 text-left">
-                                                                        <Label className="text-[10px] font-black text-rose-700 block">ছুটির ধরন</Label>
-                                                                        <Select value={att?.leaveType || ""} onValueChange={val => handleAttendanceDetailChange(staff.id, 'leaveType', val as LeaveType)}>
-                                                                            <SelectTrigger className="h-8 text-[10px] font-bold"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
-                                                                            <SelectContent>{LEAVE_TYPES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                )}
-                                                                <Button size="sm" className="w-full h-8 font-black shadow-md bg-primary text-white" onClick={() => handleLocalEntrySave(staff.id)}>নিশ্চিত করুন</Button>
-                                                            </div>
-                                                        )}
-                                                        {currentStep === 3 && (
-                                                            <div className="flex flex-col gap-2 w-full max-w-[250px] bg-slate-50 p-3 rounded-lg border-2 border-dashed border-primary/20">
-                                                                {att?.status === 'present' && (
-                                                                    <div className="space-y-2 text-left">
-                                                                         <Label className="text-[10px] font-black text-emerald-700 block">প্রস্থানের সময় (উদা: ০৪:০০ PM)</Label>
-                                                                         <div className="flex gap-1">
-                                                                            <Input 
-                                                                                type="text" 
-                                                                                placeholder="০৪:০০" 
-                                                                                className="h-8 text-xs font-bold text-center" 
-                                                                                value={att?.checkOut?.replace(/\s?(AM|PM)/i, '') || ''} 
-                                                                                onChange={e => handleAttendanceDetailChange(staff.id, 'checkOut', `${e.target.value} ${att?.checkOut?.slice(-2) || 'PM'}`)} 
-                                                                                onKeyDown={e => e.key === 'Enter' && handleLocalEntrySave(staff.id)}
-                                                                            />
-                                                                            <Select value={att?.checkOut?.slice(-2) === 'AM' ? 'AM' : 'PM'} onValueChange={v => {
-                                                                                const current = att?.checkOut?.replace(/\s?(AM|PM)/i, '') || '';
-                                                                                handleAttendanceDetailChange(staff.id, 'checkOut', `${current} ${v}`);
-                                                                            }}>
-                                                                                <SelectTrigger className="h-8 w-16 text-[10px] font-black"><SelectValue /></SelectTrigger>
-                                                                                <SelectContent><SelectItem value="AM">AM</SelectItem><SelectItem value="PM">PM</SelectItem></SelectContent>
-                                                                            </Select>
-                                                                            <Button size="sm" className="h-8 w-8 p-0 bg-emerald-600 shrink-0" onClick={() => handleLocalEntrySave(staff.id)} title="প্রস্থান সেভ"><Save className="h-3.5 w-3.5 text-white" /></Button>
-                                                                         </div>
-                                                                    </div>
-                                                                )}
-                                                                <div className="flex justify-center gap-2 mt-1 border-t pt-2 border-slate-200">
-                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-bold text-blue-600 border-blue-200" onClick={() => { setAttendanceSteps(prev => ({ ...prev, [staff.id]: 0 })); setEditStates(prev => ({ ...prev, [staff.id]: true })); }}><Edit2 className="h-3 w-3 mr-1" /> এডিট</Button>
-                                                                    <AlertDialog>
-                                                                        <AlertDialogTrigger asChild>
-                                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-bold text-rose-600 border-rose-200"><Trash2 className="h-3 w-3 mr-1" /> ডিলিট</Button>
-                                                                        </AlertDialogTrigger>
-                                                                        <AlertDialogContent className="font-kalpurush">
-                                                                            <AlertDialogHeader><AlertDialogTitle>হাজিরা মুছুন</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই শিক্ষকের আজকের হাজিরা সরাতে চান? (ফাইনাল সেভ দিতে হবে)</AlertDialogDescription></AlertDialogHeader>
-                                                                            <AlertDialogFooter>
-                                                                                <AlertDialogCancel>না</AlertDialogCancel>
-                                                                                <AlertDialogAction onClick={() => handleDeleteAttendance(staff.id)} className="bg-destructive text-destructive-foreground">হ্যাঁ, মুছুন</AlertDialogAction>
-                                                                            </AlertDialogFooter>
-                                                                        </AlertDialogContent>
-                                                                    </AlertDialog>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {att ? (
-                                                        <div className="flex flex-col items-end gap-1">
-                                                            <Badge className={cn("font-black text-[10px] px-3", att.status === 'present' ? "bg-emerald-600" : "bg-rose-600")}>
-                                                                {att.status === 'present' ? 'উপস্থিত' : 'ছুটি'}
-                                                            </Badge>
-                                                            {att.checkIn && <span className="text-[9px] font-bold text-slate-700 italic">প্রবেশ: {att.checkIn}</span>}
-                                                            {att.checkOut && <span className="text-[9px] font-bold text-emerald-700 italic">প্রস্থান: {att.checkOut}</span>}
-                                                            {att.leaveType && <span className="text-[9px] font-black text-rose-700">ধরন: {LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-[10px] font-bold text-slate-300 italic">অপেক্ষমান</span>
-                                                    )}
+                                    {tempEntry.status === 'present' ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-emerald-50/50 p-6 rounded-2xl border-2 border-dashed border-emerald-200">
+                                            <div className="space-y-2">
+                                                <Label className="font-black text-emerald-800 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময়</Label>
+                                                <Input value={tempEntry.checkIn || ''} onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} className="h-11 font-black text-center bg-white" placeholder="উদা: ১০:৩০ AM" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="font-black text-emerald-800 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময়</Label>
+                                                <Input value={tempEntry.checkOut || ''} onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} className="h-11 font-black text-center bg-white" placeholder="উদা: ০৪:০০ PM" />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-rose-50/50 p-6 rounded-2xl border-2 border-dashed border-rose-200 space-y-4">
+                                            <Label className="font-black text-rose-800">ছুটির ধরন নির্বাচন করুন</Label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {LEAVE_TYPES.map(t => (
+                                                    <Button 
+                                                        key={t.id} 
+                                                        variant={tempEntry.leaveType === t.id ? "default" : "outline"}
+                                                        size="sm" 
+                                                        className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-rose-600" : "bg-white")}
+                                                        onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
+                                                    >
+                                                        {t.label}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                                <CardFooter className="bg-slate-50 p-6 border-t flex justify-between gap-4">
+                                    <Button variant="ghost" onClick={() => { setSelectedStaffId(''); setTempEntry(null); }} className="font-bold h-12 px-8">বাতিল</Button>
+                                    <Button 
+                                        onClick={handleSaveIndividualAttendance} 
+                                        disabled={isAttendanceLoading}
+                                        className="h-12 px-12 text-lg font-black shadow-xl"
+                                    >
+                                        {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                                        হাজিরা নিশ্চিত করুন
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        )}
+
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-black text-slate-800 flex items-center gap-2 border-b-4 border-emerald-600 pb-2 max-w-fit px-2">
+                                <UserCheck className="h-6 w-6 text-emerald-600" /> আজকের গৃহীত হাজিরা তালিকা
+                            </h3>
+                            <div className="table-container shadow-xl border-2">
+                                <Table>
+                                    <TableHeader className="bg-muted/50">
+                                        <TableRow>
+                                            <TableHead className="font-black">নাম ও পদবি</TableHead>
+                                            <TableHead className="text-center font-black">অবস্থা</TableHead>
+                                            <TableHead className="text-center font-black">সময় / ছুটির ধরন</TableHead>
+                                            <TableHead className="text-right font-black">কার্যক্রম</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {dailyAttendance?.attendance.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center py-16 italic font-bold text-muted-foreground">
+                                                    আজকের কোনো হাজিরা এখনো নেওয়া হয়নি।
                                                 </TableCell>
                                             </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                        
-                        <div className="flex justify-center pt-8 border-t">
-                            <Button 
-                                onClick={handleGlobalFinalSave} 
-                                size="lg" 
-                                disabled={isAttendanceLoading}
-                                className="px-12 h-14 text-xl font-black shadow-2xl bg-primary hover:bg-primary/90"
-                            >
-                                {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                                পুরো দিনের হাজিরা ফাইনাল সেভ করুন
-                            </Button>
+                                        ) : (
+                                            dailyAttendance?.attendance.map(att => {
+                                                const staff = activeStaffList.find(s => s.id === att.staffId);
+                                                return (
+                                                    <TableRow key={att.staffId} className="h-16 hover:bg-slate-50 transition-colors">
+                                                        <TableCell>
+                                                            <div className="font-black text-sm text-slate-800">{staff?.nameBn}</div>
+                                                            <div className="text-[10px] font-bold text-muted-foreground">{staff?.designation}</div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <Badge className={cn("font-black px-4", att.status === 'present' ? "bg-emerald-600" : "bg-rose-600")}>
+                                                                {att.status === 'present' ? 'উপস্থিত' : 'ছুটি'}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            {att.status === 'present' ? (
+                                                                <div className="flex flex-col items-center">
+                                                                    <span className="text-[11px] font-black text-blue-900">{att.checkIn} - {att.checkOut}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs font-black text-rose-700">{LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handleStaffSelect(att.staffId)}><Edit2 className="h-4 w-4" /></Button>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteEntry(att.staffId)}><Trash2 className="h-4 w-4" /></Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -725,8 +701,6 @@ export default function StaffListPage() {
                                     <Badge className="bg-emerald-600 px-6 py-1 text-sm font-black shadow-lg mb-2">রিপোর্ট প্রস্তুত হয়েছে!</Badge>
                                     <p className="font-bold text-blue-700">নিচে প্রফেশনাল প্রিভিউ দেখা যাচ্ছে। আপনি চাইলে সরাসরি প্রিন্ট করতে পারেন।</p>
                                 </div>
-                                
-                                {/* HIGH-FIDELITY PREVIEW SECTION */}
                                 <div className="flex flex-col gap-12 items-center bg-slate-100 p-4 sm:p-10 rounded-3xl border-2 border-slate-200 shadow-inner overflow-x-auto">
                                     {reportPages.map((page, pageIdx) => (
                                         <div key={pageIdx} className="bg-white shadow-2xl shrink-0 overflow-hidden transform scale-95 sm:scale-100 origin-top">
@@ -744,7 +718,6 @@ export default function StaffListPage() {
         </div>
       </main>
 
-      {/* --- Full Report Printing Area (Portrait Mode) --- */}
       <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
           <style jsx global>{`
               @media print {
@@ -785,7 +758,6 @@ export default function StaffListPage() {
                   .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 9px; font-weight: 900; padding-top: 3px; }
               }
           `}</style>
-          
           {reportPages.map((page, pageIdx) => (
               <div key={pageIdx} className="report-page">
                   {renderReportPage(page, pageIdx)}
