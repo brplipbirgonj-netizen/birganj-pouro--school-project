@@ -587,30 +587,40 @@ export default function StaffListPage() {
                                 </CardHeader>
                                 <CardContent className="p-8 space-y-8">
                                     <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                        {/* Hiding arrival button if already saved */}
-                                        {!existingInToday?.checkIn && (
+                                        {/* Hide Arrival and Leave if check-in already exists */}
+                                        {!existingInToday?.checkIn ? (
+                                            <>
+                                                <Button 
+                                                    size="lg" 
+                                                    className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
+                                                    onClick={() => handleActionChange('arrival')}
+                                                >
+                                                    <LogIn className="h-5 w-5" /> আগমণ
+                                                </Button>
+                                                <Button 
+                                                    size="lg" 
+                                                    className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
+                                                    onClick={() => handleActionChange('departure')}
+                                                >
+                                                    <LogOut className="h-5 w-5" /> প্রস্থান
+                                                </Button>
+                                                <Button 
+                                                    size="lg" 
+                                                    className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'leave' ? "bg-blue-600 shadow-lg ring-4 ring-blue-100" : "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50")}
+                                                    onClick={() => handleActionChange('leave')}
+                                                >
+                                                    <UserX className="h-5 w-5" /> ছুটি
+                                                </Button>
+                                            </>
+                                        ) : (
                                             <Button 
                                                 size="lg" 
-                                                className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
-                                                onClick={() => handleActionChange('arrival')}
+                                                className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
+                                                onClick={() => handleActionChange('departure')}
                                             >
-                                                <LogIn className="h-5 w-5" /> আগমণ
+                                                <LogOut className="h-5 w-5" /> প্রস্থান
                                             </Button>
                                         )}
-                                        <Button 
-                                            size="lg" 
-                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
-                                            onClick={() => handleActionChange('departure')}
-                                        >
-                                            <LogOut className="h-5 w-5" /> প্রস্থান
-                                        </Button>
-                                        <Button 
-                                            size="lg" 
-                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'leave' ? "bg-blue-600 shadow-lg ring-4 ring-blue-100" : "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50")}
-                                            onClick={() => handleActionChange('leave')}
-                                        >
-                                            <UserX className="h-5 w-5" /> ছুটি
-                                        </Button>
                                     </div>
 
                                     <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
