@@ -587,8 +587,12 @@ export default function StaffListPage() {
                                 </CardHeader>
                                 <CardContent className="p-8 space-y-8">
                                     <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                        {/* Hide Arrival and Leave if check-in already exists */}
-                                        {!existingInToday?.checkIn ? (
+                                        {existingInToday?.status === 'leave' ? (
+                                            <div className="flex flex-col items-center justify-center p-6 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl w-full animate-in fade-in duration-500">
+                                                <Badge className="bg-blue-600 px-6 py-1.5 text-base font-black mb-2 shadow-lg">আজ ছুটিতে আছেন</Badge>
+                                                <p className="text-sm font-bold text-blue-800">এই শিক্ষক/কর্মচারীর আজকের হাজিরা 'ছুটি' হিসেবে সংরক্ষিত হয়েছে।</p>
+                                            </div>
+                                        ) : !existingInToday?.checkIn ? (
                                             <>
                                                 <Button 
                                                     size="lg" 
@@ -623,62 +627,66 @@ export default function StaffListPage() {
                                         )}
                                     </div>
 
-                                    <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
-                                        {currentAction === 'arrival' && (
-                                            <div className="space-y-2 max-w-xs mx-auto">
-                                                <Label className="font-black text-emerald-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময় লিখুন</Label>
-                                                <Input 
-                                                    value={tempEntry.checkIn || ''} 
-                                                    onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
-                                                    className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300 focus:ring-emerald-500" 
-                                                    placeholder="উদা: ১০:৩০ AM" 
-                                                />
-                                            </div>
-                                        )}
-                                        {currentAction === 'departure' && (
-                                            <div className="space-y-2 max-w-xs mx-auto">
-                                                <Label className="font-black text-rose-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময় লিখুন</Label>
-                                                <Input 
-                                                    value={tempEntry.checkOut || ''} 
-                                                    onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} 
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
-                                                    className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300 focus:ring-rose-500" 
-                                                    placeholder="উদা: ০৪:০০ PM" 
-                                                />
-                                            </div>
-                                        )}
-                                        {currentAction === 'leave' && (
-                                            <div className="space-y-4 text-center">
-                                                <Label className="font-black text-blue-800">ছুটির ধরন নির্বাচন করুন</Label>
-                                                <div className="flex flex-wrap justify-center gap-2">
-                                                    {LEAVE_TYPES.map(t => (
-                                                        <Button 
-                                                            key={t.id} 
-                                                            variant={tempEntry.leaveType === t.id ? "default" : "outline"}
-                                                            size="sm" 
-                                                            className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-blue-600" : "bg-white")}
-                                                            onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
-                                                        >
-                                                            {t.label}
-                                                        </Button>
-                                                    ))}
+                                    {existingInToday?.status !== 'leave' && (
+                                        <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
+                                            {currentAction === 'arrival' && (
+                                                <div className="space-y-2 max-w-xs mx-auto">
+                                                    <Label className="font-black text-emerald-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময় লিখুন</Label>
+                                                    <Input 
+                                                        value={tempEntry.checkIn || ''} 
+                                                        onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
+                                                        className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300 focus:ring-emerald-500" 
+                                                        placeholder="উদা: ১০:৩০ AM" 
+                                                    />
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                            {currentAction === 'departure' && (
+                                                <div className="space-y-2 max-w-xs mx-auto">
+                                                    <Label className="font-black text-rose-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময় লিখুন</Label>
+                                                    <Input 
+                                                        value={tempEntry.checkOut || ''} 
+                                                        onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} 
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
+                                                        className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300 focus:ring-rose-500" 
+                                                        placeholder="উদা: ০৪:০০ PM" 
+                                                    />
+                                                </div>
+                                            )}
+                                            {currentAction === 'leave' && (
+                                                <div className="space-y-4 text-center">
+                                                    <Label className="font-black text-blue-800">ছুটির ধরন নির্বাচন করুন</Label>
+                                                    <div className="flex flex-wrap justify-center gap-2">
+                                                        {LEAVE_TYPES.map(t => (
+                                                            <Button 
+                                                                key={t.id} 
+                                                                variant={tempEntry.leaveType === t.id ? "default" : "outline"}
+                                                                size="sm" 
+                                                                className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-blue-600" : "bg-white")}
+                                                                onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
+                                                            >
+                                                                {t.label}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </CardContent>
-                                <CardFooter className="bg-slate-50 p-6 border-t flex justify-between gap-4">
-                                    <Button variant="ghost" onClick={() => { setSelectedStaffId(''); setTempEntry(null); }} className="font-bold h-12 px-8">বাতিল</Button>
-                                    <Button 
-                                        onClick={handleSaveIndividualAttendance} 
-                                        disabled={isAttendanceLoading || (currentAction === 'leave' && !tempEntry.leaveType)}
-                                        className="h-12 px-12 text-lg font-black shadow-xl"
-                                    >
-                                        {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                                        হাজিরা নিশ্চিত করুন
-                                    </Button>
-                                </CardFooter>
+                                {existingInToday?.status !== 'leave' && (
+                                    <CardFooter className="bg-slate-50 p-6 border-t flex justify-between gap-4">
+                                        <Button variant="ghost" onClick={() => { setSelectedStaffId(''); setTempEntry(null); }} className="font-bold h-12 px-8">বাতিল</Button>
+                                        <Button 
+                                            onClick={handleSaveIndividualAttendance} 
+                                            disabled={isAttendanceLoading || (currentAction === 'leave' && !tempEntry.leaveType)}
+                                            className="h-12 px-12 text-lg font-black shadow-xl"
+                                        >
+                                            {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                                            হাজিরা নিশ্চিত করুন
+                                        </Button>
+                                    </CardFooter>
+                                )}
                             </Card>
                         )}
 
