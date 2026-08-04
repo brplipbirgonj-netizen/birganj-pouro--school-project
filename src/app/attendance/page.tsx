@@ -468,6 +468,13 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSave();
+        }
+    };
+
     return (
         <div className="mt-4 space-y-6 animate-in fade-in duration-500">
             <Card className="border-2 border-primary/10 shadow-lg">
@@ -508,6 +515,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                             className="min-h-[150px] text-lg font-black tracking-widest leading-relaxed focus:ring-primary"
                             value={rollsInput}
                             onChange={e => setRollsInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
                         />
                         <p className="text-[10px] text-muted-foreground italic font-bold">*** বাংলা বা ইংরেজি উভয় অংকেই রোল নম্বর লেখা যাবে।</p>
                     </div>
