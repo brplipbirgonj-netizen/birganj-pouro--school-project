@@ -50,7 +50,6 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { getHolidays } from '@/lib/holiday-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
     { id: 'CL', label: 'নৈমিত্তিক (CL)', color: 'bg-blue-100 text-blue-700' },
@@ -105,7 +104,7 @@ export default function StaffListPage() {
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
-  const [attendanceMode, setAttendanceMode] = useState<'arrival' | 'departure'>('arrival');
+  const [currentAction, setCurrentAction] = useState<'arrival' | 'departure' | 'leave'>('arrival');
   const [tempEntry, setTempEntry] = useState<StaffMemberAttendance | null>(null);
 
   const [reportStartDate, setReportStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
@@ -159,22 +158,24 @@ export default function StaffListPage() {
       const existing = dailyAttendance?.attendance.find(a => a.staffId === id);
       if (existing) {
           setTempEntry({ ...existing });
+          if (existing.status === 'leave') setCurrentAction('leave');
+          else if (existing.checkOut) setCurrentAction('departure');
+          else setCurrentAction('arrival');
       } else {
-          // Defaults for new entry
-          if (attendanceMode === 'arrival') {
-              setTempEntry({ staffId: id, status: 'present', checkIn: '১০:৩০ AM' });
-          } else {
-              setTempEntry({ staffId: id, status: 'present', checkOut: '০৪:০০ PM' });
-          }
+          setTempEntry({ staffId: id, status: 'present', checkIn: '১০:৩০ AM' });
+          setCurrentAction('arrival');
       }
   };
 
-  const handleTempStatusChange = (status: 'present' | 'leave') => {
+  const handleActionChange = (action: 'arrival' | 'departure' | 'leave') => {
       if (!tempEntry) return;
-      if (status === 'present') {
-          setTempEntry({ ...tempEntry, status, leaveType: undefined, checkIn: tempEntry.checkIn || '১০:৩০ AM' });
-      } else {
-          setTempEntry({ ...tempEntry, status, checkIn: undefined, checkOut: undefined, leaveType: 'CL' });
+      setCurrentAction(action);
+      if (action === 'leave') {
+          setTempEntry({ ...tempEntry, status: 'leave', leaveType: tempEntry.leaveType || 'CL', checkIn: undefined, checkOut: undefined });
+      } else if (action === 'arrival') {
+          setTempEntry({ ...tempEntry, status: 'present', checkIn: tempEntry.checkIn || '১০:৩০ AM', leaveType: undefined });
+      } else if (action === 'departure') {
+          setTempEntry({ ...tempEntry, status: 'present', checkOut: tempEntry.checkOut || '০৪:০০ PM', leaveType: undefined });
       }
   };
 
@@ -191,32 +192,18 @@ export default function StaffListPage() {
           
           if (idx > -1) {
               const prev = nextAtt[idx];
-              if (attendanceMode === 'arrival') {
-                  updatedEntry = {
-                      ...tempEntry,
-                      entryTime: prev.entryTime || nowTime,
-                      checkOut: prev.checkOut,
-                      exitTime: prev.exitTime
-                  };
+              if (currentAction === 'arrival') {
+                  updatedEntry = { ...tempEntry, entryTime: prev.entryTime || nowTime };
+              } else if (currentAction === 'departure') {
+                  updatedEntry = { ...prev, ...tempEntry, exitTime: prev.exitTime || nowTime };
               } else {
-                  // Departure mode updates checkOut and exitTime
-                  updatedEntry = {
-                      ...prev,
-                      status: 'present', // Force present if departing
-                      checkOut: tempEntry.checkOut || '০৪:০০ PM',
-                      exitTime: nowTime
-                  };
+                  updatedEntry = { ...tempEntry };
               }
               nextAtt[idx] = updatedEntry;
           } else {
-              // New record
               updatedEntry = { ...tempEntry };
-              if (attendanceMode === 'arrival') {
-                  updatedEntry.entryTime = nowTime;
-              } else {
-                  updatedEntry.status = 'present';
-                  updatedEntry.exitTime = nowTime;
-              }
+              if (currentAction === 'arrival') updatedEntry.entryTime = nowTime;
+              if (currentAction === 'departure') updatedEntry.exitTime = nowTime;
               nextAtt.push(updatedEntry);
           }
           
@@ -226,7 +213,7 @@ export default function StaffListPage() {
           setDailyAttendance(updatedRecord);
           setSelectedStaffId('');
           setTempEntry(null);
-          toast({ title: attendanceMode === 'arrival' ? 'আগমনের হাজিরা সংরক্ষিত হয়েছে' : 'প্রস্থানের হাজিরা সংরক্ষিত হয়েছে' });
+          toast({ title: 'হাজিরা সফলভাবে সংরক্ষিত হয়েছে' });
       } catch (e) {
           console.error(e);
       } finally {
@@ -547,7 +534,7 @@ export default function StaffListPage() {
 
                 {activeSection === 'attendance' && (
                     <div className="space-y-8 animate-in fade-in duration-500 no-print">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm items-end">
                             <div className="space-y-2">
                                 <Label className="font-black text-primary flex items-center gap-2"><Calendar className="h-4 w-4" /> তারিখ নির্বাচন</Label>
                                 <DatePicker value={selectedDate} onChange={setSelectedDate} />
@@ -556,28 +543,7 @@ export default function StaffListPage() {
                                 </p>
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-black text-primary flex items-center gap-2">হাজিরা ধাপ নির্বাচন</Label>
-                                <RadioGroup 
-                                    value={attendanceMode} 
-                                    onValueChange={(v) => {
-                                        setAttendanceMode(v as 'arrival' | 'departure');
-                                        setSelectedStaffId('');
-                                        setTempEntry(null);
-                                    }}
-                                    className="flex h-10 items-center gap-4 bg-slate-50 border-2 border-primary/10 rounded-md px-4"
-                                >
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="arrival" id="mode-arrival" />
-                                        <Label htmlFor="mode-arrival" className="font-black text-xs cursor-pointer flex items-center gap-1"><LogIn className="h-3 w-3 text-emerald-600" /> আগমণ</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="departure" id="mode-departure" />
-                                        <Label htmlFor="mode-departure" className="font-black text-xs cursor-pointer flex items-center gap-1"><LogOut className="h-3 w-3 text-rose-600" /> প্রস্থান</Label>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন</Label>
+                                <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন করুন</Label>
                                 <Select value={selectedStaffId} onValueChange={handleStaffSelect}>
                                     <SelectTrigger className="h-10 bg-slate-50 border-2 border-primary/10 font-bold">
                                         <SelectValue placeholder="নাম সিলেক্ট করুন" />
@@ -601,89 +567,89 @@ export default function StaffListPage() {
                                                 {currentSelectedStaff.nameBn?.charAt(0)}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <div>
+                                        <div className="flex-1">
                                             <CardTitle className="text-2xl font-black text-slate-900">{currentSelectedStaff.nameBn}</CardTitle>
                                             <CardDescription className="text-primary font-bold text-base">
                                                 {currentSelectedStaff.designation}
                                             </CardDescription>
                                         </div>
-                                        <Badge className={cn("ml-auto font-black px-4 h-8 text-sm uppercase", attendanceMode === 'arrival' ? "bg-emerald-600" : "bg-rose-600")}>
-                                            {attendanceMode === 'arrival' ? 'আগমণ ধাপ' : 'প্রস্থান ধাপ'}
-                                        </Badge>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-8 space-y-6">
-                                    {attendanceMode === 'arrival' ? (
-                                        <>
-                                            <div className="flex justify-center gap-4 mb-6">
-                                                <Button 
-                                                    size="lg" 
-                                                    className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'present' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
-                                                    onClick={() => handleTempStatusChange('present')}
-                                                >
-                                                    <CheckCircle2 className="mr-2" /> উপস্থিত
-                                                </Button>
-                                                <Button 
-                                                    size="lg" 
-                                                    className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'leave' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
-                                                    onClick={() => handleTempStatusChange('leave')}
-                                                >
-                                                    <UserX className="mr-2" /> ছুটি
-                                                </Button>
-                                            </div>
+                                <CardContent className="p-8 space-y-8">
+                                    <div className="flex flex-col sm:flex-row justify-center gap-4">
+                                        <Button 
+                                            size="lg" 
+                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
+                                            onClick={() => handleActionChange('arrival')}
+                                        >
+                                            <LogIn className="h-5 w-5" /> আগমণ
+                                        </Button>
+                                        <Button 
+                                            size="lg" 
+                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
+                                            onClick={() => handleActionChange('departure')}
+                                        >
+                                            <LogOut className="h-5 w-5" /> প্রস্থান
+                                        </Button>
+                                        <Button 
+                                            size="lg" 
+                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'leave' ? "bg-blue-600 shadow-lg ring-4 ring-blue-100" : "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50")}
+                                            onClick={() => handleActionChange('leave')}
+                                        >
+                                            <UserX className="h-5 w-5" /> ছুটি
+                                        </Button>
+                                    </div>
 
-                                            {tempEntry.status === 'present' ? (
-                                                <div className="bg-emerald-50/50 p-6 rounded-2xl border-2 border-dashed border-emerald-200">
-                                                    <div className="space-y-2 max-w-xs mx-auto">
-                                                        <Label className="font-black text-emerald-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময়</Label>
-                                                        <Input 
-                                                            value={tempEntry.checkIn || ''} 
-                                                            onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
-                                                            onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
-                                                            className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300" 
-                                                            placeholder="উদা: ১০:৩০ AM" 
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="bg-rose-50/50 p-6 rounded-2xl border-2 border-dashed border-rose-200 space-y-4">
-                                                    <Label className="font-black text-rose-800">ছুটির ধরন নির্বাচন করুন</Label>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {LEAVE_TYPES.map(t => (
-                                                            <Button 
-                                                                key={t.id} 
-                                                                variant={tempEntry.leaveType === t.id ? "default" : "outline"}
-                                                                size="sm" 
-                                                                className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-rose-600" : "bg-white")}
-                                                                onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
-                                                            >
-                                                                {t.label}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="bg-rose-50/50 p-6 rounded-2xl border-2 border-dashed border-rose-200">
+                                    <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
+                                        {currentAction === 'arrival' && (
                                             <div className="space-y-2 max-w-xs mx-auto">
-                                                <Label className="font-black text-rose-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময়</Label>
+                                                <Label className="font-black text-emerald-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময় লিখুন</Label>
+                                                <Input 
+                                                    value={tempEntry.checkIn || ''} 
+                                                    onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
+                                                    className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300 focus:ring-emerald-500" 
+                                                    placeholder="উদা: ১০:৩০ AM" 
+                                                />
+                                            </div>
+                                        )}
+                                        {currentAction === 'departure' && (
+                                            <div className="space-y-2 max-w-xs mx-auto">
+                                                <Label className="font-black text-rose-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময় লিখুন</Label>
                                                 <Input 
                                                     value={tempEntry.checkOut || ''} 
                                                     onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} 
                                                     onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
-                                                    className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300" 
+                                                    className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300 focus:ring-rose-500" 
                                                     placeholder="উদা: ০৪:০০ PM" 
                                                 />
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
+                                        {currentAction === 'leave' && (
+                                            <div className="space-y-4 text-center">
+                                                <Label className="font-black text-blue-800">ছুটির ধরন নির্বাচন করুন</Label>
+                                                <div className="flex flex-wrap justify-center gap-2">
+                                                    {LEAVE_TYPES.map(t => (
+                                                        <Button 
+                                                            key={t.id} 
+                                                            variant={tempEntry.leaveType === t.id ? "default" : "outline"}
+                                                            size="sm" 
+                                                            className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-blue-600" : "bg-white")}
+                                                            onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
+                                                        >
+                                                            {t.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </CardContent>
                                 <CardFooter className="bg-slate-50 p-6 border-t flex justify-between gap-4">
                                     <Button variant="ghost" onClick={() => { setSelectedStaffId(''); setTempEntry(null); }} className="font-bold h-12 px-8">বাতিল</Button>
                                     <Button 
                                         onClick={handleSaveIndividualAttendance} 
-                                        disabled={isAttendanceLoading}
+                                        disabled={isAttendanceLoading || (currentAction === 'leave' && !tempEntry.leaveType)}
                                         className="h-12 px-12 text-lg font-black shadow-xl"
                                     >
                                         {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
