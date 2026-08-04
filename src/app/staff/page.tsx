@@ -10,7 +10,7 @@ import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
 import { 
     Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, 
     Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, 
-    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users 
+    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users, LogIn, LogOut 
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -50,6 +50,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { getHolidays } from '@/lib/holiday-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
     { id: 'CL', label: 'নৈমিত্তিক (CL)', color: 'bg-blue-100 text-blue-700' },
@@ -57,11 +58,6 @@ const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
     { id: 'EL', label: 'অর্জিত (EL)', color: 'bg-emerald-100 text-emerald-700' },
     { id: 'DL', label: 'দায়িত্বকালীন (DL)', color: 'bg-amber-100 text-amber-700' },
     { id: 'Other', label: 'অন্যান্য', color: 'bg-slate-100 text-slate-700' },
-];
-
-const BENGALI_MONTHS = [
-    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
 const TEACHER_ORDER = [
@@ -108,11 +104,10 @@ export default function StaffListPage() {
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   
-  // New States for Dropdown UI
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
+  const [attendanceMode, setAttendanceMode] = useState<'arrival' | 'departure'>('arrival');
   const [tempEntry, setTempEntry] = useState<StaffMemberAttendance | null>(null);
 
-  // Date Range Report States
   const [reportStartDate, setReportStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
   const [reportEndDate, setReportEndDate] = useState<Date | undefined>(new Date());
   const [rangeRecords, setRangeRecords] = useState<StaffDailyAttendance[]>([]);
@@ -165,14 +160,19 @@ export default function StaffListPage() {
       if (existing) {
           setTempEntry({ ...existing });
       } else {
-          setTempEntry({ staffId: id, status: 'present', checkIn: '১০:৩০ AM', checkOut: '০৪:০০ PM' });
+          // Defaults for new entry
+          if (attendanceMode === 'arrival') {
+              setTempEntry({ staffId: id, status: 'present', checkIn: '১০:৩০ AM' });
+          } else {
+              setTempEntry({ staffId: id, status: 'present', checkOut: '০৪:০০ PM' });
+          }
       }
   };
 
   const handleTempStatusChange = (status: 'present' | 'leave') => {
       if (!tempEntry) return;
       if (status === 'present') {
-          setTempEntry({ ...tempEntry, status, leaveType: undefined, checkIn: '১০:৩০ AM', checkOut: '০৪:০০ PM' });
+          setTempEntry({ ...tempEntry, status, leaveType: undefined, checkIn: tempEntry.checkIn || '১০:৩০ AM' });
       } else {
           setTempEntry({ ...tempEntry, status, checkIn: undefined, checkOut: undefined, leaveType: 'CL' });
       }
@@ -187,25 +187,36 @@ export default function StaffListPage() {
           const nextAtt = [...dailyAttendance.attendance];
           const idx = nextAtt.findIndex(a => a.staffId === selectedStaffId);
           
-          let updatedEntry = { ...tempEntry };
+          let updatedEntry: StaffMemberAttendance;
           
           if (idx > -1) {
               const prev = nextAtt[idx];
-              // Keep old entryTime if exists, else set now
-              updatedEntry.entryTime = prev.entryTime || nowTime;
-              
-              // If checkOut changed and is not empty, set exitTime to now
-              if (updatedEntry.checkOut && updatedEntry.checkOut !== prev.checkOut) {
-                  updatedEntry.exitTime = nowTime;
+              if (attendanceMode === 'arrival') {
+                  updatedEntry = {
+                      ...tempEntry,
+                      entryTime: prev.entryTime || nowTime,
+                      checkOut: prev.checkOut,
+                      exitTime: prev.exitTime
+                  };
               } else {
-                  updatedEntry.exitTime = prev.exitTime;
+                  // Departure mode updates checkOut and exitTime
+                  updatedEntry = {
+                      ...prev,
+                      status: 'present', // Force present if departing
+                      checkOut: tempEntry.checkOut || '০৪:০০ PM',
+                      exitTime: nowTime
+                  };
               }
-              
               nextAtt[idx] = updatedEntry;
           } else {
-              // Entirely new record for today
-              updatedEntry.entryTime = nowTime;
-              if (updatedEntry.checkOut) updatedEntry.exitTime = nowTime;
+              // New record
+              updatedEntry = { ...tempEntry };
+              if (attendanceMode === 'arrival') {
+                  updatedEntry.entryTime = nowTime;
+              } else {
+                  updatedEntry.status = 'present';
+                  updatedEntry.exitTime = nowTime;
+              }
               nextAtt.push(updatedEntry);
           }
           
@@ -215,7 +226,7 @@ export default function StaffListPage() {
           setDailyAttendance(updatedRecord);
           setSelectedStaffId('');
           setTempEntry(null);
-          toast({ title: 'হাজিরা সংরক্ষিত হয়েছে' });
+          toast({ title: attendanceMode === 'arrival' ? 'আগমনের হাজিরা সংরক্ষিত হয়েছে' : 'প্রস্থানের হাজিরা সংরক্ষিত হয়েছে' });
       } catch (e) {
           console.error(e);
       } finally {
@@ -536,18 +547,39 @@ export default function StaffListPage() {
 
                 {activeSection === 'attendance' && (
                     <div className="space-y-8 animate-in fade-in duration-500 no-print">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-2 border-orange-100 rounded-xl bg-white shadow-sm items-end">
                             <div className="space-y-2">
                                 <Label className="font-black text-primary flex items-center gap-2"><Calendar className="h-4 w-4" /> তারিখ নির্বাচন</Label>
                                 <DatePicker value={selectedDate} onChange={setSelectedDate} />
-                                <p className="text-sm font-black text-muted-foreground mt-2 italic">
+                                <p className="text-[10px] font-black text-muted-foreground mt-1 italic">
                                     {selectedDate ? format(selectedDate, 'EEEE, d MMMM yyyy', { locale: bn }) : ''}
                                 </p>
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন করুন</Label>
+                                <Label className="font-black text-primary flex items-center gap-2">হাজিরা ধাপ নির্বাচন</Label>
+                                <RadioGroup 
+                                    value={attendanceMode} 
+                                    onValueChange={(v) => {
+                                        setAttendanceMode(v as 'arrival' | 'departure');
+                                        setSelectedStaffId('');
+                                        setTempEntry(null);
+                                    }}
+                                    className="flex h-10 items-center gap-4 bg-slate-50 border-2 border-primary/10 rounded-md px-4"
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="arrival" id="mode-arrival" />
+                                        <Label htmlFor="mode-arrival" className="font-black text-xs cursor-pointer flex items-center gap-1"><LogIn className="h-3 w-3 text-emerald-600" /> আগমণ</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="departure" id="mode-departure" />
+                                        <Label htmlFor="mode-departure" className="font-black text-xs cursor-pointer flex items-center gap-1"><LogOut className="h-3 w-3 text-rose-600" /> প্রস্থান</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন</Label>
                                 <Select value={selectedStaffId} onValueChange={handleStaffSelect}>
-                                    <SelectTrigger className="h-12 bg-slate-50 border-2 border-primary/10 font-bold">
+                                    <SelectTrigger className="h-10 bg-slate-50 border-2 border-primary/10 font-bold">
                                         <SelectValue placeholder="নাম সিলেক্ট করুন" />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-[300px]">
@@ -575,52 +607,74 @@ export default function StaffListPage() {
                                                 {currentSelectedStaff.designation}
                                             </CardDescription>
                                         </div>
+                                        <Badge className={cn("ml-auto font-black px-4 h-8 text-sm uppercase", attendanceMode === 'arrival' ? "bg-emerald-600" : "bg-rose-600")}>
+                                            {attendanceMode === 'arrival' ? 'আগমণ ধাপ' : 'প্রস্থান ধাপ'}
+                                        </Badge>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-8 space-y-6">
-                                    <div className="flex justify-center gap-4 mb-6">
-                                        <Button 
-                                            size="lg" 
-                                            className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'present' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
-                                            onClick={() => handleTempStatusChange('present')}
-                                        >
-                                            <CheckCircle2 className="mr-2" /> উপস্থিত
-                                        </Button>
-                                        <Button 
-                                            size="lg" 
-                                            className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'leave' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
-                                            onClick={() => handleTempStatusChange('leave')}
-                                        >
-                                            <UserX className="mr-2" /> ছুটি
-                                        </Button>
-                                    </div>
+                                    {attendanceMode === 'arrival' ? (
+                                        <>
+                                            <div className="flex justify-center gap-4 mb-6">
+                                                <Button 
+                                                    size="lg" 
+                                                    className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'present' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
+                                                    onClick={() => handleTempStatusChange('present')}
+                                                >
+                                                    <CheckCircle2 className="mr-2" /> উপস্থিত
+                                                </Button>
+                                                <Button 
+                                                    size="lg" 
+                                                    className={cn("flex-1 h-14 text-lg font-black transition-all", tempEntry.status === 'leave' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
+                                                    onClick={() => handleTempStatusChange('leave')}
+                                                >
+                                                    <UserX className="mr-2" /> ছুটি
+                                                </Button>
+                                            </div>
 
-                                    {tempEntry.status === 'present' ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-emerald-50/50 p-6 rounded-2xl border-2 border-dashed border-emerald-200">
-                                            <div className="space-y-2">
-                                                <Label className="font-black text-emerald-800 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময়</Label>
-                                                <Input value={tempEntry.checkIn || ''} onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} className="h-11 font-black text-center bg-white" placeholder="উদা: ১০:৩০ AM" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="font-black text-emerald-800 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময়</Label>
-                                                <Input value={tempEntry.checkOut || ''} onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} className="h-11 font-black text-center bg-white" placeholder="উদা: ০৪:০০ PM" />
-                                            </div>
-                                        </div>
+                                            {tempEntry.status === 'present' ? (
+                                                <div className="bg-emerald-50/50 p-6 rounded-2xl border-2 border-dashed border-emerald-200">
+                                                    <div className="space-y-2 max-w-xs mx-auto">
+                                                        <Label className="font-black text-emerald-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময়</Label>
+                                                        <Input 
+                                                            value={tempEntry.checkIn || ''} 
+                                                            onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
+                                                            onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
+                                                            className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300" 
+                                                            placeholder="উদা: ১০:৩০ AM" 
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-rose-50/50 p-6 rounded-2xl border-2 border-dashed border-rose-200 space-y-4">
+                                                    <Label className="font-black text-rose-800">ছুটির ধরন নির্বাচন করুন</Label>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {LEAVE_TYPES.map(t => (
+                                                            <Button 
+                                                                key={t.id} 
+                                                                variant={tempEntry.leaveType === t.id ? "default" : "outline"}
+                                                                size="sm" 
+                                                                className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-rose-600" : "bg-white")}
+                                                                onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
+                                                            >
+                                                                {t.label}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
                                     ) : (
-                                        <div className="bg-rose-50/50 p-6 rounded-2xl border-2 border-dashed border-rose-200 space-y-4">
-                                            <Label className="font-black text-rose-800">ছুটির ধরন নির্বাচন করুন</Label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {LEAVE_TYPES.map(t => (
-                                                    <Button 
-                                                        key={t.id} 
-                                                        variant={tempEntry.leaveType === t.id ? "default" : "outline"}
-                                                        size="sm" 
-                                                        className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-rose-600" : "bg-white")}
-                                                        onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
-                                                    >
-                                                        {t.label}
-                                                    </Button>
-                                                ))}
+                                        <div className="bg-rose-50/50 p-6 rounded-2xl border-2 border-dashed border-rose-200">
+                                            <div className="space-y-2 max-w-xs mx-auto">
+                                                <Label className="font-black text-rose-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময়</Label>
+                                                <Input 
+                                                    value={tempEntry.checkOut || ''} 
+                                                    onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} 
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
+                                                    className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300" 
+                                                    placeholder="উদা: ০৪:০০ PM" 
+                                                />
                                             </div>
                                         </div>
                                     )}
@@ -680,7 +734,7 @@ export default function StaffListPage() {
                                                         <TableCell className="text-center">
                                                             {att.status === 'present' ? (
                                                                 <div className="flex flex-col items-center">
-                                                                    <span className="text-[11px] font-black text-blue-900">{att.checkIn} - {att.checkOut}</span>
+                                                                    <span className="text-[11px] font-black text-blue-900">{att.checkIn || '-'}{att.checkOut ? ` - ${att.checkOut}` : ''}</span>
                                                                 </div>
                                                             ) : (
                                                                 <span className="text-xs font-black text-rose-700">{LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>
