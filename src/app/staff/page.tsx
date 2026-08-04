@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -630,6 +629,7 @@ export default function StaffListPage() {
                                 <Table>
                                     <TableHeader className="bg-muted/50">
                                         <TableRow>
+                                            <TableHead className="w-16 font-black">ক্রমিক</TableHead>
                                             <TableHead className="font-black">নাম ও পদবি</TableHead>
                                             <TableHead className="text-center font-black">অবস্থা</TableHead>
                                             <TableHead className="text-center font-black">সময় / ছুটির ধরন</TableHead>
@@ -639,15 +639,16 @@ export default function StaffListPage() {
                                     <TableBody>
                                         {dailyAttendance?.attendance.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-center py-16 italic font-bold text-muted-foreground">
+                                                <TableCell colSpan={5} className="text-center py-16 italic font-bold text-muted-foreground">
                                                     আজকের কোনো হাজিরা এখনো নেওয়া হয়নি।
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            dailyAttendance?.attendance.map(att => {
+                                            dailyAttendance?.attendance.map((att, index) => {
                                                 const staff = activeStaffList.find(s => s.id === att.staffId);
                                                 return (
                                                     <TableRow key={att.staffId} className="h-16 hover:bg-slate-50 transition-colors">
+                                                        <TableCell className="font-bold">{toBengaliNumber(index + 1)}</TableCell>
                                                         <TableCell>
                                                             <div className="font-black text-sm text-slate-800">{staff?.nameBn}</div>
                                                             <div className="text-[10px] font-bold text-muted-foreground">{staff?.designation}</div>
