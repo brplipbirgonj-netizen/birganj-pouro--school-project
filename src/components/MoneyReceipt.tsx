@@ -6,6 +6,7 @@ import { Student } from '@/lib/student-data';
 import { SchoolInfo } from '@/lib/school-info';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface MoneyReceiptProps {
     collection: FeeCollection;
@@ -17,6 +18,47 @@ const toBengaliNumber = (str: string | number) => {
     if (!str && str !== 0) return '';
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
+
+const numberToBengaliWords = (n: number): string => {
+    const words: Record<number, string> = {
+        0: 'শূন্য', 1: 'এক', 2: 'দুই', 3: 'তিন', 4: 'চার', 5: 'পাঁচ', 6: 'ছয়', 7: 'সাত', 8: 'আট', 9: 'নয়', 10: 'দশ',
+        11: 'এগারো', 12: 'বারো', 13: 'তেরো', 14: 'চৌদ্দ', 15: 'পনেরো', 16: 'ষোলো', 17: 'সতেরো', 18: 'আঠারো', 19: 'উনিশ', 20: 'বিশ',
+        21: 'একুশ', 22: 'বাইশ', 23: 'তেইশ', 24: 'চব্বিশ', 25: 'পঁচিশ', 26: 'ছাব্বিশ', 27: 'সাতাশ', 28: 'আটাশ', 29: 'উনত্রিশ', 30: 'ত্রিশ',
+        31: 'একত্রিশ', 32: 'বত্রিশ', 33: 'তেত্রিশ', 34: 'চৌত্রিশ', 35: 'পঁয়ত্রিশ', 36: 'ছত্রিশ', 37: 'সাঁইত্রিশ', 38: 'আটত্রিশ', 39: 'উনচল্লিশ', 40: 'চল্লিশ',
+        41: 'একচল্লিশ', 42: 'বিয়াল্লিশ', 43: 'তেতাল্লিশ', 44: 'চুয়াল্লিশ', 45: 'পঁয়তাল্লিশ', 46: 'ছেচল্লিশ', 47: 'সাতচল্লিশ', 48: 'আটচল্লিশ', 49: 'উনপঞ্চাশ', 50: 'পঞ্চাশ',
+        51: 'একান্ন', 52: 'বায়ান্ন', 53: 'তিপ্পান্ন', 54: 'চুয়ান্ন', 55: 'পঞ্চান্ন', 56: 'ছাপ্পান্ন', 57: 'সাতান্ন', 58: 'আটান্ন', 59: 'উনষাট', 60: 'ষাট',
+        61: 'একষট্টি', 62: 'বাষট্টি', 63: 'তেষট্টি', 64: 'চৌষট্টি', 65: 'পঁয়ষট্টি', 66: 'ছেষট্টি', 67: 'সাতষট্টি', 68: 'আটষট্টি', 69: 'উনসত্তর', 70: 'সত্তর',
+        71: 'একাত্তর', 72: 'বাহাত্তর', 73: 'তিয়াত্তর', 74: 'চুয়াত্তর', 75: 'পঁচাত্তর', 76: 'ছিয়াত্তর', 77: 'সাতাত্তর', 78: 'আটাত্তর', 79: 'উনআশি', 80: 'আশি',
+        81: 'একাশি', 82: 'বিরাশি', 83: 'তিরাশি', 84: 'চুরাশি', 85: 'পঁচাশী', 86: 'ছিয়াশি', 87: 'সাতাশি', 88: 'অষ্টাশি', 89: 'উননব্বই', 90: 'নব্বই',
+        91: 'একানব্বই', 92: 'বিরানব্বই', 93: 'তিরানব্বই', 94: 'চুরানব্বই', 95: 'পঁচানব্বই', 96: 'ছেয়ানব্বই', 97: 'সাতানব্বই', 98: 'আটানব্বই', 99: 'নিরানব্বই'
+    };
+
+    if (n === 0) return 'শূন্য';
+
+    let res = '';
+    if (n >= 10000000) {
+        res += numberToBengaliWords(Math.floor(n / 10000000)) + ' কোটি ';
+        n %= 10000000;
+    }
+    if (n >= 100000) {
+        res += numberToBengaliWords(Math.floor(n / 100000)) + ' লক্ষ ';
+        n %= 100000;
+    }
+    if (n >= 1000) {
+        res += numberToBengaliWords(Math.floor(n / 1000)) + ' হাজার ';
+        n %= 1000;
+    }
+    if (n >= 100) {
+        const hundreds = Math.floor(n / 100);
+        res += (hundreds > 1 ? words[hundreds] : '') + ' শত ';
+        n %= 100;
+    }
+    if (n > 0) {
+        res += words[n];
+    }
+
+    return res.trim();
 };
 
 const classNamesMap: Record<string, string> = {
@@ -43,6 +85,14 @@ const feeLabels: Record<string, string> = {
 export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptProps) => {
     const activeFees = Object.entries(collection.breakdown || {})
         .filter(([_, amount]) => amount && amount > 0);
+
+    const qrValue = `রসিদ নং: ${collection.id.slice(-6).toUpperCase()}
+শিক্ষার্থী: ${student.studentNameBn}
+আইডি: ${student.generatedId || '-'}
+শ্রেণি: ${classNamesMap[student.className] || student.className}
+রোল: ${student.roll}
+মোট টাকা: ${collection.totalAmount} ৳
+তারিখ: ${format(collection.collectionDate, 'dd/MM/yyyy')}`;
 
     return (
         <div className="money-receipt font-kalpurush w-[148mm] h-[210mm] p-6 bg-white text-black border-2 border-black relative overflow-hidden flex flex-col mx-auto my-4 shadow-sm print:m-0 print:border-2 print:border-black print:shadow-none box-border">
@@ -92,7 +142,7 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                             </thead>
                             <tbody>
                                 {activeFees.map(([key, amount], i) => (
-                                    <tr key={key} className="border-b border-black last:border-b-0">
+                                    <tr key={key} className="border-b border-black last:border-0">
                                         <td className="p-2 border-r border-black text-center">{toBengaliNumber(i + 1)}</td>
                                         <td className="p-2 border-r border-black font-bold">{feeLabels[key] || key}</td>
                                         <td className="p-2 text-right font-black pr-4">{toBengaliNumber(amount as number)}</td>
@@ -101,21 +151,35 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                             </tbody>
                             <tfoot>
                                 <tr className="bg-emerald-50 font-black border-t border-black">
-                                    <td colSpan={2} className="p-2 text-right border-r border-black">সর্বমোট আদায়:</td>
-                                    <td className="p-2 text-right text-lg pr-4 text-emerald-900">{toBengaliNumber(collection.totalAmount)} ৳</td>
+                                    <td colSpan={2} className="p-2 text-right border-r border-black font-black">সর্বমোট আদায়:</td>
+                                    <td className="p-2 text-right text-lg pr-4 text-emerald-900 font-black">{toBengaliNumber(collection.totalAmount)} ৳</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </div>
 
-                <div className="text-xs italic bg-slate-50 p-2 rounded border border-dashed border-black/30">
-                    <p><strong>কথায়:</strong> {collection.description || 'বিবিধ ফি আদায়'}</p>
+                <div className="space-y-6">
+                    <div className="text-sm font-bold bg-slate-50 p-3 rounded border border-dashed border-black/30">
+                        <p className="text-lg"><span className="text-slate-600">কথায়:</span> <span className="font-black underline decoration-double">{numberToBengaliWords(collection.totalAmount)} টাকা মাত্র।</span></p>
+                        <p className="mt-2 text-xs text-muted-foreground"><strong>আদায়ের বিবরণ:</strong> {collection.description || 'বিবিধ ফি আদায়'}</p>
+                    </div>
+
+                    <div className="flex justify-center py-2">
+                        <div className="p-3 border-2 border-black bg-white rounded-xl shadow-sm">
+                            <QRCodeSVG 
+                                value={qrValue}
+                                size={130}
+                                level="H"
+                                includeMargin={false}
+                            />
+                        </div>
+                    </div>
                 </div>
             </main>
 
             <footer className="relative z-10 pt-10 mt-auto">
-                <div className="flex justify-between items-end">
+                <div className="flex justify-between items-end px-4">
                     <div className="text-center">
                         <p className="text-[10px] font-bold text-slate-500 mb-1">তারিখ: {format(collection.collectionDate, 'dd/MM/yyyy', { locale: bn })}</p>
                         <div className="w-32 border-t border-black pt-1 font-black text-[10px]">অভিভাবকের স্বাক্ষর</div>
@@ -125,8 +189,8 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                         <div className="w-32 border-t border-black pt-1 font-black text-[10px]">হিসাবরক্ষকের স্বাক্ষর</div>
                     </div>
                 </div>
-                <div className="mt-6 text-center text-[8px] text-slate-400 font-bold border-t pt-2">
-                    এটি একটি কম্পিউটার জেনারেটেড ডিজিটাল রসিদ। বীরগঞ্জ পৌর উচ্চ বিদ্যালয়।
+                <div className="mt-6 text-center text-[8px] text-slate-400 font-bold border-t pt-2 uppercase tracking-widest">
+                    Computer Generated Digital Receipt | {schoolInfo.name}
                 </div>
             </footer>
         </div>
