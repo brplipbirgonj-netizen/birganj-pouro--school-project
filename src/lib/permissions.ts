@@ -16,6 +16,7 @@ export const availablePermissions = [
   { id: 'view:staff', label: 'শিক্ষক ও কর্মচারী তালিকা দেখুন' },
   { id: 'manage:staff', label: 'শিক্ষক ও কর্মচারী ম্যানেজ করুন' },
   { id: 'manage:staff-attendance', label: 'স্টাফ হাজিরা ও ছুটি ম্যানেজ (ইনপুট)' },
+  { id: 'manage:staff-attendance-delete', label: 'স্টাফ হাজিরা রেকর্ড ডিলিট করার অনুমতি' },
   { id: 'view:staff-attendance-report', label: 'স্টাফ হাজিরা ও ছুটির রিপোর্ট দেখুন' },
 
   { id: 'manage:attendance', label: 'শিক্ষার্থীর হাজিরা ম্যানেজ করুন' },
@@ -35,8 +36,8 @@ export const availablePermissions = [
   { id: 'collect:fees', label: 'বেতন আদায় করুন' },
   { id: 'special:edit-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় এডিট করুন' },
   { id: 'special:delete-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় ডিলিট করুন' },
-  { id: 'view:collection-report', label: 'বেতন আদায়ের রিপোর্ট দেখুন' },
-  { id: 'view:accounts-monthly-report', label: 'মাসিক আয়-ব্যয় রিপোর্ট দেখুন' },
+  { id: 'view:collection-report', label: 'বেতন আদায়ের রিপোর্ট দেখুন' },
+  { id: 'view:accounts-monthly-report', label: 'মাসিক আয়-ব্যয় রিপোর্ট দেখুন' },
   { id: 'view:cashbook-ledger', label: 'ক্যাশবুক ও খতিয়ান দেখুন' },
   { id: 'manage:transactions', label: 'সাধারণ লেনদেন ম্যানেজ করুন' },
   

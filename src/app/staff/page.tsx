@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -85,6 +84,36 @@ function toBengaliNumber(str: string | number) {
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
 
+/**
+ * Converts Bengali digits and AM/PM strings to English for consistent storage
+ */
+const convertToEnglishDigits = (str: string) => {
+    if (!str) return '';
+    const bnToEn: Record<string, string> = {
+        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+    };
+    let result = str.replace(/[০-৯]/g, (d) => bnToEn[d]);
+    result = result.replace(/এএম/g, 'AM').replace(/পিএম/g, 'PM');
+    return result;
+};
+
+/**
+ * Helper to get current system time in English format
+ */
+const getSystemTimeEn = () => {
+    return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
+/**
+ * Automatically appends AM or PM to a time string if missing
+ */
+const ensureAmPm = (timeStr: string, defaultType: 'AM' | 'PM') => {
+    const cleaned = convertToEnglishDigits(timeStr).trim().toUpperCase();
+    if (!cleaned) return '';
+    if (cleaned.includes('AM') || cleaned.includes('PM')) return cleaned;
+    return `${cleaned} ${defaultType}`;
+};
+
 export default function StaffListPage() {
   const [allStaff, setAllStaff] = useState<Staff[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,6 +126,7 @@ export default function StaffListPage() {
   
   const canManageStaff = hasPermission('manage:staff');
   const canManageAttendance = hasPermission('manage:staff-attendance');
+  const canDeleteAttendanceEntry = hasPermission('manage:staff-attendance-delete');
   const canViewAttendanceReport = hasPermission('view:staff-attendance-report');
 
   const [activeSection, setActiveSection] = useState('list');
@@ -177,7 +207,7 @@ export default function StaffListPage() {
               setCurrentAction('arrival');
           }
       } else {
-          setTempEntry({ staffId: id, status: 'present', checkIn: '১০:৩০ AM' });
+          setTempEntry({ staffId: id, status: 'present', checkIn: '10:30 AM' });
           setCurrentAction('arrival');
       }
   };
@@ -188,9 +218,9 @@ export default function StaffListPage() {
       if (action === 'leave') {
           setTempEntry({ ...tempEntry, status: 'leave', leaveType: tempEntry.leaveType || 'CL', checkIn: undefined, checkOut: undefined });
       } else if (action === 'arrival') {
-          setTempEntry({ ...tempEntry, status: 'present', checkIn: tempEntry.checkIn || '১০:৩০ AM', leaveType: undefined });
+          setTempEntry({ ...tempEntry, status: 'present', checkIn: tempEntry.checkIn || '10:30 AM', leaveType: undefined });
       } else if (action === 'departure') {
-          setTempEntry({ ...tempEntry, status: 'present', checkOut: tempEntry.checkOut || '০৪:০০ PM', leaveType: undefined });
+          setTempEntry({ ...tempEntry, status: 'present', checkOut: tempEntry.checkOut || '04:00 PM', leaveType: undefined });
       }
   };
 
@@ -199,26 +229,31 @@ export default function StaffListPage() {
       
       setIsAttendanceLoading(true);
       try {
-          const nowTime = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+          const sysTime = getSystemTimeEn();
           const nextAtt = [...dailyAttendance.attendance];
           const idx = nextAtt.findIndex(a => a.staffId === selectedStaffId);
           
           let updatedEntry: StaffMemberAttendance;
           
+          // Apply time formatting and normalization
+          const processedEntry = { ...tempEntry };
+          if (processedEntry.checkIn) processedEntry.checkIn = ensureAmPm(processedEntry.checkIn, 'AM');
+          if (processedEntry.checkOut) processedEntry.checkOut = ensureAmPm(processedEntry.checkOut, 'PM');
+
           if (idx > -1) {
               const prev = nextAtt[idx];
               if (currentAction === 'arrival') {
-                  updatedEntry = { ...tempEntry, entryTime: prev.entryTime || nowTime };
+                  updatedEntry = { ...processedEntry, entryTime: prev.entryTime || sysTime };
               } else if (currentAction === 'departure') {
-                  updatedEntry = { ...prev, ...tempEntry, exitTime: prev.exitTime || nowTime };
+                  updatedEntry = { ...prev, ...processedEntry, exitTime: prev.exitTime || sysTime };
               } else {
-                  updatedEntry = { ...tempEntry, entryTime: prev.entryTime || nowTime };
+                  updatedEntry = { ...processedEntry, entryTime: prev.entryTime || sysTime };
               }
               nextAtt[idx] = updatedEntry;
           } else {
-              updatedEntry = { ...tempEntry };
-              if (currentAction === 'arrival' || currentAction === 'leave') updatedEntry.entryTime = nowTime;
-              if (currentAction === 'departure') updatedEntry.exitTime = nowTime;
+              updatedEntry = { ...processedEntry };
+              if (currentAction === 'arrival' || currentAction === 'leave') updatedEntry.entryTime = sysTime;
+              if (currentAction === 'departure') updatedEntry.exitTime = sysTime;
               nextAtt.push(updatedEntry);
           }
           
@@ -619,39 +654,45 @@ export default function StaffListPage() {
                                                 <Badge className="bg-blue-600 px-6 py-1.5 text-base font-black mb-2 shadow-lg">আজ ছুটিতে আছেন</Badge>
                                                 <p className="text-sm font-bold text-blue-800">এই শিক্ষক/কর্মচারীর আজকের হাজিরা 'ছুটি' হিসেবে সংরক্ষিত হয়েছে।</p>
                                             </div>
-                                        ) : !existingInToday?.checkIn ? (
+                                        ) : (
                                             <>
+                                                {/* Arrival Button: Show if NOT already arrived */}
+                                                {!existingInToday?.checkIn && (
+                                                    <Button 
+                                                        size="lg" 
+                                                        className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
+                                                        onClick={() => handleActionChange('arrival')}
+                                                    >
+                                                        <LogIn className="h-5 w-5" /> আগমণ
+                                                    </Button>
+                                                )}
+
+                                                {/* Departure Button: Always visible, but disabled if no check-in */}
                                                 <Button 
                                                     size="lg" 
-                                                    className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
-                                                    onClick={() => handleActionChange('arrival')}
-                                                >
-                                                    <LogIn className="h-5 w-5" /> আগমণ
-                                                </Button>
-                                                <Button 
-                                                    size="lg" 
-                                                    disabled={true}
-                                                    title="আগমণ সেভ করা ছাড়া প্রস্থান দেওয়া যাবে না"
-                                                    className="flex-1 h-14 text-lg font-black bg-white text-slate-300 border-2 border-slate-200 cursor-not-allowed opacity-50"
+                                                    disabled={!existingInToday?.checkIn}
+                                                    title={!existingInToday?.checkIn ? "আগমণ সেভ করা ছাড়া প্রস্থান দেওয়া যাবে না" : ""}
+                                                    className={cn(
+                                                        "flex-1 h-14 text-lg font-black transition-all gap-2", 
+                                                        currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50",
+                                                        !existingInToday?.checkIn && "opacity-50 cursor-not-allowed border-slate-200 text-slate-300"
+                                                    )}
+                                                    onClick={() => handleActionChange('departure')}
                                                 >
                                                     <LogOut className="h-5 w-5" /> প্রস্থান
                                                 </Button>
-                                                <Button 
-                                                    size="lg" 
-                                                    className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'leave' ? "bg-blue-600 shadow-lg ring-4 ring-blue-100" : "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50")}
-                                                    onClick={() => handleActionChange('leave')}
-                                                >
-                                                    <UserX className="h-5 w-5" /> ছুটি
-                                                </Button>
+
+                                                {/* Leave Button: Show if NOT already arrived */}
+                                                {!existingInToday?.checkIn && (
+                                                    <Button 
+                                                        size="lg" 
+                                                        className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'leave' ? "bg-blue-600 shadow-lg ring-4 ring-blue-100" : "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50")}
+                                                        onClick={() => handleActionChange('leave')}
+                                                    >
+                                                        <UserX className="h-5 w-5" /> ছুটি
+                                                    </Button>
+                                                )}
                                             </>
-                                        ) : (
-                                            <Button 
-                                                size="lg" 
-                                                className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50")}
-                                                onClick={() => handleActionChange('departure')}
-                                            >
-                                                <LogOut className="h-5 w-5" /> প্রস্থান
-                                            </Button>
                                         )}
                                     </div>
 
@@ -665,7 +706,7 @@ export default function StaffListPage() {
                                                         onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
                                                         onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
                                                         className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300 focus:ring-emerald-500" 
-                                                        placeholder="উদা: ১০:৩০ AM" 
+                                                        placeholder="উদা: 10:30 AM" 
                                                     />
                                                 </div>
                                             )}
@@ -677,7 +718,7 @@ export default function StaffListPage() {
                                                         onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} 
                                                         onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
                                                         className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300 focus:ring-rose-500" 
-                                                        placeholder="উদা: ০৪:০০ PM" 
+                                                        placeholder="উদা: 04:00 PM" 
                                                     />
                                                 </div>
                                             )}
@@ -726,7 +767,7 @@ export default function StaffListPage() {
                                 <Table>
                                     <TableHeader className="bg-muted/50">
                                         <TableRow>
-                                            <TableHead className="w-16 font-black">ক্রমিক</TableHead>
+                                            <TableHead className="w-16 font-black text-center">ক্রমিক</TableHead>
                                             <TableHead className="font-black">নাম ও পদবি</TableHead>
                                             <TableHead className="text-center font-black">অবস্থা</TableHead>
                                             <TableHead className="text-center font-black">সময় / ছুটির ধরন</TableHead>
@@ -746,7 +787,7 @@ export default function StaffListPage() {
                                                 const staff = activeStaffList.find(s => s.id === att.staffId);
                                                 return (
                                                     <TableRow key={att.staffId} className="h-16 hover:bg-slate-50 transition-colors">
-                                                        <TableCell className="font-bold">{toBengaliNumber(index + 1)}</TableCell>
+                                                        <TableCell className="font-bold text-center">{toBengaliNumber(index + 1)}</TableCell>
                                                         <TableCell>
                                                             <div className="font-black text-sm text-slate-800">{staff?.nameBn}</div>
                                                             <div className="text-[10px] font-bold text-muted-foreground">{staff?.designation}</div>
@@ -759,7 +800,7 @@ export default function StaffListPage() {
                                                         <TableCell className="text-center">
                                                             {att.status === 'present' ? (
                                                                 <div className="flex flex-col items-center">
-                                                                    <span className="text-[11px] font-black text-blue-900">{att.checkIn || '-'}{att.checkOut ? ` - ${att.checkOut}` : ''}</span>
+                                                                    <span className="text-[11px] font-black text-blue-900">{toBengaliNumber(att.checkIn || '-')}{att.checkOut ? ` - ${toBengaliNumber(att.checkOut)}` : ''}</span>
                                                                 </div>
                                                             ) : (
                                                                 <span className="text-xs font-black text-rose-700">{LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>
@@ -778,7 +819,9 @@ export default function StaffListPage() {
                                                         <TableCell className="text-right">
                                                             <div className="flex justify-end gap-2">
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handleStaffSelect(att.staffId)}><Edit2 className="h-4 w-4" /></Button>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteEntry(att.staffId)}><Trash2 className="h-4 w-4" /></Button>
+                                                                {canDeleteAttendanceEntry && (
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteEntry(att.staffId)}><Trash2 className="h-4 w-4" /></Button>
+                                                                )}
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>
