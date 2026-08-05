@@ -168,15 +168,15 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                     <div className="text-sm font-bold bg-emerald-50/50 p-4 rounded-xl border-2 border-dashed border-emerald-900/20">
                         <p className="text-xl leading-relaxed flex flex-wrap gap-2 items-end">
                             <span className="text-slate-600 font-black shrink-0">কথায়:</span> 
-                            <span className="font-black text-emerald-950 border-b border-dotted border-slate-400 flex-grow min-w-[200px] px-2 italic pb-0.5">
+                            <span className="font-black text-emerald-950 border-b border-dotted border-slate-400 border-opacity-50 flex-grow min-w-[200px] px-2 italic pb-0.5">
                                 {numberToBengaliWords(collection.totalAmount)} টাকা মাত্র।
                             </span>
                         </p>
                         <p className="mt-4 text-[11px] text-slate-700"><strong>আদায়ের বিবরণ:</strong> {collection.description || 'বিবিধ ফি আদায়'}</p>
                     </div>
 
-                    <div className="flex justify-between items-center py-4 px-6 bg-white rounded-2xl border-2 border-black/5 shadow-inner">
-                        <div className="flex gap-16">
+                    <div className="flex justify-between items-center py-4 pl-6 pr-1 bg-white rounded-2xl border-2 border-black/5 shadow-inner">
+                        <div className="flex gap-12">
                             <div className="text-center">
                                 <div className="h-10"></div>
                                 <div className="w-32 border-t border-black pt-1.5 font-black text-[11px] text-emerald-950">আদায়কারীর স্বাক্ষর</div>
@@ -186,11 +186,11 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                                 <div className="w-32 border-t border-black pt-1.5 font-black text-[11px] text-emerald-950">প্রধান শিক্ষকের স্বাক্ষর</div>
                             </div>
                         </div>
-                        <div className="p-2 border-2 border-emerald-950 bg-white rounded-xl shadow-lg">
+                        <div className="p-2 border-2 border-emerald-950 bg-white rounded-xl shadow-lg mr-2 shrink-0">
                             <QRCodeSVG 
                                 value={qrValue}
-                                size={90}
-                                level="H"
+                                size={115}
+                                level="M"
                                 includeMargin={false}
                             />
                         </div>
