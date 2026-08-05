@@ -150,6 +150,7 @@ export default function NoticeManagementPage() {
         );
     }
 
+    // Access to this page is allowed for anyone who can AT LEAST see the board
     if (!user || !canViewNotices) {
         return (
             <div className="flex min-h-screen flex-col bg-indigo-50 font-kalpurush">
@@ -172,8 +173,8 @@ export default function NoticeManagementPage() {
             <main className="flex-1 flex flex-col h-full max-w-[1400px] mx-auto w-full p-4 md:p-10 gap-8 pb-40">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
                     <div>
-                        <h2 className="text-3xl font-black text-slate-800">নোটিশ বোর্ড ব্যবস্থাপনা</h2>
-                        <p className="text-sm font-bold text-muted-foreground mt-1">বিদ্যালয়ের নোটিশ বোর্ড নিয়ন্ত্রণ ও নতুন নোটিশ প্রকাশ করুন</p>
+                        <h2 className="text-3xl font-black text-slate-800">নোটিশ বোর্ড</h2>
+                        <p className="text-sm font-bold text-muted-foreground mt-1">বিদ্যালয়ের সকল গুরুত্বপূর্ণ ঘোষণা এখানে পাওয়া যাবে</p>
                     </div>
                     {canManageNotices && (
                         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
