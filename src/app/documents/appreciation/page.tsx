@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const classNamesMap: { [key: string]: string } = {
