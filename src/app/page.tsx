@@ -19,7 +19,7 @@ import { getTransactions, Transaction } from '@/lib/transactions-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit, doc, Timestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -87,7 +87,7 @@ const NoticeTicker = () => {
                 setLatestNotice({
                     id: snapshot.docs[0].id,
                     ...data,
-                    date: data.date?.toDate() || new Date(),
+                    date: data.date instanceof Timestamp ? data.date.toDate() : (data.date ? new Date(data.date) : new Date()),
                 } as Notice);
             } else {
                 setLatestNotice(null);
@@ -536,7 +536,7 @@ const LiveRoutineCard = () => {
     const { selectedYear } = useAcademicYear();
     const [fullRoutine, setFullRoutine] = useState<ClassRoutine[]>([]);
     const [proxies, setProxies] = useState<ProxyClass[]>([]);
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [currentTime, setCurrentTime] = useState<Date | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
 
@@ -560,6 +560,7 @@ const LiveRoutineCard = () => {
             setIsLoading(false);
         };
         fetchData();
+        setCurrentTime(new Date());
     }, [db, selectedYear, user]);
 
     useEffect(() => {
@@ -568,6 +569,8 @@ const LiveRoutineCard = () => {
     }, []);
 
     const getCurrentPeriodInfo = () => {
+        if (!currentTime) return { status: 'লোড হচ্ছে...', runningClasses: [], isSpecialStatus: false, nextClasses: [], nextStatus: '' };
+        
         const now = currentTime;
         const currentDayName = dayMap[now.getDay()];
         let status = 'ক্লাস চলছে';
@@ -674,7 +677,7 @@ const LiveRoutineCard = () => {
                         .sort((a, b) => parseInt(a.className) - parseInt(b.className));
                 }
                 
-                nextStatus = `পরবর্তী ক্লাস শুরু হবে ${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} এ`;
+                nextStatus = `পরবর্তী ক্লাস শুরু হবে ${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} 에`;
             }
         } else {
              nextStatus = 'আজ আর কোনো ক্লাস বাকি নেই।';
@@ -693,7 +696,7 @@ const LiveRoutineCard = () => {
                         <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
                     </CardTitle>
                     <p className="text-[10px] font-bold text-muted-foreground pl-6">
-                        {format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn })}
+                        {currentTime ? format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
                     </p>
                 </div>
                  <Badge variant="outline" className="flex items-center gap-2 bg-white shadow-sm">
@@ -701,7 +704,7 @@ const LiveRoutineCard = () => {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    {currentTime.toLocaleTimeString('bn-BD', { hour: 'numeric', minute: 'numeric' })}
+                    {currentTime ? currentTime.toLocaleTimeString('bn-BD', { hour: 'numeric', minute: 'numeric' }) : <Skeleton className="h-4 w-12" />}
                 </Badge>
             </CardHeader>
             <CardContent>
