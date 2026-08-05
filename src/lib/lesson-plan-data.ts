@@ -13,7 +13,6 @@ import {
   Firestore,
   serverTimestamp,
   Timestamp,
-  orderBy
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -63,25 +62,28 @@ export const saveLessonPlan = async (db: Firestore, plan: NewLessonPlan) => {
 
 /**
  * Fetches lesson plans for a specific teacher.
+ * Sorting is done in-memory to avoid "Missing Index" errors.
  */
 export const getLessonPlansForTeacher = async (db: Firestore, teacherUid: string, academicYear: string): Promise<LessonPlan[]> => {
     const q = query(
         collection(db, COLLECTION_NAME),
         where('teacherUid', '==', teacherUid),
-        where('academicYear', '==', academicYear),
-        orderBy('updatedAt', 'desc')
+        where('academicYear', '==', academicYear)
     );
 
     try {
         const snap = await getDocs(q);
-        return snap.docs.map(doc => {
+        const plans = snap.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
                 ...data,
-                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
+                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : new Date()),
             } as LessonPlan;
         });
+        
+        // Manual sorting to bypass index requirement
+        return plans.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     } catch (e: any) {
         if (e.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -96,24 +98,27 @@ export const getLessonPlansForTeacher = async (db: Firestore, teacherUid: string
 
 /**
  * Fetches all lesson plans for admin overview.
+ * Sorting is done in-memory to avoid "Missing Index" errors.
  */
 export const getAllLessonPlans = async (db: Firestore, academicYear: string): Promise<LessonPlan[]> => {
     const q = query(
         collection(db, COLLECTION_NAME),
-        where('academicYear', '==', academicYear),
-        orderBy('updatedAt', 'desc')
+        where('academicYear', '==', academicYear)
     );
 
     try {
         const snap = await getDocs(q);
-        return snap.docs.map(doc => {
+        const plans = snap.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
                 ...data,
-                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
+                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : new Date()),
             } as LessonPlan;
         });
+        
+        // Manual sorting to bypass index requirement
+        return plans.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     } catch (e: any) {
         if (e.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
