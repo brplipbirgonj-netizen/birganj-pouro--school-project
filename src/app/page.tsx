@@ -10,10 +10,9 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
-import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
+import { getNotices, Notice } from '@/lib/notice-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { getStaff } from '@/lib/staff-data';
-import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { getGalleryConfig, GalleryConfig, defaultGalleryConfig } from '@/lib/gallery-data';
 import { getTransactions, Transaction } from '@/lib/transactions-data';
 import { format } from 'date-fns';
@@ -29,23 +28,6 @@ import { Badge } from '@/components/ui/badge';
 import { isHoliday, Holiday } from '@/lib/holiday-data';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogTrigger 
-} from "@/components/ui/alert-dialog";
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import Image from 'next/image';
 
@@ -76,9 +58,14 @@ const NoticeTicker = () => {
     const { user } = useAuth();
     const [latestNotice, setLatestNotice] = useState<Notice | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        if (!db || !user) return;
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (!db || !user || !isClient) return;
         
         const q = query(collection(db, 'notices'), orderBy('date', 'desc'), limit(1));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -103,7 +90,9 @@ const NoticeTicker = () => {
         });
 
         return () => unsubscribe();
-    }, [db, user]);
+    }, [db, user, isClient]);
+
+    if (!isClient) return null;
 
     if (latestNotice) {
         return (
@@ -306,230 +295,6 @@ const TeachersOnLeaveCard = () => {
     );
 };
 
-const NoticeBoard = () => {
-    const db = useFirestore();
-    const { user } = useAuth();
-    const { toast } = useToast();
-    const [notices, setNotices] = useState<Notice[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isAddOpen, setIsAddOpen] = useState(false);
-    const [isAiLoading, setIsAiLoading] = useState(false);
-    const [aiTopic, setAiTopic] = useState('');
-    const isAdmin = user?.role === 'admin';
-
-    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'] });
-
-    const fetchNotices = useCallback(async () => {
-        if (!db || !user) return;
-        setIsLoading(true);
-        try {
-            const data = await getNotices(db, 10);
-            setNotices(data);
-        } catch (e) {
-            console.error(e);
-        }
-        setIsLoading(false);
-    }, [db, user]);
-
-    useEffect(() => {
-        if (user) {
-            fetchNotices();
-        }
-    }, [user, fetchNotices]);
-
-    const handleAiGenerate = async () => {
-      if (!aiTopic.trim()) {
-        toast({ variant: 'destructive', title: 'বিষয় লিখুন', description: 'AI দিয়ে ড্রাফট করতে একটি বিষয় লিখুন।' });
-        return;
-      }
-
-      setIsAiLoading(true);
-      try {
-        const result = await generateNotice({ topic: aiTopic });
-        setNewNotice(prev => ({
-          ...prev,
-          title: result.title,
-          content: result.content
-        }));
-        toast({ title: 'AI ড্রাফট তৈরি হয়েছে', description: 'এখন আপনি এটি এডিট বা পাবলিশ করতে পারেন।' });
-        setAiTopic('');
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'AI ত্রুটি', description: 'দুঃখিত, এই মুহূর্তে ড্রাফট তৈরি করা সম্ভব হচ্ছে না।' });
-      } finally {
-        setIsAiLoading(false);
-      }
-    };
-
-    const handleAddNotice = async () => {
-        if (!db || !user) return;
-        if (!newNotice.title || !newNotice.content) {
-            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'শিরোনাম ও বিষয়বস্তু লিখুন।' });
-            return;
-        }
-
-        const senderName = user.role === 'admin' ? 'প্রধান শিক্ষক' : (user.displayName || user.email || 'শিক্ষক');
-
-        try {
-            await addNotice(db, {
-                title: newNotice.title,
-                content: newNotice.content,
-                priority: newNotice.priority,
-                senderName: senderName
-            });
-            toast({ title: 'নোটিশ প্রকাশিত হয়েছে' });
-            setIsAddOpen(false);
-            setNewNotice({ title: '', content: '', priority: 'normal' });
-            fetchNotices();
-        } catch (e) {}
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!db) return;
-        try {
-            await deleteNotice(db, id);
-            toast({ title: 'নোটিশ মুছে ফেলা হয়েছে' });
-            fetchNotices();
-        } catch (e) {}
-    };
-
-    return (
-        <Card className="lg:col-span-1 shadow-md border-2 border-black">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 bg-primary/5 rounded-t-lg">
-                <div className="flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-primary animate-pulse" />
-                    <CardTitle className="text-lg">নোটিশ বোর্ড</CardTitle>
-                </div>
-                <div className="flex items-center gap-2">
-                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={fetchNotices}>
-                        <RefreshCcw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-                   </Button>
-                    {isAdmin && (
-                        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="sm" variant="outline" className="h-8 bg-white"><Plus className="h-4 w-4" /></Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                    <FilePen className="h-5 w-5" /> নতুন নোটিশ তৈরি করুন
-                                </DialogTitle>
-                                </DialogHeader>
-                                
-                                <div className="space-y-6 py-4">
-                                    <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3">
-                                    <div className="flex items-center gap-2 text-indigo-700 font-black text-sm uppercase tracking-wider">
-                                        <Sparkles className="h-4 w-4 animate-bounce" /> AI দিয়ে ড্রাফট করুন (অ্যাডভান্সড)
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Input 
-                                        placeholder="বিষয় লিখুন (উদা: শীতকালীন ছুটি)" 
-                                        value={aiTopic}
-                                        onChange={e => setAiTopic(e.target.value)}
-                                        className="bg-white border-indigo-200"
-                                        />
-                                        <Button 
-                                        onClick={handleAiGenerate} 
-                                        disabled={isAiLoading}
-                                        className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
-                                        >
-                                        {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                    <p className="text-[10px] text-indigo-600 font-bold italic">*** শুধু টপিকটি লিখুন, AI আপনার হয়ে একটি সুন্দর নোটিশ লিখে দেবে।</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">শিরোনাম / বিষয়</Label>
-                                        <Input 
-                                            placeholder="উদা: শীতকালীন ছুটি সংক্রান্ত"
-                                            value={newNotice.title} 
-                                            onChange={e => setNewNotice({...newNotice, title: e.target.value})} 
-                                            className="font-bold"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">ধরণ (Priority)</Label>
-                                        <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
-                                            <SelectTrigger className="font-bold"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="normal">সাধারণ (Normal)</SelectItem>
-                                                <SelectItem value="important">গুরুত্বপূর্ণ (Important)</SelectItem>
-                                                <SelectItem value="urgent">জরুরি (Urgent)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label className="font-bold"> বিস্তারিত বিষয়বস্তু</Label>
-                                        <Textarea 
-                                            placeholder="নোটিশের বিস্তারিত লিখুন..."
-                                            value={newNotice.content} 
-                                            onChange={e => setNewNotice({...newNotice, content: e.target.value})} 
-                                            className="min-h-[180px] font-medium leading-relaxed" 
-                                        />
-                                    </div>
-                                </div>
-
-                                <DialogFooter className="border-t pt-4">
-                                    <DialogClose asChild><Button variant="ghost" className="font-bold">বাতিল</Button></DialogClose>
-                                    <Button onClick={handleAddNotice} className="px-8 font-black shadow-lg">প্রকাশ করুন</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    )}
-                </div>
-            </CardHeader>
-            <CardContent className="p-4">
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin">
-                    {isLoading ? (
-                        [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-md" />)
-                    ) : notices.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-8 text-sm italic">বর্তমানে কোনো নোটিশ নেই।</p>
-                    ) : (
-                        notices.map(notice => (
-                            <div key={notice.id} className={cn(
-                                "p-3 rounded-lg border-l-4 shadow-sm relative group transition-all hover:bg-accent/5",
-                                notice.priority === 'urgent' ? "bg-red-50 border-l-red-500" : notice.priority === 'important' ? "bg-amber-50 border-l-amber-500" : "bg-blue-50 border-l-blue-500"
-                            )}>
-                                <div className="flex justify-between items-start mb-1">
-                                    <h4 className="font-bold text-sm leading-tight pr-6">{notice.title}</h4>
-                                    {isAdmin && (
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                    <AlertDialogDescription>এই নোটিশটি স্থায়ীভাবে মুছে ফেলা হবে।</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(notice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    )}
-                                </div>
-                                <p className="text-xs text-muted-foreground mb-3 whitespace-pre-wrap leading-relaxed text-justify">{notice.content}</p>
-                                
-                                <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold border-t border-dashed pt-2">
-                                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(notice.date, 'dd MMM p', { locale: bn })}</span>
-                                    <span>{(notice.senderName === 'dlswf.roy@gmail.com' || notice.senderName === 'System Admin') ? 'প্রধান শিক্ষক' : notice.senderName}</span>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
 const LiveRoutineCard = () => {
     const db = useFirestore();
     const { user } = useAuth();
@@ -539,9 +304,14 @@ const LiveRoutineCard = () => {
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        if (!db || !user) return;
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (!db || !user || !isClient) return;
         setIsLoading(true);
         const fetchData = async () => {
             try {
@@ -561,15 +331,16 @@ const LiveRoutineCard = () => {
         };
         fetchData();
         setCurrentTime(new Date());
-    }, [db, selectedYear, user]);
+    }, [db, selectedYear, user, isClient]);
 
     useEffect(() => {
+        if (!isClient) return;
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
-    }, []);
+    }, [isClient]);
 
     const getCurrentPeriodInfo = () => {
-        if (!currentTime) return { status: 'লোড হচ্ছে...', runningClasses: [], isSpecialStatus: false, nextClasses: [], nextStatus: '' };
+        if (!isClient || !currentTime) return { status: 'লোড হচ্ছে...', runningClasses: [], isSpecialStatus: false, nextClasses: [], nextStatus: '' };
         
         const now = currentTime;
         const currentDayName = dayMap[now.getDay()];
@@ -677,7 +448,7 @@ const LiveRoutineCard = () => {
                         .sort((a, b) => parseInt(a.className) - parseInt(b.className));
                 }
                 
-                nextStatus = `পরবর্তী ক্লাস শুরু হবে ${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} 에`;
+                nextStatus = `পরবর্তী ক্লাস শুরু হবে ${nextPeriodInfo.start.h > 12 ? nextPeriodInfo.start.h - 12 : nextPeriodInfo.start.h}:${nextPeriodInfo.start.m.toString().padStart(2, '0')} এ`;
             }
         } else {
              nextStatus = 'আজ আর কোনো ক্লাস বাকি নেই।';
@@ -696,7 +467,7 @@ const LiveRoutineCard = () => {
                         <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
                     </CardTitle>
                     <div className="text-[10px] font-bold text-muted-foreground pl-6">
-                        {currentTime ? format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
+                        {isClient && currentTime ? format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
                     </div>
                 </div>
                  <Badge variant="outline" className="flex items-center gap-2 bg-white shadow-sm">
@@ -704,7 +475,7 @@ const LiveRoutineCard = () => {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    {currentTime ? currentTime.toLocaleTimeString('bn-BD', { hour: 'numeric', minute: 'numeric' }) : <Skeleton className="h-4 w-12" />}
+                    {isClient && currentTime ? currentTime.toLocaleTimeString('bn-BD', { hour: 'numeric', minute: 'numeric' }) : <Skeleton className="h-4 w-12" />}
                 </Badge>
             </CardHeader>
             <CardContent>
@@ -722,7 +493,7 @@ const LiveRoutineCard = () => {
                                     <div className="flex items-center gap-2 mb-2 text-emerald-600 font-semibold text-sm">
                                         <span className="relative flex h-2 w-2">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                                         </span>
                                         এখন ক্লাস চলছে
                                     </div>
@@ -1126,7 +897,6 @@ export default function Home() {
           </Card>
           <LiveRoutineCard />
           <IncomeExpenseChart />
-          <NoticeBoard />
           <TeachersOnLeaveCard />
         </div>
       </main>
