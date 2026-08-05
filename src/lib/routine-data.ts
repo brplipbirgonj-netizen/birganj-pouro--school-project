@@ -11,7 +11,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export interface ClassRoutine {
   id?: string;
@@ -98,7 +98,7 @@ export const getFullRoutine = async (db: Firestore, academicYear: string): Promi
         const permissionError = new FirestorePermissionError({
             path: ROUTINE_COLLECTION,
             operation: 'list',
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     }
     return [];
@@ -127,7 +127,7 @@ export const saveRoutinesBatch = async (db: Firestore, routines: ClassRoutine[])
         path: ROUTINE_COLLECTION,
         operation: 'write',
         requestResourceData: routines,
-      });
+      } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
       throw permissionError;
     });

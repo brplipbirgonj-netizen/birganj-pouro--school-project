@@ -48,6 +48,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/auth';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, limit, onSnapshot, getDocs } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -149,7 +151,12 @@ export function Header() {
           setDisplayDesignation('শিক্ষক');
         }
       }, (error) => {
-          if (error.code === 'permission-denied') return;
+          if (error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  path: 'staff',
+                  operation: 'get',
+              } satisfies SecurityRuleContext));
+          }
       });
     } else {
       setDisplayPhoto(user.photoUrl || null);
@@ -188,7 +195,13 @@ export function Header() {
             const snap = await getDocs(q);
             setAllStudents(snap.docs.map(studentFromDoc));
             setLastFetchedYear(selectedYear);
-        } catch (e) {
+        } catch (e: any) {
+            if (e.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'students',
+                    operation: 'list',
+                } satisfies SecurityRuleContext));
+            }
             console.error(e);
         }
         setIsSearching(false);

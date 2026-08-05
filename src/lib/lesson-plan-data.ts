@@ -1,4 +1,3 @@
-
 'use client';
 /**
  * @fileOverview Lesson plan and syllabus progress data services.
@@ -83,7 +82,13 @@ export const getLessonPlansForTeacher = async (db: Firestore, teacherUid: string
                 updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
             } as LessonPlan;
         });
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: COLLECTION_NAME,
+                operation: 'list',
+            } satisfies SecurityRuleContext));
+        }
         console.error("Error fetching lesson plans:", e);
         return [];
     }
@@ -109,7 +114,13 @@ export const getAllLessonPlans = async (db: Firestore, academicYear: string): Pr
                 updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
             } as LessonPlan;
         });
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: COLLECTION_NAME,
+                operation: 'list',
+            } satisfies SecurityRuleContext));
+        }
         console.error("Error fetching all lesson plans:", e);
         return [];
     }
