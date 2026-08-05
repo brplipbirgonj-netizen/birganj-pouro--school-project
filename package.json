@@ -71,7 +71,6 @@
   },
   "browserslist": [
     "defaults",
-    "not ie 11",
-    "not expo 36"
+    "not ie 11"
   ]
 }
