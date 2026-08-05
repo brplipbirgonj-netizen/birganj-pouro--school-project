@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -44,8 +45,6 @@ import { Switch } from '@/components/ui/switch';
 import * as XLSX from 'xlsx';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
-import { generateNotice } from '@/ai/flows/generate-notice-flow';
 
 // --- Utility Functions ---
 const toBengaliNumber = (str: string | number) => {
@@ -59,260 +58,6 @@ const classNamesMap: Record<string, string> = {
 };
 
 // --- Sub Components ---
-
-function NoticeManagementSettings() {
-    const db = useFirestore();
-    const { user } = useAuth();
-    const { toast } = useToast();
-    const { schoolInfo } = useSchoolInfo();
-    const [notices, setNotices] = useState<Notice[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isAddOpen, setIsAddOpen] = useState(false);
-    const [isAiLoading, setIsAiLoading] = useState(false);
-    const [aiTopic, setAiTopic] = useState('');
-    const isAdmin = user?.role === 'admin';
-
-    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'], pdfUrl: '' });
-    const [printingNotice, setPrintingNotice] = useState<Notice | null>(null);
-
-    const fetchNotices = useCallback(async () => {
-        if (!db || !user) return;
-        setIsLoading(true);
-        try {
-            const data = await getNotices(db, 50); // Fetch more for management
-            setNotices(data);
-        } catch (e) {
-            console.error(e);
-        }
-        setIsLoading(false);
-    }, [db, user]);
-
-    useEffect(() => {
-        if (user) {
-            fetchNotices();
-        }
-    }, [user, fetchNotices]);
-
-    const handleAiGenerate = async () => {
-      if (!aiTopic.trim()) {
-        toast({ variant: 'destructive', title: 'বিষয় লিখুন', description: 'AI দিয়ে ড্রাফট করতে একটি বিষয় লিখুন।' });
-        return;
-      }
-
-      setIsAiLoading(true);
-      try {
-        const result = await generateNotice({ topic: aiTopic });
-        setNewNotice(prev => ({
-          ...prev,
-          title: result.title,
-          content: result.content
-        }));
-        toast({ title: 'AI ড্রাফট তৈরি হয়েছে' });
-        setAiTopic('');
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'AI ত্রুটি' });
-      } finally {
-        setIsAiLoading(false);
-      }
-    };
-
-    const handleAddNotice = async () => {
-        if (!db || !user) return;
-        if (!newNotice.title || !newNotice.content) {
-            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' });
-            return;
-        }
-
-        const senderName = user.role === 'admin' ? 'প্রধান শিক্ষক' : (user.displayName || user.email || 'শিক্ষক');
-
-        try {
-            await addNotice(db, {
-                title: newNotice.title,
-                content: newNotice.content,
-                priority: newNotice.priority,
-                senderName: senderName,
-                pdfUrl: newNotice.pdfUrl || undefined
-            });
-            toast({ title: 'নোটিশ প্রকাশিত হয়েছে' });
-            setIsAddOpen(false);
-            setNewNotice({ title: '', content: '', priority: 'normal', pdfUrl: '' });
-            fetchNotices();
-        } catch (e) {}
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!db) return;
-        try {
-            await deleteNotice(db, id);
-            toast({ title: 'নোটিশ মুছে ফেলা হয়েছে' });
-            fetchNotices();
-        } catch (e) {}
-    };
-
-    const handlePrint = (notice: Notice) => {
-        setPrintingNotice(notice);
-        setTimeout(() => {
-            window.print();
-            setPrintingNotice(null);
-        }, 300);
-    };
-
-    return (
-        <Card className="border-none shadow-none">
-            <CardHeader className="px-0 pt-0">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="text-2xl font-black flex items-center gap-2">
-                            <Bell className="h-6 w-6 text-primary" /> নোটিশ বোর্ড ব্যবস্থাপনা
-                        </CardTitle>
-                        <CardDescription>বিদ্যালয়ের নোটিশ বোর্ড নিয়ন্ত্রণ ও নতুন নোটিশ প্রকাশ করুন</CardDescription>
-                    </div>
-                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="font-black h-11 px-6 shadow-lg"><Plus className="mr-2 h-5 w-5" /> নতুন নোটিশ</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto font-kalpurush">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-black">নতুন নোটিশ তৈরি করুন</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-6 py-4">
-                                <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3">
-                                    <div className="flex items-center gap-2 text-indigo-700 font-black text-xs uppercase tracking-wider">
-                                        <Sparkles className="h-4 w-4" /> AI জেনারেটর
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Input placeholder="টপিক লিখুন (উদা: বার্ষিক ক্রীড়া প্রতিযোগিতা)" value={aiTopic} onChange={e => setAiTopic(e.target.value)} className="bg-white" />
-                                        <Button onClick={handleAiGenerate} disabled={isAiLoading} className="bg-indigo-600">
-                                            {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">শিরোনাম</Label>
-                                        <Input value={newNotice.title} onChange={e => setNewNotice({...newNotice, title: e.target.value})} className="font-bold" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">গুরুত্ব (Priority)</Label>
-                                        <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="normal">সাধারণ (Normal)</SelectItem>
-                                                <SelectItem value="important">গুরুত্বপূর্ণ (Important)</SelectItem>
-                                                <SelectItem value="urgent">জরুরি (Urgent)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label className="font-bold">বিস্তারিত বিষয়বস্তু</Label>
-                                        <Textarea value={newNotice.content} onChange={e => setNewNotice({...newNotice, content: e.target.value})} className="min-h-[150px]" />
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label className="font-bold">পিডিএফ বা ডকুমেন্ট লিংক (ঐচ্ছিক)</Label>
-                                        <Input placeholder="https://..." value={newNotice.pdfUrl} onChange={e => setNewNotice({...newNotice, pdfUrl: e.target.value})} />
-                                    </div>
-                                </div>
-                            </div>
-                            <DialogFooter className="pt-4 border-t">
-                                <DialogClose asChild><Button variant="ghost" className="font-bold">বাতিল</Button></DialogClose>
-                                <Button onClick={handleAddNotice} className="px-8 font-black">প্রকাশ করুন</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                </div>
-            </CardHeader>
-            <CardContent className="px-0 pt-6">
-                <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
-                    <Table>
-                        <TableHeader className="bg-muted/50">
-                            <TableRow>
-                                <TableHead className="w-16 text-center">ক্রমিক</TableHead>
-                                <TableHead>শিরোনাম ও তারিখ</TableHead>
-                                <TableHead>ধরণ</TableHead>
-                                <TableHead>ডকুমেন্ট</TableHead>
-                                <TableHead className="text-right">একশন</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow><TableCell colSpan={5} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
-                            ) : notices.length === 0 ? (
-                                <TableRow><TableCell colSpan={5} className="text-center py-20 italic">কোনো নোটিশ পাওয়া যায়নি।</TableCell></TableRow>
-                            ) : (
-                                notices.map((notice, idx) => (
-                                    <TableRow key={notice.id} className="hover:bg-slate-50">
-                                        <TableCell className="text-center font-bold">{toBengaliNumber(idx + 1)}</TableCell>
-                                        <TableCell>
-                                            <p className="font-black text-sm text-slate-800 line-clamp-1">{notice.title}</p>
-                                            <p className="text-[10px] text-muted-foreground">{format(notice.date, 'PP p', { locale: bn })}</p>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={notice.priority === 'urgent' ? 'destructive' : notice.priority === 'important' ? 'secondary' : 'outline'} className="text-[10px] font-black">
-                                                {notice.priority === 'urgent' ? 'জরুরি' : notice.priority === 'important' ? 'গুরুত্বপূর্ণ' : 'সাধারণ'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {notice.pdfUrl ? (
-                                                <a href={notice.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-[10px] font-bold">
-                                                    <ExternalLink className="h-3 w-3" /> লিংক
-                                                </a>
-                                            ) : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handlePrint(notice)}><Printer className="h-4 w-4" /></Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500"><Trash2 className="h-4 w-4" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="font-kalpurush">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>নোটিশটি মুছতে চান?</AlertDialogTitle>
-                                                            <AlertDialogDescription>এই নোটিশটি স্থায়ীভাবে মুছে ফেলা হবে।</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDelete(notice.id)} className="bg-destructive text-destructive-foreground">মুছে ফেলুন</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-
-            {/* Hidden Printable Notice */}
-            {printingNotice && (
-                <div className="hidden print:block printable-area bg-white text-black p-12 font-kalpurush">
-                    <div className="text-center border-b-4 border-emerald-800 pb-4 mb-8">
-                        <h1 className="text-4xl font-black text-emerald-950 mb-1">{schoolInfo.name}</h1>
-                        <p className="text-lg font-bold text-slate-700">{schoolInfo.address}</p>
-                    </div>
-                    <div className="text-right mb-6 text-sm font-bold">
-                        তারিখ: {format(printingNotice.date, 'dd/MM/yyyy', { locale: bn })} ইং
-                    </div>
-                    <div className="text-center mb-10">
-                        <h2 className="text-2xl font-black underline underline-offset-8 uppercase tracking-widest">{printingNotice.title}</h2>
-                    </div>
-                    <div className="text-xl leading-[2] text-justify font-medium whitespace-pre-wrap px-6">
-                        {printingNotice.content}
-                    </div>
-                    <div className="mt-24 flex justify-end px-12">
-                        <div className="text-center">
-                            <div className="w-48 border-t-2 border-black pt-1 font-black text-lg">প্রধান শিক্ষক</div>
-                            <p className="text-sm font-bold">{schoolInfo.name}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </Card>
-    );
-}
 
 function GalleryManagementSettings() {
     const db = useFirestore();
@@ -1261,7 +1006,6 @@ export default function SettingsPage() {
         if (isAdmin) {
             items.push(
                 { id: 'school', label: 'প্রতিষ্ঠানের তথ্য', icon: School, color: 'text-emerald-600 bg-emerald-50' },
-                { id: 'notices', label: 'নোটিশ ব্যবস্থাপনা', icon: Bell, color: 'text-blue-600 bg-blue-50' },
                 { id: 'gallery', label: 'গ্যালারি সেটিংস', icon: ImageIcon, color: 'text-primary bg-primary/10' },
                 { id: 'holidays', label: 'অতিরিক্ত ছুটি', icon: Calendar, color: 'text-rose-600 bg-rose-50' },
                 { id: 'users', label: 'ইউজার ম্যানেজমেন্ট', icon: Users, color: 'text-blue-600 bg-blue-50' },
@@ -1308,7 +1052,6 @@ export default function SettingsPage() {
                     <div className="p-6 sm:p-10 lg:p-14 flex-1">
                         {activeSection === 'profile' && <ProfileSettings />}
                         {activeSection === 'school' && isAdmin && <SchoolInfoSettings />}
-                        {activeSection === 'notices' && isAdmin && <NoticeManagementSettings />}
                         {activeSection === 'gallery' && isAdmin && <GalleryManagementSettings />}
                         {activeSection === 'holidays' && isAdmin && <HolidaySettings />}
                         {activeSection === 'users' && isAdmin && <UserManagementSettings />}

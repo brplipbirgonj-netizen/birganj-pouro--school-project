@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -24,7 +25,8 @@ import {
   UserCheck,
   ChevronRight,
   Loader2,
-  ListTodo
+  ListTodo,
+  Bell
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -88,6 +90,7 @@ const classNamesMap: { [key: string]: string } = {
 const mainMenuItems = [
   { id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, href: '/', permission: 'view:dashboard', color: 'bg-sky-50 text-sky-700 border-sky-100' },
   { id: 'admissions', label: 'ভর্তি আবেদনসমূহ', icon: UserCheck, href: '/admissions-management', permission: 'manage:admissions', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
+  { id: 'notices', label: 'নোটিশ ব্যবস্থাপনা', icon: Bell, href: '/notices-management', permission: 'manage:notices', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
   { id: 'profile-search', label: 'শিক্ষার্থী প্রোফাইল', icon: UserSearch, href: '/student-profile', permission: 'view:student-profile', color: 'bg-blue-50 text-blue-700 border-blue-100' },
   { id: 'add-student', label: 'নতুন শিক্ষার্থী যোগ', icon: UserPlus, href: '/add-student', permission: 'manage:students', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
   { id: 'student-list', label: 'শিক্ষার্থী তালিকা', icon: Users, href: '/student-list', permission: 'view:students', color: 'bg-rose-50 text-rose-700 border-rose-100' },
