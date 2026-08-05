@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -11,7 +12,7 @@ import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
 import { 
     Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, 
     Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, 
-    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users, LogIn, LogOut, AlertTriangle 
+    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users, LogIn, LogOut, AlertTriangle, LayoutGrid 
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -130,6 +131,7 @@ export default function StaffListPage() {
   const canViewAttendanceReport = hasPermission('view:staff-attendance-report');
 
   const [activeSection, setActiveSection] = useState('list');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
@@ -395,6 +397,48 @@ export default function StaffListPage() {
     </div>
   );
 
+  const StaffGrid = ({ data, colorClass }: { data: Staff[], colorClass: string }) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+        {data.map((staff) => (
+            <Card key={staff.id} className="overflow-hidden group relative hover:shadow-xl transition-all duration-300 border-2 border-black/5 hover:border-primary/20 bg-white rounded-2xl">
+                <div className="p-5 flex flex-col items-center text-center">
+                    <div className="relative mb-4">
+                        <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-primary/30 to-transparent blur-sm group-hover:blur-md transition-all"></div>
+                        <Avatar className="h-24 w-24 border-4 border-white shadow-lg relative">
+                            <AvatarImage src={staff.photoUrl} className="object-cover" />
+                            <AvatarFallback className="font-black text-2xl bg-muted text-muted-foreground">{staff.nameBn.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </div>
+                    <h3 className={cn("font-black text-lg line-clamp-1 leading-tight mb-1", colorClass)}>{staff.nameBn}</h3>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{staff.designation}</p>
+                    <div className="mt-3 pt-3 border-t border-dashed w-full flex flex-col gap-1">
+                        <p className="text-xs font-black text-slate-700 flex items-center justify-center gap-1.5">
+                            <Clock className="h-3 w-3 text-primary" />
+                            যোগদান: {toBengaliNumber(format(new Date(staff.joinDate), 'yyyy'))}
+                        </p>
+                        <p className="text-xs font-black text-primary flex items-center justify-center gap-1.5">
+                            <ChevronRight className="h-3 w-3" />
+                            {toBengaliNumber(staff.mobile)}
+                        </p>
+                    </div>
+                </div>
+                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white" onClick={() => setStaffToView(staff)}>
+                        <Eye className="h-4 w-4" />
+                    </Button>
+                    {canManageStaff && (
+                        <Link href={`/edit-staff/${staff.id}`}>
+                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white text-blue-600">
+                                <FilePen className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                    )}
+                </div>
+            </Card>
+        ))}
+    </div>
+  );
+
   const reportPages = useMemo(() => {
       if (!reportStartDate || !reportEndDate) return [];
       const activeTeachers = activeStaffList;
@@ -556,33 +600,63 @@ export default function StaffListPage() {
 
         <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
             <div className="p-4 sm:p-6 lg:p-8 flex-1">
-                <div className="mb-6 border-b pb-4 flex justify-between items-center no-print">
+                <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
                     <div>
                         <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
                         <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">{schoolInfo.name}</p>
                     </div>
-                    {activeSection === 'list' && canManageStaff && (
-                        <Link href="/add-staff">
-                            <Button className="font-black h-10 px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> নতুন স্টাফ</Button>
-                        </Link>
-                    )}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {activeSection === 'list' && (
+                            <div className="flex bg-muted/50 p-1 rounded-xl shadow-inner border border-black/5 mr-2">
+                                <Button
+                                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    className="h-8 px-3 rounded-lg shadow-none"
+                                    onClick={() => setViewMode('table')}
+                                >
+                                    <List className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    className="h-8 px-3 rounded-lg shadow-none"
+                                    onClick={() => setViewMode('grid')}
+                                >
+                                    <LayoutGrid className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+                        {activeSection === 'list' && canManageStaff && (
+                            <Link href="/add-staff">
+                                <Button className="font-black h-10 px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> নতুন স্টাফ</Button>
+                            </Link>
+                        )}
+                    </div>
                 </div>
 
                 {activeSection === 'list' && (
                     <div className="space-y-8 animate-in fade-in duration-500 no-print">
                         <section>
-                            <div className="flex items-center gap-2 mb-4 px-2">
+                            <div className="flex items-center gap-2 mb-6 px-2">
                                 <div className="h-6 w-1.5 bg-orange-500 rounded-full" />
-                                <h3 className="text-lg font-black text-orange-950">| শিক্ষকবৃন্দের তালিকা ({toBengaliNumber(sortedTeachers.length)} জন)</h3>
+                                <h3 className="text-xl font-black text-orange-950">শিক্ষকবৃন্দের তালিকা ({toBengaliNumber(sortedTeachers.length)} জন)</h3>
                             </div>
-                            <StaffTable data={sortedTeachers} colorClass="text-blue-700" />
+                            {viewMode === 'table' ? (
+                                <StaffTable data={sortedTeachers} colorClass="text-blue-700" />
+                            ) : (
+                                <StaffGrid data={sortedTeachers} colorClass="text-blue-700" />
+                            )}
                         </section>
                         <section>
-                            <div className="flex items-center gap-2 mb-4 px-2">
+                            <div className="flex items-center gap-2 mb-6 px-2">
                                 <div className="h-6 w-1.5 bg-blue-500 rounded-full" />
-                                <h3 className="text-lg font-black text-blue-950">| কর্মচারীবৃন্দের তালিকা ({toBengaliNumber(sortedEmployees.length)} জন)</h3>
+                                <h3 className="text-xl font-black text-blue-950">কর্মচারীবৃন্দের তালিকা ({toBengaliNumber(sortedEmployees.length)} জন)</h3>
                             </div>
-                            <StaffTable data={sortedEmployees} colorClass="text-primary" />
+                            {viewMode === 'table' ? (
+                                <StaffTable data={sortedEmployees} startIdx={sortedTeachers.length} colorClass="text-primary" />
+                            ) : (
+                                <StaffGrid data={sortedEmployees} colorClass="text-primary" />
+                            )}
                         </section>
                     </div>
                 )}
