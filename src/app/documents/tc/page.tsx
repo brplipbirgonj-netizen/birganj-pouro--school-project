@@ -12,12 +12,15 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, ArrowLeft, FileText, Info } from 'lucide-react';
+import { Printer, ArrowLeft, FileText, Info, Settings2, Type } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
@@ -39,6 +42,14 @@ export default function TCGeneratorPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+  // Customization Settings
+  const [customSettings, setCustomSettings] = useState({
+    watermarkOpacity: 0.05,
+    borderStyle: 'border-double',
+    fontSize: 20,
+    borderWidth: 'border-8'
+  });
 
   const [formData, setFormData] = useState({
     smarakNo: `বিপৌউবি/ছাড়পত্র/${new Date().getFullYear()}/`,
@@ -107,50 +118,117 @@ export default function TCGeneratorPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <Card className="shadow-lg border-2">
-                    <CardHeader className="bg-amber-50 border-b">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-amber-700" /> ছাড়পত্রের বিবরণ
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="font-bold">শ্রেণি</Label>
-                                <Select value={className} onValueChange={setClassName}>
-                                    <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
-                                    <SelectContent>
-                                        {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">শিক্ষার্থী</Label>
-                                <Select value={selectedStudent?.id || ''} onValueChange={(v) => setSelectedStudent(students.find(s => s.id === v) || null)}>
-                                    <SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
-                                    <SelectContent>
-                                        {students.map(s => <SelectItem key={s.id} value={s.id}>রোল {s.roll} - {s.studentNameBn}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 border-t pt-4">
+                <div className="space-y-6">
+                    <Card className="shadow-lg border-2">
+                        <CardHeader className="bg-amber-50 border-b">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-amber-700" /> ছাড়পত্রের বিবরণ
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label className="font-bold">স্মারক নং</Label><Input value={formData.smarakNo} onChange={e => handleFieldChange('smarakNo', e.target.value)} /></div>
-                                <div className="space-y-2"><Label className="font-bold">ইস্যুর তারিখ</Label><Input value={formData.issueDate} onChange={e => handleFieldChange('issueDate', e.target.value)} /></div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">শ্রেণি</Label>
+                                    <Select value={className} onValueChange={setClassName}>
+                                        <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">শিক্ষার্থী</Label>
+                                    <Select value={selectedStudent?.id || ''} onValueChange={(v) => setSelectedStudent(students.find(s => s.id === v) || null)}>
+                                        <SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট করুন" /></SelectTrigger>
+                                        <SelectContent>
+                                            {students.map(s => <SelectItem key={s.id} value={s.id}>রোল {s.roll} - {s.studentNameBn}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                            <div className="space-y-2"><Label className="font-bold">ত্যাগের কারণ</Label><Input value={formData.reason} onChange={e => handleFieldChange('reason', e.target.value)} /></div>
-                            <div className="space-y-2"><Label className="font-bold">আচরণ</Label><Input value={formData.conduct} onChange={e => handleFieldChange('conduct', e.target.value)} /></div>
-                            <div className="space-y-2"><Label className="font-bold">অ্যাকাডেমিক অবস্থা</Label><Input value={formData.status} onChange={e => handleFieldChange('status', e.target.value)} /></div>
-                            <div className="space-y-2"><Label className="font-bold">দেনা-পাওনা</Label><Input value={formData.dues} onChange={e => handleFieldChange('dues', e.target.value)} /></div>
-                        </div>
 
-                        <Button onClick={() => window.print()} size="lg" className="w-full font-black shadow-lg bg-amber-700 hover:bg-amber-800" disabled={!selectedStudent}>
-                            <Printer className="mr-2 h-5 w-5" /> ছাড়পত্র প্রিন্ট করুন
-                        </Button>
-                    </CardContent>
-                </Card>
+                            <div className="space-y-4 border-t pt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2"><Label className="font-bold">স্মারক নং</Label><Input value={formData.smarakNo} onChange={e => handleFieldChange('smarakNo', e.target.value)} /></div>
+                                    <div className="space-y-2"><Label className="font-bold">ইস্যুর তারিখ</Label><Input value={formData.issueDate} onChange={e => handleFieldChange('issueDate', e.target.value)} /></div>
+                                </div>
+                                <div className="space-y-2"><Label className="font-bold">ত্যাগের কারণ</Label><Input value={formData.reason} onChange={e => handleFieldChange('reason', e.target.value)} /></div>
+                                <div className="space-y-2"><Label className="font-bold">আচরণ</Label><Input value={formData.conduct} onChange={e => handleFieldChange('conduct', e.target.value)} /></div>
+                                <div className="space-y-2"><Label className="font-bold">অ্যাকাডেমিক অবস্থা</Label><Input value={formData.status} onChange={e => handleFieldChange('status', e.target.value)} /></div>
+                                <div className="space-y-2"><Label className="font-bold">দেনা-পাওনা</Label><Input value={formData.dues} onChange={e => handleFieldChange('dues', e.target.value)} /></div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Live Customization Card */}
+                    <Card className="shadow-lg border-2 border-amber-200">
+                        <CardHeader className="bg-amber-50 border-b">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Settings2 className="h-5 w-5 text-amber-700" /> টেমপ্লেট কাস্টমাইজেশন (লাইভ)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold text-xs flex items-center gap-2">
+                                            স্কুল লোগো জলছাপ (Opacity)
+                                        </Label>
+                                        <Select 
+                                            value={customSettings.watermarkOpacity.toString()} 
+                                            onValueChange={(v) => setCustomSettings(prev => ({ ...prev, watermarkOpacity: parseFloat(v) }))}
+                                        >
+                                            <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="0.05">৫% (হালকা)</SelectItem>
+                                                <SelectItem value="0.10">১০% (স্পষ্ট)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="font-bold text-xs flex items-center gap-2">
+                                            বর্ডার ডিজাইন
+                                        </Label>
+                                        <Select 
+                                            value={customSettings.borderStyle} 
+                                            onValueChange={(v) => setCustomSettings(prev => ({ ...prev, borderStyle: v }))}
+                                        >
+                                            <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="border-double">ডাবল (Double)</SelectItem>
+                                                <SelectItem value="border-solid">সলিড (Solid)</SelectItem>
+                                                <SelectItem value="border-dashed">ড্যাশ (Dashed)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="font-bold text-xs flex items-center gap-2">
+                                                <Type className="h-4 w-4" /> ফন্ট সাইজ (Font Size)
+                                            </Label>
+                                            <Badge variant="outline" className="font-black h-5">{toBengaliNumber(customSettings.fontSize)}px</Badge>
+                                        </div>
+                                        <Slider 
+                                            value={[customSettings.fontSize]} 
+                                            min={16} 
+                                            max={28} 
+                                            step={1} 
+                                            onValueChange={([v]) => setCustomSettings(prev => ({ ...prev, fontSize: v }))} 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Button onClick={() => window.print()} size="lg" className="w-full font-black h-14 text-xl shadow-xl bg-amber-700 hover:bg-amber-800" disabled={!selectedStudent}>
+                        <Printer className="mr-2 h-5 w-5" /> ছাড়পত্র প্রিন্ট করুন
+                    </Button>
+                </div>
 
                 <div className="sticky top-24">
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
@@ -158,7 +236,7 @@ export default function TCGeneratorPage() {
                     </h3>
                     <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.65] sm:scale-[0.75] lg:scale-[0.8] xl:scale-100">
                         {selectedStudent ? (
-                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} />
+                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} settings={customSettings} />
                         ) : (
                             <div className="w-[210mm] h-[297mm] bg-white flex flex-col items-center justify-center text-muted-foreground italic"><Info className="h-12 w-12 mb-4 opacity-10" /><p>শিক্ষার্থী নির্বাচন করুন</p></div>
                         )}
@@ -169,17 +247,21 @@ export default function TCGeneratorPage() {
       </main>
 
       <div className="hidden print:block printable-area">
-        {selectedStudent && <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} />}
+        {selectedStudent && <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} settings={customSettings} />}
       </div>
     </div>
   );
 }
 
-function TCTemplate({ student, schoolInfo, formData }: any) {
+function TCTemplate({ student, schoolInfo, formData, settings }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
-        <div className="w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-10 box-border border-8 border-double border-emerald-800 font-kalpurush">
+        <div className={cn(
+            "w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-10 box-border border-emerald-800 font-kalpurush",
+            settings?.borderWidth || 'border-8',
+            settings?.borderStyle || 'border-double'
+        )}>
             <div className="text-center border-b-2 border-emerald-800 pb-3 mb-6 flex justify-between items-center px-4">
                 <div className="w-20 h-20 relative">{schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}</div>
                 <div className="flex-grow">
@@ -193,7 +275,19 @@ function TCTemplate({ student, schoolInfo, formData }: any) {
 
             <div className="flex justify-between font-bold text-sm mb-10 px-4"><span>স্মারক নং: {formData.smarakNo}</span><span>তারিখ: {toBengaliNumber(formData.issueDate)} ইং</span></div>
 
-            <div className="flex-grow space-y-6 text-xl font-semibold leading-relaxed px-4 text-justify">
+            {schoolInfo.logoUrl && (
+                <div 
+                    className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none"
+                    style={{ opacity: settings?.watermarkOpacity || 0.05 }}
+                >
+                    <Image src={schoolInfo.logoUrl} alt="Watermark" width={450} height={450} />
+                </div>
+            )}
+
+            <div 
+                className="flex-grow space-y-6 font-semibold leading-relaxed px-4 text-justify"
+                style={{ fontSize: `${settings?.fontSize || 20}px` }}
+            >
                 <p className="indent-16">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 

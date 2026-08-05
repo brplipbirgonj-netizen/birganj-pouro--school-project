@@ -15,12 +15,14 @@ import { getSubjects } from '@/lib/subjects';
 import { processStudentResults } from '@/lib/results-calculation';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, ArrowLeft, Award, Info, Loader2 } from 'lucide-react';
+import { Printer, ArrowLeft, Award, Info, Loader2, Settings2, Type } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
 
 const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
@@ -43,6 +45,14 @@ export default function AppreciationGeneratorPage() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isFetchingResults, setIsFetchingResults] = useState(false);
+
+  // Customization Settings
+  const [customSettings, setCustomSettings] = useState({
+    watermarkOpacity: 0.05,
+    borderStyle: 'border-double',
+    fontSize: 20,
+    borderWidth: 'border-[10px]'
+  });
 
   const [formData, setFormData] = useState({
     smarak: `বিপৌউবি/প্রসংসা/${new Date().getFullYear()}/`,
@@ -159,83 +169,169 @@ export default function AppreciationGeneratorPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <Card className="shadow-lg border-2">
-                    <CardHeader className="bg-blue-50 border-b">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Award className="h-5 w-5 text-blue-700" /> প্রশংসাপত্রের বিবরণ
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="font-bold">শ্রেণি</Label>
-                                <Select value={className} onValueChange={setClassName}>
-                                    <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
-                                    <SelectContent>
-                                        {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">শিক্ষার্থী নির্বাচন</Label>
-                                <Select 
-                                    value={selectedStudent?.id || ''} 
-                                    onValueChange={(val) => setSelectedStudent(students.find(s => s.id === val) || null)}
-                                    disabled={students.length === 0}
-                                >
-                                    <SelectTrigger className="bg-white">
-                                        <SelectValue placeholder={isLoadingStudents ? "লোড হচ্ছে..." : (students.length === 0 ? "শিক্ষার্থী নেই" : "শিক্ষার্থী সিলেক্ট করুন")} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {students.map(s => <SelectItem key={s.id} value={s.id}>রোল {s.roll} - {s.studentNameBn}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 border-t pt-4">
+                <div className="space-y-6">
+                    <Card className="shadow-lg border-2">
+                        <CardHeader className="bg-blue-50 border-b">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Award className="h-5 w-5 text-blue-700" /> প্রশংসাপত্রের বিবরণ
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="font-bold">স্মারক নম্বর</Label>
-                                    <Input value={formData.smarak} onChange={(e) => handleFieldChange('smarak', e.target.value)} />
+                                    <Label className="font-bold">শ্রেণি</Label>
+                                    <Select value={className} onValueChange={setClassName}>
+                                        <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold">ইস্যুর তারিখ</Label>
-                                    <Input value={formData.issueDate} onChange={(e) => handleFieldChange('issueDate', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="font-bold">পাসের বছর</Label>
-                                    <Input value={formData.passingYear} onChange={(e) => handleFieldChange('passingYear', e.target.value)} />
-                                </div>
-                                <div className="space-y-2 relative">
-                                    <Label className="font-bold">GPA / ফলাফল</Label>
-                                    <Input value={formData.gpa} onChange={(e) => handleFieldChange('gpa', e.target.value)} />
-                                    {isFetchingResults && <Loader2 className="h-4 w-4 animate-spin absolute right-2 bottom-3 text-primary" />}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="font-bold">মেধাক্রম (ঐচ্ছিক)</Label>
-                                    <Input value={formData.meritPosition} onChange={(e) => handleFieldChange('meritPosition', e.target.value)} placeholder="উদা: ১" />
+                                    <Label className="font-bold">শিক্ষার্থী নির্বাচন</Label>
+                                    <Select 
+                                        value={selectedStudent?.id || ''} 
+                                        onValueChange={(val) => setSelectedStudent(students.find(s => s.id === val) || null)}
+                                        disabled={students.length === 0}
+                                    >
+                                        <SelectTrigger className="bg-white">
+                                            <SelectValue placeholder={isLoadingStudents ? "লোড হচ্ছে..." : (students.length === 0 ? "শিক্ষার্থী নেই" : "শিক্ষার্থী সিলেক্ট করুন")} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {students.map(s => <SelectItem key={s.id} value={s.id}>রোল {s.roll} - {s.studentNameBn}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">আচরণ ও চরিত্র</Label>
-                                <Input value={formData.conduct} onChange={(e) => handleFieldChange('conduct', e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">অতিরিক্ত তথ্য (ঐচ্ছিক)</Label>
-                                <textarea 
-                                    className="w-full min-h-[80px] p-3 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 outline-none"
-                                    value={formData.extraContent}
-                                    onChange={(e) => handleFieldChange('extraContent', e.target.value)}
-                                />
-                            </div>
-                        </div>
 
-                        <Button onClick={() => window.print()} size="lg" className="w-full font-black shadow-lg bg-blue-700 hover:bg-blue-800" disabled={!selectedStudent}>
-                            <Printer className="mr-2 h-5 w-5" /> প্রশংসাপত্র প্রিন্ট করুন
-                        </Button>
-                    </CardContent>
-                </Card>
+                            <div className="space-y-4 border-t pt-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">স্মারক নম্বর</Label>
+                                        <Input value={formData.smarak} onChange={(e) => handleFieldChange('smarak', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">ইস্যুর তারিখ</Label>
+                                        <Input value={formData.issueDate} onChange={(e) => handleFieldChange('issueDate', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">পাসের বছর</Label>
+                                        <Input value={formData.passingYear} onChange={(e) => handleFieldChange('passingYear', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2 relative">
+                                        <Label className="font-bold">GPA / ফলাফল</Label>
+                                        <Input value={formData.gpa} onChange={(e) => handleFieldChange('gpa', e.target.value)} />
+                                        {isFetchingResults && <Loader2 className="h-4 w-4 animate-spin absolute right-2 bottom-3 text-primary" />}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">মেধাক্রম (ঐচ্ছিক)</Label>
+                                        <Input value={formData.meritPosition} onChange={(e) => handleFieldChange('meritPosition', e.target.value)} placeholder="উদা: ১" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">আচরণ ও চরিত্র</Label>
+                                    <Input value={formData.conduct} onChange={(e) => handleFieldChange('conduct', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">অতিরিক্ত তথ্য (ঐচ্ছিক)</Label>
+                                    <textarea 
+                                        className="w-full min-h-[80px] p-3 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 outline-none"
+                                        value={formData.extraContent}
+                                        onChange={(e) => handleFieldChange('extraContent', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Live Customization Card */}
+                    <Card className="shadow-lg border-2 border-emerald-100">
+                        <CardHeader className="bg-emerald-50 border-b">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Settings2 className="h-5 w-5 text-emerald-700" /> টেমপ্লেট কাস্টমাইজেশন (লাইভ)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold text-xs flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500" /> স্কুল লোগো জলছাপ (Opacity)
+                                        </Label>
+                                        <Select 
+                                            value={customSettings.watermarkOpacity.toString()} 
+                                            onValueChange={(v) => setCustomSettings(prev => ({ ...prev, watermarkOpacity: parseFloat(v) }))}
+                                        >
+                                            <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="0.05">৫% (হালকা)</SelectItem>
+                                                <SelectItem value="0.10">১০% (স্পষ্ট)</SelectItem>
+                                                <SelectItem value="0.15">১৫% (গাঢ়)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="font-bold text-xs flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500" /> বর্ডার ডিজাইন
+                                        </Label>
+                                        <Select 
+                                            value={customSettings.borderStyle} 
+                                            onValueChange={(v) => setCustomSettings(prev => ({ ...prev, borderStyle: v }))}
+                                        >
+                                            <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="border-double">ডাবল (Double)</SelectItem>
+                                                <SelectItem value="border-solid">সলিড (Solid)</SelectItem>
+                                                <SelectItem value="border-dashed">ড্যাশ (Dashed)</SelectItem>
+                                                <SelectItem value="border-none">বর্ডার নেই</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="font-bold text-xs flex items-center gap-2">
+                                                <Type className="h-4 w-4" /> ফন্ট সাইজ (Font Size)
+                                            </Label>
+                                            <Badge variant="outline" className="font-black h-5">{toBengaliNumber(customSettings.fontSize)}px</Badge>
+                                        </div>
+                                        <Slider 
+                                            value={[customSettings.fontSize]} 
+                                            min={16} 
+                                            max={28} 
+                                            step={1} 
+                                            onValueChange={([v]) => setCustomSettings(prev => ({ ...prev, fontSize: v }))} 
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="font-bold text-xs flex items-center gap-2">
+                                            বর্ডার পুরুত্ব (Width)
+                                        </Label>
+                                        <Select 
+                                            value={customSettings.borderWidth} 
+                                            onValueChange={(v) => setCustomSettings(prev => ({ ...prev, borderWidth: v }))}
+                                        >
+                                            <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="border-[4px]">৪px (চিকন)</SelectItem>
+                                                <SelectItem value="border-[10px]">১০px (মাঝারি)</SelectItem>
+                                                <SelectItem value="border-[16px]">১৬px (মোটা)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Button onClick={() => window.print()} size="lg" className="w-full font-black h-14 text-xl shadow-xl bg-blue-700 hover:bg-blue-800" disabled={!selectedStudent}>
+                        <Printer className="mr-2 h-6 w-6" /> প্রশংসাপত্র প্রিন্ট করুন
+                    </Button>
+                </div>
 
                 <div className="sticky top-24">
                     <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
@@ -247,6 +343,7 @@ export default function AppreciationGeneratorPage() {
                                 student={selectedStudent} 
                                 schoolInfo={schoolInfo} 
                                 formData={formData}
+                                settings={customSettings}
                             />
                         ) : (
                             <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center bg-white text-muted-foreground gap-4">
@@ -266,6 +363,7 @@ export default function AppreciationGeneratorPage() {
                 student={selectedStudent} 
                 schoolInfo={schoolInfo} 
                 formData={formData} 
+                settings={customSettings}
             />
         )}
       </div>
@@ -273,11 +371,16 @@ export default function AppreciationGeneratorPage() {
   );
 }
 
-function AppreciationTemplate({ student, schoolInfo, formData }: any) {
+function AppreciationTemplate({ student, schoolInfo, formData, settings }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
-        <div className="w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-12 box-border border-[10px] border-double border-blue-900 overflow-hidden font-kalpurush">
+        <div className={cn(
+            "w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-12 box-border overflow-hidden font-kalpurush",
+            settings?.borderWidth || 'border-[10px]',
+            settings?.borderStyle || 'border-double',
+            "border-blue-900"
+        )}>
             <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-blue-900 rounded-tl-xl opacity-20"></div>
             <div className="absolute top-4 right-4 w-20 h-20 border-t-4 border-r-4 border-blue-900 rounded-tr-xl opacity-20"></div>
             <div className="absolute bottom-4 left-4 w-20 h-20 border-b-4 border-l-4 border-blue-900 rounded-bl-xl opacity-20"></div>
@@ -309,7 +412,10 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
             </div>
 
             {schoolInfo.logoUrl && (
-                <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-[0.03]">
+                <div 
+                    className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none"
+                    style={{ opacity: settings?.watermarkOpacity || 0.05 }}
+                >
                     <Image src={schoolInfo.logoUrl} alt="Watermark" width={600} height={600} />
                 </div>
             )}
@@ -318,8 +424,11 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 <h2 className="inline-block text-4xl font-black border-b-4 border-blue-900 pb-2 px-16 uppercase tracking-widest text-blue-950">প্রশংসাপত্র</h2>
             </div>
 
-            {/* Main Body with padding bottom to prevent overlap with footer */}
-            <div className="relative z-10 text-justify leading-[2.2] text-xl font-semibold space-y-6 px-6 text-slate-900 pb-[220px]">
+            {/* Main Body */}
+            <div 
+                className="relative z-10 text-justify leading-[2.2] font-semibold space-y-6 px-6 text-slate-900 pb-[220px]"
+                style={{ fontSize: `${settings?.fontSize || 20}px` }}
+            >
                 <p className="indent-20">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
@@ -339,7 +448,7 @@ function AppreciationTemplate({ student, schoolInfo, formData }: any) {
                 </p>
             </div>
 
-            {/* Footer with fixed height and position */}
+            {/* Footer */}
             <footer className="absolute bottom-16 left-0 right-0 z-10 px-16 bg-white">
                 <div className="text-center mb-10">
                     <p className="italic text-blue-950 text-2xl font-black leading-relaxed">
