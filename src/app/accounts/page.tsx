@@ -514,7 +514,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
-                .filter((c): c is FeeCollection => f !== null)
+                .filter((c): c is FeeCollection => c !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
             setCollections(data);
             setIsLoading(false);
@@ -725,13 +725,13 @@ const MonthlyReportTab = ({ transactions, selectedYear }: { transactions: Transa
                     <h1 className="text-3xl font-black text-emerald-900">{schoolInfo.name}</h1>
                     <p className="font-bold text-slate-700">{schoolInfo.address}</p>
                     <div className="mt-4 inline-block bg-emerald-50 px-6 py-1 rounded-full border-2 border-emerald-200">
-                        <h2 className="text-xl font-black uppercase">মাসিক আয়-ব্যয় বিবরণী - {BENGALI_MONTHS[parseInt(selectedMonth)]} {toBengaliNumber(selectedYear)}</h2>
+                        <h2 className="text-xl font-black uppercase tracking-widest">মাসিক আয়-ব্যয় বিবরণী - {BENGALI_MONTHS[parseInt(selectedMonth)]} {toBengaliNumber(selectedYear)}</h2>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-4">
-                        <h3 className="font-black text-lg border-b-2 border-emerald-700 pb-1 text-emerald-800">আয় (Incomes)</h3>
+                        <h3 className="text-xl font-black border-b-2 border-emerald-700 pb-1 text-emerald-800">আয় (Incomes)</h3>
                         <Table className="border">
                             <TableHeader className="bg-slate-50"><TableRow><TableHead className="font-black">বিবরণ</TableHead><TableHead className="text-right font-black">পরিমাণ (৳)</TableHead></TableRow></TableHeader>
                             <TableBody>
@@ -745,7 +745,7 @@ const MonthlyReportTab = ({ transactions, selectedYear }: { transactions: Transa
                     </div>
 
                     <div className="space-y-4">
-                        <h3 className="font-black text-lg border-b-2 border-rose-700 pb-1 text-rose-800">ব্যয় (Expenditures)</h3>
+                        <h3 className="text-xl font-black border-b-2 border-rose-700 pb-1 text-rose-800">ব্যয় (Expenditures)</h3>
                         <Table className="border">
                             <TableHeader className="bg-slate-50"><TableRow><TableHead className="font-black">বিবরণ</TableHead><TableHead className="text-right font-black">পরিমাণ (৳)</TableHead></TableRow></TableHeader>
                             <TableBody>
