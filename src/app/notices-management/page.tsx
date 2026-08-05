@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-    Trash2, Plus, Loader2, Bell, Printer, FileText, ExternalLink, Sparkles, ChevronRight
+    Trash2, Plus, Loader2, Bell, Printer, FileText, ExternalLink, Sparkles, ChevronRight, AlertCircle
 } from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
@@ -27,6 +26,7 @@ import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
 import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 const toBengaliNumber = (str: string | number) => {
     if (!str && str !== 0) return '';
@@ -36,9 +36,11 @@ const toBengaliNumber = (str: string | number) => {
 
 export default function NoticeManagementPage() {
     const db = useFirestore();
-    const { user, hasPermission } = useAuth();
+    const { user, hasPermission, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const { schoolInfo } = useSchoolInfo();
+    const router = useRouter();
+    
     const [notices, setNotices] = useState<Notice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -48,6 +50,9 @@ export default function NoticeManagementPage() {
 
     const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'], pdfUrl: '' });
     const [printingNotice, setPrintingNotice] = useState<Notice | null>(null);
+
+    const canManageNotices = hasPermission('manage:notices');
+    const canViewNotices = hasPermission('view:notices');
 
     useEffect(() => {
         setIsClient(true);
@@ -66,10 +71,12 @@ export default function NoticeManagementPage() {
     }, [db, user]);
 
     useEffect(() => {
-        if (user && isClient) {
-            fetchNotices();
+        if (isClient && !authLoading) {
+            if (user && canViewNotices) {
+                fetchNotices();
+            }
         }
-    }, [user, fetchNotices, isClient]);
+    }, [user, fetchNotices, isClient, authLoading, canViewNotices]);
 
     const handleAiGenerate = async () => {
       if (!aiTopic.trim()) {
@@ -135,7 +142,29 @@ export default function NoticeManagementPage() {
         }, 300);
     };
 
-    if (!isClient) return null;
+    if (!isClient || authLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-indigo-50">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (!user || !canViewNotices) {
+        return (
+            <div className="flex min-h-screen flex-col bg-indigo-50 font-kalpurush">
+                <Header />
+                <main className="flex-1 flex items-center justify-center p-4">
+                    <Card className="max-w-md w-full border-2 border-rose-200 text-center p-10">
+                        <AlertCircle className="h-16 w-16 text-rose-500 mx-auto mb-4" />
+                        <CardTitle className="text-2xl font-black text-rose-950 mb-2">প্রবেশাধিকার নেই</CardTitle>
+                        <CardDescription className="text-base font-bold">আপনার নোটিশ বোর্ড দেখার অনুমতি নেই।</CardDescription>
+                        <Button className="mt-6" onClick={() => router.push('/')}>ড্যাশবোর্ডে ফিরে যান</Button>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
@@ -146,59 +175,61 @@ export default function NoticeManagementPage() {
                         <h2 className="text-3xl font-black text-slate-800">নোটিশ বোর্ড ব্যবস্থাপনা</h2>
                         <p className="text-sm font-bold text-muted-foreground mt-1">বিদ্যালয়ের নোটিশ বোর্ড নিয়ন্ত্রণ ও নতুন নোটিশ প্রকাশ করুন</p>
                     </div>
-                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="font-black h-12 px-8 shadow-xl text-lg"><Plus className="mr-2 h-6 w-6" /> নতুন নোটিশ প্রকাশ</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto font-kalpurush p-0 border-none shadow-2xl rounded-2xl">
-                            <DialogHeader className="p-6 bg-primary text-white">
-                                <DialogTitle className="text-2xl font-black">নতুন নোটিশ তৈরি করুন</DialogTitle>
-                                <DialogDescription className="text-white/80 font-bold">নিচে তথ্যগুলো পূরণ করে নোটিশ পাবলিশ করুন</DialogDescription>
-                            </DialogHeader>
-                            <div className="p-8 space-y-6">
-                                <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3 shadow-inner">
-                                    <div className="flex items-center gap-2 text-indigo-700 font-black text-xs uppercase tracking-wider">
-                                        <Sparkles className="h-4 w-4" /> AI নোটিশ জেনারেটর
+                    {canManageNotices && (
+                        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="font-black h-12 px-8 shadow-xl text-lg"><Plus className="mr-2 h-6 w-6" /> নতুন নোটিশ প্রকাশ</Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto font-kalpurush p-0 border-none shadow-2xl rounded-2xl">
+                                <DialogHeader className="p-6 bg-primary text-white">
+                                    <DialogTitle className="text-2xl font-black">নতুন নোটিশ তৈরি করুন</DialogTitle>
+                                    <DialogDescription className="text-white/80 font-bold">নিচে তথ্যগুলো পূরণ করে নোটিশ পাবলিশ করুন</DialogDescription>
+                                </DialogHeader>
+                                <div className="p-8 space-y-6">
+                                    <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3 shadow-inner">
+                                        <div className="flex items-center gap-2 text-indigo-700 font-black text-xs uppercase tracking-wider">
+                                            <Sparkles className="h-4 w-4" /> AI নোটিশ জেনারেটর
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Input placeholder="টপিক লিখুন (উদা: বার্ষিক ক্রীড়া প্রতিযোগিতা)" value={aiTopic} onChange={e => setAiTopic(e.target.value)} className="bg-white h-11 border-2 focus:ring-primary" />
+                                            <Button onClick={handleAiGenerate} disabled={isAiLoading} className="bg-indigo-600 h-11 px-4">
+                                                {isAiLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Input placeholder="টপিক লিখুন (উদা: বার্ষিক ক্রীড়া প্রতিযোগিতা)" value={aiTopic} onChange={e => setAiTopic(e.target.value)} className="bg-white h-11 border-2 focus:ring-primary" />
-                                        <Button onClick={handleAiGenerate} disabled={isAiLoading} className="bg-indigo-600 h-11 px-4">
-                                            {isAiLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-                                        </Button>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label className="font-black text-sm">শিরোনাম (Title)</Label>
+                                            <Input value={newNotice.title} onChange={e => setNewNotice({...newNotice, title: e.target.value})} className="font-bold h-11 border-2" placeholder="নোটিশের শিরোনাম" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="font-black text-sm">গুরুত্ব (Priority)</Label>
+                                            <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
+                                                <SelectTrigger className="h-11 border-2 font-bold"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="normal">সাধারণ (Normal)</SelectItem>
+                                                    <SelectItem value="important">গুরুত্বপূর্ণ (Important)</SelectItem>
+                                                    <SelectItem value="urgent">জরুরি (Urgent)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <Label className="font-black text-sm">বিস্তারিত বিষয়বস্তু</Label>
+                                            <Textarea value={newNotice.content} onChange={e => setNewNotice({...newNotice, content: e.target.value})} className="min-h-[200px] border-2 font-medium" placeholder="বিস্তারিত নোটিশ এখানে লিখুন..." />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <Label className="font-black text-sm">পিডিএফ বা ডকুমেন্ট লিংক (ঐচ্ছিক)</Label>
+                                            <Input placeholder="https://..." value={newNotice.pdfUrl} onChange={e => setNewNotice({...newNotice, pdfUrl: e.target.value})} className="h-11 border-2" />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label className="font-black text-sm">শিরোনাম (Title)</Label>
-                                        <Input value={newNotice.title} onChange={e => setNewNotice({...newNotice, title: e.target.value})} className="font-bold h-11 border-2" placeholder="নোটিশের শিরোনাম" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="font-black text-sm">গুরুত্ব (Priority)</Label>
-                                        <Select value={newNotice.priority} onValueChange={(v: any) => setNewNotice({...newNotice, priority: v})}>
-                                            <SelectTrigger className="h-11 border-2 font-bold"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="normal">সাধারণ (Normal)</SelectItem>
-                                                <SelectItem value="important">গুরুত্বপূর্ণ (Important)</SelectItem>
-                                                <SelectItem value="urgent">জরুরি (Urgent)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label className="font-black text-sm">বিস্তারিত বিষয়বস্তু</Label>
-                                        <Textarea value={newNotice.content} onChange={e => setNewNotice({...newNotice, content: e.target.value})} className="min-h-[200px] border-2 font-medium" placeholder="বিস্তারিত নোটিশ এখানে লিখুন..." />
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label className="font-black text-sm">পিডিএফ বা ডকুমেন্ট লিংক (ঐচ্ছিক)</Label>
-                                        <Input placeholder="https://..." value={newNotice.pdfUrl} onChange={e => setNewNotice({...newNotice, pdfUrl: e.target.value})} className="h-11 border-2" />
-                                    </div>
-                                </div>
-                            </div>
-                            <DialogFooter className="p-6 bg-slate-50 border-t sticky bottom-0">
-                                <DialogClose asChild><Button variant="ghost" className="font-bold h-11 px-6">বাতিল</Button></DialogClose>
-                                <Button onClick={handleAddNotice} className="px-10 font-black h-11 shadow-lg">প্রকাশ করুন</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                                <DialogFooter className="p-6 bg-slate-50 border-t sticky bottom-0">
+                                    <DialogClose asChild><Button variant="ghost" className="font-bold h-11 px-6">বাতিল</Button></DialogClose>
+                                    <Button onClick={handleAddNotice} className="px-10 font-black h-11 shadow-lg">প্রকাশ করুন</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
 
                 <div className="bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[600px] flex flex-col no-print animate-in fade-in duration-500">
@@ -241,21 +272,23 @@ export default function NoticeManagementPage() {
                                             <TableCell className="text-right pr-10">
                                                 <div className="flex justify-end gap-2">
                                                     <Button variant="outline" size="icon" className="h-10 w-10 text-blue-600 border-blue-200 bg-white hover:bg-blue-50" onClick={() => handlePrint(notice)} title="প্রিন্ট করুন"><Printer className="h-5 w-5" /></Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-rose-500 hover:text-rose-700 hover:bg-rose-50" title="মুছে ফেলুন"><Trash2 className="h-5 w-5" /></Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent className="font-kalpurush">
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle className="text-2xl font-black text-rose-700">নোটিশটি মুছতে চান?</AlertDialogTitle>
-                                                                <AlertDialogDescription className="text-lg font-bold">এই নোটিশটি স্থায়ীভাবে মুছে ফেলা হবে এবং ড্যাশবোর্ড থেকে চলে যাবে।</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter className="gap-2">
-                                                                <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDelete(notice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">হ্যাঁ, মুছুন</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                    {canManageNotices && (
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-10 w-10 text-rose-500 hover:text-rose-700 hover:bg-rose-50" title="মুছে ফেলুন"><Trash2 className="h-5 w-5" /></Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent className="font-kalpurush">
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle className="text-2xl font-black text-rose-700">নোটিশটি মুছতে চান?</AlertDialogTitle>
+                                                                    <AlertDialogDescription className="text-lg font-bold">এই নোটিশটি স্থায়ীভাবে মুছে ফেলা হবে এবং ড্যাশবোর্ড থেকে চলে যাবে।</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete(notice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -299,4 +332,3 @@ export default function NoticeManagementPage() {
         </div>
     );
 }
-

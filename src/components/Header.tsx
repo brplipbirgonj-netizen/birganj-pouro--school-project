@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -264,7 +263,7 @@ export function Header() {
                           <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
                         </div>
                       ))}
-                      <div className="font-black text-slate-900 truncate text-[10px]">{isSchoolInfoLoading ? <Skeleton className="h-4 w-20" /> : schoolInfo.name}</div>
+                      <span className="font-black text-slate-900 truncate text-[10px]">{isSchoolInfoLoading ? <Skeleton className="h-4 w-20" /> : schoolInfo.name}</span>
                     </Link>
                   </SheetHeader>
                   
