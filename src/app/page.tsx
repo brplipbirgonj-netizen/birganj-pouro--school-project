@@ -140,7 +140,7 @@ const NoticeTicker = () => {
         );
     }
 
-    if (isLoading) return <Skeleton className="h-8 w-full mb-4 rounded-none" />;
+    if (isLoading) return <div className="h-8 w-full mb-4 bg-muted animate-pulse" />;
     return null;
 };
 
@@ -695,9 +695,9 @@ const LiveRoutineCard = () => {
                     <CardTitle className="text-sm font-bold flex items-center gap-2">
                         <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
                     </CardTitle>
-                    <p className="text-[10px] font-bold text-muted-foreground pl-6">
+                    <div className="text-[10px] font-bold text-muted-foreground pl-6">
                         {currentTime ? format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
-                    </p>
+                    </div>
                 </div>
                  <Badge variant="outline" className="flex items-center gap-2 bg-white shadow-sm">
                     <span className="relative flex h-2 w-2">

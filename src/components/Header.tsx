@@ -261,7 +261,7 @@ export function Header() {
                           <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
                         </div>
                       ))}
-                      <span className="font-black text-slate-900 truncate text-[10px]">{isSchoolInfoLoading ? <Skeleton className="h-4 w-20" /> : schoolInfo.name}</span>
+                      <div className="font-black text-slate-900 truncate text-[10px]">{isSchoolInfoLoading ? <Skeleton className="h-4 w-20" /> : schoolInfo.name}</div>
                     </Link>
                   </SheetHeader>
                   
@@ -341,9 +341,9 @@ export function Header() {
                 <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
               </div>
             )}
-            <h1 className="text-xl sm:text-2xl md:text-[45px] font-black whitespace-nowrap tracking-tight md:[text-shadow:1px_1px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-normal">
+            <div className="text-xl sm:text-2xl md:text-[45px] font-black whitespace-nowrap tracking-tight md:[text-shadow:1px_1px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-normal">
               {isSchoolInfoLoading ? <Skeleton className="h-8 w-40 md:h-12 md:w-80" /> : schoolInfo.name}
-            </h1>
+            </div>
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
