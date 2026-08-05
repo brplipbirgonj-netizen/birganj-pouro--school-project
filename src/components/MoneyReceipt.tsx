@@ -168,22 +168,28 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                     <div className="text-sm font-bold bg-emerald-50/50 p-4 rounded-xl border-2 border-dashed border-emerald-900/20">
                         <p className="text-xl leading-relaxed flex flex-wrap gap-2 items-end">
                             <span className="text-slate-600 font-black shrink-0">কথায়:</span> 
-                            <span className="font-black text-emerald-950 border-b border-dotted border-black/40 flex-grow min-w-[200px] px-2 italic">
+                            <span className="font-black text-emerald-950 border-b border-dotted border-slate-400 flex-grow min-w-[200px] px-2 italic pb-0.5">
                                 {numberToBengaliWords(collection.totalAmount)} টাকা মাত্র।
                             </span>
                         </p>
                         <p className="mt-4 text-[11px] text-slate-700"><strong>আদায়ের বিবরণ:</strong> {collection.description || 'বিবিধ ফি আদায়'}</p>
                     </div>
 
-                    <div className="flex justify-between items-center py-4 bg-white p-4 rounded-2xl border-2 border-black/5 shadow-inner">
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Transaction Security</p>
-                            <p className="text-[11px] font-bold text-emerald-800">এটি একটি কম্পিউটার জেনারেটেড ডিজিটাল রসিদ।<br/>সিস্টেমে এই লেনদেনের সকল তথ্য সংরক্ষিত আছে।</p>
+                    <div className="flex justify-between items-center py-4 px-6 bg-white rounded-2xl border-2 border-black/5 shadow-inner">
+                        <div className="flex gap-16">
+                            <div className="text-center">
+                                <div className="h-10"></div>
+                                <div className="w-32 border-t border-black pt-1.5 font-black text-[11px] text-emerald-950">আদায়কারীর স্বাক্ষর</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="h-10"></div>
+                                <div className="w-32 border-t border-black pt-1.5 font-black text-[11px] text-emerald-950">প্রধান শিক্ষকের স্বাক্ষর</div>
+                            </div>
                         </div>
                         <div className="p-2 border-2 border-emerald-950 bg-white rounded-xl shadow-lg">
                             <QRCodeSVG 
                                 value={qrValue}
-                                size={100}
+                                size={90}
                                 level="H"
                                 includeMargin={false}
                             />
@@ -192,24 +198,17 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                 </div>
             </main>
 
-            <footer className="relative z-10 pt-16 mt-auto">
+            <footer className="relative z-10 pt-8 mt-auto border-t-2 border-dashed border-slate-200">
                 <div className="flex justify-between items-end px-4">
-                    <div className="text-center">
-                        <p className="text-[11px] font-black text-slate-500 mb-2">তারিখ: {format(collection.collectionDate, 'dd/MM/yyyy', { locale: bn })}</p>
-                        <div className="w-36 border-t border-black pt-1.5 font-black text-[12px] text-emerald-950">অভিভাবকের স্বাক্ষর</div>
+                    <div className="text-left">
+                        <p className="text-[10px] font-black text-slate-400 mb-1">তারিখ: {format(collection.collectionDate, 'dd/MM/yyyy', { locale: bn })}</p>
+                        <p className="text-[9px] font-bold text-emerald-800">রসিদ জেনারেট সময়: {format(new Date(), 'pp', { locale: bn })}</p>
                     </div>
-                    <div className="text-center">
-                        <div className="h-12 flex flex-col items-center justify-end mb-2">
-                             <span className="text-[10px] font-bold text-slate-400 italic mb-1">{collection.collectorName || 'অফিস সহকারী'}</span>
-                        </div>
-                        <div className="w-36 border-t border-black pt-1.5 font-black text-[12px] text-emerald-950">হিসাবরক্ষকের স্বাক্ষর</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="h-12 mb-2"></div>
-                        <div className="w-36 border-t border-black pt-1.5 font-black text-[12px] text-emerald-950">প্রধান শিক্ষকের স্বাক্ষর</div>
+                    <div className="text-right">
+                        <div className="w-36 border-t border-black pt-1.5 font-black text-[11px] text-emerald-950 text-center">অভিভাবকের স্বাক্ষর</div>
                     </div>
                 </div>
-                <div className="mt-8 text-center text-[9px] text-slate-400 font-black border-t-2 border-dashed pt-3 uppercase tracking-[0.2em]">
+                <div className="mt-4 text-center text-[9px] text-slate-300 font-black uppercase tracking-[0.2em]">
                     BIRGANJ POURO HIGH SCHOOL PORTAL | DIGITAL RECEIPT
                 </div>
             </footer>
