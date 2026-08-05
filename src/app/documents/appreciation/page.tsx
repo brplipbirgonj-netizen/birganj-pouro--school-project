@@ -319,8 +319,9 @@ export default function AppreciationGeneratorPage() {
                                             <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="border-[4px]">৪px (চিকন)</SelectItem>
-                                                <SelectItem value="border-[10px]">১০px (মাঝারি)</SelectItem>
-                                                <SelectItem value="border-[16px]">১৬px (মোটা)</SelectItem>
+                                                <SelectItem value="border-[8px]">৮px (মাঝারি)</SelectItem>
+                                                <SelectItem value="border-[12px]">১২px (মোটা)</SelectItem>
+                                                <SelectItem value="border-[16px]">১৬px (খুব মোটা)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

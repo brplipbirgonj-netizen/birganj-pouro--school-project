@@ -200,6 +200,7 @@ export default function TCGeneratorPage() {
                                                 <SelectItem value="border-double">ডাবল (Double)</SelectItem>
                                                 <SelectItem value="border-solid">সলিড (Solid)</SelectItem>
                                                 <SelectItem value="border-dashed">ড্যাশ (Dashed)</SelectItem>
+                                                <SelectItem value="border-none">বর্ডার নেই</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -220,6 +221,24 @@ export default function TCGeneratorPage() {
                                             step={1} 
                                             onValueChange={([v]) => setCustomSettings(prev => ({ ...prev, fontSize: v }))} 
                                         />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="font-bold text-xs flex items-center gap-2">
+                                            বর্ডার পুরুত্ব (Width)
+                                        </Label>
+                                        <Select 
+                                            value={customSettings.borderWidth} 
+                                            onValueChange={(v) => setCustomSettings(prev => ({ ...prev, borderWidth: v }))}
+                                        >
+                                            <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="border-4">৪px (চিকন)</SelectItem>
+                                                <SelectItem value="border-8">৮px (মাঝারি)</SelectItem>
+                                                <SelectItem value="border-[12px]">১২px (মোটা)</SelectItem>
+                                                <SelectItem value="border-[16px]">১৬px (খুব মোটা)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </div>
