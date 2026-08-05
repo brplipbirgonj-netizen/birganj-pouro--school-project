@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -213,7 +214,12 @@ export default function MessagingPage() {
                         ) : null}
 
                         <div className="space-y-2">
-                            <div className="flex justify-between items-center"><Label className="font-black">বার্তার বিষয়বস্তু</Label><span className="text-[10px] font-bold text-muted-foreground">অক্ষর: {messageContent.length.toLocaleString('bn-BD')}</span></div>
+                            <div className="flex justify-between items-center">
+                                <Label className="font-black">বার্তার বিষয়বস্তু</Label>
+                                <span className="text-[10px] font-bold text-muted-foreground">
+                                    অক্ষর: {messageContent.length.toLocaleString('bn-BD')} | মেসেজ: {Math.ceil(messageContent.length > 70 ? messageContent.length / 67 : (messageContent.length > 0 ? 1 : 0)).toLocaleString('bn-BD')}
+                                </span>
+                            </div>
                             <Textarea value={messageContent} onChange={e => setMessageContent(e.target.value)} placeholder="বার্তা লিখুন..." className="min-h-[150px] text-base font-medium border-2 focus:ring-primary" />
                         </div>
 
