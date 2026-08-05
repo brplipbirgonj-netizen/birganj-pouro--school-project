@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -15,7 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3 } from 'lucide-react';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -30,7 +31,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Badge } from '@/components/ui/badge';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { MoneyReceipt } from '@/components/MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -124,7 +125,7 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-2 border-emerald-100 bg-emerald-50/20 shadow-sm relative overflow-hidden group">
+                <Card className="border-2 border-emerald-500/20 bg-emerald-50/30 shadow-md relative overflow-hidden group hover:scale-[1.02] transition-all">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <Banknote className="h-24 w-24 text-emerald-900" />
                     </div>
@@ -134,12 +135,12 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                     <CardContent className="relative z-10">
                         <div className="text-3xl font-black text-emerald-950">{stats.todayIncome.toLocaleString('bn-BD')} ৳</div>
                         <p className="text-[10px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3" /> লাইভ আপডেট
+                            <TrendingUp className="h-3 w-3" /> রিয়েল-টাইম ডাটা
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card className="border-2 border-primary/10 bg-primary/5 shadow-sm relative overflow-hidden group">
+                <Card className="border-2 border-primary/20 bg-primary/5 shadow-md relative overflow-hidden group hover:scale-[1.02] transition-all">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <Wallet className="h-24 w-24 text-primary" />
                     </div>
@@ -152,76 +153,72 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                     </CardContent>
                 </Card>
 
-                <Card className="border-2 border-amber-100 bg-amber-50/20 shadow-sm relative overflow-hidden group">
+                <Card className="border-2 border-amber-500/20 bg-amber-50/30 shadow-md relative overflow-hidden group hover:scale-[1.02] transition-all">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <Coins className="h-24 w-24 text-amber-900" />
                     </div>
                     <CardHeader className="pb-2 relative z-10">
-                        <CardTitle className="text-xs font-black uppercase text-amber-700">হাতে নগদ (Cash Balance)</CardTitle>
+                        <CardTitle className="text-xs font-black uppercase text-amber-700">হাতে নগদ (Cash)</CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
                         <div className="text-3xl font-black text-amber-950">{stats.cashBalance.toLocaleString('bn-BD')} ৳</div>
-                        <p className="text-[10px] font-bold text-amber-600 mt-1">অফিসে গচ্ছিত টাকা</p>
+                        <p className="text-[10px] font-bold text-amber-600 mt-1">অফিস ব্যালেন্স</p>
                     </CardContent>
                 </Card>
 
-                <Card className="border-2 border-blue-100 bg-blue-50/20 shadow-sm relative overflow-hidden group">
+                <Card className="border-2 border-blue-500/20 bg-blue-50/30 shadow-md relative overflow-hidden group hover:scale-[1.02] transition-all">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <Landmark className="h-24 w-24 text-blue-900" />
                     </div>
                     <CardHeader className="pb-2 relative z-10">
-                        <CardTitle className="text-xs font-black uppercase text-blue-700">ব্যাংক ব্যালেন্স (Bank Balance)</CardTitle>
+                        <CardTitle className="text-xs font-black uppercase text-blue-700">ব্যাংক ব্যালেন্স</CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
                         <div className="text-3xl font-black text-blue-950">{stats.bankBalance.toLocaleString('bn-BD')} ৳</div>
-                        <p className="text-[10px] font-bold text-blue-600 mt-1">ব্যাংক একাউন্টের জের</p>
+                        <p className="text-[10px] font-bold text-blue-600 mt-1">ব্যাংক একাউন্ট</p>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Button onClick={() => onActionClick('income')} className="h-16 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-lg">
+                <Button onClick={() => onActionClick('income')} className="h-16 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-xl border-b-4 border-emerald-800 active:border-b-0 transition-all">
                     <PlusCircle className="mr-2 h-6 w-6" /> আয় যোগ করুন
                 </Button>
-                <Button onClick={() => onActionClick('expense')} variant="destructive" className="h-16 text-lg font-black shadow-lg">
+                <Button onClick={() => onActionClick('expense')} variant="destructive" className="h-16 text-lg font-black shadow-xl border-b-4 border-rose-800 active:border-b-0 transition-all">
                     <MinusCircle className="mr-2 h-6 w-6" /> ব্যয় যোগ করুন
                 </Button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2 border-2 border-black/5 shadow-md">
-                    <CardHeader className="bg-primary/5 border-b">
-                        <CardTitle className="text-sm font-black flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4" /> গত ৭ দিনের আয়-ব্যয় চিত্র
+                <Card className="lg:col-span-2 border-2 border-black/10 shadow-lg bg-white rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-primary/5 border-b border-black/5">
+                        <CardTitle className="text-base font-black flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5 text-primary" /> গত ৭ দিনের আয়-ব্যয় চিত্র (Bar Graph)
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 h-[300px]">
+                    <CardContent className="pt-6 h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={last7DaysData}>
-                                <defs>
-                                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
+                            <BarChart data={last7DaysData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                                <YAxis hide />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
+                                    cursor={{fill: '#f1f5f9'}}
+                                    contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
-                                <Area type="monotone" dataKey="income" name="আয়" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
-                                <Area type="monotone" dataKey="expense" name="ব্যয়" stroke="#ef4444" strokeWidth={3} fill="transparent" />
-                            </AreaChart>
+                                <Legend verticalAlign="top" align="right" iconType="circle" />
+                                <Bar dataKey="income" name="আয়" fill="#10b981" radius={[6, 6, 0, 0]} barSize={35} />
+                                <Bar dataKey="expense" name="ব্যয়" fill="#ef4444" radius={[6, 6, 0, 0]} barSize={35} />
+                            </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
-                <Card className="border-2 border-black/5 shadow-md">
-                    <CardHeader className="bg-primary/5 border-b">
-                        <CardTitle className="text-sm font-black flex items-center gap-2">
-                            <PieChartIcon className="h-4 w-4" /> এই মাসের আয়-ব্যয় তুলনা
+                <Card className="border-2 border-black/10 shadow-lg bg-white rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-primary/5 border-b border-black/5">
+                        <CardTitle className="text-base font-black flex items-center gap-2">
+                            <PieChartIcon className="h-5 w-5 text-primary" /> এই মাসের আয়-ব্যয় (Pie Chart)
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="h-[350px] pt-4">
@@ -231,20 +228,22 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                                     data={chartData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
+                                    innerRadius={70}
+                                    outerRadius={95}
+                                    paddingAngle={8}
                                     dataKey="value"
+                                    strokeWidth={3}
+                                    stroke="#fff"
                                 >
                                     {chartData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
                                 </Pie>
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: '2px solid black', fontWeight: 'bold', fontSize: '12px' }}
+                                    contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
-                                <Legend verticalAlign="bottom" align="center" iconType="circle" />
+                                <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -325,7 +324,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <Card className="border-red-200">
+            <Card className="border-red-200 shadow-lg">
                 <CardHeader className="bg-red-50/50">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
@@ -515,7 +514,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
-                .filter((c): c is FeeCollection => c !== null)
+                .filter((c): c is FeeCollection => f !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
             setCollections(data);
             setIsLoading(false);
