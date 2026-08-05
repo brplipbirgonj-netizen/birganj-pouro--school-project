@@ -1,7 +1,7 @@
 'use client';
 import { ReactNode, useMemo } from 'react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 
 import { firebaseConfig } from './config';
@@ -21,6 +21,17 @@ if (typeof window !== 'undefined') {
   }
   firestore = getFirestore(app);
   auth = getAuth(app);
+
+  // Enable offline persistence
+  enableIndexedDbPersistence(firestore).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time.
+      console.warn('Firestore persistence failed: Multiple tabs open');
+    } else if (err.code === 'unimplemented') {
+      // The current browser does not support persistence
+      console.warn('Firestore persistence failed: Browser not supported');
+    }
+  });
 }
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {

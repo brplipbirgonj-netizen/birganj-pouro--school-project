@@ -20,7 +20,7 @@ import { format, eachDayOfInterval, isAfter } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX, Printer } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX, Printer, Wifi, WifiOff } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,6 +48,26 @@ function toBengaliNumber(str: string | number) {
   if (!str && str !== 0) return '';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+}
+
+// --- Connectivity Hook ---
+function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOnline;
 }
 
 // --- Helper Components ---
@@ -1326,6 +1346,7 @@ export default function AttendancePage() {
     const { user, hasPermission } = useAuth();
     const { selectedYear } = useAcademicYear();
     const [isClient, setIsClient] = useState(false);
+    const isOnline = useOnlineStatus();
     
     const [activeSection, setActiveSection] = useState('digital-attendance');
     const [attendanceDate, setAttendanceDate] = useState<Date>(new Date());
@@ -1389,7 +1410,15 @@ export default function AttendancePage() {
             <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
                 {/* Sidebar Navigation - Fixed/Sticky */}
                 <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
-                    <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
+                    <div className="mb-6 px-4 hidden md:block">
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
+                        <Badge className={cn(
+                            "mt-2 font-black text-[10px] px-3 gap-1",
+                            isOnline ? "bg-emerald-600" : "bg-rose-600"
+                        )}>
+                            {isOnline ? <><Wifi className="h-3 w-3" /> অনলাইন</> : <><WifiOff className="h-3 w-3" /> অফলাইন (লোকাল)</>}
+                        </Badge>
+                    </div>
                     <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
                         {sidebarItems.map(item => (
                             <button
@@ -1415,6 +1444,12 @@ export default function AttendancePage() {
                 {/* Content Area */}
                 <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
                     <div className="p-4 sm:p-6 lg:p-8 flex-1">
+                        {!isOnline && (
+                            <div className="mb-6 p-4 bg-rose-50 border-2 border-dashed border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700 animate-pulse no-print">
+                                <WifiOff className="h-6 w-6" />
+                                <p className="font-black">আপনি অফলাইনে আছেন। আপনার দেওয়া হাজিরাগুলো এই ডিভাইসে সুরক্ষিত আছে এবং ইন্টারনেট সংযোগ পাওয়া মাত্রই সিঙ্ক হবে।</p>
+                            </div>
+                        )}
                         {isLoading && allStudents.length === 0 ? (
                             <div className="space-y-4">
                                 <Skeleton className="h-12 w-full" />
