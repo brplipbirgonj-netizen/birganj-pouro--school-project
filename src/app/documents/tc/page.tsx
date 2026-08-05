@@ -181,7 +181,8 @@ export default function TCGeneratorPage() {
                                             <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="0.05">৫% (হালকা)</SelectItem>
-                                                <SelectItem value="0.10">১০% (স্পষ্ট)</SelectItem>
+                                                <SelectItem value="0.1">১০% (স্পষ্ট)</SelectItem>
+                                                <SelectItem value="0.15">১৫% (গাঢ়)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
