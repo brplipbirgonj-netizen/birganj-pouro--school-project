@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Header } from '@/components/Header';
@@ -423,6 +424,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
     const [selectedClass, setSelectedClass] = useState<string>('6');
     const [rollsInput, setRollsInput] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isConfirming, setIsConfirming] = useState(false);
 
     const rollCount = useMemo(() => {
         if (!rollsInput.trim()) return 0;
@@ -442,6 +444,22 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
         setIsProcessing(true);
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
+
+            // Check if attendance already exists for this class and date
+            if (!isConfirming) {
+                const existing = await getAttendanceForClassAndDate(db, dateStr, selectedClass, selectedYear);
+                if (existing) {
+                    setIsConfirming(true);
+                    toast({ 
+                        variant: 'destructive', 
+                        title: 'হাজিরা ইতিমধ্যে নেওয়া হয়েছে!', 
+                        description: 'আবার এন্টার দিন অথবা সেভ বাটনে ক্লিক করুন নতুনভাবে সেভ করার জন্য।' 
+                    });
+                    setIsProcessing(false);
+                    return;
+                }
+            }
+
             const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === selectedClass);
             
             if (classStudents.length === 0) {
@@ -477,10 +495,11 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
             await saveDailyAttendance(db, dailyAttendance);
             
             toast({ 
-                title: 'হাজিরা সফলভাবে সংরক্ষিত হয়েছে', 
+                title: isConfirming ? 'হাজিরা সফলভাবে আপডেট হয়েছে' : 'হাজিরা সফলভাবে সংরক্ষিত হয়েছে', 
                 description: `${toBengaliNumber(inputRolls.length)} জন উপস্থিত এবং বাকিরা অনুপস্থিত হিসেবে গণ্য হয়েছে।` 
             });
             setRollsInput('');
+            setIsConfirming(false);
         } catch (e) {
             console.error(e);
         } finally {
@@ -492,27 +511,38 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSave();
+        } else {
+            // Reset confirmation if user starts typing again
+            if (isConfirming) setIsConfirming(false);
         }
     };
 
     return (
         <div className="mt-4 space-y-6 animate-in fade-in duration-500">
-            <Card className="border-2 border-primary/10 shadow-lg">
-                <CardHeader className="bg-primary/5">
-                    <CardTitle className="text-xl flex items-center gap-2">
-                        <Plus className="h-5 w-5" /> রোল ইনপুট দিয়ে দ্রুত হাজিরা
+            <Card className={cn(
+                "border-2 transition-all duration-300 shadow-lg",
+                isConfirming ? "border-rose-500 ring-4 ring-rose-100" : "border-primary/10"
+            )}>
+                <CardHeader className={cn("transition-colors duration-300", isConfirming ? "bg-rose-50" : "bg-primary/5")}>
+                    <CardTitle className={cn("text-xl flex items-center gap-2", isConfirming && "text-rose-700")}>
+                        {isConfirming ? <AlertCircle className="h-6 w-6 animate-bounce" /> : <Plus className="h-5 w-5" />}
+                        {isConfirming ? "পূর্বের হাজিরা রিপ্লেস করতে চান?" : "রোল ইনপুট দিয়ে দ্রুত হাজিরা"}
                     </CardTitle>
-                    <CardDescription>তারিখ ও শ্রেণি সিলেক্ট করে উপস্থিত শিক্ষার্থীদের রোল নম্বরগুলো লিখুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</CardDescription>
+                    <CardDescription className={cn(isConfirming && "text-rose-600 font-bold")}>
+                        {isConfirming 
+                            ? "এই শ্রেণির হাজিরা আজ আগে একবার নেওয়া হয়েছে। আবার সেভ করলে আগের তথ্য মুছে যাবে।" 
+                            : "তারিখ ও শ্রেণি সিলেক্ট করে উপস্থিত শিক্ষার্থীদের রোল নম্বরগুলো লিখুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।"}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                         <div className="space-y-2">
                             <Label className="font-black text-primary">তারিখ নির্বাচন</Label>
-                            <DatePicker value={date} onChange={(d) => d && onDateChange(d)} />
+                            <DatePicker value={date} onChange={(d) => { d && onDateChange(d); setIsConfirming(false); }} />
                         </div>
                         <div className="space-y-2">
                             <Label className="font-black text-primary">শ্রেণি নির্বাচন করুন</Label>
-                            <Select value={selectedClass} onValueChange={setSelectedClass}>
+                            <Select value={selectedClass} onValueChange={(val) => { setSelectedClass(val); setIsConfirming(false); }}>
                                 <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
@@ -532,22 +562,40 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                         </div>
                         <Textarea 
                             placeholder="উদা: ১, ২, ৫, ১০, ১২..." 
-                            className="min-h-[150px] text-lg font-black tracking-widest leading-relaxed focus:ring-primary"
+                            className={cn(
+                                "min-h-[150px] text-lg font-black tracking-widest leading-relaxed transition-all",
+                                isConfirming ? "border-rose-400 bg-rose-50/50" : "focus:ring-primary"
+                            )}
                             value={rollsInput}
                             onChange={e => setRollsInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                         />
-                        <p className="text-[10px] text-muted-foreground italic font-bold">*** বাংলা বা ইংরেজি উভয় অংকেই রোল নম্বর লেখা যাবে।</p>
+                        <div className="flex justify-between items-center mt-1">
+                            <p className="text-[10px] text-muted-foreground italic font-bold">*** বাংলা বা ইংরেজি উভয় অংকেই রোল নম্বর লেখা যাবে।</p>
+                            {isConfirming && (
+                                <p className="text-xs font-black text-rose-600 animate-pulse flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" /> আবার এন্টার দিলে সেভ হবে
+                                </p>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="flex justify-end pt-4">
+                    <div className="flex justify-end pt-4 gap-4">
+                        {isConfirming && (
+                            <Button variant="outline" onClick={() => setIsConfirming(false)} className="px-8 h-14 font-bold border-rose-200 text-rose-700 hover:bg-rose-50">
+                                বাতিল
+                            </Button>
+                        )}
                         <Button 
                             onClick={handleSave} 
                             disabled={isProcessing || !rollsInput.trim()}
-                            className="px-12 h-14 text-lg font-black shadow-xl"
+                            className={cn(
+                                "px-12 h-14 text-lg font-black shadow-xl transition-all",
+                                isConfirming ? "bg-rose-600 hover:bg-rose-700 animate-in zoom-in-95" : "bg-primary"
+                            )}
                         >
                             {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                            হাজিরা সেভ করুন
+                            {isConfirming ? "হ্যাঁ, নতুনভাবে সেভ করুন" : "হাজিরা সেভ করুন"}
                         </Button>
                     </div>
                 </CardContent>
