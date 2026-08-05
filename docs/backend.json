@@ -32,42 +32,22 @@
       },
       "required": ["roll", "className", "academicYear", "studentNameBn", "photoUrl"]
     },
-    "admissionApplication": {
-      "title": "Admission Application",
-      "description": "An online application for student admission submitted by parents.",
+    "lessonPlan": {
+      "title": "Lesson Plan",
+      "description": "Weekly lesson plan and syllabus progress tracked by teachers.",
       "type": "object",
       "properties": {
-        "applicationId": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-        "appliedAt": { "type": "string", "format": "date-time" },
+        "teacherUid": { "type": "string" },
+        "teacherName": { "type": "string" },
         "className": { "type": "string" },
+        "subject": { "type": "string" },
         "academicYear": { "type": "string" },
-        "studentNameBn": { "type": "string" },
-        "previousSchool": { "type": "string" },
-        "guardianMobile": { "type": "string" },
-        "photoUrl": { "type": "string" }
+        "week": { "type": "string" },
+        "topic": { "type": "string" },
+        "progress": { "type": "number", "minimum": 0, "maximum": 100 },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["studentNameBn", "className", "academicYear", "guardianMobile", "photoUrl", "previousSchool"]
-    },
-    "galleryConfig": {
-      "title": "Gallery Configuration",
-      "description": "Configuration for the dashboard gallery images and settings.",
-      "type": "object",
-      "properties": {
-        "images": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "url": { "type": "string" },
-              "title": { "type": "string" },
-              "isActive": { "type": "boolean" }
-            }
-          }
-        },
-        "duration": { "type": "number" }
-      }
+      "required": ["teacherUid", "className", "subject", "academicYear", "week"]
     }
   },
   "auth": {
@@ -82,13 +62,9 @@
       "schema": { "$ref": "#/entities/student" },
       "description": "Stores individual student records."
     },
-    "/admissionApplications/{id}": {
-      "schema": { "$ref": "#/entities/admissionApplication" },
-      "description": "Stores online admission applications."
-    },
-    "/school/gallery": {
-      "schema": { "$ref": "#/entities/galleryConfig" },
-      "description": "Stores dashboard gallery settings and images."
+    "/lessonPlans/{id}": {
+      "schema": { "$ref": "#/entities/lessonPlan" },
+      "description": "Stores teacher lesson plans and progress."
     }
   }
 }

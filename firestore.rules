@@ -30,13 +30,18 @@ service cloud.firestore {
 
     // --- কালেকশন ভিত্তিক রুলস ---
 
-    // ১. অনলাইন ভর্তি আবেদন
+    match /lessonPlans/{id} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && hasPermission('manage:lesson-plans');
+      allow update: if isAuthed() && (hasPermission('manage:lesson-plans') || isAdmin());
+      allow delete: if isAdmin();
+    }
+
     match /admissionApplications/{id} {
       allow create: if true;
       allow read, write: if isAuthed() && hasPermission('manage:admissions');
     }
 
-    // ২. স্কুল তথ্য ও গ্যালারি
     match /school/info {
       allow read: if true;
       allow write: if isAdmin();
@@ -47,20 +52,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ৩. ইউজার প্রোফাইল
     match /users/{userId} {
       allow get: if isAuthed() && (request.auth.uid == userId || isAdmin());
       allow list: if isAdmin();
       allow create: if isAuthed() && request.auth.uid == userId;
-      
-      allow update: if isAdmin() || (
-        isAuthed() && request.auth.uid == userId &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
-      );
+      allow update: if isAdmin() || (isAuthed() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions']));
       allow delete: if isAdmin();
     }
 
-    // ৪. একাডেমিক ও ম্যানেজমেন্ট কালেকশন
     match /classRoutines/{id} {
       allow read: if true;
       allow write: if hasPermission('manage:routines');
@@ -89,7 +88,6 @@ service cloud.firestore {
     }
 
     match /students/{id} {
-      // পাবলিক রেজাল্ট পোর্টালের জন্য রোল এবং আইডি দিয়ে সার্চ করার অনুমতি
       allow read: if true; 
       allow write: if hasPermission('manage:students');
       allow delete: if isAdmin();
@@ -113,7 +111,6 @@ service cloud.firestore {
     }
     
     match /results/{id} {
-      // পাবলিক রেজাল্ট দেখার অনুমতি
       allow read: if true;
       allow write: if hasPermission('input:results') || hasPermission('manage:results');
       allow delete: if isAdmin();

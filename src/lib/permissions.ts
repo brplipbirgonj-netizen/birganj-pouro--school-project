@@ -1,3 +1,4 @@
+
 'use client';
 
 // This is a list of available permissions in the system.
@@ -24,6 +25,9 @@ export const availablePermissions = [
   { id: 'view:missed-attendance', label: 'বকেয়া হাজিরা দেখুন' },
   { id: 'input:missed-attendance', label: 'বকেয়া হাজিরা গ্রহণ করুন' },
   { id: 'view:absent-student-list', label: 'অনুপস্থিত শিক্ষার্থীর তালিকা দেখুন' },
+
+  { id: 'manage:lesson-plans', label: 'লেসন প্ল্যান ও প্রগ্রেস ম্যানেজ করুন' },
+  { id: 'view:syllabus-tracker', label: 'সিলেবাস ট্র্যাকার (মনিটরিং) দেখুন' },
 
   { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
   { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
@@ -67,6 +71,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'input:quick-roll-attendance',
     'view:missed-attendance',
     'view:absent-student-list',
+    'manage:lesson-plans',
     'input:results', 
     'view:merit-list',
     'view:accounts',
