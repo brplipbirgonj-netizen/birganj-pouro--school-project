@@ -29,7 +29,7 @@ const numberToBengaliWords = (n: number): string => {
         31: 'একত্রিশ', 32: 'বত্রিশ', 33: 'তেত্রিশ', 34: 'চৌত্রিশ', 35: 'পঁয়ত্রিশ', 36: 'ছত্রিশ', 37: 'সাঁইত্রিশ', 38: 'আটত্রিশ', 39: 'উনচল্লিশ', 40: 'চল্লিশ',
         41: 'একচল্লিশ', 42: 'বিয়াল্লিশ', 43: 'তেতাল্লিশ', 44: 'চুয়াল্লিশ', 45: 'পঁয়তাল্লিশ', 46: 'ছেচল্লিশ', 47: 'সাতচল্লিশ', 48: 'আটচল্লিশ', 49: 'উনপঞ্চাশ', 50: 'পঞ্চাশ',
         51: 'একান্ন', 52: 'বায়ান্ন', 53: 'তিপ্পান্ন', 54: 'চুয়ান্ন', 55: 'পঞ্চান্ন', 56: 'ছাপ্পান্ন', 57: 'সাতান্ন', 58: 'আটান্ন', 59: 'উনষাট', 60: 'ষাট',
-        61: 'একষট্টি', 62: 'বাষট্টি', 63: 'তেষট্টি', 64: 'চৌ্বরষট্টি', 65: 'পঁয়ষট্টি', 66: 'ছেষট্টি', 67: 'সাতষট্টি', 68: 'আটষট্টি', 69: 'উনসত্তর', 70: 'সত্তর',
+        61: 'একষট্টি', 62: 'বাষট্টি', 63: 'তেষট্টি', 64: 'চৌ্বরষট্টি', 65: 'পঁয়চল্লিশ', 66: 'ছেষট্টি', 67: 'সাতষট্টি', 68: 'আটষট্টি', 69: 'উনসত্তর', 70: 'সত্তর',
         71: 'একাত্তর', 72: 'বাহাত্তর', 73: 'তিয়াত্তর', 74: 'চুয়াত্তর', 75: 'পঁচাত্তর', 76: 'ছিয়াত্তর', 77: 'সাতাত্তর', 78: 'আটাত্তর', 79: 'উনআশি', 80: 'আশি',
         81: 'একাশি', 82: 'বিরাশি', 83: 'তিরাশি', 84: 'চুরাশি', 85: 'পঁচাশী', 86: 'ছিয়াশি', 87: 'সাতাশি', 88: 'অষ্টাশি', 89: 'উননব্বই', 90: 'নব্বই',
         91: 'একানব্বই', 92: 'বিরানব্বই', 93: 'তিরানব্বই', 94: 'চুরানব্বই', 95: 'পঁচানব্বই', 96: 'ছেয়ানব্বই', 97: 'সাতানব্বই', 98: 'আটানব্বই', 99: 'নিরানব্বই'
@@ -166,8 +166,13 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
 
                 <div className="space-y-6">
                     <div className="text-sm font-bold bg-emerald-50/50 p-4 rounded-xl border-2 border-dashed border-emerald-900/20">
-                        <p className="text-xl leading-relaxed"><span className="text-slate-600 font-black">কথায়:</span> <span className="font-black text-emerald-900 underline decoration-double">{numberToBengaliWords(collection.totalAmount)} টাকা মাত্র।</span></p>
-                        <p className="mt-3 text-[11px] text-slate-700"><strong>আদায়ের বিবরণ:</strong> {collection.description || 'বিবিধ ফি আদায়'}</p>
+                        <p className="text-xl leading-relaxed flex flex-wrap gap-2 items-end">
+                            <span className="text-slate-600 font-black shrink-0">কথায়:</span> 
+                            <span className="font-black text-emerald-950 border-b border-dotted border-black/40 flex-grow min-w-[200px] px-2 italic">
+                                {numberToBengaliWords(collection.totalAmount)} টাকা মাত্র।
+                            </span>
+                        </p>
+                        <p className="mt-4 text-[11px] text-slate-700"><strong>আদায়ের বিবরণ:</strong> {collection.description || 'বিবিধ ফি আদায়'}</p>
                     </div>
 
                     <div className="flex justify-between items-center py-4 bg-white p-4 rounded-2xl border-2 border-black/5 shadow-inner">
@@ -187,15 +192,21 @@ export const MoneyReceipt = ({ collection, student, schoolInfo }: MoneyReceiptPr
                 </div>
             </main>
 
-            <footer className="relative z-10 pt-12 mt-auto">
-                <div className="flex justify-between items-end px-6">
+            <footer className="relative z-10 pt-16 mt-auto">
+                <div className="flex justify-between items-end px-4">
                     <div className="text-center">
                         <p className="text-[11px] font-black text-slate-500 mb-2">তারিখ: {format(collection.collectionDate, 'dd/MM/yyyy', { locale: bn })}</p>
-                        <div className="w-36 border-t-2 border-emerald-900 pt-1.5 font-black text-[12px] text-emerald-950">অভিভাবকের স্বাক্ষর</div>
+                        <div className="w-36 border-t border-black pt-1.5 font-black text-[12px] text-emerald-950">অভিভাবকের স্বাক্ষর</div>
                     </div>
                     <div className="text-center">
-                        <p className="text-[11px] font-black text-slate-500 mb-2">আদায়কারী: {collection.collectorName || 'অফিস সহকারী'}</p>
-                        <div className="w-36 border-t-2 border-emerald-900 pt-1.5 font-black text-[12px] text-emerald-950">হিসাবরক্ষকের স্বাক্ষর</div>
+                        <div className="h-12 flex flex-col items-center justify-end mb-2">
+                             <span className="text-[10px] font-bold text-slate-400 italic mb-1">{collection.collectorName || 'অফিস সহকারী'}</span>
+                        </div>
+                        <div className="w-36 border-t border-black pt-1.5 font-black text-[12px] text-emerald-950">হিসাবরক্ষকের স্বাক্ষর</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="h-12 mb-2"></div>
+                        <div className="w-36 border-t border-black pt-1.5 font-black text-[12px] text-emerald-950">প্রধান শিক্ষকের স্বাক্ষর</div>
                     </div>
                 </div>
                 <div className="mt-8 text-center text-[9px] text-slate-400 font-black border-t-2 border-dashed pt-3 uppercase tracking-[0.2em]">
