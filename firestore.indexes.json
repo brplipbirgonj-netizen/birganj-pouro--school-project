@@ -1,3 +1,4 @@
+
 {
   "indexes": [
     {
@@ -55,6 +56,38 @@
         {
           "fieldPath": "__name__",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lessonPlans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "academicYear",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "teacherUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lessonPlans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "academicYear",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
         }
       ]
     }
