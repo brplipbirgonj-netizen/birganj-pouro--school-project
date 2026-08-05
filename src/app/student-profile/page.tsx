@@ -16,7 +16,7 @@ import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award } from 'lucide-react';
+import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +33,7 @@ import { getAllResults } from '@/lib/results-data';
 import { getSubjects } from '@/lib/subjects';
 import { processStudentResults } from '@/lib/results-calculation';
 import { getExams } from '@/lib/exam-data';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -53,8 +54,16 @@ const religionMapBn: Record<string, string> = {
     'islam': 'ইসলাম', 'hinduism': 'হিন্দু', 'buddhism': 'বৌদ্ধ', 'christianity': 'খ্রিস্টান', 'other': 'অন্যান্য'
 };
 
-const groupMapBn: Record<string, string> = {
-    'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'general': 'সাধারণ'
+/**
+ * Generates constructive feedback based on the percentage of marks obtained.
+ */
+const getAutoComment = (percentage: number, subjectName: string) => {
+    if (percentage < 33) return `${subjectName} বিষয়ের ভিত্তি বেশ দুর্বল। নিয়মিত অনুশীলন এবং বিশেষ ক্লাস প্রয়োজন।`;
+    if (percentage < 45) return `${subjectName} বিষয়ে কাঙ্ক্ষিত ফলাফল আসেনি। মৌলিক ধারণাগুলো আরও ঝালাই করতে হবে।`;
+    if (percentage < 60) return `ফলাফল ভালো হয়েছে, তবে ${subjectName} বিষয়ে আরও উন্নতির সুযোগ রয়েছে।`;
+    if (percentage < 75) return `${subjectName} বিষয়ে পারফরম্যান্স চমৎকার। ধারাবাহিকতা বজায় রাখলে আরও ভালো করবে।`;
+    if (percentage < 85) return `খুবই উৎসাহব্যঞ্জক ফলাফল! ${subjectName} বিষয়ে তুমি ক্লাসের অন্যতম সেরা।`;
+    return `${subjectName} বিষয়ে তোমার দখল অসাধারণ। এই মেধা ভবিষ্যতেও বজায় রাখো।`;
 };
 
 // Heatmap Component
@@ -70,7 +79,6 @@ const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendan
                     const monthEnd = new Date(parseInt(year), monthIdx + 1, 0);
                     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
                     
-                    // Create weeks grid (up to 6 weeks)
                     const weeks: (Date | null)[][] = [Array(7).fill(null)];
                     let currentWeekIdx = 0;
                     
@@ -303,11 +311,20 @@ function StudentProfileSearchContent() {
             });
             setPaidMonths(Array.from(monthsPaid));
 
-            // Fetch Academic Progress Data
+            // Fetch Academic Progress Data with Class Comparison
             setIsProgressLoading(true);
             const exams = await getExams(db, selectedYear);
             const progressData = [];
             
+            // Get other students in class to calculate merit rank and averages
+            const classStudentsQuery = query(
+                collection(db, 'students'),
+                where('academicYear', '==', selectedYear),
+                where('className', '==', foundStudent.className)
+            );
+            const classStudentsSnap = await getDocs(classStudentsQuery);
+            const classStudents = classStudentsSnap.docs.map(studentFromDoc);
+
             for (const exam of exams) {
                 if (!exam.classes.includes(foundStudent.className)) continue;
                 
@@ -317,25 +334,38 @@ function StudentProfileSearchContent() {
 
                 const subs = getSubjects(foundStudent.className, foundStudent.group).filter(s => s.isExamSubject !== false);
                 
-                // Get other students in class to calculate merit rank
-                const classStudentsQuery = query(
-                    collection(db, 'students'),
-                    where('academicYear', '==', selectedYear),
-                    where('className', '==', foundStudent.className)
-                );
-                const classStudentsSnap = await getDocs(classStudentsQuery);
-                const classStudents = classStudentsSnap.docs.map(studentFromDoc);
-
                 const results = processStudentResults(classStudents, classRes, subs);
                 const studentResult = results.find(r => r.student.id === foundStudent.id);
 
                 if (studentResult) {
+                    // Calculate Subject-wise Class Statistics
+                    const subjectStats = subs.map(subject => {
+                        const subjectMarks = results.map(r => r.subjectResults.get(subject.name)?.marks || 0);
+                        const classMax = Math.max(...subjectMarks);
+                        const classAvg = subjectMarks.reduce((a, b) => a + b, 0) / subjectMarks.length;
+                        
+                        const myResult = studentResult.subjectResults.get(subject.name);
+                        const obtained = myResult?.marks || 0;
+                        const percentage = (obtained / subject.fullMarks) * 100;
+
+                        return {
+                            subjectName: subject.name,
+                            fullMarks: subject.fullMarks,
+                            obtained,
+                            grade: myResult?.grade || '-',
+                            classMax,
+                            classAvg: parseFloat(classAvg.toFixed(1)),
+                            comment: getAutoComment(percentage, subject.name)
+                        };
+                    });
+
                     progressData.push({
                         exam: exam.name,
                         gpa: studentResult.gpa,
                         marks: studentResult.totalMarks,
                         rank: studentResult.isPass ? studentResult.meritPosition : 0,
-                        isPass: studentResult.isPass
+                        isPass: studentResult.isPass,
+                        subjectStats
                     });
                 }
             }
@@ -556,17 +586,16 @@ function StudentProfileSearchContent() {
 
             {/* Screen Profile Dialog */}
             <Dialog open={showProfile} onOpenChange={setShowProfile}>
-                <DialogContent className="sm:max-w-5xl h-[95vh] flex flex-col p-0 no-print font-kalpurush">
+                <DialogContent className="sm:max-w-6xl h-[95vh] flex flex-col p-0 no-print font-kalpurush">
                     <DialogHeader className="sr-only">
                         <DialogTitle>শিক্ষার্থী প্রোফাইল</DialogTitle>
                     </DialogHeader>
                     
                     {studentData && (
                         <div className="flex flex-col h-full overflow-hidden">
-                            {/* TOP SECTION: Quick Summary (Fixed at top) */}
+                            {/* TOP SECTION: Quick Summary */}
                             <div className="flex-shrink-0 bg-white border-b-2 border-slate-200 p-4 sm:p-6 overflow-hidden">
                                 <div className="flex flex-col sm:flex-row gap-6 items-start">
-                                    {/* Left: Photo & Action */}
                                     <div className="flex flex-col items-center gap-3 shrink-0">
                                         <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full border-4 border-primary/20 p-1 shadow-lg">
                                             <div className="relative h-full w-full rounded-full overflow-hidden bg-muted">
@@ -584,7 +613,6 @@ function StudentProfileSearchContent() {
                                         </Button>
                                     </div>
 
-                                    {/* Right: Personal Info Header */}
                                     <div className="flex-1 w-full overflow-hidden">
                                         <div className="mb-4 text-center sm:text-left">
                                             <h1 className="text-2xl sm:text-3xl font-black text-slate-900">{studentData.studentNameBn}</h1>
@@ -593,7 +621,6 @@ function StudentProfileSearchContent() {
                                             </p>
                                         </div>
                                         
-                                        {/* Main Tab Controller */}
                                         <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
                                             <TabsList className="grid w-full grid-cols-4 h-12 bg-muted/30 p-1 mb-0 rounded-b-none border-b-0">
                                                 <TabsTrigger value="details" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><Info className="h-4 w-4 mr-1.5" /> তথ্য</TabsTrigger>
@@ -606,10 +633,9 @@ function StudentProfileSearchContent() {
                                 </div>
                             </div>
 
-                            {/* SCROLLABLE CONTENT SECTION: Filtered by Active Tab */}
+                            {/* SCROLLABLE CONTENT SECTION */}
                             <div className="flex-1 overflow-y-auto bg-slate-100/50 p-4 sm:p-8">
                                 <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
-                                    {/* 1. Personal Details Tab */}
                                     <TabsContent value="details" className="mt-0 space-y-6 animate-in fade-in duration-500">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <Card className="border-[4px] border-black rounded-xl bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
@@ -640,7 +666,6 @@ function StudentProfileSearchContent() {
                                         </div>
                                     </TabsContent>
 
-                                    {/* 2. Academic Progress Tab */}
                                     <TabsContent value="academic_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             {academicProgress.length > 0 ? (
@@ -661,6 +686,92 @@ function StudentProfileSearchContent() {
                                                 </div>
                                             )}
                                         </div>
+
+                                        {academicProgress.length > 0 && (
+                                            <div className="space-y-6">
+                                                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                                    <Target className="h-6 w-6 text-primary" /> বিষয়ভিত্তিক ফলাফল বিশ্লেষণ (শ্রেণির গড়ের সাথে তুলনা)
+                                                </h3>
+                                                
+                                                <Accordion type="single" collapsible className="space-y-4">
+                                                    {academicProgress.map((examData, eIdx) => (
+                                                        <AccordionItem key={eIdx} value={`exam-${eIdx}`} className="border-[4px] border-black rounded-2xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)] overflow-hidden">
+                                                            <AccordionTrigger className="px-6 py-4 hover:no-underline bg-primary/5">
+                                                                <div className="flex justify-between items-center w-full pr-6">
+                                                                    <span className="font-black text-lg text-primary">{examData.exam}</span>
+                                                                    <Badge className="font-black bg-primary">GPA: {toBengaliNumber(examData.gpa.toFixed(2))}</Badge>
+                                                                </div>
+                                                            </AccordionTrigger>
+                                                            <AccordionContent className="p-6 space-y-8">
+                                                                <div className="grid grid-cols-1 gap-8">
+                                                                    {examData.subjectStats.map((sub: any, sIdx: number) => {
+                                                                        const obtainedPercent = (sub.obtained / sub.fullMarks) * 100;
+                                                                        const avgPercent = (sub.classAvg / sub.fullMarks) * 100;
+                                                                        const maxPercent = (sub.classMax / sub.fullMarks) * 100;
+
+                                                                        return (
+                                                                            <div key={sIdx} className="space-y-4 p-4 border-2 border-slate-100 rounded-xl bg-slate-50/50">
+                                                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <Badge variant="outline" className="font-black text-sm border-black h-8 px-4 bg-white">{sub.subjectName}</Badge>
+                                                                                        <span className="font-black text-2xl text-slate-900">{toBengaliNumber(sub.obtained)}</span>
+                                                                                        <span className="text-xs font-bold text-muted-foreground">/ {toBengaliNumber(sub.fullMarks)}</span>
+                                                                                    </div>
+                                                                                    <Badge className={cn(
+                                                                                        "font-black text-lg px-4 h-8",
+                                                                                        sub.obtained >= (sub.fullMarks * 0.8) ? "bg-emerald-600" : sub.obtained >= (sub.fullMarks * 0.33) ? "bg-primary" : "bg-rose-600"
+                                                                                    )}>
+                                                                                        গ্রেড: {sub.grade}
+                                                                                    </Badge>
+                                                                                </div>
+
+                                                                                {/* Visual Comparison Bar */}
+                                                                                <div className="space-y-6 pt-2">
+                                                                                    <div className="relative h-4 w-full bg-slate-200 rounded-full shadow-inner">
+                                                                                        {/* Class Average Indicator */}
+                                                                                        <div 
+                                                                                            className="absolute top-0 h-full border-r-4 border-primary z-10 transition-all duration-1000 flex flex-col items-center"
+                                                                                            style={{ left: `${avgPercent}%` }}
+                                                                                        >
+                                                                                            <div className="absolute -top-6 whitespace-nowrap text-[9px] font-black bg-primary text-white px-1.5 py-0.5 rounded shadow-sm">শ্রেণির গড়: {toBengaliNumber(sub.classAvg)}</div>
+                                                                                        </div>
+
+                                                                                        {/* Class Highest Indicator */}
+                                                                                        <div 
+                                                                                            className="absolute top-0 h-full border-r-4 border-amber-500 z-10 transition-all duration-1000 flex flex-col items-center"
+                                                                                            style={{ left: `${maxPercent}%` }}
+                                                                                        >
+                                                                                            <div className="absolute -top-6 whitespace-nowrap text-[9px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded shadow-sm">সর্বোচ্চ: {toBengaliNumber(sub.classMax)}</div>
+                                                                                        </div>
+
+                                                                                        {/* Student Obtained Bar */}
+                                                                                        <div 
+                                                                                            className={cn(
+                                                                                                "h-full rounded-full transition-all duration-1000 shadow-lg",
+                                                                                                sub.obtained >= sub.classAvg ? "bg-emerald-500" : "bg-rose-500"
+                                                                                            )}
+                                                                                            style={{ width: `${obtainedPercent}%` }}
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    {/* Auto Comment Section */}
+                                                                                    <div className="bg-white p-4 rounded-xl border-2 border-dashed border-primary/20 flex items-start gap-3">
+                                                                                        <MessageSquareQuote className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                                                                                        <p className="text-sm font-bold text-slate-700 leading-relaxed italic">
+                                                                                            "{sub.comment}"
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </AccordionContent>
+                                                        </AccordionItem>
+                                                    ))}
+                                                </Accordion>
+                                            </div>
+                                        )}
 
                                         <div className="space-y-4">
                                             <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
@@ -703,7 +814,6 @@ function StudentProfileSearchContent() {
                                         </div>
                                     </TabsContent>
 
-                                    {/* 3. Attendance Tab */}
                                     <TabsContent value="attendance_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                             <Card className="border-[4px] border-black rounded-xl p-4 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] text-center">
@@ -729,7 +839,6 @@ function StudentProfileSearchContent() {
                                         </div>
                                     </TabsContent>
 
-                                    {/* 4. Fees & Payments Tab */}
                                     <TabsContent value="fees_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
                                         <div className="space-y-4">
                                             <h3 className="text-lg font-black text-slate-800">মাসিক বেতন স্ট্যাটাস</h3>
