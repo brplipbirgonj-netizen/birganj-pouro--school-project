@@ -444,6 +444,21 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
         setIsProcessing(true);
         try {
             const dateStr = format(date, 'yyyy-MM-dd');
+            const dayOfWeek = date.getDay();
+            const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+
+            // Check for holiday
+            const activeHoliday = await isHoliday(db, dateStr);
+
+            if (isWeekend || activeHoliday) {
+                toast({ 
+                    variant: "destructive", 
+                    title: "আজ ছুটি!", 
+                    description: activeHoliday ? `আজ ${activeHoliday.description} তাই হাজিরা নেওয়া বন্ধ আছে।` : "আজ সাপ্তাহিক ছুটি তাই হাজিরা নেওয়া বন্ধ আছে।" 
+                });
+                setIsProcessing(false);
+                return;
+            }
 
             // Check if attendance already exists for this class and date
             if (!isConfirming) {
@@ -1102,7 +1117,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (!student) return;
         const mobile = student.guardianMobile || student.studentMobile;
         if (!mobile) {
-            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
+            toast({ variant: 'destructive', title: 'মোাবাইল নম্বর নেই' });
             return;
         }
         
