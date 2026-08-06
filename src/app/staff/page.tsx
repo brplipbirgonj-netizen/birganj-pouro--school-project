@@ -125,8 +125,8 @@ const parseSubjectTeacher = (cell: string): { subject: string, teacher: string |
     return { subject, teacher };
 };
 
-// --- Sub Tab: Teacher Profile Section ---
-const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], academicYear: string }) => {
+// --- Sub Tab: Staff Profile Section ---
+const StaffProfileTab = ({ staffList, academicYear }: { staffList: Staff[], academicYear: string }) => {
     const db = useFirestore();
     const { toast } = useToast();
     const [selectedStaffId, setSelectedStaffId] = useState<string>('');
@@ -162,7 +162,7 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
     }, [fetchData, selectedStaffId]);
 
     const teacherRoutineInfo = useMemo(() => {
-        if (!selectedStaff || routineRecords.length === 0) return null;
+        if (!selectedStaff || selectedStaff.staffType !== 'teacher' || routineRecords.length === 0) return null;
         
         const teacherName = selectedStaff.nameBn.trim();
         const dailySchedule: Record<string, any[]> = {};
@@ -179,7 +179,6 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                 if (routineTeacher) {
                     const teachersInCell = routineTeacher.split('/').map(t => t.trim()).filter(Boolean);
                     
-                    // Improved matching logic: Check if profile name includes routine name OR routine name includes profile name
                     const isMatch = teachersInCell.some(t => 
                         teacherName.includes(t) || t.includes(teacherName)
                     );
@@ -227,12 +226,12 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
         <div className="space-y-8 animate-in fade-in duration-500 pb-20">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
                 <div className="space-y-2 md:col-span-1">
-                    <Label className="font-black text-primary flex items-center gap-2"><User className="h-4 w-4" /> শিক্ষক নির্বাচন করুন</Label>
+                    <Label className="font-black text-primary flex items-center gap-2"><User className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন করুন</Label>
                     <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
                         <SelectTrigger className="h-11 bg-slate-50 border-2 font-bold"><SelectValue placeholder="নাম সিলেক্ট করুন" /></SelectTrigger>
                         <SelectContent>
-                            {staffList.filter(s => s.staffType === 'teacher').map(s => (
-                                <SelectItem key={s.id} value={s.id}>{s.nameBn}</SelectItem>
+                            {staffList.map(s => (
+                                <SelectItem key={s.id} value={s.id}>{s.nameBn} ({s.designation})</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -250,7 +249,7 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <p className="font-bold text-muted-foreground">শিক্ষক প্রোফাইল লোড হচ্ছে...</p>
+                    <p className="font-bold text-muted-foreground">প্রোফাইল লোড হচ্ছে...</p>
                 </div>
             ) : selectedStaff ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -274,9 +273,11 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                                     </Badge>
                                 </div>
                                 <div className="mt-6 space-y-3 text-left bg-slate-50 p-4 rounded-xl border">
-                                    <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                                        <Briefcase className="h-4 w-4 text-primary" /> <span>বিষয়: {selectedStaff.subject || 'N/A'}</span>
-                                    </div>
+                                    {selectedStaff.staffType === 'teacher' && (
+                                        <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
+                                            <Briefcase className="h-4 w-4 text-primary" /> <span>বিষয়: {selectedStaff.subject || 'N/A'}</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
                                         <Clock className="h-4 w-4 text-primary" /> <span>যোগদান: {toBengaliNumber(format(new Date(selectedStaff.joinDate), "dd-MM-yyyy", { locale: bn }))}</span>
                                     </div>
@@ -322,59 +323,62 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                     </div>
 
                     <div className="lg:col-span-2 space-y-6">
-                        <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
-                            <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center">
-                                <div>
-                                    <CardTitle className="text-xl font-black flex items-center gap-2"><CalendarDays className="h-6 w-6 text-primary" /> সাপ্তাহিক ক্লাস সিডিউল</CardTitle>
-                                    <CardDescription className="font-bold">রুটিন অনুযায়ী ক্লাস লোড</CardDescription>
-                                </div>
-                                <Badge variant="secondary" className="font-black text-base h-10 px-6 bg-primary text-white shadow-md">মোট ক্লাস: {toBengaliNumber(teacherRoutineInfo?.totalClasses || 0)} টি</Badge>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                {teacherRoutineInfo?.totalClasses === 0 ? (
-                                    <div className="p-12 text-center border-2 border-dashed rounded-2xl italic text-muted-foreground font-bold">রুটিনে এই শিক্ষকের কোনো ক্লাস পাওয়া যায়নি।</div>
-                                ) : (
-                                    <div className="space-y-8">
-                                        <div className="p-4 bg-muted/20 rounded-2xl border-2 border-dashed">
-                                            <p className="text-xs font-black text-muted-foreground uppercase mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" /> নিয়মিত পাঠদানের বিষয়সমূহ:</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {teacherRoutineInfo?.subjects.map(s => <Badge key={s} className="font-black bg-white text-primary border-2 border-primary/20 h-8 px-4">{s}</Badge>)}
+                        {/* Weekly class schedule is only for teachers */}
+                        {selectedStaff.staffType === 'teacher' && (
+                            <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
+                                <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center">
+                                    <div>
+                                        <CardTitle className="text-xl font-black flex items-center gap-2"><CalendarDays className="h-6 w-6 text-primary" /> সাপ্তাহিক ক্লাস সিডিউল</CardTitle>
+                                        <CardDescription className="font-bold">রুটিন অনুযায়ী ক্লাস লোড</CardDescription>
+                                    </div>
+                                    <Badge variant="secondary" className="font-black text-base h-10 px-6 bg-primary text-white shadow-md">মোট ক্লাস: {toBengaliNumber(teacherRoutineInfo?.totalClasses || 0)} টি</Badge>
+                                </CardHeader>
+                                <CardContent className="pt-6">
+                                    {teacherRoutineInfo?.totalClasses === 0 ? (
+                                        <div className="p-12 text-center border-2 border-dashed rounded-2xl italic text-muted-foreground font-bold">রুটিনে এই শিক্ষকের কোনো ক্লাস পাওয়া যায়নি।</div>
+                                    ) : (
+                                        <div className="space-y-8">
+                                            <div className="p-4 bg-muted/20 rounded-2xl border-2 border-dashed">
+                                                <p className="text-xs font-black text-muted-foreground uppercase mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" /> নিয়মিত পাঠদানের বিষয়সমূহ:</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {teacherRoutineInfo?.subjects.map(s => <Badge key={s} className="font-black bg-white text-primary border-2 border-primary/20 h-auto py-1 px-4">{s}</Badge>)}
+                                                </div>
+                                            </div>
+
+                                            <div className="overflow-x-auto rounded-xl border-2 border-black">
+                                                <Table>
+                                                    <TableHeader className="bg-slate-100">
+                                                        <TableRow className="h-12 border-b-2 border-black">
+                                                            <TableHead className="font-black text-black border-r-2 border-black text-center w-24">বার</TableHead>
+                                                            {periodLabels.map(p => <TableHead key={p} className="text-center font-black text-black border-r last:border-0 text-xs">{p} পিরিয়ড</TableHead>)}
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"].map(day => (
+                                                            <TableRow key={day} className="h-16 hover:bg-slate-50 border-b last:border-0 transition-colors">
+                                                                <TableCell className="font-black border-r-2 border-black text-center bg-gray-50/50">{day}</TableCell>
+                                                                {teacherRoutineInfo?.dailySchedule[day]?.map((period, pIdx) => (
+                                                                    <TableCell key={pIdx} className="text-center border-r last:border-0 p-1">
+                                                                        {period ? (
+                                                                            <div className="flex flex-col items-center justify-center p-1.5 rounded-lg bg-primary/5 border border-primary/20 h-full min-h-[50px]">
+                                                                                <span className="font-black text-[11px] leading-tight text-blue-900 mb-1">{period.subject}</span>
+                                                                                <Badge variant="outline" className="h-auto py-0.5 px-2 text-[8px] font-black border-slate-300 whitespace-nowrap">
+                                                                                    {classNamesMap[period.className] || period.className} শ্রেণি
+                                                                                </Badge>
+                                                                            </div>
+                                                                        ) : <span className="text-muted-foreground/30">-</span>}
+                                                                    </TableCell>
+                                                                ))}
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
                                             </div>
                                         </div>
-
-                                        <div className="overflow-x-auto rounded-xl border-2 border-black">
-                                            <Table>
-                                                <TableHeader className="bg-slate-100">
-                                                    <TableRow className="h-12 border-b-2 border-black">
-                                                        <TableHead className="font-black text-black border-r-2 border-black text-center w-24">বার</TableHead>
-                                                        {periodLabels.map(p => <TableHead key={p} className="text-center font-black text-black border-r last:border-0 text-xs">{p} পিরিয়ড</TableHead>)}
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"].map(day => (
-                                                        <TableRow key={day} className="h-16 hover:bg-slate-50 border-b last:border-0 transition-colors">
-                                                            <TableCell className="font-black border-r-2 border-black text-center bg-gray-50/50">{day}</TableCell>
-                                                            {teacherRoutineInfo?.dailySchedule[day]?.map((period, pIdx) => (
-                                                                <TableCell key={pIdx} className="text-center border-r last:border-0 p-1">
-                                                                    {period ? (
-                                                                        <div className="flex flex-col items-center justify-center p-1.5 rounded-lg bg-primary/5 border border-primary/20 h-full min-h-[50px]">
-                                                                            <span className="font-black text-[11px] leading-tight text-blue-900 mb-1">{period.subject}</span>
-                                                                            <Badge variant="outline" className="h-auto py-0.5 px-2 text-[8px] font-black border-slate-300 whitespace-nowrap">
-                                                                                {classNamesMap[period.className] || period.className} শ্রেণি
-                                                                            </Badge>
-                                                                        </div>
-                                                                    ) : <span className="text-muted-foreground/30">-</span>}
-                                                                </TableCell>
-                                                            ))}
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
 
                         <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)] overflow-hidden">
                             <CardHeader className="bg-muted/30 border-b-[3px] border-black">
@@ -431,8 +435,8 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
             ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-muted/10 rounded-3xl border-4 border-dashed">
                     <User className="h-16 w-16 mb-4 opacity-20" />
-                    <p className="text-xl font-black">শিক্ষক নির্বাচন করুন</p>
-                    <p className="font-bold">বিস্তারিত প্রোফাইল এবং হাজিরা রিপোর্ট দেখতে শিক্ষক সিলেক্ট করুন।</p>
+                    <p className="text-xl font-black">শিক্ষক বা কর্মচারী নির্বাচন করুন</p>
+                    <p className="font-bold">বিস্তারিত প্রোফাইল এবং হাজিরা রিপোর্ট দেখতে স্টাফ সিলেক্ট করুন।</p>
                 </div>
             )}
         </div>
@@ -659,7 +663,7 @@ export default function StaffListPage() {
   const sidebarItems = useMemo(() => {
       const items = [
           { id: 'list', label: 'স্টাফ তালিকা', icon: List, color: 'text-orange-600 bg-orange-50' },
-          { id: 'teacher-profile', label: 'শিক্ষক প্রোফাইল', icon: User, color: 'text-primary bg-primary/10' }
+          { id: 'staff-profile', label: 'শিক্ষক ও কর্মচারী প্রোফাইল', icon: User, color: 'text-primary bg-primary/10' }
       ];
       if (canManageAttendance) {
           items.push({ id: 'attendance', label: 'দৈনিক হাজিরা ও ছুটি', icon: ClipboardCheck, color: 'text-emerald-600 bg-emerald-50' });
@@ -984,8 +988,8 @@ export default function StaffListPage() {
                     </div>
                 )}
 
-                {activeSection === 'teacher-profile' && (
-                    <TeacherProfileTab staffList={activeStaffList} academicYear={selectedYear} />
+                {activeSection === 'staff-profile' && (
+                    <StaffProfileTab staffList={activeStaffList} academicYear={selectedYear} />
                 )}
 
                 {activeSection === 'attendance' && (
@@ -1336,6 +1340,7 @@ export default function StaffListPage() {
                         <div className="space-y-4 py-4 text-sm font-bold text-slate-700">
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">নাম (ইংরেজি):</span> <span>{staffToView.nameEn || 'N/A'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">জন্ম তারিখ:</span> <span>{staffToView.dob ? toBengaliNumber(format(new Date(staffToView.dob), "dd-MM-yyyy", { locale: bn })) : 'N/A'}</span></p>
+                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">ধরন:</span> <span>{staffToView.staffType === 'teacher' ? 'শিক্ষক' : 'কর্মচারী'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">বিষয়:</span> <span>{staffToView.subject || 'N/A'}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">মোবাইল:</span> <span>{toBengaliNumber(staffToView.mobile)}</span></p>
                             <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">যোগদানের তারিখ:</span> <span>{staffToView.joinDate ? toBengaliNumber(format(new Date(staffToView.joinDate), "dd-MM-yyyy", { locale: bn })) : 'N/A'}</span></p>
