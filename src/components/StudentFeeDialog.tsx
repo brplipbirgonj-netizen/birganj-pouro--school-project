@@ -14,13 +14,13 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Skeleton } from './ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { DatePicker } from './ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -46,14 +46,14 @@ const toBengaliNumber = (str: string | number) => {
 };
 
 const feeFields: { key: keyof FeeBreakdown; label: string }[] = [
-    { key: 'tuitionCurrent', label: 'চলতি' },
-    { key: 'tuitionAdvance', label: 'অগ্রিম' },
-    { key: 'tuitionDue', label: 'বকেয়া' },
+    { key: 'tuitionCurrent', label: 'চলতি বেতন' },
+    { key: 'tuitionDue', label: 'বকেয়া বেতন' },
+    { key: 'tuitionAdvance', label: 'অগ্রিম বেতন' },
     { key: 'tuitionFine', label: 'জরিমানা' },
     { key: 'examFeeHalfYearly', label: 'অর্ধ-বার্ষিক' },
-    { key: 'examFeeAnnual', label: 'বার্ষিক' },
+    { key: 'examFeeAnnual', label: 'বার্ষিক ফি' },
     { key: 'examFeePreNirbachoni', label: 'প্রাক-নির্বাচনী' },
-    { key: 'examFeeNirbachoni', label: 'নির্বাচনী' },
+    { key: 'examFeeNirbachoni', label: 'নির্বাচনী ফি' },
     { key: 'sessionFee', label: 'সেশন ফি' },
     { key: 'admissionFee', label: 'ভর্তি ফি' },
     { key: 'scoutFee', label: 'স্কাউট ফি' },
@@ -81,7 +81,7 @@ const feeHeadMapping: { [key in keyof FeeBreakdown]?: string } = {
 
 const emptyBreakdown: FeeBreakdown = {};
 
-function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenChange }: { student: Student, onSave: () => void, existingCollection: FeeCollection | null, open: boolean, onOpenChange: (open: boolean) => void }) {
+function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenChange, paidMonths }: { student: Student, onSave: () => void, existingCollection: FeeCollection | null, open: boolean, onOpenChange: (open: boolean) => void, paidMonths: Set<string> }) {
     const db = useFirestore();
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -93,6 +93,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     const [breakdown, setBreakdown] = useState<FeeBreakdown>(emptyBreakdown);
     const [collectorName, setCollectorName] = useState<string>('');
     const [shouldSendSMS, setShouldSendSMS] = useState(true);
+    const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (!db || !user) return;
@@ -121,6 +122,12 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 setDescription(existingCollection.description);
                 setBreakdown(existingCollection.breakdown || {});
                 setMethod(existingCollection.method || 'cash');
+                
+                const monthsInDesc = new Set<string>();
+                BENGALI_MONTHS.forEach(m => {
+                    if (existingCollection.description.includes(m)) monthsInDesc.add(m);
+                });
+                setSelectedMonths(monthsInDesc);
             } else {
                 const today = new Date();
                 setCollectionDate(today);
@@ -129,9 +136,25 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 setDescription(currentMonthName ? `${currentMonthName} মাসের বেতন` : '');
                 setBreakdown(emptyBreakdown);
                 setMethod('cash');
+                setSelectedMonths(new Set([currentMonthName]));
             }
         }
     }, [existingCollection, open]);
+
+    const handleMonthToggle = (month: string) => {
+        const next = new Set(selectedMonths);
+        if (next.has(month)) next.delete(month);
+        else next.add(month);
+        
+        setSelectedMonths(next);
+        
+        const sortedSelected = BENGALI_MONTHS.filter(m => next.has(m));
+        if (sortedSelected.length > 0) {
+            setDescription(`${sortedSelected.join(', ')} মাসের বেতন`);
+        } else {
+            setDescription('');
+        }
+    };
 
     const handleFeeChange = (field: keyof FeeBreakdown, value: string) => {
         const numValue = value === '' ? undefined : parseInt(value, 10);
@@ -253,94 +276,118 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] font-kalpurush">
-                <DialogHeader>
-                    <DialogTitle>{existingCollection ? 'ফি আদায় এডিট করুন' : 'নতুন ফি আদায়'}</DialogTitle>
-                    <DialogDescription className="font-bold">
+            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] font-kalpurush p-0 border-none shadow-2xl overflow-hidden">
+                <DialogHeader className="p-6 bg-slate-50 border-b">
+                    <DialogTitle className="text-xl font-black">{existingCollection ? 'ফি আদায় এডিট করুন' : 'নতুন ফি আদায়'}</DialogTitle>
+                    <DialogDescription className="font-bold text-primary">
                         {student.studentNameBn} (রোল: {student.roll.toLocaleString('bn-BD')}) এর জন্য ফি আদায় করুন।
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-grow overflow-y-auto -mx-2 px-2 sm:-mx-6 sm:px-6 space-y-4">
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-white">
+                    {/* Month Multi-Select Grid */}
+                    <div className="space-y-3">
+                        <Label className="font-black text-primary flex items-center gap-2">
+                            <CalendarCheck className="h-4 w-4" /> কোন কোন মাসের বেতন নিচ্ছেন? (সিলেক্ট করুন)
+                        </Label>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                            {BENGALI_MONTHS.map(month => {
+                                const isSelected = selectedMonths.has(month);
+                                const isPaid = paidMonths.has(month) && !existingCollection?.description.includes(month);
+                                return (
+                                    <Button
+                                        key={month}
+                                        type="button"
+                                        variant="outline"
+                                        disabled={isPaid}
+                                        onClick={() => handleMonthToggle(month)}
+                                        className={cn(
+                                            "h-9 text-[10px] sm:text-xs font-black transition-all",
+                                            isSelected ? "bg-primary text-white border-primary shadow-md" : "bg-white border-slate-200 text-slate-600",
+                                            isPaid && "opacity-30 bg-emerald-50 text-emerald-800 border-emerald-100 cursor-not-allowed"
+                                        )}
+                                    >
+                                        {month}
+                                        {isPaid && <CheckCircle2 className="h-3 w-3 ml-1" />}
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="description" className="font-bold">আদায়ের বিবরণ</Label>
+                            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="bg-slate-50 font-bold border-2 focus:ring-primary" placeholder="উদা: জানুয়ারি মাসের বেতন" />
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="date" className="font-bold">আদায়ের তারিখ</Label>
                             <DatePicker value={collectionDate} onChange={setStartDate => setCollectionDate(setStartDate)} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description" className="font-bold">বিবরণ</Label>
-                            <div className="flex gap-2">
-                                <Select 
-                                    onValueChange={(month) => month && setDescription(`${month} মাসের বেতন`)}
-                                    defaultValue={BENGALI_MONTHS[new Date().getMonth()]}
-                                >
-                                    <SelectTrigger className="w-[120px] sm:w-[180px] bg-white">
-                                        <SelectValue placeholder="মাস" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {BENGALI_MONTHS.map(month => (
-                                            <SelectItem key={month} value={month}>{month}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="flex-1 bg-white" />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
                             <Label className="font-bold">লেনদেনের মাধ্যম</Label>
-                            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-4 pt-2">
+                            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="flex items-center space-x-6 pt-2">
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="cash" id="fee-cash" />
-                                    <Label htmlFor="fee-cash" className="font-bold">নগদ (Cash)</Label>
+                                    <RadioGroupItem value="cash" id="fee-cash" className="w-5 h-5" />
+                                    <Label htmlFor="fee-cash" className="font-black text-slate-700">নগদ (Cash)</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="bank" id="fee-bank" />
-                                    <Label htmlFor="fee-bank" className="font-bold">ব্যাংক (Bank)</Label>
+                                    <RadioGroupItem value="bank" id="fee-bank" className="w-5 h-5" />
+                                    <Label htmlFor="fee-bank" className="font-black text-slate-700">ব্যাংক (Bank)</Label>
                                 </div>
                             </RadioGroup>
                         </div>
                     </div>
-                    <div className="border-t pt-4">
+
+                    <div className="space-y-4 border-t pt-6">
+                        <Label className="font-black text-lg text-slate-800 border-l-4 border-primary pl-3">বিস্তারিত হিসাব (Breakdown)</Label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {feeFields.map(field => (
-                                <div key={field.key} className="space-y-2">
-                                    <Label htmlFor={field.key} className="font-bold text-xs">{field.label}</Label>
-                                    <Input
-                                        id={field.key}
-                                        type="number"
-                                        value={breakdown[field.key] || ''}
-                                        onChange={(e) => handleFeeChange(field.key, e.target.value)}
-                                        className="h-9 font-black"
-                                    />
+                                <div key={field.key} className="space-y-1.5 p-3 rounded-lg border-2 border-slate-100 hover:border-primary/20 transition-colors bg-slate-50/30">
+                                    <Label htmlFor={field.key} className="font-black text-[10px] uppercase text-muted-foreground">{field.label}</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-2 top-2 text-[10px] font-bold text-slate-400">৳</span>
+                                        <Input
+                                            id={field.key}
+                                            type="number"
+                                            value={breakdown[field.key] || ''}
+                                            onChange={(e) => handleFeeChange(field.key, e.target.value)}
+                                            className="h-8 pl-5 font-black text-right focus:bg-white"
+                                        />
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/50 p-4 rounded-lg mt-4">
-                        <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-primary/5 p-5 rounded-2xl border-2 border-dashed border-primary/20">
+                        <div className="flex items-center space-x-3">
                             <Checkbox 
                                 id="send-sms" 
                                 checked={shouldSendSMS} 
                                 onCheckedChange={(checked) => setShouldSendSMS(!!checked)} 
+                                className="w-5 h-5"
                             />
-                            <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer text-sm font-bold">
-                                <Smartphone className="h-4 w-4 text-primary" />
-                                সেভ করার পর ফোনে মেসেজ ড্রাফট করুন
+                            <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer text-sm font-black text-primary">
+                                <Smartphone className="h-5 w-5" />
+                                সেভ করার পর ফোনে কনফার্মেশন মেসেজ ড্রাফট করুন
                             </Label>
                         </div>
-                        <div className="text-[10px] sm:text-xs text-muted-foreground italic font-medium">
-                            আদায়কারী: {collectorName || 'লোড হচ্ছে...'}
+                        <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-white px-3 py-1 rounded-full border shadow-sm">
+                            আদায়কারী: {collectorName || '...'}
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter className="pt-4 border-t -mx-6 px-6 pb-6 mt-auto">
-                    <div className="flex flex-col sm:flex-row justify-between w-full items-center gap-4">
-                        <p className="font-black text-xl text-primary">মোট: {totalAmount.toLocaleString('bn-BD')} ৳</p>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                             <DialogClose asChild><Button variant="ghost" className="flex-1 sm:flex-none font-bold">বাতিল</Button></DialogClose>
-                            <Button onClick={handleSave} className="flex-1 sm:flex-none min-w-[120px] font-black shadow-lg">
+                <DialogFooter className="p-6 bg-slate-50 border-t sticky bottom-0">
+                    <div className="flex flex-col sm:flex-row justify-between w-full items-center gap-6">
+                        <div className="text-center sm:text-left">
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">সর্বমোট আদায়যোগ্য টাকা</p>
+                            <p className="font-black text-3xl text-primary">{totalAmount.toLocaleString('bn-BD')} ৳</p>
+                        </div>
+                        <div className="flex gap-3 w-full sm:w-auto">
+                            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none font-bold h-12 px-8">বাতিল</Button>
+                            <Button onClick={handleSave} className="flex-1 sm:flex-none min-w-[180px] font-black h-12 text-lg shadow-xl">
                                 {shouldSendSMS ? 'সেভ ও মেসেজ' : 'শুধুমাত্র সেভ'}
                             </Button>
                         </div>
@@ -451,38 +498,43 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     return (
         <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] no-print font-kalpurush">
-                <DialogHeader>
-                    <div className="flex flex-col md:flex-row items-center gap-4">
+            <DialogContent className="sm:max-w-4xl flex flex-col max-h-[95vh] w-[95vw] no-print font-kalpurush p-0 border-none shadow-2xl overflow-hidden rounded-2xl">
+                <DialogHeader className="p-6 bg-primary text-white shrink-0">
+                    <div className="flex flex-col md:flex-row items-center gap-5">
                         {isLoading || !student ? (
-                            <Skeleton className="h-20 w-20 rounded-lg" />
+                            <Skeleton className="h-20 w-20 rounded-full bg-white/20" />
                         ) : (
-                             student.photoUrl && <Image src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} alt="Student photo" width={80} height={80} className="rounded-lg border object-cover shadow-sm" />
+                             <Avatar className="h-20 w-20 border-4 border-white shadow-xl">
+                                <AvatarImage src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} />
+                                <AvatarFallback className="text-primary font-black text-2xl bg-white">{student.studentNameBn?.charAt(0)}</AvatarFallback>
+                             </Avatar>
                         )}
                         <div className="flex-1 text-center md:text-left space-y-1">
-                            <DialogTitle className="text-xl sm:text-2xl font-black">বেতন আদায়ের তথ্য</DialogTitle>
+                            <DialogTitle className="text-2xl sm:text-3xl font-black">বেতন আদায়ের তথ্য</DialogTitle>
                             {isLoading || !student ? (
-                                <Skeleton className="h-4 w-1/2 mx-auto md:mx-0" />
+                                <Skeleton className="h-4 w-1/2 mx-auto md:mx-0 bg-white/20" />
                             ) : (
-                                <DialogDescription className="text-md font-bold text-foreground">
-                                    <span className="text-primary font-black">{student.studentNameBn}</span> (রোল: {student.roll.toLocaleString('bn-BD')}, শ্রেণি: {classNamesMap[student.className] || student.className})
+                                <DialogDescription className="text-md font-bold text-white/90">
+                                    {student.studentNameBn} (রোল: {toBengaliNumber(student.roll)}, শ্রেণি: {classNamesMap[student.className] || student.className})
                                 </DialogDescription>
                             )}
                         </div>
+                        <Button onClick={handleAddNew} size="lg" className="bg-white text-primary hover:bg-slate-100 font-black shadow-lg">নতুন আদায়</Button>
                     </div>
                 </DialogHeader>
 
                  {isLoading ? (
-                    <div className="p-12 text-center">
-                        <Skeleton className="h-32 w-full" />
+                    <div className="p-12 text-center flex flex-col items-center gap-4">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                        <p className="font-bold text-muted-foreground italic">তথ্য লোড হচ্ছে...</p>
                     </div>
                  ) : (
                 <>
-                    <div className="py-4 flex-grow overflow-hidden flex flex-col gap-6">
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 bg-slate-50/50">
                         {/* Due Status Summary */}
-                        <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-6 shadow-inner">
-                            <h3 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-primary" /> মাসিক বেতন স্ট্যাটাস ({toBengaliNumber(selectedYear)})
+                        <div className="bg-white border-[4px] border-black rounded-[32px] p-6 sm:p-8 shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
+                            <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+                                <Clock className="h-5 w-5 text-primary" /> মাসিক বেতন স্ট্যাটাস ({toBengaliNumber(selectedYear)})
                             </h3>
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                                 {BENGALI_MONTHS.map((month, idx) => {
@@ -492,16 +544,16 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
 
                                     return (
                                         <div key={month} className={cn(
-                                            "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all duration-300",
+                                            "flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-300",
                                             isPaid 
-                                                ? "bg-emerald-50 border-emerald-500/30 text-emerald-800 shadow-[2px_2px_0px_rgba(16,185,129,0.2)]" 
+                                                ? "bg-emerald-50 border-emerald-500/30 text-emerald-800 shadow-sm" 
                                                 : isCurrentOrPast 
-                                                    ? "bg-rose-50 border-rose-500/30 text-rose-800 shadow-[2px_2px_0px_rgba(239,68,68,0.1)]"
+                                                    ? "bg-rose-50 border-rose-500/30 text-rose-800 shadow-sm"
                                                     : "bg-slate-50 border-slate-200 text-slate-400 opacity-60"
                                         )}>
-                                            <span className="text-[10px] font-black leading-none mb-1.5">{month}</span>
+                                            <span className="text-[11px] font-black leading-none mb-2">{month}</span>
                                             <Badge variant="outline" className={cn(
-                                                "h-4 text-[7px] sm:text-[8px] font-black border-none px-2",
+                                                "h-5 text-[9px] font-black border-none px-3 uppercase",
                                                 isPaid ? "bg-emerald-600 text-white" : isCurrentOrPast ? "bg-rose-600 text-white" : "bg-slate-300 text-white"
                                             )}>
                                                 {isPaid ? 'Paid' : 'Due'}
@@ -512,74 +564,80 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                             </div>
                         </div>
 
-                        <div className="border rounded-md overflow-x-auto overflow-y-auto max-h-[35vh] shadow-inner bg-white">
-                            <Table className="min-w-[750px]">
-                                <TableHeader className="sticky top-0 bg-muted z-10">
-                                    <TableRow>
-                                        <TableHead className="font-black">আদায়ের তারিখ</TableHead>
-                                        <TableHead className="font-black">বিবরণ</TableHead>
-                                        <TableHead className="text-center font-black">পদ্ধতি</TableHead>
-                                        <TableHead className="text-right font-black">মোট টাকা</TableHead>
-                                        <TableHead className="font-black text-center">রসিদ</TableHead>
-                                        <TableHead className="text-right font-black">কার্যক্রম</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {feeCollections.length === 0 ? (
-                                        <TableRow><TableCell colSpan={6} className="text-center h-32 italic font-bold text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
-                                    ) : (
-                                        feeCollections.map(collection => (
-                                            <TableRow key={collection.id} className="hover:bg-primary/5 transition-colors">
-                                                <TableCell className="whitespace-nowrap font-bold">{format(collection.collectionDate, "PP", { locale: bn })}</TableCell>
-                                                <TableCell className="font-medium">{collection.description || 'N/A'}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="outline" className={cn(
-                                                        "text-[10px] font-black px-3",
-                                                        collection.method === 'bank' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50"
-                                                    )}>
-                                                        {collection.method === 'bank' ? 'Bank' : 'Cash'}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right font-black text-primary whitespace-nowrap">{(collection.totalAmount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-primary" onClick={() => handlePrint(collection)}>
-                                                        <Printer className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex gap-2 justify-end">
-                                                        {canEditTransaction && (
-                                                            <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-100 hover:bg-blue-50" onClick={() => handleEdit(collection)}>
-                                                                <FilePen className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                        {canDeleteTransaction && (
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                                <AlertDialogContent className="font-kalpurush">
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                        <AlertDialogDescription className="font-bold">এই লেনদেনটি স্থায়ীভাবে মুছে যাবে। এটি ক্যাশবুক থেকেও স্বয়ংক্রিয়ভাবে মুছে যাবে।</AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => handleDelete(collection)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">মুছে ফেলুন</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 pl-2">
+                                <Banknote className="h-5 w-5 text-emerald-600" /> বিগত আদায়ের রেকর্ডসমূহ
+                            </h3>
+                            <div className="table-container !border-2 !border-black shadow-xl">
+                                <Table className="min-w-[800px]">
+                                    <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-md z-10">
+                                        <TableRow className="border-b-2 border-black">
+                                            <TableHead className="font-black text-black text-center w-36">আদায়ের তারিখ</TableHead>
+                                            <TableHead className="font-black text-black">বিবরণ (মাসসমূহ)</TableHead>
+                                            <TableHead className="text-center font-black text-black w-24">পদ্ধতি</TableHead>
+                                            <TableHead className="text-right font-black text-emerald-950 w-32">মোট টাকা</TableHead>
+                                            <TableHead className="font-black text-center text-black w-20">রসিদ</TableHead>
+                                            <TableHead className="text-right font-black text-black pr-6">কার্যক্রম</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {feeCollections.length === 0 ? (
+                                            <TableRow><TableCell colSpan={6} className="text-center py-20 italic font-bold text-muted-foreground">এখনও কোনো ফি আদায় করা হয়নি।</TableCell></TableRow>
+                                        ) : (
+                                            feeCollections.map(collection => (
+                                                <TableRow key={collection.id} className="hover:bg-primary/5 transition-colors h-14">
+                                                    <TableCell className="text-center font-bold text-slate-600">{toBengaliNumber(format(collection.collectionDate, "dd/MM/yyyy"))}</TableCell>
+                                                    <TableCell className="font-black text-slate-800">{collection.description || 'N/A'}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant="outline" className={cn(
+                                                            "text-[10px] font-black px-3",
+                                                            collection.method === 'bank' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50"
+                                                        )}>
+                                                            {collection.method === 'bank' ? 'Bank' : 'Cash'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-black text-emerald-700 text-lg">{toBengaliNumber(collection.totalAmount ?? 0)} ৳</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-500 hover:text-primary hover:bg-primary/10" onClick={() => handlePrint(collection)}>
+                                                            <Printer className="h-5 w-5" />
+                                                        </Button>
+                                                    </TableCell>
+                                                    <TableCell className="text-right pr-6">
+                                                        <div className="flex gap-1.5 justify-end">
+                                                            {canEditTransaction && (
+                                                                <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-100 hover:bg-blue-50" onClick={() => handleEdit(collection)}>
+                                                                    <FilePen className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            {canDeleteTransaction && (
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                                    <AlertDialogContent className="font-kalpurush">
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>রেকর্ডটি মুছতে চান?</AlertDialogTitle>
+                                                                            <AlertDialogDescription className="font-bold">এই লেনদেনটি স্থায়ীভাবে মুছে যাবে। এটি ক্যাশবুক থেকেও স্বয়ংক্রিয়ভাবে মুছে যাবে।</AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleDelete(collection)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex justify-end pt-2 border-t mt-auto">
-                        <Button onClick={handleAddNew} size="lg" className="shadow-lg hover:shadow-xl transition-all font-black px-8 h-12">নতুন ফি আদায় করুন</Button>
-                    </div>
+                    
+                    <DialogFooter className="p-4 bg-white border-t -mx-0">
+                        <DialogClose asChild><Button variant="outline" className="w-full sm:w-auto font-black h-10 px-10 border-2">বন্ধ করুন</Button></DialogClose>
+                    </DialogFooter>
 
                     {student && (
                         <FeeCollectionForm 
@@ -588,6 +646,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                             existingCollection={editingCollection}
                             open={isFormOpen}
                             onOpenChange={setIsFormOpen}
+                            paidMonths={paidMonths}
                         />
                     )}
                 </>
@@ -609,4 +668,14 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         )}
         </>
     );
+}
+
+function Avatar({ children, className }: { children: React.ReactNode, className?: string }) {
+    return <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}>{children}</div>;
+}
+function AvatarImage({ src, className }: { src?: string, className?: string }) {
+    return src ? <img src={src} className={cn("aspect-square h-full w-full", className)} alt="avatar" /> : null;
+}
+function AvatarFallback({ children, className }: { children: React.ReactNode, className?: string }) {
+    return <div className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)}>{children}</div>;
 }
