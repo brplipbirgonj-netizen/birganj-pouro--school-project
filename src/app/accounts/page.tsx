@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -16,7 +15,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3 } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt } from 'lucide-react';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -494,7 +493,7 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
 }
 
 // Collection Report Tab Component
-const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
+const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: Student[], onDeleteSuccess: () => void }) => {
     const db = useFirestore();
     const { user, hasPermission } = useAuth();
     const { selectedYear } = useAcademicYear();
@@ -508,7 +507,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [printingCollection, setPrintingCollection] = useState<FeeCollection | null>(null);
     const [printingStudent, setPrintingStudent] = useState<Student | null>(null);
 
-    const canDelete = hasPermission('special:delete-transaction');
+    const canDelete = hasPermission('special:delete-transaction') || user?.role === 'admin';
 
     useEffect(() => {
         if (!db || !user) return;
@@ -583,6 +582,7 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         try {
             await batch.commit();
             toast({ title: "আদায়ের রেকর্ডটি মুছে ফেলা হয়েছে।" });
+            onDeleteSuccess(); // Trigger refetch in parent
         } catch (error) {
             // Contextual errors handled by FirebaseErrorListener
         }
@@ -692,6 +692,131 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 </div>
             )}
+        </div>
+    );
+};
+
+// Expense Report Tab Component
+const ExpenseReportTab = ({ transactions, isLoading, onDeleteSuccess }: { transactions: Transaction[], isLoading: boolean, onDeleteSuccess: () => void }) => {
+    const db = useFirestore();
+    const { user, hasPermission } = useAuth();
+    const { toast } = useToast();
+    const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+    const [headFilter, setHeadFilter] = useState<string>('all');
+
+    const canDelete = hasPermission('special:delete-transaction') || user?.role === 'admin';
+
+    const expenseHeads = useMemo(() => {
+        const heads = new Set<string>();
+        transactions.filter(t => t.type === 'expense').forEach(t => heads.add(t.accountHead));
+        return Array.from(heads).sort();
+    }, [transactions]);
+
+    const filteredExpenses = useMemo(() => {
+        return transactions.filter(t => {
+            const isExpense = t.type === 'expense';
+            const matchesHead = headFilter === 'all' || t.accountHead === headFilter;
+            const matchesDate = !dateFilter || format(t.date, 'yyyy-MM-dd') === format(dateFilter, 'yyyy-MM-dd');
+            return isExpense && matchesHead && matchesDate;
+        }).sort((a, b) => b.date.getTime() - a.date.getTime());
+    }, [transactions, headFilter, dateFilter]);
+
+    const handleDelete = async (id: string) => {
+        if (!db) return;
+        try {
+            await deleteTransaction(db, id);
+            toast({ title: 'ব্যয়ের রেকর্ডটি মুছে ফেলা হয়েছে।' });
+            onDeleteSuccess();
+        } catch (error) {}
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg">
+                <div className="space-y-2 flex-1">
+                    <Label className="text-xs font-bold">তারিখ দিয়ে ফিল্টার</Label>
+                    <DatePicker value={dateFilter} onChange={setDateFilter} placeholder="তারিখ নির্বাচন করুন" />
+                </div>
+                <div className="space-y-2 flex-1">
+                    <Label className="text-xs font-bold">ব্যয়ের খাত</Label>
+                    <Select value={headFilter} onValueChange={setHeadFilter}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সকল খাত" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">সকল খাত</SelectItem>
+                            {expenseHeads.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            
+            <Card className="border-none shadow-none">
+                <CardHeader className="px-0 pt-0">
+                    <CardTitle className="text-xl">ব্যয় রিপোর্ট</CardTitle>
+                </CardHeader>
+                <CardContent className="px-0 pt-2">
+                    <div className="table-container">
+                        <Table>
+                            <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                                <TableRow>
+                                    <TableHead>তারিখ</TableHead>
+                                    <TableHead>ব্যয়ের খাত</TableHead>
+                                    <TableHead>বিবরণ</TableHead>
+                                    <TableHead className="text-center">পদ্ধতি</TableHead>
+                                    <TableHead className="text-center">ভাউচার/চেক</TableHead>
+                                    <TableHead className="text-right">পরিমাণ</TableHead>
+                                    <TableHead className="text-right no-print">একশন</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
+                                ) : filteredExpenses.length === 0 ? (
+                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                ) : (
+                                    filteredExpenses.map(e => (
+                                        <TableRow key={e.id} className="hover:bg-accent/5">
+                                            <TableCell className="whitespace-nowrap">{format(e.date, 'PP', { locale: bn })}</TableCell>
+                                            <TableCell className="font-bold text-rose-700">{e.accountHead}</TableCell>
+                                            <TableCell className="max-w-[200px] truncate text-xs">{e.description}</TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="outline" className={cn("text-[9px] font-black", e.method === 'bank' ? "text-blue-700 bg-blue-50" : "text-amber-700 bg-amber-50")}>{e.method === 'bank' ? 'Bank' : 'Cash'}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col gap-1 items-center">
+                                                    {e.voucherNo && <Badge className="text-[8px] bg-rose-50 text-rose-600">V: {e.voucherNo}</Badge>}
+                                                    {e.checkNo && <Badge className="text-[8px] bg-blue-50 text-blue-600">C: {e.checkNo}</Badge>}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right font-black text-rose-600">{(e.amount ?? 0).toLocaleString('bn-BD')} ৳</TableCell>
+                                            <TableCell className="text-right no-print">
+                                                {canDelete && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent className="font-kalpurush">
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>ব্যয়ের রেকর্ডটি মুছতে চান?</AlertDialogTitle>
+                                                                <AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই ব্যয়ের রেকর্ডটি মুছে ফেলতে চান?</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>না</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(e.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };
@@ -922,7 +1047,8 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
     const db = useFirestore();
     const { toast } = useToast();
     const { user, hasPermission } = useAuth();
-    const canDeleteTransaction = hasPermission('special:delete-transaction');
+    const isAdmin = user?.role === 'admin';
+    const canDeleteTransaction = hasPermission('special:delete-transaction') || isAdmin;
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
     const cashbookData = useMemo(() => {
@@ -1010,7 +1136,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                                 )}
                                                 {canDeleteTransaction && (
                                                     <AlertDialog>
-                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId && !isAdmin} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                                         <AlertDialogContent className="font-kalpurush">
                                                             <AlertDialogHeader><AlertDialogTitle>মুছে ফেলতে চান?</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই লেনদেনটি মুছে ফেলতে চান?</AlertDialogDescription></AlertDialogHeader>
                                                             <AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
@@ -1143,6 +1269,7 @@ export default function AccountsPage() {
 
   const canCollectFees = hasPermission('collect:fees');
   const canViewReports = hasPermission('view:collection-report');
+  const canViewExpenseReport = hasPermission('view:expense-report');
   const canManageTransactions = hasPermission('manage:transactions');
   const canViewMonthlyReport = hasPermission('view:accounts-monthly-report');
   const canViewCashbook = hasPermission('view:cashbook-ledger');
@@ -1154,6 +1281,7 @@ export default function AccountsPage() {
         items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
     }
     if (canViewReports) items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
+    if (canViewExpenseReport) items.push({ id: 'expense-report', label: 'ব্যয় রিপোর্ট', icon: Receipt, color: 'text-rose-600 bg-rose-50' });
     if (canViewCashbook) {
         items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' });
         items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' });
@@ -1161,7 +1289,7 @@ export default function AccountsPage() {
     if (canViewMonthlyReport) items.push({ id: 'monthly-report', label: 'মাসিক রিপোর্ট', icon: FileBarChart, color: 'text-emerald-600 bg-emerald-50' });
     if (canManageTransactions) items.push({ id: 'new-transaction', label: 'আয়/ব্যয় এন্ট্রি', icon: PlusCircle, color: 'text-primary bg-primary/10' });
     return items;
-  }, [canCollectFees, canViewReports, canManageTransactions, canViewMonthlyReport, canViewCashbook]);
+  }, [canCollectFees, canViewReports, canViewExpenseReport, canManageTransactions, canViewMonthlyReport, canViewCashbook]);
 
   if (!isClient) return null;
 
@@ -1207,7 +1335,8 @@ export default function AccountsPage() {
                         {activeSection === 'dashboard' && <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={(t) => { setPendingEntryType(t); setActiveSection('new-transaction'); }} />}
                         {activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}
                         {activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}
-                        {activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} />}
+                        {activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} onDeleteSuccess={fetchTransactions} />}
+                        {activeSection === 'expense-report' && <ExpenseReportTab transactions={transactions} isLoading={isLoading} onDeleteSuccess={fetchTransactions} />}
                         {activeSection === 'cashbook' && <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />}
                         {activeSection === 'ledger' && <LedgerTab transactions={transactions} isLoading={isLoading} />}
                         {activeSection === 'monthly-report' && <MonthlyReportTab transactions={transactions} selectedYear={selectedYear} />}
