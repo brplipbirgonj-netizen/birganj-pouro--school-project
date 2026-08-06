@@ -139,11 +139,11 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
     const selectedStaff = useMemo(() => staffList.find(s => s.id === selectedStaffId), [staffList, selectedStaffId]);
 
     const fetchData = useCallback(async () => {
-        if (!db || !selectedStaffId) return;
+        if (!db || !selectedStaffId || !startDate || !endDate) return;
         setIsLoading(true);
         try {
             const [attRes, routineRes, holidayRes] = await Promise.all([
-                getStaffAttendanceForRange(db, format(startDate!, 'yyyy-MM-dd'), format(endDate!, 'yyyy-MM-dd')),
+                getStaffAttendanceForRange(db, format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd')),
                 getFullRoutine(db, academicYear),
                 getHolidays(db)
             ]);
@@ -186,9 +186,9 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
     }, [selectedStaff, routineRecords]);
 
     const attStats = useMemo(() => {
-        if (!selectedStaffId || !attendanceData) return { present: 0, leave: 0, absent: 0, total: 0 };
+        if (!selectedStaffId || !attendanceData || !startDate || !endDate) return { present: 0, leave: 0, absent: 0, total: 0 };
         
-        const daysInRange = eachDayOfInterval({ start: startDate!, end: endDate! });
+        const daysInRange = eachDayOfInterval({ start: startDate, end: endDate });
         let present = 0, leave = 0, absent = 0, totalWorkDays = 0;
 
         daysInRange.forEach(day => {
@@ -236,7 +236,12 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                 </div>
             </div>
 
-            {selectedStaff && (
+            {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="font-bold text-muted-foreground">শিক্ষক প্রোফাইল লোড হচ্ছে...</p>
+                </div>
+            ) : selectedStaff ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Column 1: Info & Stats */}
                     <div className="lg:col-span-1 space-y-6">
@@ -340,7 +345,7 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                                                     {["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"].map(day => (
                                                         <TableRow key={day} className="h-16 hover:bg-slate-50 border-b last:border-0 transition-colors">
                                                             <TableCell className="font-black border-r-2 border-black text-center bg-gray-50/50">{day}</TableCell>
-                                                            {teacherRoutineInfo?.dailySchedule[day].map((period, pIdx) => (
+                                                            {teacherRoutineInfo?.dailySchedule[day]?.map((period, pIdx) => (
                                                                 <TableCell key={pIdx} className="text-center border-r last:border-0 p-1">
                                                                     {period ? (
                                                                         <div className="flex flex-col items-center justify-center p-1.5 rounded-lg bg-primary/5 border border-primary/20 h-full">
@@ -413,6 +418,12 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                         </Card>
                     </div>
                 </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-muted/10 rounded-3xl border-4 border-dashed">
+                    <User className="h-16 w-16 mb-4 opacity-20" />
+                    <p className="text-xl font-black">শিক্ষক নির্বাচন করুন</p>
+                    <p className="font-bold">বিস্তারিত প্রোফাইল এবং হাজিরা রিপোর্ট দেখতে শিক্ষক সিলেক্ট করুন।</p>
+                </div>
             )}
         </div>
     );
@@ -452,7 +463,11 @@ export default function StaffListPage() {
   const [holidays, setHolidays] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!db || !user) return;
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!db || !user || !isClient) return;
     setIsLoading(true);
 
     const staffQuery = query(collection(db, "staff"), orderBy("nameBn", "asc"));
@@ -468,7 +483,7 @@ export default function StaffListPage() {
     });
 
     return () => unsubscribe();
-  }, [db, user]);
+  }, [db, user, isClient]);
 
   const fetchAttendance = useCallback(async () => {
     if (!db || !selectedDate) return;
@@ -486,10 +501,10 @@ export default function StaffListPage() {
   }, [db, selectedDate]);
 
   useEffect(() => {
-    if (canManageAttendance && activeSection === 'attendance') {
+    if (canManageAttendance && activeSection === 'attendance' && isClient) {
         fetchAttendance();
     }
-  }, [fetchAttendance, canManageAttendance, activeSection]);
+  }, [fetchAttendance, canManageAttendance, activeSection, isClient]);
 
   const isWeekend = selectedDate ? (selectedDate.getDay() === 5 || selectedDate.getDay() === 6) : false;
   const isOffDay = isWeekend || !!activeHoliday;
@@ -670,7 +685,7 @@ export default function StaffListPage() {
                     <TableCell className="text-xs font-bold">{toBengaliNumber(staff.mobile)}</TableCell>
                     <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStaffToView(staff)} title="देखুন"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStaffToView(staff)} title="দেখুন"><Eye className="h-4 w-4" /></Button>
                             {canManageStaff && (
                                 <>
                                     <Link href={`/edit-staff/${staff.id}`}><Button variant="outline" size="icon" className="h-8 w-8 text-blue-600" title="এডিট"><FilePen className="h-4 w-4" /></Button></Link>
@@ -1325,3 +1340,4 @@ export default function StaffListPage() {
     </div>
   );
 }
+
