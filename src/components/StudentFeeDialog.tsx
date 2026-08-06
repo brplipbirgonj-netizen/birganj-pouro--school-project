@@ -15,7 +15,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote, ListTodo, Wallet, Coins, Star, GraduationCap } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote, ListTodo, Wallet, Coins, Star, GraduationCap, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -214,7 +214,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-white">
                     <div className="space-y-3">
-                        <Label className="font-black text-primary flex items-center gap-2"><CalendarCheck className="h-4 w-4" /> কোন কোন মাসের বেতন নিচ্ছেন?</Label>
+                        <Label className="font-black text-primary flex items-gap-2"><CalendarCheck className="h-4 w-4" /> কোন কোন মাসের বেতন নিচ্ছেন?</Label>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                             {BENGALI_MONTHS.map(month => {
                                 const isSelected = selectedMonths.has(month);

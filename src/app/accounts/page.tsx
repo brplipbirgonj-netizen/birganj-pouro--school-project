@@ -286,15 +286,9 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         filteredStudents.forEach(s => {
             if (!next[s.id]) next[s.id] = {};
             
-            // Check student category for monthly fee discount
-            if (bulkValues.monthly) {
-                const baseMonthly = parseInt(bulkValues.monthly, 10);
-                let finalMonthly = baseMonthly;
-                if (s.feeCategory === 'full-free') finalMonthly = 0;
-                else if (s.feeCategory === 'half-free') finalMonthly = Math.floor(baseMonthly / 2);
-                next[s.id].monthlyFee = finalMonthly;
-            }
-
+            // Note: For bulk setup, we set the BASE fee.
+            // Waivers (Half-free/Full-free) will be calculated during collection logic.
+            if (bulkValues.monthly) next[s.id].monthlyFee = parseInt(bulkValues.monthly, 10);
             if (bulkValues.halfYearly) next[s.id].examFeeHalfYearly = parseInt(bulkValues.halfYearly, 10);
             if (bulkValues.annual) next[s.id].examFeeAnnual = parseInt(bulkValues.annual, 10);
             if (bulkValues.preTest) next[s.id].examFeePreNirbachoni = parseInt(bulkValues.preTest, 10);
@@ -335,21 +329,17 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
 
     const handleFreeConfigUpdate = (studentId: string, waivers: Record<string, any>) => {
         const next = { ...(editedStudents[studentId] || {}) };
-        const originalStudent = filteredStudents.find(s => s.id === studentId);
-        if (!originalStudent) return;
         
+        // Fee Category mapping
         if (waivers.tuition === 'full') {
             next.feeCategory = 'full-free';
-            next.monthlyFee = 0;
         } else if (waivers.tuition === 'half') {
             next.feeCategory = 'half-free';
-            const baseFee = editedStudents[studentId]?.monthlyFee || originalStudent.monthlyFee || 0;
-            next.monthlyFee = Math.floor(baseFee / 2);
-        } else if (waivers.tuition === 'none') {
+        } else {
             next.feeCategory = 'general';
-            // Here we might need the "original" full fee if it was half/full before
         }
 
+        // Direct waivers (set amount to 0)
         if (waivers.exam) {
             next.examFeeHalfYearly = 0;
             next.examFeeAnnual = 0;
@@ -687,6 +677,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
     const getDefaultersForClass = (cls: string) => {
         const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === cls);
         return studentsInClass.filter(student => {
+            if (student.feeCategory === 'full-free') return false;
             const hasPaid = collections.some(c => 
                 c.studentId === student.id && 
                 (c.description?.includes(selectedMonth))

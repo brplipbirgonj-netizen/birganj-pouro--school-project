@@ -16,7 +16,7 @@ import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target, Star, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target, Star, GraduationCap, CheckCircle2, XCircle, Wallet, ListChecks } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -370,6 +370,34 @@ function StudentProfileSearchContent() {
     }, [attendanceRecords]);
 
     const attendancePercentage = attendanceStats.total > 0 ? (attendanceStats.present / attendanceStats.total) * 100 : 0;
+
+    const duesSummary = useMemo(() => {
+        if (!studentData) return { tuitionDue: 0, tuitionDueMonths: [], examDues: [], otherDues: 0 };
+        
+        let effectiveMonthlyFee = studentData.monthlyFee || 0;
+        if (studentData.feeCategory === 'half-free') effectiveMonthlyFee = Math.floor(effectiveMonthlyFee / 2);
+        else if (studentData.feeCategory === 'full-free') effectiveMonthlyFee = 0;
+
+        const currentMonthIdx = new Date().getMonth();
+        const tuitionDueMonths = BENGALI_MONTHS.filter((m, idx) => idx <= currentMonthIdx && !paidMonths.includes(m));
+        const tuitionDueAmount = tuitionDueMonths.length * effectiveMonthlyFee;
+        
+        const examDues: any[] = [];
+        const paidCats = new Set<string>();
+        feeHistory.forEach(c => c.breakdown && Object.entries(c.breakdown).forEach(([k, v]) => { if (v && v > 0) paidCats.add(k); }));
+        
+        [{ key: 'examFeeHalfYearly', label: 'অর্ধ-বার্ষিক' }, { key: 'examFeeAnnual', label: 'বার্ষিক' }, { key: 'examFeePreNirbachoni', label: 'প্রাক-নির্বাচনী' }, { key: 'examFeeNirbachoni', label: 'নির্বাচনী' }].forEach(ex => {
+            const val = studentData[ex.key as keyof Student] as number;
+            if (val && val > 0 && !paidCats.has(ex.key)) examDues.push({ label: ex.label, amount: val });
+        });
+        
+        let otherDues = 0;
+        ['sessionFee', 'admissionFee', 'scoutFee', 'developmentFee', 'libraryFee', 'tiffinFee', 'otherFee'].forEach(k => {
+            const val = studentData[k as keyof Student] as number;
+            if (val && val > 0 && !paidCats.has(k)) otherDues += val;
+        });
+        return { tuitionDue: tuitionDueAmount, tuitionDueMonths, examDues, otherDues };
+    }, [studentData, paidMonths, feeHistory]);
 
     if (!isMounted || authLoading) {
         return (
