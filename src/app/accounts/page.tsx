@@ -1594,6 +1594,140 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
     );
 };
 
+// Income Comparison Tab Component
+const IncomeComparisonTab = ({ allStudents, selectedYear }: { allStudents: Student[], selectedYear: string }) => {
+    const db = useFirestore();
+    const [collections, setCollections] = useState<FeeCollection[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!db) return;
+        setIsLoading(true);
+        const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null));
+            setIsLoading(false);
+        }, (error) => {
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [db, selectedYear]);
+
+    const chartData = useMemo(() => {
+        const months = BENGALI_MONTHS.map((month, idx) => {
+            let potential = 0;
+            let actual = 0;
+
+            const studentsInYear = allStudents.filter(s => s.academicYear === selectedYear);
+
+            studentsInYear.forEach(s => {
+                // 1. Monthly Tuition (Apply category logic)
+                let effectiveTuition = s.monthlyFee || 0;
+                if (s.feeCategory === 'full-free') effectiveTuition = 0;
+                else if (s.feeCategory === 'half-free') effectiveTuition = Math.floor(effectiveTuition / 2);
+                
+                potential += effectiveTuition;
+
+                // 2. One-time fees (Add to January - Index 0)
+                if (idx === 0) {
+                    potential += (s.admissionFee || 0) + (s.sessionFee || 0) + (s.otherFee || 0);
+                }
+
+                // 3. Exam Fees (Spread across specific months)
+                if (idx === 5) potential += (s.examFeeHalfYearly || 0); // June
+                if (idx === 9) potential += (s.examFeePreNirbachoni || 0); // October
+                if (idx === 10) potential += (s.examFeeNirbachoni || 0); // November
+                if (idx === 11) potential += (s.examFeeAnnual || 0); // December
+            });
+
+            // Calculate Actual Collection for this month
+            collections.forEach(c => {
+                const cDate = new Date(c.collectionDate);
+                if (cDate.getMonth() === idx) {
+                    actual += (c.totalAmount || 0);
+                }
+            });
+
+            return { name: month, potential, actual };
+        });
+        return months;
+    }, [allStudents, collections, selectedYear]);
+
+    const stats = useMemo(() => {
+        const totalPotential = chartData.reduce((acc, curr) => acc + curr.potential, 0);
+        const totalActual = chartData.reduce((acc, curr) => acc + curr.actual, 0);
+        return { 
+            potential: totalPotential, 
+            actual: totalActual, 
+            due: Math.max(0, totalPotential - totalActual)
+        };
+    }, [chartData]);
+
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> ডাটা বিশ্লেষণ করা হচ্ছে...</div>;
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="border-2 border-primary/20 bg-primary/5 shadow-md hover:scale-[1.02] transition-transform">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-[10px] font-black uppercase text-primary tracking-widest">বার্ষিক মোট সম্ভাব্য আয়</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-black text-slate-900">{stats.potential.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-muted-foreground mt-1">টিউশন ও সকল ওয়ান-টাইম ফি মিলিয়ে</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-2 border-emerald-500/20 bg-emerald-50/30 shadow-md hover:scale-[1.02] transition-transform">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-[10px] font-black uppercase text-emerald-700 tracking-widest">বার্ষিক মোট প্রকৃত আদায়</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-black text-emerald-950">{stats.actual.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-emerald-600 mt-1">নগদ ও ব্যাংক আদায়ের সমষ্টি</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-2 border-rose-500/20 bg-rose-50/30 shadow-md hover:scale-[1.02] transition-transform">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-[10px] font-black uppercase text-rose-700 tracking-widest">মোট বকেয়া / অনাদায়ী</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-black text-rose-950">{stats.due.toLocaleString('bn-BD')} ৳</div>
+                        <p className="text-[10px] font-bold text-rose-600 mt-1">প্রাক্কলিত অবশিষ্ট পাওনা</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card className="border-2 border-black/10 shadow-xl bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="bg-primary/5 border-b border-black/5 flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-base font-black flex items-center gap-2 text-primary">
+                            <BarChart3 className="h-5 w-5" /> সম্ভাব্য আয় বনাম প্রকৃত আদায় (তুলনামূলক চিত্র)
+                        </CardTitle>
+                        <CardDescription className="font-bold text-[10px]">প্রতি মাসের সম্ভাব্য পাওনা এবং আদায়ের গ্রাফ</CardDescription>
+                    </div>
+                </CardHeader>
+                <CardContent className="pt-8 h-[450px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
+                            <Tooltip 
+                                cursor={{fill: '#f1f5f9'}}
+                                contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
+                                formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
+                            />
+                            <Legend verticalAlign="top" align="right" iconType="circle" />
+                            <Bar dataKey="potential" name="সম্ভাব্য আয়" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="actual" name="প্রকৃত আদায়" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 export default function AccountsPage() {
   const [isClient, setIsClient] = useState(false);
   const db = useFirestore();
@@ -1647,7 +1781,10 @@ export default function AccountsPage() {
         items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' });
         items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
     }
-    if (canViewReports) items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
+    if (canViewReports) {
+        items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
+        items.push({ id: 'income-comparison', label: 'সম্ভাব্য আয় বনাম আদায়', icon: BarChart3, color: 'text-amber-600 bg-amber-50' });
+    }
     if (canViewExpenseReport) items.push({ id: 'expense-report', label: 'ব্যয় রিপোর্ট', icon: Receipt, color: 'text-rose-600 bg-rose-50' });
     if (canViewCashbook) {
         items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' });
@@ -1702,6 +1839,7 @@ export default function AccountsPage() {
                         {activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}
                         {activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}
                         {activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} onDeleteSuccess={fetchTransactions} />}
+                        {activeSection === 'income-comparison' && <IncomeComparisonTab allStudents={allStudents} selectedYear={selectedYear} />}
                         {activeSection === 'expense-report' && <ExpenseReportTab transactions={transactions} isLoading={isLoading} onDeleteSuccess={fetchTransactions} />}
                         {activeSection === 'cashbook' && <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />}
                         {activeSection === 'ledger' && <LedgerTab transactions={transactions} isLoading={isLoading} />}
