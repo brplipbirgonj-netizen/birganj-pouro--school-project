@@ -748,7 +748,7 @@ function StudentProfileSearchContent() {
                                                                                         <div 
                                                                                             className={cn(
                                                                                                 "h-full rounded-full transition-all duration-1000 shadow-lg",
-                                                                                                sub.obtained >= sub.classAvg ? "bg-emerald-500" : "bg-rose-500"
+                                                                                                sub.obtained >= sub.classAvg ? "bg-emerald-50" : "bg-rose-50"
                                                                                             )}
                                                                                             style={{ width: `${obtainedPercent}%` }}
                                                                                         />
