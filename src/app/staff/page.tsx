@@ -357,9 +357,11 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                                                             {teacherRoutineInfo?.dailySchedule[day]?.map((period, pIdx) => (
                                                                 <TableCell key={pIdx} className="text-center border-r last:border-0 p-1">
                                                                     {period ? (
-                                                                        <div className="flex flex-col items-center justify-center p-1.5 rounded-lg bg-primary/5 border border-primary/20 h-full">
-                                                                            <span className="font-black text-[11px] leading-tight text-blue-900">{period.subject}</span>
-                                                                            <Badge variant="outline" className="mt-1 h-4 text-[8px] font-black border-slate-300">{classNamesMap[period.className] || period.className} শ্রেণি</Badge>
+                                                                        <div className="flex flex-col items-center justify-center p-1.5 rounded-lg bg-primary/5 border border-primary/20 h-full min-h-[50px]">
+                                                                            <span className="font-black text-[11px] leading-tight text-blue-900 mb-1">{period.subject}</span>
+                                                                            <Badge variant="outline" className="h-auto py-0.5 px-2 text-[8px] font-black border-slate-300 whitespace-nowrap">
+                                                                                {classNamesMap[period.className] || period.className} শ্রেণি
+                                                                            </Badge>
                                                                         </div>
                                                                     ) : <span className="text-muted-foreground/30">-</span>}
                                                                 </TableCell>
