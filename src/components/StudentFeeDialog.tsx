@@ -14,7 +14,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone, Printer, Loader2, Save } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -29,6 +29,11 @@ import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+const BENGALI_MONTHS = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+];
 
 const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -83,17 +88,12 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     const [collectorName, setCollectorName] = useState<string>('');
     const [shouldSendSMS, setShouldSendSMS] = useState(true);
 
-    const bengaliMonths = useMemo(() => [
-        'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
-        'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
-    ], []);
-
     useEffect(() => {
         if (!db || !user) return;
 
         const fetchCollectorName = async () => {
             if (user.role === 'teacher' && user.email) {
-                const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase()), limit(1));
+                const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase().trim()), limit(1));
                 const staffSnap = await getDocs(staffQuery);
                 if (!staffSnap.empty) {
                     setCollectorName(staffSnap.docs[0].data().nameBn);
@@ -119,13 +119,13 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 const today = new Date();
                 setCollectionDate(today);
                 const currentMonthIndex = today.getMonth();
-                const currentMonthName = bengaliMonths[currentMonthIndex];
+                const currentMonthName = BENGALI_MONTHS[currentMonthIndex];
                 setDescription(currentMonthName ? `${currentMonthName} মাসের বেতন` : '');
                 setBreakdown(emptyBreakdown);
                 setMethod('cash');
             }
         }
-    }, [existingCollection, open, bengaliMonths]);
+    }, [existingCollection, open]);
 
     const handleFeeChange = (field: keyof FeeBreakdown, value: string) => {
         const numValue = value === '' ? undefined : parseInt(value, 10);
@@ -259,20 +259,20 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                         <div className="space-y-2">
                             <Label htmlFor="date" className="font-bold">আদায়ের তারিখ</Label>
-                            <DatePicker value={collectionDate} onChange={setCollectionDate} />
+                            <DatePicker value={collectionDate} onChange={setStartDate => setCollectionDate(setStartDate)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="description" className="font-bold">বিবরণ</Label>
                             <div className="flex gap-2">
                                 <Select 
                                     onValueChange={(month) => month && setDescription(`${month} মাসের বেতন`)}
-                                    defaultValue={bengaliMonths[new Date().getMonth()]}
+                                    defaultValue={BENGALI_MONTHS[new Date().getMonth()]}
                                 >
                                     <SelectTrigger className="w-[120px] sm:w-[180px] bg-white">
                                         <SelectValue placeholder="মাস" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {bengaliMonths.map(month => (
+                                        {BENGALI_MONTHS.map(month => (
                                             <SelectItem key={month} value={month}>{month}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -378,6 +378,18 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         }
     }, [open, studentId, fetchFeeData]);
 
+    const paidMonths = useMemo(() => {
+        const months = new Set<string>();
+        feeCollections.forEach(c => {
+            BENGALI_MONTHS.forEach(m => {
+                if (c.description?.includes(m)) {
+                    months.add(m);
+                }
+            });
+        });
+        return months;
+    }, [feeCollections]);
+
     const handleEdit = (collection: FeeCollection) => {
         if (!canEditTransaction) {
             toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
@@ -460,8 +472,41 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                     </div>
                  ) : (
                 <>
-                    <div className="py-4 flex-grow overflow-hidden flex flex-col">
-                        <div className="border rounded-md overflow-x-auto overflow-y-auto max-h-[50vh] shadow-inner bg-white">
+                    <div className="py-4 flex-grow overflow-hidden flex flex-col gap-6">
+                        {/* Due Status Summary */}
+                        <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-6 shadow-inner">
+                            <h3 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-primary" /> মাসিক বেতন স্ট্যাটাস ({toBengaliNumber(selectedYear)})
+                            </h3>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                                {BENGALI_MONTHS.map((month, idx) => {
+                                    const isPaid = paidMonths.has(month);
+                                    const currentMonthIdx = new Date().getMonth();
+                                    const isCurrentOrPast = idx <= currentMonthIdx;
+
+                                    return (
+                                        <div key={month} className={cn(
+                                            "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all duration-300",
+                                            isPaid 
+                                                ? "bg-emerald-50 border-emerald-500/30 text-emerald-800 shadow-[2px_2px_0px_rgba(16,185,129,0.2)]" 
+                                                : isCurrentOrPast 
+                                                    ? "bg-rose-50 border-rose-500/30 text-rose-800 shadow-[2px_2px_0px_rgba(239,68,68,0.1)]"
+                                                    : "bg-slate-50 border-slate-200 text-slate-400 opacity-60"
+                                        )}>
+                                            <span className="text-[10px] font-black leading-none mb-1.5">{month}</span>
+                                            <Badge variant="outline" className={cn(
+                                                "h-4 text-[8px] font-black border-none px-2",
+                                                isPaid ? "bg-emerald-600 text-white" : isCurrentOrPast ? "bg-rose-600 text-white" : "bg-slate-300 text-white"
+                                            )}>
+                                                {isPaid ? 'Paid' : 'Due'}
+                                            </Badge>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="border rounded-md overflow-x-auto overflow-y-auto max-h-[35vh] shadow-inner bg-white">
                             <Table className="min-w-[750px]">
                                 <TableHeader className="sticky top-0 bg-muted z-10">
                                     <TableRow>
