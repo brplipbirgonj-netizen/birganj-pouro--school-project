@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
@@ -97,6 +98,14 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
     const [shouldSendSMS, setShouldSendSMS] = useState(true);
     const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
 
+    const effectiveMonthlyFee = useMemo(() => {
+        if (!student) return 0;
+        const base = student.monthlyFee || 0;
+        if (student.feeCategory === 'full-free') return 0;
+        if (student.feeCategory === 'half-free') return Math.floor(base / 2);
+        return base;
+    }, [student]);
+
     useEffect(() => {
         if (!db || !user) return;
         const fetchCollectorName = async () => {
@@ -126,13 +135,13 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 const currentMonthName = BENGALI_MONTHS[today.getMonth()];
                 setDescription(currentMonthName ? `${currentMonthName} মাসের বেতন` : '');
                 const initial: FeeBreakdown = {};
-                if (student.monthlyFee) initial.tuitionCurrent = student.monthlyFee;
+                if (effectiveMonthlyFee > 0) initial.tuitionCurrent = effectiveMonthlyFee;
                 setBreakdown(initial);
                 setMethod('cash');
                 setSelectedMonths(new Set([currentMonthName]));
             }
         }
-    }, [existingCollection, open, student]);
+    }, [existingCollection, open, student, effectiveMonthlyFee]);
 
     const handleMonthToggle = (month: string) => {
         const next = new Set(selectedMonths);
@@ -141,8 +150,11 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         const sortedSelected = BENGALI_MONTHS.filter(m => next.has(m));
         if (sortedSelected.length > 0) {
             setDescription(`${sortedSelected.join(', ')} মাসের বেতন`);
-            if (student.monthlyFee) setBreakdown(prev => ({ ...prev, tuitionCurrent: student.monthlyFee! * sortedSelected.length }));
-        } else setDescription('');
+            setBreakdown(prev => ({ ...prev, tuitionCurrent: effectiveMonthlyFee * sortedSelected.length }));
+        } else {
+            setDescription('');
+            setBreakdown(prev => ({ ...prev, tuitionCurrent: 0 }));
+        }
     };
 
     const handleFeeChange = (field: keyof FeeBreakdown, value: string) => {
@@ -287,16 +299,25 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
 
     const duesSummary = useMemo(() => {
         if (!student) return { tuitionDue: 0, tuitionDueMonths: [], examDues: [], otherDues: 0 };
+        
+        // Calculate effective monthly fee based on category
+        let effectiveMonthlyFee = student.monthlyFee || 0;
+        if (student.feeCategory === 'full-free') effectiveMonthlyFee = 0;
+        else if (student.feeCategory === 'half-free') effectiveMonthlyFee = Math.floor(effectiveMonthlyFee / 2);
+
         const currentMonthIdx = new Date().getMonth();
         const tuitionDueMonths = BENGALI_MONTHS.filter((m, idx) => idx <= currentMonthIdx && !paidMonths.has(m));
-        const tuitionDueAmount = tuitionDueMonths.length * (student.monthlyFee || 0);
+        const tuitionDueAmount = tuitionDueMonths.length * effectiveMonthlyFee;
+        
         const examDues: any[] = [];
         const paidCats = new Set<string>();
         feeCollections.forEach(c => c.breakdown && Object.entries(c.breakdown).forEach(([k, v]) => { if (v && v > 0) paidCats.add(k); }));
+        
         [{ key: 'examFeeHalfYearly', label: 'অর্ধ-বার্ষিক' }, { key: 'examFeeAnnual', label: 'বার্ষিক' }, { key: 'examFeePreNirbachoni', label: 'প্রাক-নির্বাচনী' }, { key: 'examFeeNirbachoni', label: 'নির্বাচনী' }].forEach(ex => {
             const val = student[ex.key as keyof Student] as number;
             if (val && val > 0 && !paidCats.has(ex.key)) examDues.push({ label: ex.label, amount: val });
         });
+        
         let otherDues = 0;
         ['sessionFee', 'admissionFee', 'scoutFee', 'developmentFee', 'libraryFee', 'tiffinFee'].forEach(k => {
             const val = student[k as keyof Student] as number;
@@ -304,6 +325,11 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         });
         return { tuitionDue: tuitionDueAmount, tuitionDueMonths, examDues, otherDues };
     }, [student, paidMonths, feeCollections]);
+
+    const handlePrint = (collection: FeeCollection) => {
+        setPrintingCollection(collection);
+        setTimeout(() => { window.print(); setPrintingCollection(null); }, 300);
+    };
 
     const handleDelete = async (collection: FeeCollection) => {
         if(!db || !canDelete) return;
@@ -326,7 +352,9 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                 <div className="space-y-1">
                                     <DialogDescription className="text-md font-bold text-white/90">{student.studentNameBn} (রোল: {toBengaliNumber(student.roll)})</DialogDescription>
                                     <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
-                                        <Badge variant="secondary" className="bg-white/20 text-white font-black">{student.feeCategory === 'half-free' ? 'হাফ-ফ্রি' : student.feeCategory === 'full-free' ? 'ফুল-ফ্রি' : 'সাধারণ'}</Badge>
+                                        <Badge variant="secondary" className="bg-white/20 text-white font-black">
+                                            ক্যাটাগরি: {student.feeCategory === 'half-free' ? 'হাফ-ফ্রি' : student.feeCategory === 'full-free' ? 'ফুল-ফ্রি' : 'সাধারণ'}
+                                        </Badge>
                                         {student.isStipendReceiver && <Badge className="bg-yellow-400 text-yellow-950 font-black"><Star className="h-3 w-3" /> উপবৃত্তিপ্রাপ্ত</Badge>}
                                     </div>
                                 </div>
@@ -336,20 +364,31 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                     </div>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 bg-slate-50/50">
+                    {/* Summary of Dues */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card className="border-[3px] border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
                             <CardHeader className="p-4 bg-rose-50 border-b-2 border-black"><CardTitle className="text-sm font-black flex items-center gap-2 text-rose-700"><Clock className="h-4 w-4" /> বকেয়া বেতন</CardTitle></CardHeader>
-                            <CardContent className="p-4"><p className="text-2xl font-black text-rose-900">{toBengaliNumber(duesSummary.tuitionDue)} ৳</p><p className="text-[10px] font-bold text-muted-foreground mt-2 line-clamp-1">বকেয়া: {duesSummary.tuitionDueMonths.join(', ') || 'নেই'}</p></CardContent>
+                            <CardContent className="p-4">
+                                <p className="text-2xl font-black text-rose-900">{toBengaliNumber(duesSummary.tuitionDue)} ৳</p>
+                                <p className="text-[10px] font-bold text-muted-foreground mt-2 line-clamp-1">বকেয়া: {duesSummary.tuitionDueMonths.join(', ') || 'নেই'}</p>
+                            </CardContent>
                         </Card>
                         <Card className="border-[3px] border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
                             <CardHeader className="p-4 bg-amber-50 border-b-2 border-black"><CardTitle className="text-sm font-black flex items-center gap-2 text-amber-700"><ListTodo className="h-4 w-4" /> পরীক্ষার ফি</CardTitle></CardHeader>
-                            <CardContent className="p-4"><p className="text-2xl font-black text-amber-900">{toBengaliNumber(duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</p><p className="text-[10px] font-bold text-muted-foreground mt-2 line-clamp-1">বাকি: {duesSummary.examDues.map(d => d.label).join(', ') || 'নেই'}</p></CardContent>
+                            <CardContent className="p-4">
+                                <p className="text-2xl font-black text-amber-900">{toBengaliNumber(duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</p>
+                                <p className="text-[10px] font-bold text-muted-foreground mt-2 line-clamp-1">বাকি: {duesSummary.examDues.map(d => d.label).join(', ') || 'নেই'}</p>
+                            </CardContent>
                         </Card>
                         <Card className="border-[3px] border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
                             <CardHeader className="p-4 bg-indigo-50 border-b-2 border-black"><CardTitle className="text-sm font-black flex items-center gap-2 text-indigo-700"><Wallet className="h-4 w-4" /> অন্যান্য ফি</CardTitle></CardHeader>
-                            <CardContent className="p-4"><p className="text-2xl font-black text-indigo-900">{toBengaliNumber(duesSummary.otherDues)} ৳</p><p className="text-[10px] font-bold text-muted-foreground mt-2">সেশন ও দাপ্তরিক ফি সমূহ</p></CardContent>
+                            <CardContent className="p-4">
+                                <p className="text-2xl font-black text-indigo-900">{toBengaliNumber(duesSummary.otherDues)} ৳</p>
+                                <p className="text-[10px] font-bold text-muted-foreground mt-2">সেশন ও দাপ্তরিক ফি সমূহ</p>
+                            </CardContent>
                         </Card>
                     </div>
+
                     <div className="bg-white border-[4px] border-black rounded-[32px] p-6 sm:p-8 shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
                         <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><CalendarCheck className="h-5 w-5 text-primary" /> মাসিক পরিশোধের অবস্থা ({toBengaliNumber(selectedYear)})</h3>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -365,6 +404,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                             })}
                         </div>
                     </div>
+
                     <div className="table-container !border-2 !border-black shadow-xl">
                         <Table className="min-w-[800px]">
                             <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-md z-10"><TableRow className="border-b-2 border-black"><TableHead className="font-black text-black text-center">আদায়ের তারিখ</TableHead><TableHead className="font-black text-black">বিবরণ</TableHead><TableHead className="text-center font-black text-black">পদ্ধতি</TableHead><TableHead className="text-right font-black text-emerald-950">মোট টাকা</TableHead><TableHead className="text-center font-black text-black">রসিদ</TableHead><TableHead className="text-right font-black text-black pr-6">কার্যক্রম</TableHead></TableRow></TableHeader>
