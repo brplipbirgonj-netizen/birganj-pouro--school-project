@@ -16,7 +16,7 @@ import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target, Star, GraduationCap } from 'lucide-react';
+import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target, Star, GraduationCap, CheckCircle2, XCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -423,229 +423,260 @@ function StudentProfileSearchContent() {
 
             <Dialog open={showProfile} onOpenChange={setShowProfile}>
                 <DialogContent className="sm:max-w-6xl h-[95vh] flex flex-col p-0 no-print font-kalpurush border-none shadow-2xl overflow-hidden rounded-2xl">
-                    <DialogHeader className="sr-only">
-                        <DialogTitle>শিক্ষার্থী প্রোফাইল: {studentData?.studentNameBn}</DialogTitle>
-                        <DialogDescription>শিক্ষার্থীর বিস্তারিত তথ্য, হাজিরা এবং বেতন সংক্রান্ত পরিসংখ্যান</DialogDescription>
-                    </DialogHeader>
-                    {studentData && (
-                        <div className="flex flex-col h-full overflow-hidden">
-                            <div className="flex-shrink-0 bg-white border-b-2 border-slate-200 p-6 overflow-hidden">
-                                <div className="flex flex-col sm:flex-row gap-6 items-start">
-                                    <div className="flex flex-col items-center gap-3 shrink-0">
-                                        <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full border-4 border-primary/20 p-1 shadow-lg">
-                                            <div className="relative h-full w-full rounded-full overflow-hidden bg-muted">
-                                                <Image 
-                                                    src={sanitizePhotoUrl(studentData.photoUrl, studentData.gender) || getStudentPlaceholderImage(studentData.gender)} 
-                                                    alt={studentData.studentNameBn} 
-                                                    fill 
-                                                    className="object-cover" 
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 w-full overflow-hidden">
-                                        <div className="mb-4 text-center sm:text-left">
-                                            <h1 className="text-3xl font-black text-slate-900">{studentData.studentNameBn}</h1>
-                                            <p className="text-sm font-bold text-muted-foreground">
-                                                রোল: {toBengaliNumber(studentData.roll)} | {classNamesMap[studentData.className]} শ্রেণি | আইডি: {toBengaliNumber(studentData.generatedId || '')}
-                                            </p>
-                                            <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
-                                                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-black h-7 px-4">
-                                                    ক্যাটাগরি: {studentData.feeCategory === 'half-free' ? 'হাফ-ফ্রি' : studentData.feeCategory === 'full-free' ? 'ফুল-ফ্রি' : 'সাধারণ'}
-                                                </Badge>
-                                                {studentData.isStipendReceiver && (
-                                                    <Badge className="bg-yellow-400 text-yellow-950 font-black h-7 px-4 flex items-center gap-1.5 shadow-sm">
-                                                        <Star className="h-3.5 w-3.5 fill-current" /> উপবৃত্তিপ্রাপ্ত
-                                                    </Badge>
-                                                )}
-                                                <Button variant="outline" size="sm" className="h-7 font-black border-slate-300 text-slate-600 hover:bg-slate-50" onClick={() => window.print()}>
-                                                    <Printer className="h-3.5 w-3.5 mr-1.5" /> প্রিন্ট রিপোর্ট
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        
-                                        <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
-                                            <TabsList className="grid w-full grid-cols-4 h-12 bg-muted/30 p-1 mb-0 rounded-b-none border-b-0">
-                                                <TabsTrigger value="details" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><Info className="h-4 w-4 mr-1.5" /> তথ্য</TabsTrigger>
-                                                <TabsTrigger value="academic_stats" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><Award className="h-4 w-4 mr-1.5" /> প্রগতি</TabsTrigger>
-                                                <TabsTrigger value="attendance_stats" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><CalendarCheck className="h-4 w-4 mr-1.5" /> হাজিরা</TabsTrigger>
-                                                <TabsTrigger value="fees_stats" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><Banknote className="h-4 w-4 mr-1.5" /> বেতন</TabsTrigger>
-                                            </TabsList>
-                                        </Tabs>
+                    <DialogHeader className="p-6 bg-white border-b-2 border-slate-200">
+                        <div className="flex flex-col sm:flex-row gap-6 items-start">
+                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full border-4 border-primary/20 p-1 shadow-lg">
+                                    <div className="relative h-full w-full rounded-full overflow-hidden bg-muted">
+                                        <Image 
+                                            src={studentData ? (sanitizePhotoUrl(studentData.photoUrl, studentData.gender) || getStudentPlaceholderImage(studentData.gender)) : getStudentPlaceholderImage()} 
+                                            alt={studentData?.studentNameBn || 'Student'} 
+                                            fill 
+                                            className="object-cover" 
+                                        />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto bg-slate-100/50 p-6 sm:p-10">
+                            <div className="flex-1 w-full overflow-hidden">
+                                <div className="mb-4 text-center sm:text-left">
+                                    <DialogTitle className="text-3xl font-black text-slate-900">{studentData?.studentNameBn}</DialogTitle>
+                                    <DialogDescription className="text-sm font-bold text-muted-foreground">
+                                        রোল: {studentData ? toBengaliNumber(studentData.roll) : ''} | {studentData ? classNamesMap[studentData.className] : ''} শ্রেণি | আইডি: {studentData ? toBengaliNumber(studentData.generatedId || '') : ''}
+                                    </DialogDescription>
+                                    <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
+                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-black h-7 px-4">
+                                            ক্যাটাগরি: {studentData?.feeCategory === 'half-free' ? 'হাফ-ফ্রি' : studentData?.feeCategory === 'full-free' ? 'ফুল-ফ্রি' : 'সাধারণ'}
+                                        </Badge>
+                                        {studentData?.isStipendReceiver && (
+                                            <Badge className="bg-yellow-400 text-yellow-950 font-black h-7 px-4 flex items-center gap-1.5 shadow-sm">
+                                                <Star className="h-3.5 w-3.5 fill-current" /> উপবৃত্তিপ্রাপ্ত
+                                            </Badge>
+                                        )}
+                                        <Button variant="outline" size="sm" className="h-7 font-black border-slate-300 text-slate-600 hover:bg-slate-50" onClick={() => window.print()}>
+                                            <Printer className="h-3.5 w-3.5 mr-1.5" /> প্রিন্ট রিপোর্ট
+                                        </Button>
+                                    </div>
+                                </div>
+                                
                                 <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
-                                    <TabsContent value="details" className="mt-0 space-y-6 animate-in fade-in duration-500">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <Card className="border-[4px] border-black rounded-xl bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
-                                                <CardHeader className="bg-primary/5 border-b-2 border-black/10">
-                                                    <CardTitle className="text-lg font-black flex items-center gap-2"><User className="h-5 w-5" /> অভিভাবকের তথ্য</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="pt-6 space-y-3 font-bold text-sm">
-                                                    <div className="flex justify-between border-b pb-2"><span>পিতার নাম:</span> <span>{studentData.fatherNameBn}</span></div>
-                                                    <div className="flex justify-between border-b pb-2"><span>মাতার নাম:</span> <span>{studentData.motherNameBn}</span></div>
-                                                    <div className="flex justify-between border-b pb-2"><span>মোবাইল:</span> <span className="text-primary font-black">{toBengaliNumber(studentData.guardianMobile || '-')}</span></div>
-                                                    <div className="flex justify-between border-b pb-2"><span>পিতার NID:</span> <span>{toBengaliNumber(studentData.fatherNid || '-')}</span></div>
-                                                    <div className="flex justify-between"><span>মাতার NID:</span> <span>{toBengaliNumber(studentData.motherNid || '-')}</span></div>
-                                                </CardContent>
-                                            </Card>
-                                            
-                                            <Card className="border-[4px] border-black rounded-xl bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
-                                                <CardHeader className="bg-emerald-50 border-b-2 border-black/10">
-                                                    <CardTitle className="text-lg font-black flex items-center gap-2"><MapPin className="h-5 w-5 text-emerald-700" /> বর্তমান ঠিকানা ও অন্যান্য</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="pt-6 space-y-3 font-bold text-sm">
-                                                    <div className="flex justify-between border-b pb-2"><span>গ্রাম:</span> <span>{studentData.presentVillage || '-'}</span></div>
-                                                    <div className="flex justify-between border-b pb-2"><span>ইউনিয়ন:</span> <span>{studentData.presentUnion || '-'}</span></div>
-                                                    <div className="flex justify-between border-b pb-2"><span>উপজেলা:</span> <span>{studentData.presentUpazila || '-'}</span></div>
-                                                    <div className="flex justify-between border-b pb-2"><span>জেলা:</span> <span>{studentData.presentDistrict || '-'}</span></div>
-                                                    <div className="flex justify-between"><span>ধর্ম:</span> <span>{religionMapBn[studentData.religion?.toLowerCase() || ''] || studentData.religion || 'অন্যান্য'}</span></div>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    </TabsContent>
+                                    <TabsList className="grid w-full grid-cols-4 h-12 bg-muted/30 p-1 mb-0 rounded-b-none border-b-0">
+                                        <TabsTrigger value="details" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><Info className="h-4 w-4 mr-1.5" /> তথ্য</TabsTrigger>
+                                        <TabsTrigger value="academic_stats" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><Award className="h-4 w-4 mr-1.5" /> প্রগতি</TabsTrigger>
+                                        <TabsTrigger value="attendance_stats" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><CalendarCheck className="h-4 w-4 mr-1.5" /> হাজিরা</TabsTrigger>
+                                        <TabsTrigger value="fees_stats" className="font-black text-[10px] sm:text-sm data-[state=active]:shadow-md"><Banknote className="h-4 w-4 mr-1.5" /> বেতন</TabsTrigger>
+                                    </TabsList>
+                                </Tabs>
+                            </div>
+                        </div>
+                    </DialogHeader>
 
-                                    <TabsContent value="academic_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                            {academicProgress.length > 0 ? (
-                                                academicProgress.map((p, i) => (
-                                                    <Card key={i} className="border-[4px] border-black rounded-xl bg-white p-4 text-center shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
-                                                        <p className="text-[10px] font-black text-violet-700 uppercase mb-2">{p.exam}</p>
-                                                        <p className="text-3xl font-black text-slate-900">GPA: {toBengaliNumber(p.gpa.toFixed(2))}</p>
-                                                        <div className="mt-2 flex justify-center gap-2">
-                                                            <Badge variant="outline" className="font-black border-black/20">মার্কস: {toBengaliNumber(p.marks)}</Badge>
-                                                            {p.rank > 0 && <Badge className="bg-violet-600 font-black">মেধাস্থান: {toBengaliNumber(p.rank)}</Badge>}
-                                                        </div>
-                                                    </Card>
-                                                ))
-                                            ) : (
-                                                <div className="col-span-full py-12 bg-white border-[4px] border-black border-dashed rounded-xl text-center">
-                                                    <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                                                    <p className="font-black text-muted-foreground italic">এই বছরের পরীক্ষার রেজাল্ট এখনো এন্ট্রি হয়নি।</p>
-                                                </div>
-                                            )}
-                                        </div>
+                    {studentData && (
+                        <div className="flex-1 overflow-y-auto bg-slate-100/50 p-6 sm:p-10">
+                            <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
+                                <TabsContent value="details" className="mt-0 space-y-6 animate-in fade-in duration-500">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Card className="border-[4px] border-black rounded-xl bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
+                                            <CardHeader className="bg-primary/5 border-b-2 border-black/10">
+                                                <CardTitle className="text-lg font-black flex items-center gap-2"><User className="h-5 w-5" /> অভিভাবকের তথ্য</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="pt-6 space-y-3 font-bold text-sm">
+                                                <div className="flex justify-between border-b pb-2"><span>পিতার নাম:</span> <span>{studentData.fatherNameBn}</span></div>
+                                                <div className="flex justify-between border-b pb-2"><span>মাতার নাম:</span> <span>{studentData.motherNameBn}</span></div>
+                                                <div className="flex justify-between border-b pb-2"><span>মোবাইল:</span> <span className="text-primary font-black">{toBengaliNumber(studentData.guardianMobile || '-')}</span></div>
+                                                <div className="flex justify-between border-b pb-2"><span>পিতার NID:</span> <span>{toBengaliNumber(studentData.fatherNid || '-')}</span></div>
+                                                <div className="flex justify-between"><span>মাতার NID:</span> <span>{toBengaliNumber(studentData.motherNid || '-')}</span></div>
+                                            </CardContent>
+                                        </Card>
+                                        
+                                        <Card className="border-[4px] border-black rounded-xl bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
+                                            <CardHeader className="bg-emerald-50 border-b-2 border-black/10">
+                                                <CardTitle className="text-lg font-black flex items-center gap-2"><MapPin className="h-5 w-5 text-emerald-700" /> বর্তমান ঠিকানা ও অন্যান্য</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="pt-6 space-y-3 font-bold text-sm">
+                                                <div className="flex justify-between border-b pb-2"><span>গ্রাম:</span> <span>{studentData.presentVillage || '-'}</span></div>
+                                                <div className="flex justify-between border-b pb-2"><span>ইউনিয়ন:</span> <span>{studentData.presentUnion || '-'}</span></div>
+                                                <div className="flex justify-between border-b pb-2"><span>উপজেলা:</span> <span>{studentData.presentUpazila || '-'}</span></div>
+                                                <div className="flex justify-between border-b pb-2"><span>জেলা:</span> <span>{studentData.presentDistrict || '-'}</span></div>
+                                                <div className="flex justify-between"><span>ধর্ম:</span> <span>{religionMapBn[studentData.religion?.toLowerCase() || ''] || studentData.religion || 'অন্যান্য'}</span></div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                </TabsContent>
 
-                                        {academicProgress.length > 0 && (
-                                            <div className="space-y-6">
-                                                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                                                    <Target className="h-6 w-6 text-primary" /> বিষয়ভিত্তিক ফলাফল বিশ্লেষণ
-                                                </h3>
-                                                <Accordion type="single" collapsible className="space-y-4">
-                                                    {academicProgress.map((examData, eIdx) => (
-                                                        <AccordionItem key={eIdx} value={`exam-${eIdx}`} className="border-[4px] border-black rounded-2xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)] overflow-hidden">
-                                                            <AccordionTrigger className="px-6 py-4 hover:no-underline bg-primary/5">
-                                                                <div className="flex justify-between items-center w-full pr-6">
-                                                                    <span className="font-black text-lg text-primary">{examData.exam}</span>
-                                                                    <Badge className="font-black bg-primary">GPA: {toBengaliNumber(examData.gpa.toFixed(2))}</Badge>
-                                                                </div>
-                                                            </AccordionTrigger>
-                                                            <AccordionContent className="p-6 space-y-6">
-                                                                <div className="grid grid-cols-1 gap-6">
-                                                                    {examData.subjectStats.map((sub: any, sIdx: number) => {
-                                                                        const obtainedPercent = (sub.obtained / sub.fullMarks) * 100;
-                                                                        return (
-                                                                            <div key={sIdx} className="space-y-3 p-4 border-2 border-slate-100 rounded-xl bg-slate-50/50">
-                                                                                <div className="flex justify-between items-center">
-                                                                                    <Badge variant="outline" className="font-black border-black bg-white">{sub.subjectName}</Badge>
-                                                                                    <Badge className={cn("font-black", sub.obtained >= (sub.fullMarks * 0.33) ? "bg-emerald-600" : "bg-rose-600")}>গ্রেড: {sub.grade}</Badge>
-                                                                                </div>
-                                                                                <div className="flex items-center gap-4">
-                                                                                    <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden shadow-inner">
-                                                                                        <div className={cn("h-full transition-all duration-1000", sub.obtained >= (sub.fullMarks * 0.33) ? "bg-primary" : "bg-rose-500")} style={{ width: `${obtainedPercent}%` }} />
-                                                                                    </div>
-                                                                                    <span className="font-black text-sm whitespace-nowrap">{toBengaliNumber(sub.obtained)} / {toBengaliNumber(sub.fullMarks)}</span>
-                                                                                </div>
-                                                                                <div className="bg-white p-3 rounded-lg border border-dashed text-xs font-bold text-slate-700 italic">
-                                                                                    "{sub.comment}"
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </AccordionContent>
-                                                        </AccordionItem>
-                                                    ))}
-                                                </Accordion>
+                                <TabsContent value="academic_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        {academicProgress.length > 0 ? (
+                                            academicProgress.map((p, i) => (
+                                                <Card key={i} className="border-[4px] border-black rounded-xl bg-white p-4 text-center shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
+                                                    <p className="text-[10px] font-black text-violet-700 uppercase mb-2">{p.exam}</p>
+                                                    <p className="text-3xl font-black text-slate-900">GPA: {toBengaliNumber(p.gpa.toFixed(2))}</p>
+                                                    <div className="mt-2 flex justify-center gap-2">
+                                                        <Badge variant="outline" className="font-black border-black/20">মার্কস: {toBengaliNumber(p.marks)}</Badge>
+                                                        {p.rank > 0 && <Badge className="bg-violet-600 font-black">মেধাস্থান: {toBengaliNumber(p.rank)}</Badge>}
+                                                    </div>
+                                                </Card>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-full py-12 bg-white border-[4px] border-black border-dashed rounded-xl text-center">
+                                                <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                                                <p className="font-black text-muted-foreground italic">এই বছরের পরীক্ষার রেজাল্ট এখনো এন্ট্রি হয়নি।</p>
                                             </div>
                                         )}
-                                    </TabsContent>
+                                    </div>
 
-                                    <TabsContent value="attendance_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                            <Card className="border-[4px] border-black rounded-xl p-6 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] text-center">
-                                                <p className="text-[10px] font-black text-emerald-700 uppercase mb-1">মোট উপস্থিত</p>
-                                                <p className="text-4xl font-black">{toBengaliNumber(attendanceStats.present)} দিন</p>
-                                            </Card>
-                                            <Card className="border-[4px] border-black rounded-xl p-6 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] text-center">
-                                                <p className="text-[10px] font-black text-rose-700 uppercase mb-1">অনুপস্থিত</p>
-                                                <p className="text-4xl font-black">{toBengaliNumber(attendanceStats.absent)} দিন</p>
-                                            </Card>
-                                            <Card className="border-[4px] border-black rounded-xl p-6 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] text-center">
-                                                <p className="text-[10px] font-black text-blue-700 uppercase mb-1">উপস্থিতির হার</p>
-                                                <p className="text-4xl font-black">{toBengaliNumber(attendancePercentage.toFixed(1))}%</p>
-                                                <Progress value={attendancePercentage} className="h-2 mt-3" />
-                                            </Card>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                                <LayoutGrid className="h-5 w-5 text-primary" /> বার্ষিক হাজিরা ক্যালেন্ডার ({toBengaliNumber(selectedYear)})
+                                    {academicProgress.length > 0 && (
+                                        <div className="space-y-6">
+                                            <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                                <Target className="h-6 w-6 text-primary" /> বিষয়ভিত্তিক ফলাফল বিশ্লেষণ
                                             </h3>
-                                            <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
+                                            <Accordion type="single" collapsible className="space-y-4">
+                                                {academicProgress.map((examData, eIdx) => (
+                                                    <AccordionItem key={eIdx} value={`exam-${eIdx}`} className="border-[4px] border-black rounded-2xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)] overflow-hidden">
+                                                        <AccordionTrigger className="px-6 py-4 hover:no-underline bg-primary/5">
+                                                            <div className="flex justify-between items-center w-full pr-6">
+                                                                <span className="font-black text-lg text-primary">{examData.exam}</span>
+                                                                <Badge className="font-black bg-primary">GPA: {toBengaliNumber(examData.gpa.toFixed(2))}</Badge>
+                                                            </div>
+                                                        </AccordionTrigger>
+                                                        <AccordionContent className="p-6 space-y-6">
+                                                            <div className="grid grid-cols-1 gap-6">
+                                                                {examData.subjectStats.map((sub: any, sIdx: number) => {
+                                                                    const obtainedPercent = (sub.obtained / sub.fullMarks) * 100;
+                                                                    return (
+                                                                        <div key={sIdx} className="space-y-3 p-4 border-2 border-slate-100 rounded-xl bg-slate-50/50">
+                                                                            <div className="flex justify-between items-center">
+                                                                                <Badge variant="outline" className="font-black border-black bg-white">{sub.subjectName}</Badge>
+                                                                                <Badge className={cn("font-black", sub.obtained >= (sub.fullMarks * 0.33) ? "bg-emerald-600" : "bg-rose-600")}>গ্রেড: {sub.grade}</Badge>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-4">
+                                                                                <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                                                                                    <div className={cn("h-full transition-all duration-1000", sub.obtained >= (sub.fullMarks * 0.33) ? "bg-primary" : "bg-rose-500")} style={{ width: `${obtainedPercent}%` }} />
+                                                                                </div>
+                                                                                <span className="font-black text-sm whitespace-nowrap">{toBengaliNumber(sub.obtained)} / {toBengaliNumber(sub.fullMarks)}</span>
+                                                                            </div>
+                                                                            <div className="bg-white p-3 rounded-lg border border-dashed text-xs font-bold text-slate-700 italic">
+                                                                                "{sub.comment}"
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                ))}
+                                            </Accordion>
                                         </div>
-                                    </TabsContent>
+                                    )}
+                                </TabsContent>
 
-                                    <TabsContent value="fees_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
-                                        <div className="space-y-4">
-                                            <h3 className="text-lg font-black text-slate-800">মাসিক বেতন স্ট্যাটাস</h3>
-                                            <div className="flex flex-wrap gap-2">
-                                                {BENGALI_MONTHS.map(month => {
-                                                    const isPaid = paidMonths.includes(month);
-                                                    return (
-                                                        <div key={month} className={cn(
-                                                            "flex flex-col items-center justify-center w-20 sm:w-24 p-2 rounded-xl border-[3px] font-black transition-all",
-                                                            isPaid ? "border-emerald-600 bg-emerald-50 text-emerald-800 shadow-[3px_3px_0px_rgba(16,185,129,0.2)]" : "border-rose-200 bg-rose-50 text-rose-600 opacity-60"
+                                <TabsContent value="attendance_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                        <Card className="border-[4px] border-black rounded-xl p-6 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] text-center">
+                                            <p className="text-[10px] font-black text-emerald-700 uppercase mb-1">মোট উপস্থিত</p>
+                                            <p className="text-4xl font-black">{toBengaliNumber(attendanceStats.present)} দিন</p>
+                                        </Card>
+                                        <Card className="border-[4px] border-black rounded-xl p-6 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] text-center">
+                                            <p className="text-[10px] font-black text-rose-700 uppercase mb-1">অনুপস্থিত</p>
+                                            <p className="text-4xl font-black">{toBengaliNumber(attendanceStats.absent)} দিন</p>
+                                        </Card>
+                                        <Card className="border-[4px] border-black rounded-xl p-6 bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)] text-center">
+                                            <p className="text-[10px] font-black text-blue-700 uppercase mb-1">উপস্থিতির হার</p>
+                                            <p className="text-4xl font-black">{toBengaliNumber(attendancePercentage.toFixed(1))}%</p>
+                                            <Progress value={attendancePercentage} className="h-2 mt-3" />
+                                        </Card>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                            <LayoutGrid className="h-5 w-5 text-primary" /> বার্ষিক হাজিরা ক্যালেন্ডার ({toBengaliNumber(selectedYear)})
+                                        </h3>
+                                        <AttendanceHeatmap records={attendanceRecords} year={selectedYear} holidays={holidays} />
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="fees_stats" className="mt-0 space-y-8 animate-in fade-in duration-500">
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                            <Wallet className="h-5 w-5 text-primary" /> ডিজিটাল বেতন কার্ড (Jan-Dec)
+                                        </h3>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                                            {BENGALI_MONTHS.map((month, idx) => {
+                                                const isPaid = paidMonths.includes(month);
+                                                const isFuture = idx > new Date().getMonth();
+                                                return (
+                                                    <div key={month} className={cn(
+                                                        "flex flex-col items-center justify-center p-3 rounded-2xl border-[3px] font-black transition-all",
+                                                        isPaid ? "border-emerald-600 bg-emerald-50 text-emerald-800 shadow-[4px_4px_0px_rgba(16,185,129,0.2)]" : 
+                                                        isFuture ? "border-slate-200 bg-slate-50 text-slate-400 opacity-60" :
+                                                        "border-rose-500 bg-rose-50 text-rose-800 shadow-[4px_4px_0px_rgba(244,63,94,0.2)] animate-pulse"
+                                                    )}>
+                                                        <span className="text-[11px] mb-2">{month}</span>
+                                                        {isPaid ? (
+                                                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                                        ) : isFuture ? (
+                                                            <div className="h-5 w-5 rounded-full border-2 border-slate-300 border-dashed" />
+                                                        ) : (
+                                                            <XCircle className="h-5 w-5 text-rose-500" />
+                                                        )}
+                                                        <Badge variant="outline" className={cn(
+                                                            "h-4 text-[7px] font-black px-1.5 border-none mt-2",
+                                                            isPaid ? "bg-emerald-600 text-white" : isFuture ? "bg-slate-300 text-white" : "bg-rose-600 text-white"
                                                         )}>
-                                                            <span className="text-[10px] sm:text-xs mb-1">{month}</span>
-                                                            <Badge variant="outline" className={cn(
-                                                                "h-4 text-[7px] sm:text-[8px] font-black px-1.5 border-none",
-                                                                isPaid ? "bg-emerald-600 text-white" : "bg-rose-500 text-white"
-                                                            )}>
-                                                                {isPaid ? 'পরিশোধিত' : 'বকেয়া'}
-                                                            </Badge>
+                                                            {isPaid ? 'পরিশোধিত' : isFuture ? 'অপেক্ষমান' : 'বকেয়া'}
+                                                        </Badge>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Card className="border-[4px] border-black rounded-xl bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
+                                            <CardHeader className="bg-primary/5 border-b-2 border-black/10">
+                                                <CardTitle className="text-sm font-black flex items-center gap-2"><ListChecks className="h-4 w-4" /> অন্যান্য ফি এর অবস্থা</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="pt-6 space-y-3 font-bold text-sm">
+                                                {[
+                                                    { label: 'সেশন ফি', key: 'sessionFee' },
+                                                    { label: 'পরীক্ষা ফি (বার্ষিক)', key: 'examFeeAnnual' },
+                                                    { label: 'ভর্তি ফি', key: 'admissionFee' },
+                                                    { label: 'অন্যান্য ফি', key: 'otherFee' }
+                                                ].map(item => {
+                                                    const amount = studentData[item.key as keyof Student] as number;
+                                                    const isPaid = feeHistory.some(f => f.breakdown && f.breakdown[item.key as keyof typeof f.breakdown] > 0);
+                                                    return (
+                                                        <div key={item.key} className="flex justify-between items-center border-b pb-2 last:border-0">
+                                                            <span>{item.label}:</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-black text-slate-800">{toBengaliNumber(amount || 0)} ৳</span>
+                                                                {amount === 0 ? <Badge className="bg-blue-600 text-[8px]">মওকুফ</Badge> : isPaid ? <Badge className="bg-emerald-600 text-[8px]">পরিশোধিত</Badge> : <Badge variant="destructive" className="text-[8px]">বকেয়া</Badge>}
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}
-                                            </div>
-                                        </div>
+                                            </CardContent>
+                                        </Card>
+
                                         <div className="space-y-4">
                                             <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                                <Banknote className="h-5 w-5 text-primary" /> ফি আদায়ের বিস্তারিত বিবরণ
+                                                <Banknote className="h-5 w-5 text-primary" /> সাম্প্রতিক লেনদেন
                                             </h3>
-                                            <div className="border-[4px] border-black rounded-xl overflow-hidden bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)]">
+                                            <div className="border-[4px] border-black rounded-xl overflow-hidden bg-white shadow-[6px_6px_0px_rgba(0,0,0,0.1)] max-h-[250px] overflow-y-auto">
                                                 <Table>
-                                                    <TableHeader className="bg-primary/5">
-                                                        <TableRow className="border-b-[4px] border-black">
+                                                    <TableHeader className="bg-primary/5 sticky top-0 z-10 shadow-sm">
+                                                        <TableRow className="border-b-[3px] border-black">
                                                             <TableHead className="font-black text-black">তারিখ</TableHead>
-                                                            <TableHead className="font-black text-black">বিবরণ</TableHead>
                                                             <TableHead className="font-black text-black text-right">পরিমাণ</TableHead>
-                                                            <TableHead className="font-black text-black">আদায়কারী</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {feeHistory.length === 0 ? (
-                                                            <TableRow><TableCell colSpan={4} className="text-center py-12 font-bold text-muted-foreground">কোনো তথ্য নেই।</TableCell></TableRow>
+                                                            <TableRow><TableCell colSpan={2} className="text-center py-12 font-bold text-muted-foreground">কোনো তথ্য নেই।</TableCell></TableRow>
                                                         ) : (
                                                             feeHistory.map((fee) => (
-                                                                <TableRow key={fee.id} className="border-b-2 border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
-                                                                    <TableCell className="font-bold text-xs whitespace-nowrap">{format(fee.collectionDate, 'dd/MM/yyyy', { locale: bn })}</TableCell>
-                                                                    <TableCell className="font-black text-sm">{fee.description}</TableCell>
-                                                                    <TableCell className="font-black text-right text-emerald-700 text-lg">{toBengaliNumber(fee.totalAmount)} ৳</TableCell>
-                                                                    <TableCell className="text-[10px] font-bold text-muted-foreground">{fee.collectorName || '-'}</TableCell>
+                                                                <TableRow key={fee.id} className="border-b-2 border-slate-100 last:border-0 hover:bg-slate-50">
+                                                                    <TableCell className="font-bold text-xs">{format(fee.collectionDate, 'dd/MM/yyyy', { locale: bn })}</TableCell>
+                                                                    <TableCell className="font-black text-right text-emerald-700">{toBengaliNumber(fee.totalAmount)} ৳</TableCell>
                                                                 </TableRow>
                                                             ))
                                                         )}
@@ -653,9 +684,9 @@ function StudentProfileSearchContent() {
                                                 </Table>
                                             </div>
                                         </div>
-                                    </TabsContent>
-                                </Tabs>
-                            </div>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
                         </div>
                     )}
                 </DialogContent>

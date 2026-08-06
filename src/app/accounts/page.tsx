@@ -15,7 +15,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles, Gift } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles, Gift, Clock } from 'lucide-react';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -269,10 +269,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         test: '',
         session: '',
         admission: '',
-        scout: '',
-        dev: '',
-        lib: '',
-        tiffin: ''
+        other: ''
     });
     
     const [editedStudents, setEditedStudents] = useState<Record<string, Partial<Student>>>({});
@@ -289,17 +286,22 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         filteredStudents.forEach(s => {
             if (!next[s.id]) next[s.id] = {};
             
-            if (bulkValues.monthly) next[s.id].monthlyFee = parseInt(bulkValues.monthly, 10);
+            // Check student category for monthly fee discount
+            if (bulkValues.monthly) {
+                const baseMonthly = parseInt(bulkValues.monthly, 10);
+                let finalMonthly = baseMonthly;
+                if (s.feeCategory === 'full-free') finalMonthly = 0;
+                else if (s.feeCategory === 'half-free') finalMonthly = Math.floor(baseMonthly / 2);
+                next[s.id].monthlyFee = finalMonthly;
+            }
+
             if (bulkValues.halfYearly) next[s.id].examFeeHalfYearly = parseInt(bulkValues.halfYearly, 10);
             if (bulkValues.annual) next[s.id].examFeeAnnual = parseInt(bulkValues.annual, 10);
             if (bulkValues.preTest) next[s.id].examFeePreNirbachoni = parseInt(bulkValues.preTest, 10);
             if (bulkValues.test) next[s.id].examFeeNirbachoni = parseInt(bulkValues.test, 10);
             if (bulkValues.session) next[s.id].sessionFee = parseInt(bulkValues.session, 10);
             if (bulkValues.admission) next[s.id].admissionFee = parseInt(bulkValues.admission, 10);
-            if (bulkValues.scout) next[s.id].scoutFee = parseInt(bulkValues.scout, 10);
-            if (bulkValues.dev) next[s.id].developmentFee = parseInt(bulkValues.dev, 10);
-            if (bulkValues.lib) next[s.id].libraryFee = parseInt(bulkValues.lib, 10);
-            if (bulkValues.tiffin) next[s.id].tiffinFee = parseInt(bulkValues.tiffin, 10);
+            if (bulkValues.other) next[s.id].otherFee = parseInt(bulkValues.other, 10);
         });
         setEditedStudents(next);
         toast({ title: 'সকল শিক্ষার্থীর জন্য মানগুলো যুক্ত হয়েছে।' });
@@ -333,13 +335,19 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
 
     const handleFreeConfigUpdate = (studentId: string, waivers: Record<string, any>) => {
         const next = { ...(editedStudents[studentId] || {}) };
+        const originalStudent = filteredStudents.find(s => s.id === studentId);
+        if (!originalStudent) return;
         
         if (waivers.tuition === 'full') {
             next.feeCategory = 'full-free';
+            next.monthlyFee = 0;
         } else if (waivers.tuition === 'half') {
             next.feeCategory = 'half-free';
+            const baseFee = editedStudents[studentId]?.monthlyFee || originalStudent.monthlyFee || 0;
+            next.monthlyFee = Math.floor(baseFee / 2);
         } else if (waivers.tuition === 'none') {
             next.feeCategory = 'general';
+            // Here we might need the "original" full fee if it was half/full before
         }
 
         if (waivers.exam) {
@@ -355,6 +363,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
             next.developmentFee = 0;
             next.libraryFee = 0;
             next.tiffinFee = 0;
+            next.otherFee = 0;
         }
         
         setEditedStudents(prev => ({ ...prev, [studentId]: next }));
@@ -376,7 +385,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                         </Select>
                     </div>
                     
-                    <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 items-end">
+                    <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 items-end">
                         <div className="space-y-1">
                             <Label className="text-[9px] font-black uppercase text-muted-foreground">বেতন</Label>
                             <Input type="number" value={bulkValues.monthly} onChange={e => setBulkValues({...bulkValues, monthly: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
@@ -396,6 +405,10 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                         <div className="space-y-1">
                             <Label className="text-[9px] font-black uppercase text-muted-foreground">ভর্তি ফি</Label>
                             <Input type="number" value={bulkValues.admission} onChange={e => setBulkValues({...bulkValues, admission: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">অন্যান্য</Label>
+                            <Input type="number" value={bulkValues.other} onChange={e => setBulkValues({...bulkValues, other: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
                         </div>
                         <Button onClick={handleBulkApply} variant="secondary" className="h-9 font-black bg-white border-2 border-primary/20 text-primary hover:bg-primary hover:text-white">
                             <Sparkles className="h-3.5 w-3.5 mr-2" /> অটো-ফিল
@@ -504,8 +517,8 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={getVal('scoutFee') ?? ''} 
-                                                    onChange={e => handleIndividualChange(student.id, 'scoutFee', parseInt(e.target.value) || 0)} 
+                                                    value={getVal('otherFee') ?? ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'otherFee', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
                                             </TableCell>

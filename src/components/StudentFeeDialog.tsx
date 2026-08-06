@@ -61,6 +61,7 @@ const feeFields: { key: keyof FeeBreakdown; label: string }[] = [
     { key: 'developmentFee', label: 'উন্নয়ন ফি' },
     { key: 'libraryFee', label: 'লাইব্রেরি ফি' },
     { key: 'tiffinFee', label: 'টিফিন ফি' },
+    { key: 'otherFee', label: 'অন্যান্য ফি' },
 ];
 
 const feeHeadMapping: { [key in keyof FeeBreakdown]?: string } = {
@@ -77,7 +78,8 @@ const feeHeadMapping: { [key in keyof FeeBreakdown]?: string } = {
     scoutFee: 'Other',
     developmentFee: 'Other',
     libraryFee: 'Other',
-    tiffinFee: 'Other'
+    tiffinFee: 'Other',
+    otherFee: 'Other'
 };
 
 const emptyBreakdown: FeeBreakdown = {};
@@ -316,7 +318,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         });
         
         let otherDues = 0;
-        ['sessionFee', 'admissionFee', 'scoutFee', 'developmentFee', 'libraryFee', 'tiffinFee'].forEach(k => {
+        ['sessionFee', 'admissionFee', 'scoutFee', 'developmentFee', 'libraryFee', 'tiffinFee', 'otherFee'].forEach(k => {
             const val = student[k as keyof Student] as number;
             if (val && val > 0 && !paidCats.has(k)) otherDues += val;
         });
