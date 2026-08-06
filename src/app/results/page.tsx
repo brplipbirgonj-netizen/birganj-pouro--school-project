@@ -12,7 +12,7 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Student, studentFromDoc, addStudent } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
-import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
+import { processStudentResults, StudentProcessedResult, getGradePoint } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText } from 'lucide-react';
@@ -354,10 +354,20 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
             .filter(s => s.academicYear === selectedYear && s.className === className && (!group || s.group === group))
             .sort((a, b) => a.roll - b.roll)
             .map(student => {
-                const res = results.results.find(r => r.studentId === student.id);
+                const marks = results.results.find(r => r.studentId === student.id);
+                const obtainedMarks = (marks?.written || 0) + (marks?.mcq || 0) + (marks?.practical || 0);
+                const percentage = results.fullMarks > 0 ? (obtainedMarks / results.fullMarks) * 100 : 0;
+                const passMark = Math.ceil(results.fullMarks * 0.33);
+                const isPass = obtainedMarks >= passMark;
+                const { grade, point } = getGradePoint(percentage);
+
                 return {
                     student,
-                    marks: res || { studentId: student.id }
+                    marks: marks || { studentId: student.id },
+                    obtainedMarks,
+                    grade: isPass ? grade : 'F',
+                    point: isPass ? point : 0,
+                    isPass
                 };
             });
     }, [results, allStudents, selectedYear, className, group]);
@@ -421,20 +431,24 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                                         <TableHead className="text-center font-black">লিখিত</TableHead>
                                         <TableHead className="text-center font-black">MCQ</TableHead>
                                         <TableHead className="text-center font-black">ব্যবহারিক</TableHead>
-                                        <TableHead className="text-right pr-6 font-black text-primary">মোট নম্বর</TableHead>
+                                        <TableHead className="text-center font-black">প্রাপ্ত নম্বর</TableHead>
+                                        <TableHead className="text-center font-black">গ্রেড</TableHead>
+                                        <TableHead className="text-right pr-6 font-black">পয়েন্ট</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {reportStudents.map(({ student, marks }) => (
-                                        <TableRow key={student.id} className="hover:bg-slate-50 h-10">
-                                            <TableCell className="text-center font-black">{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
-                                            <TableCell className="text-center">{marks.written ?? '-'}</TableCell>
-                                            <TableCell className="text-center">{marks.mcq ?? '-'}</TableCell>
-                                            <TableCell className="text-center">{marks.practical ?? '-'}</TableCell>
-                                            <TableCell className="text-right pr-6 font-black text-blue-900">
-                                                {((marks.written || 0) + (marks.mcq || 0) + (marks.practical || 0)).toLocaleString('bn-BD')}
+                                    {reportStudents.map(({ student, marks, obtainedMarks, grade, point, isPass }) => (
+                                        <TableRow key={student.id} className={cn("hover:bg-slate-50 h-10", !isPass && "bg-rose-50/50")}>
+                                            <TableCell className={cn("text-center font-black", !isPass && "text-rose-600")}>{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className={cn("font-bold text-slate-700", !isPass && "text-rose-700")}>{student.studentNameBn}</TableCell>
+                                            <TableCell className={cn("text-center", !isPass && "text-rose-600")}>{marks.written ?? '-'}</TableCell>
+                                            <TableCell className={cn("text-center", !isPass && "text-rose-600")}>{marks.mcq ?? '-'}</TableCell>
+                                            <TableCell className={cn("text-center", !isPass && "text-rose-600")}>{marks.practical ?? '-'}</TableCell>
+                                            <TableCell className={cn("text-center font-black", isPass ? "text-blue-900" : "text-rose-700")}>
+                                                {obtainedMarks.toLocaleString('bn-BD')}
                                             </TableCell>
+                                            <TableCell className={cn("text-center font-black", isPass ? "text-emerald-700" : "text-rose-700")}>{grade}</TableCell>
+                                            <TableCell className={cn("text-right pr-6 font-black", isPass ? "text-slate-700" : "text-rose-700")}>{point.toFixed(2).toLocaleString('bn-BD')}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -620,7 +634,7 @@ const FullMarksTab = () => {
                                                                                     <Trash2 className="h-4 w-4" />
                                                                                 </Button>
                                                                             </AlertDialogTrigger>
-                                                                            <AlertDialogContent>
+                                                                            <AlertDialogContent className="font-kalpurush">
                                                                                 <AlertDialogHeader>
                                                                                     <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
                                                                                     <AlertDialogDescription>
@@ -1318,22 +1332,30 @@ export default function ResultsPage() {
                             <TableRow className="border-b-2 border-black">
                                 <TableHead className="w-16 text-center font-black border-r-2 border-black text-black">রোল</TableHead>
                                 <TableHead className="font-black border-r-2 border-black text-black">শিক্ষার্থীর নাম</TableHead>
-                                <TableHead className="w-24 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead>
-                                <TableHead className="w-24 text-center font-black border-r-2 border-black text-black">MCQ</TableHead>
-                                <TableHead className="w-24 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead>
-                                <TableHead className="w-24 text-center font-black text-black">মোট নম্বর</TableHead>
+                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead>
+                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">MCQ</TableHead>
+                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead>
+                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">প্রাপ্ত</TableHead>
+                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">গ্রেড</TableHead>
+                                <TableHead className="w-20 text-center font-black text-black">পয়েন্ট</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {printingReport.studentData.map((item: any) => (
-                                <TableRow key={item.student.id} className="border-b border-slate-400 h-9">
-                                    <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell>
-                                    <TableCell className="font-bold border-r-2 border-black">{item.student.studentNameBn}</TableCell>
-                                    <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(item.marks.written ?? '-')}</TableCell>
-                                    <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
-                                    <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
-                                    <TableCell className="text-center font-black">
-                                        {toBengaliNumber((item.marks.written || 0) + (item.marks.mcq || 0) + (item.marks.practical || 0))}
+                                <TableRow key={item.student.id} className={cn("border-b border-slate-400 h-9", !item.isPass && "bg-rose-50/50")}>
+                                    <TableCell className={cn("text-center font-black border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.student.roll)}</TableCell>
+                                    <TableCell className={cn("font-bold border-r-2 border-black", !item.isPass && "text-rose-700")}>{item.student.studentNameBn}</TableCell>
+                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.marks.written ?? '-')}</TableCell>
+                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
+                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
+                                    <TableCell className={cn("text-center font-black border-r-2 border-black", item.isPass ? "text-blue-900" : "text-rose-700")}>
+                                        {toBengaliNumber(item.obtainedMarks)}
+                                    </TableCell>
+                                    <TableCell className={cn("text-center font-black border-r-2 border-black", item.isPass ? "text-emerald-700" : "text-rose-700")}>
+                                        {item.grade}
+                                    </TableCell>
+                                    <TableCell className={cn("text-center font-black", item.isPass ? "text-slate-800" : "text-rose-700")}>
+                                        {toBengaliNumber(item.point.toFixed(2))}
                                     </TableCell>
                                 </TableRow>
                             ))}
