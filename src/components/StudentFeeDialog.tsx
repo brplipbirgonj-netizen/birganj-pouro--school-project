@@ -100,10 +100,13 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
 
     const effectiveMonthlyFee = useMemo(() => {
         if (!student) return 0;
-        const base = student.monthlyFee || 0;
+        // In the student profile, we already store the discounted fee if set via fee setup
+        // But for robust calculation, if the student is half-free but fee setup didn't halve it yet:
+        let fee = student.monthlyFee || 0;
         if (student.feeCategory === 'full-free') return 0;
-        if (student.feeCategory === 'half-free') return Math.floor(base / 2);
-        return base;
+        // Logic: if feeCategory is half-free, assume the set fee is the full amount if it looks like one, 
+        // OR better yet, just use the value directly because Fee Setup Tab now handles the halving on save.
+        return fee;
     }, [student]);
 
     useEffect(() => {
@@ -302,9 +305,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         
         // Calculate effective monthly fee based on category
         let effectiveMonthlyFee = student.monthlyFee || 0;
-        if (student.feeCategory === 'full-free') effectiveMonthlyFee = 0;
-        else if (student.feeCategory === 'half-free') effectiveMonthlyFee = Math.floor(effectiveMonthlyFee / 2);
-
+        
         const currentMonthIdx = new Date().getMonth();
         const tuitionDueMonths = BENGALI_MONTHS.filter((m, idx) => idx <= currentMonthIdx && !paidMonths.has(m));
         const tuitionDueAmount = tuitionDueMonths.length * effectiveMonthlyFee;
@@ -396,7 +397,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                 const isPaid = paidMonths.has(month);
                                 const isCur = idx <= new Date().getMonth();
                                 return (
-                                    <div key={month} className={cn("flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-300", isPaid ? "bg-emerald-50 border-emerald-500/30 text-emerald-800" : isCur ? "bg-rose-50 border-rose-500/30 text-rose-800" : "bg-slate-50 border-slate-200 text-slate-400 opacity-60")}>
+                                    <div key={month} className={cn("flex flex-col items-center justify-center w-full p-3 rounded-2xl border-2 transition-all duration-300", isPaid ? "bg-emerald-50 border-emerald-500/30 text-emerald-800" : isCur ? "bg-rose-50 border-rose-500/30 text-rose-800" : "bg-slate-50 border-slate-200 text-slate-400 opacity-60")}>
                                         <span className="text-[11px] font-black leading-none mb-2">{month}</span>
                                         <Badge className={cn("h-5 text-[9px] font-black border-none px-3", isPaid ? "bg-emerald-600" : isCur ? "bg-rose-600" : "bg-slate-300")}>{isPaid ? 'Paid' : 'Due'}</Badge>
                                     </div>

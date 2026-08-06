@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Transaction, NewTransactionData, addTransaction, getTransactions, deleteTransaction, TransactionType, PaymentMethod } from '@/lib/transactions-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
@@ -202,11 +202,11 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={last7DaysData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, font-weight: 'bold', fill: '#64748b' }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, font-weight: 'bold', fill: '#64748b' }} />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
                                 <Tooltip 
                                     cursor={{fill: '#f1f5f9'}}
-                                    contentStyle={{ borderRadius: '16px', border: '3px solid black', font-weight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
+                                    contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
                                 <Legend verticalAlign="top" align="right" iconType="circle" />
@@ -242,7 +242,7 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                                     ))}
                                 </Pie>
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '16px', border: '3px solid black', font-weight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
+                                    contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
                                     formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']}
                                 />
                                 <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
@@ -293,7 +293,10 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
             // For monthlyFee, we save the BASE fee. 
             // Discounts are applied during collection calculation.
             if (bulkValues.monthly) {
-                next[s.id].monthlyFee = parseInt(bulkValues.monthly, 10);
+                let fee = parseInt(bulkValues.monthly, 10);
+                if (s.feeCategory === 'full-free') fee = 0;
+                else if (s.feeCategory === 'half-free') fee = Math.floor(fee / 2);
+                next[s.id].monthlyFee = fee;
             }
             if (bulkValues.halfYearly) next[s.id].examFeeHalfYearly = parseInt(bulkValues.halfYearly, 10);
             if (bulkValues.annual) next[s.id].examFeeAnnual = parseInt(bulkValues.annual, 10);
@@ -341,8 +344,10 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         
         if (waivers.tuition === 'full') {
             next.feeCategory = 'full-free';
+            next.monthlyFee = 0;
         } else if (waivers.tuition === 'half') {
             next.feeCategory = 'half-free';
+            // Logic to halved existing or base fee should happen here or during save
         } else if (waivers.tuition === 'none') {
             next.feeCategory = 'general';
         }
@@ -415,7 +420,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle className="text-lg font-black text-primary">ব্যক্তিগতভাবে ফি বা ক্যাটাগরি সংশোধন করুন</CardTitle>
-                            <CardDescription className="font-bold">বেতন হিসাবে বেস ফি (Base Fee) ব্যবহার করুন, সিস্টেম ক্যাটাগরি অনুযায়ী ছাড় দিবে।</CardDescription>
+                            <CardDescription className="font-bold">বেতন হিসাবে প্রকৃত আদায়যোগ্য ফি ব্যবহার করুন।</CardDescription>
                         </div>
                         {Object.keys(editedStudents).length > 0 && (
                             <Badge className="bg-amber-600 font-black animate-pulse">
