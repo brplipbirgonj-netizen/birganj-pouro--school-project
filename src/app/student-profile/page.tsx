@@ -10,13 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, Timestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target, Star, GraduationCap, CheckCircle2, XCircle, Wallet, ListChecks } from 'lucide-react';
+import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target, Star, GraduationCap, CheckCircle2, XCircle, Wallet, ListChecks, Phone, FileText, ListTodo } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,12 +28,13 @@ import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getAllResults } from '@/lib/results-data';
 import { getSubjects } from '@/lib/subjects';
 import { processStudentResults } from '@/lib/results-calculation';
 import { getExams } from '@/lib/exam-data';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -719,6 +720,95 @@ function StudentProfileSearchContent() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Printable Area - Hidden on Screen */}
+            {studentData && (
+                <div className="hidden print:block printable-area bg-white text-black p-10 font-kalpurush border-2">
+                    <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-8">
+                        {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}
+                        <div className="text-center flex-grow">
+                            <h1 className="text-3xl font-black text-emerald-950 uppercase">{schoolInfo.name}</h1>
+                            <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                            <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
+                                <h2 className="text-lg font-black uppercase">শিক্ষার্থী প্রগতি ও প্রোফাইল রিপোর্ট - {toBengaliNumber(selectedYear)}</h2>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="flex justify-between items-start gap-10 mb-10">
+                        <div className="flex-1 space-y-3 font-bold text-base">
+                            <div className="flex border-b pb-1"><span className="w-40 text-slate-600">শিক্ষার্থীর নাম</span><span className="font-black">: {studentData.studentNameBn}</span></div>
+                            <div className="flex border-b pb-1"><span className="w-40 text-slate-600">রোল ও শ্রেণি</span><span className="font-black">: {toBengaliNumber(studentData.roll)}, {classNamesMap[studentData.className]} শ্রেণি</span></div>
+                            <div className="flex border-b pb-1"><span className="w-40 text-slate-600">শিক্ষার্থী আইডি</span><span className="font-black">: {toBengaliNumber(studentData.generatedId || '-')}</span></div>
+                            <div className="flex border-b pb-1"><span className="w-40 text-slate-600">পিতার নাম</span><span>: {studentData.fatherNameBn}</span></div>
+                            <div className="flex border-b pb-1"><span className="w-40 text-slate-600">মাতার নাম</span><span>: {studentData.motherNameBn}</span></div>
+                            <div className="flex border-b pb-1"><span className="w-40 text-slate-600">মোবাইল নম্বর</span><span className="font-black">: {toBengaliNumber(studentData.guardianMobile || '-')}</span></div>
+                        </div>
+                        <div className="w-32 h-40 border-2 border-black p-0.5 rounded overflow-hidden shadow-md">
+                            <Image src={sanitizePhotoUrl(studentData.photoUrl, studentData.gender) || getStudentPlaceholderImage(studentData.gender)} alt="Profile" width={128} height={160} className="object-cover w-full h-full" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 mb-10">
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-black border-l-4 border-primary pl-2 uppercase">হাজিরা পরিসংখ্যান</h3>
+                            <div className="border-2 border-black rounded-xl p-4 bg-slate-50 space-y-2">
+                                <p className="flex justify-between"><span>মোট কার্যদিবস:</span> <span className="font-black">{toBengaliNumber(attendanceStats.total)} দিন</span></p>
+                                <p className="flex justify-between text-emerald-700"><span>মোট উপস্থিত:</span> <span className="font-black">{toBengaliNumber(attendanceStats.present)} দিন</span></p>
+                                <p className="flex justify-between text-rose-700"><span>মোট অনুপস্থিত:</span> <span className="font-black">{toBengaliNumber(attendanceStats.absent)} দিন</span></p>
+                                <p className="flex justify-between border-t border-slate-300 pt-2 font-black text-primary"><span>উপস্থিতির হার:</span> <span>{toBengaliNumber(attendancePercentage.toFixed(1))}%</span></p>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-black border-l-4 border-emerald-700 pl-2 uppercase">বকেয়া পাওনা সম্বলিত তথ্য</h3>
+                            <div className="border-2 border-black rounded-xl p-4 bg-slate-50 space-y-2">
+                                <p className="flex justify-between"><span>বকেয়া বেতন:</span> <span className="font-black text-rose-700">{toBengaliNumber(duesSummary.tuitionDue)} ৳</span></p>
+                                <p className="flex justify-between"><span>পরীক্ষার ফি:</span> <span className="font-black text-amber-700">{toBengaliNumber(duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</span></p>
+                                <p className="flex justify-between"><span>অন্যান্য ফি:</span> <span className="font-black text-indigo-700">{toBengaliNumber(duesSummary.otherDues)} ৳</span></p>
+                                <p className="flex justify-between border-t border-slate-300 pt-2 font-black text-emerald-800"><span>সর্বমোট পাওনা:</span> <span>{toBengaliNumber(duesSummary.tuitionDue + duesSummary.otherDues + duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {academicProgress.length > 0 && (
+                        <div className="space-y-4 mb-10">
+                            <h3 className="text-lg font-black border-l-4 border-violet-700 pl-2 uppercase">একাডেমিক ফলাফল (পরীক্ষাভিত্তিক)</h3>
+                            <Table className="border-2 border-black">
+                                <TableHeader className="bg-slate-100">
+                                    <TableRow className="border-b-2 border-black">
+                                        <TableHead className="font-black text-black">পরীক্ষার নাম</TableHead>
+                                        <TableHead className="text-center font-black text-black">মোট নম্বর</TableHead>
+                                        <TableHead className="text-center font-black text-black">GPA</TableHead>
+                                        <TableHead className="text-right font-black text-black">মেধাস্থান</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {academicProgress.map((p, i) => (
+                                        <TableRow key={i} className="border-b last:border-0 border-slate-300 h-10">
+                                            <TableCell className="font-bold">{p.exam}</TableCell>
+                                            <TableCell className="text-center font-black">{toBengaliNumber(p.marks)}</TableCell>
+                                            <TableCell className="text-center font-black text-primary">{toBengaliNumber(p.gpa.toFixed(2))}</TableCell>
+                                            <TableCell className="text-right font-black">{p.rank > 0 ? toBengaliNumber(p.rank) : '-'}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+
+                    <footer className="mt-32 flex justify-between px-10">
+                        <div className="text-center">
+                            <div className="w-48 border-t-2 border-black pt-1 font-black">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div>
+                        </div>
+                    </footer>
+                    <div className="mt-10 text-center text-[9px] text-slate-400 italic border-t border-dashed pt-4">
+                        Digital Management Portal | Report Generated: {format(new Date(), 'PPpp', { locale: bn })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
