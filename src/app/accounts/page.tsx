@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -290,14 +289,8 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         filteredStudents.forEach(s => {
             if (!next[s.id]) next[s.id] = {};
             
-            // For monthlyFee, we save the BASE fee. 
-            // Discounts are applied during collection calculation.
-            if (bulkValues.monthly) {
-                let fee = parseInt(bulkValues.monthly, 10);
-                if (s.feeCategory === 'full-free') fee = 0;
-                else if (s.feeCategory === 'half-free') fee = Math.floor(fee / 2);
-                next[s.id].monthlyFee = fee;
-            }
+            // Set base fees. The discount logic is handled in the StudentFeeDialog during collection.
+            if (bulkValues.monthly) next[s.id].monthlyFee = parseInt(bulkValues.monthly, 10);
             if (bulkValues.halfYearly) next[s.id].examFeeHalfYearly = parseInt(bulkValues.halfYearly, 10);
             if (bulkValues.annual) next[s.id].examFeeAnnual = parseInt(bulkValues.annual, 10);
             if (bulkValues.preTest) next[s.id].examFeePreNirbachoni = parseInt(bulkValues.preTest, 10);
@@ -344,10 +337,8 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         
         if (waivers.tuition === 'full') {
             next.feeCategory = 'full-free';
-            next.monthlyFee = 0;
         } else if (waivers.tuition === 'half') {
             next.feeCategory = 'half-free';
-            // Logic to halved existing or base fee should happen here or during save
         } else if (waivers.tuition === 'none') {
             next.feeCategory = 'general';
         }

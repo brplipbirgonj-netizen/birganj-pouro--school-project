@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
@@ -15,7 +14,7 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
-import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, Timestamp, query, where, getDocs, limit } from 'firebase/firestore';
 import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote, ListTodo, Wallet, Coins, Star, GraduationCap } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
@@ -30,7 +29,6 @@ import { MoneyReceipt } from './MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const BENGALI_MONTHS = [
@@ -100,12 +98,9 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
 
     const effectiveMonthlyFee = useMemo(() => {
         if (!student) return 0;
-        // In the student profile, we already store the discounted fee if set via fee setup
-        // But for robust calculation, if the student is half-free but fee setup didn't halve it yet:
         let fee = student.monthlyFee || 0;
         if (student.feeCategory === 'full-free') return 0;
-        // Logic: if feeCategory is half-free, assume the set fee is the full amount if it looks like one, 
-        // OR better yet, just use the value directly because Fee Setup Tab now handles the halving on save.
+        if (student.feeCategory === 'half-free') return Math.floor(fee / 2);
         return fee;
     }, [student]);
 
@@ -242,7 +237,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                         </div>
                     </div>
                     <div className="space-y-4 border-t pt-6">
-                        <Label className="font-black text-lg text-slate-800 border-l-4 border-primary pl-3">বিস্তারিত হিসাব (Breakdown)</Label>
+                        <Label className="font-black text-lg text-slate-800 border-l-4 border-primary pl-3"> বিস্তারিত হিসাব (Breakdown)</Label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {feeFields.map(field => (
                                 <div key={field.key} className="space-y-1.5 p-3 rounded-lg border-2 border-slate-100 hover:border-primary/20 bg-slate-50/30">
@@ -273,7 +268,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     const { schoolInfo } = useSchoolInfo();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
-    const { user, hasPermission } = useAuth();
+    const { hasPermission } = useAuth();
     
     const canEdit = hasPermission('special:edit-transaction');
     const canDelete = hasPermission('special:delete-transaction');
@@ -303,9 +298,10 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     const duesSummary = useMemo(() => {
         if (!student) return { tuitionDue: 0, tuitionDueMonths: [], examDues: [], otherDues: 0 };
         
-        // Calculate effective monthly fee based on category
         let effectiveMonthlyFee = student.monthlyFee || 0;
-        
+        if (student.feeCategory === 'half-free') effectiveMonthlyFee = Math.floor(effectiveMonthlyFee / 2);
+        else if (student.feeCategory === 'full-free') effectiveMonthlyFee = 0;
+
         const currentMonthIdx = new Date().getMonth();
         const tuitionDueMonths = BENGALI_MONTHS.filter((m, idx) => idx <= currentMonthIdx && !paidMonths.has(m));
         const tuitionDueAmount = tuitionDueMonths.length * effectiveMonthlyFee;
@@ -365,7 +361,6 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                     </div>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 bg-slate-50/50">
-                    {/* Summary of Dues */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card className="border-[3px] border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
                             <CardHeader className="p-4 bg-rose-50 border-b-2 border-black"><CardTitle className="text-sm font-black flex items-center gap-2 text-rose-700"><Clock className="h-4 w-4" /> বকেয়া বেতন</CardTitle></CardHeader>
