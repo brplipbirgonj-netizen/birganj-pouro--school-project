@@ -333,9 +333,23 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         }
     };
 
-    const handleFreeConfigUpdate = (studentId: string, waivers: Record<string, boolean>) => {
+    const handleFreeConfigUpdate = (studentId: string, waivers: Record<string, any>) => {
         const next = { ...(editedStudents[studentId] || {}) };
-        if (waivers.monthly) next.monthlyFee = 0;
+        
+        // Handle Tuition specifically with categories
+        if (waivers.tuition === 'full') {
+            next.monthlyFee = 0;
+            next.feeCategory = 'full-free';
+        } else if (waivers.tuition === 'half') {
+            // Logic to calculate half: take the student's existing monthlyFee OR use a default
+            const currentFee = next.monthlyFee !== undefined ? next.monthlyFee : (allStudents.find(s => s.id === studentId)?.monthlyFee || 0);
+            // If it's already set to half, we shouldn't keep halving it. 
+            // Better to assume we are setting category here.
+            next.feeCategory = 'half-free';
+        } else if (waivers.tuition === 'none') {
+            next.feeCategory = 'general';
+        }
+
         if (waivers.exam) {
             next.examFeeHalfYearly = 0;
             next.examFeeAnnual = 0;
@@ -556,7 +570,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
 
 const StudentFreeConfigDialog = ({ student, open, onOpenChange, onApply }: { student: Student | null, open: boolean, onOpenChange: (o: boolean) => void, onApply: (id: string, waivers: any) => void }) => {
     const [waivers, setWaivers] = useState({
-        monthly: false,
+        tuition: 'none' as 'none' | 'half' | 'full',
         exam: false,
         session: false,
         admission: false,
@@ -564,8 +578,16 @@ const StudentFreeConfigDialog = ({ student, open, onOpenChange, onApply }: { stu
     });
 
     useEffect(() => {
-        if (open) setWaivers({ monthly: false, exam: false, session: false, admission: false, other: false });
-    }, [open]);
+        if (open && student) {
+            setWaivers({ 
+                tuition: (student.feeCategory === 'half-free' ? 'half' : student.feeCategory === 'full-free' ? 'full' : 'none'),
+                exam: false, 
+                session: false, 
+                admission: false, 
+                other: false 
+            });
+        }
+    }, [open, student]);
 
     if (!student) return null;
 
@@ -580,27 +602,46 @@ const StudentFreeConfigDialog = ({ student, open, onOpenChange, onApply }: { stu
                         {student.studentNameBn} এর জন্য কোন কোন ফি মওকুফ (ফ্রি) করতে চান?
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-6 space-y-4">
-                    <div className="grid grid-cols-1 gap-3">
-                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
-                            <Checkbox id="waiver-monthly" checked={waivers.monthly} onCheckedChange={(v) => setWaivers({...waivers, monthly: !!v})} />
-                            <Label htmlFor="waiver-monthly" className="font-black text-sm cursor-pointer">মাসিক বেতন মওকুফ করুন (০ টাকা)</Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
-                            <Checkbox id="waiver-exam" checked={waivers.exam} onCheckedChange={(v) => setWaivers({...waivers, exam: !!v})} />
-                            <Label htmlFor="waiver-exam" className="font-black text-sm cursor-pointer">সকল পরীক্ষা ফি মওকুফ করুন (০ টাকা)</Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
-                            <Checkbox id="waiver-session" checked={waivers.session} onCheckedChange={(v) => setWaivers({...waivers, session: !!v})} />
-                            <Label htmlFor="waiver-session" className="font-black text-sm cursor-pointer">সেশন ফি মওকুফ করুন (০ টাকা)</Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
-                            <Checkbox id="waiver-admission" checked={waivers.admission} onCheckedChange={(v) => setWaivers({...waivers, admission: !!v})} />
-                            <Label htmlFor="waiver-admission" className="font-black text-sm cursor-pointer">ভর্তি ফি মওকুফ করুন (০ টাকা)</Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
-                            <Checkbox id="waiver-other" checked={waivers.other} onCheckedChange={(v) => setWaivers({...waivers, other: !!v})} />
-                            <Label htmlFor="waiver-other" className="font-black text-sm cursor-pointer">অন্যান্য সকল ফি মওকুফ করুন (০ টাকা)</Label>
+                <div className="py-6 space-y-6">
+                    <div className="space-y-3">
+                        <Label className="font-black text-sm text-slate-700">মাসিক বেতন মওকুফ:</Label>
+                        <RadioGroup value={waivers.tuition} onValueChange={(v: any) => setWaivers({...waivers, tuition: v})} className="grid grid-cols-1 gap-2">
+                            <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                                <RadioGroupItem value="none" id="t-none" />
+                                <Label htmlFor="t-none" className="font-bold cursor-pointer flex-1">সাধারণ (পুরো বেতন পরিশোধ করবেন)</Label>
+                            </div>
+                            <div className="flex items-center space-x-3 p-3 border rounded-lg bg-blue-50 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors">
+                                <RadioGroupItem value="half" id="t-half" />
+                                <Label htmlFor="t-half" className="font-black text-blue-700 cursor-pointer flex-1">বেতন হাফ মওকুফ (৫০% ছাড়)</Label>
+                            </div>
+                            <div className="flex items-center space-x-3 p-3 border rounded-lg bg-emerald-50 border-emerald-200 cursor-pointer hover:bg-emerald-100 transition-colors">
+                                <RadioGroupItem value="full" id="t-full" />
+                                <Label htmlFor="t-full" className="font-black text-emerald-700 cursor-pointer flex-1">বেতন সম্পূর্ণ মওকুফ (০ টাকা)</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                        <Label className="font-black text-sm text-slate-700">অন্যান্য ফি মওকুফ:</Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                                <Checkbox id="waiver-exam" checked={waivers.exam} onCheckedChange={(v) => setWaivers({...waivers, exam: !!v})} />
+                                <Label htmlFor="waiver-exam" className="font-bold text-sm cursor-pointer">সকল পরীক্ষা ফি মওকুফ করুন</Label>
+                            </div>
+                            <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                                <Checkbox id="waiver-session" checked={waivers.session} onCheckedChange={(v) => setWaivers({...waivers, session: !!v})} />
+                                <Label htmlFor="waiver-session" className="font-bold text-sm cursor-pointer">সেশন ফি মওকুফ করুন</Label>
+                            </div>
+                            <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                                <Checkbox id="waiver-admission" checked={waivers.admission} onCheckedChange={(v) => setWaivers({...waivers, admission: !!v})} />
+                                <Label htmlFor="waiver-admission" className="font-bold text-sm cursor-pointer">ভর্তি ফি মওকুফ করুন</Label>
+                            </div>
+                            <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                                <Checkbox id="waiver-other" checked={waivers.other} onCheckedChange={(v) => setWaivers({...waivers, other: !!v})} />
+                                <Label htmlFor="waiver-other" className="font-bold text-sm cursor-pointer">অন্যান্য সকল আনুষঙ্গিক ফি মওকুফ করুন</Label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -942,7 +983,7 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
 
         try {
             await batch.commit();
-            toast({ title: "আদায়ের রেকর্ডটি মুছে ফেলা হয়েছে।" });
+            toast({ title: "আদায়ের রেকর্ডটি মুছে ফেলা হয়েছে।" });
             onDeleteSuccess(); // Trigger refetch in parent
         } catch (error) {
             // Contextual errors handled by FirebaseErrorListener

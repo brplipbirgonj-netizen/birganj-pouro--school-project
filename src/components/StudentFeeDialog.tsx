@@ -16,7 +16,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote, ListTodo, Wallet, Coins } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote, ListTodo, Wallet, Coins, Star, GraduationCap } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -322,11 +322,11 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                         <div className="space-y-2">
-                            <Label htmlFor="description" className="font-bold">আদায়ের বিবরণ</Label>
+                            <Label htmlFor="description" className="font-bold">আদায়ের বিবরণ</Label>
                             <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="bg-slate-50 font-bold border-2 focus:ring-primary" placeholder="উদা: জানুয়ারি মাসের বেতন" />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="date" className="font-bold">আদায়ের তারিখ</Label>
+                            <Label htmlFor="date" className="font-bold">আদায়ের তারিখ</Label>
                             <DatePicker value={collectionDate} onChange={date => setCollectionDate(date)} />
                         </div>
                         <div className="space-y-2">
@@ -574,9 +574,21 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                             {isLoading || !student ? (
                                 <Skeleton className="h-4 w-1/2 mx-auto md:mx-0 bg-white/20" />
                             ) : (
-                                <DialogDescription className="text-md font-bold text-white/90">
-                                    {student.studentNameBn} (রোল: {toBengaliNumber(student.roll)}, শ্রেণি: {classNamesMap[student.className] || student.className})
-                                </DialogDescription>
+                                <div className="space-y-1">
+                                    <DialogDescription className="text-md font-bold text-white/90">
+                                        {student.studentNameBn} (রোল: {toBengaliNumber(student.roll)}, শ্রেণি: {classNamesMap[student.className] || student.className})
+                                    </DialogDescription>
+                                    <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
+                                        <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-black">
+                                            ক্যাটাগরি: {student.feeCategory === 'half-free' ? 'হাফ-ফ্রি' : student.feeCategory === 'full-free' ? 'ফুল-ফ্রি' : 'সাধারণ'}
+                                        </Badge>
+                                        {student.isStipendReceiver && (
+                                            <Badge className="bg-yellow-400 text-yellow-950 font-black flex items-center gap-1">
+                                                <Star className="h-3 w-3" /> উপবৃত্তিপ্রাপ্ত
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
                             )}
                         </div>
                         <Button onClick={handleAddNew} size="lg" className="bg-white text-primary hover:bg-slate-100 font-black shadow-lg">নতুন আদায়</Button>
