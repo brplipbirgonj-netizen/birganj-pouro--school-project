@@ -164,7 +164,7 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
     const teacherRoutineInfo = useMemo(() => {
         if (!selectedStaff || routineRecords.length === 0) return null;
         
-        const teacherName = selectedStaff.nameBn;
+        const teacherName = selectedStaff.nameBn.trim();
         const dailySchedule: Record<string, any[]> = {};
         const subjectSet = new Set<string>();
         let totalClasses = 0;
@@ -174,11 +174,21 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
             if (!dailySchedule[day]) dailySchedule[day] = Array(6).fill(null);
             
             routine.periods.forEach((cell, idx) => {
-                const { subject, teacher } = parseSubjectTeacher(cell);
-                if (teacher && teacher.includes(teacherName)) {
-                    dailySchedule[day][idx] = { className: routine.className, subject };
-                    subjectSet.add(subject);
-                    totalClasses++;
+                const { subject, teacher: routineTeacher } = parseSubjectTeacher(cell);
+                
+                if (routineTeacher) {
+                    const teachersInCell = routineTeacher.split('/').map(t => t.trim()).filter(Boolean);
+                    
+                    // Improved matching logic: Check if profile name includes routine name OR routine name includes profile name
+                    const isMatch = teachersInCell.some(t => 
+                        teacherName.includes(t) || t.includes(teacherName)
+                    );
+
+                    if (isMatch) {
+                        dailySchedule[day][idx] = { className: routine.className, subject };
+                        subjectSet.add(subject);
+                        totalClasses++;
+                    }
                 }
             });
         });
@@ -197,7 +207,7 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
             const isWeekend = day.getDay() === 5 || day.getDay() === 6;
             const isHolidayDay = holidays.includes(dateStr);
             
-            if (!isWeekend && !isHolidayDay && !isAfter(day, new Date())) {
+            if (!isWeekend && !isHolidayDay && !isBefore(day, new Date(2020, 0, 1)) && !isAfter(day, new Date())) {
                 totalWorkDays++;
                 const record = attendanceData.find(r => r.date === dateStr);
                 const att = record?.attendance.find(a => a.staffId === selectedStaffId);
