@@ -378,7 +378,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                 <CardHeader className="bg-muted/30 border-b-2 border-black">
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle className="text-lg font-black text-primary">শিক্ষার্থী ভিত্তিক ফি সেটআপ</CardTitle>
+                            <CardTitle className="text-lg font-black text-primary">ব্যক্তিগতভাবে ফি বা ক্যাটাগরি সংশোধন করুন</CardTitle>
                             <CardDescription className="font-bold">ব্যক্তিগতভাবে ফি বা ক্যাটাগরি সংশোধন করুন</CardDescription>
                         </div>
                         {Object.keys(editedStudents).length > 0 && (
@@ -396,6 +396,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                     <TableHead className="w-16 text-center font-black border-r text-black">রোল</TableHead>
                                     <TableHead className="min-w-[150px] font-black border-r text-black">নাম</TableHead>
                                     <TableHead className="w-24 text-center font-black border-r text-black">বেতন</TableHead>
+                                    <TableHead className="w-24 text-center font-black border-r text-black">অর্ধ-বার্ষিক</TableHead>
                                     <TableHead className="w-24 text-center font-black border-r text-black">বার্ষিক ফি</TableHead>
                                     <TableHead className="w-24 text-center font-black border-r text-black">সেশন ফি</TableHead>
                                     <TableHead className="w-24 text-center font-black border-r text-black">ভর্তি ফি</TableHead>
@@ -406,7 +407,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                             </TableHeader>
                             <TableBody>
                                 {filteredStudents.length === 0 ? (
-                                    <TableRow><TableCell colSpan={9} className="text-center py-20 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={10} className="text-center py-20 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</TableCell></TableRow>
                                 ) : filteredStudents.map(student => {
                                     const changes = editedStudents[student.id] || {};
                                     
@@ -422,6 +423,14 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                                     type="number" 
                                                     value={getVal('monthlyFee') || ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'monthlyFee', parseInt(e.target.value) || 0)} 
+                                                    className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="p-1 border-r">
+                                                <Input 
+                                                    type="number" 
+                                                    value={getVal('examFeeHalfYearly') || ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'examFeeHalfYearly', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
                                             </TableCell>
