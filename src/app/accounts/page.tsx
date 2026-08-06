@@ -10,7 +10,7 @@ import { Student } from '@/lib/student-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError, doc, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Transaction, NewTransactionData, addTransaction, getTransactions, deleteTransaction, TransactionType, PaymentMethod } from '@/lib/transactions-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
@@ -496,9 +496,10 @@ const FeeCollectionTab = ({ studentsForYear, isLoading, onFeeCollected }: { stud
 // Collection Report Tab Component
 const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const { selectedYear } = useAcademicYear();
     const { schoolInfo } = useSchoolInfo();
+    const { toast } = useToast();
     const [collections, setCollections] = useState<FeeCollection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -506,6 +507,8 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const [printingCollection, setPrintingCollection] = useState<FeeCollection | null>(null);
     const [printingStudent, setPrintingStudent] = useState<Student | null>(null);
+
+    const canDelete = hasPermission('special:delete-transaction');
 
     useEffect(() => {
         if (!db || !user) return;
@@ -556,6 +559,35 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
         }, 300);
     };
 
+    const handleDeleteCollection = async (collectionData: FeeCollection) => {
+        if (!db) return;
+        if (!canDelete) {
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            return;
+        }
+
+        const batch = writeBatch(db);
+        
+        // Delete the fee collection document
+        const feeCollectionRef = doc(db, 'feeCollections', collectionData.id);
+        batch.delete(feeCollectionRef);
+
+        // Delete all associated transaction documents
+        if (collectionData.transactionIds && collectionData.transactionIds.length > 0) {
+            collectionData.transactionIds.forEach(id => {
+                const transRef = doc(db, 'transactions', id);
+                batch.delete(transRef);
+            });
+        }
+
+        try {
+            await batch.commit();
+            toast({ title: "আদায়ের রেকর্ডটি মুছে ফেলা হয়েছে।" });
+        } catch (error) {
+            // Contextual errors handled by FirebaseErrorListener
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg">
@@ -591,13 +623,14 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <TableHead className="text-right">মোট আদায়</TableHead>
                                     <TableHead className="text-center">রসিদ</TableHead>
                                     <TableHead>আদায়কারী</TableHead>
+                                    <TableHead className="text-right no-print">একশন</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={8} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>
                                 ) : filteredCollections.length === 0 ? (
-                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={8} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                                 ) : (
                                     filteredCollections.map(c => {
                                         const student = studentMap.get(c.studentId);
@@ -614,6 +647,29 @@ const CollectionReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     </Button>
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap text-xs">{c.collectorName || '-'}</TableCell>
+                                                <TableCell className="text-right no-print">
+                                                    {canDelete && (
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent className="font-kalpurush">
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>রেকর্ডটি মুছতে চান?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        আপনি কি নিশ্চিতভাবে এই আদায়ের রেকর্ডটি মুছে ফেলতে চান? এটি ক্যাশবুক থেকেও স্থায়ীভাবে মুছে যাবে।
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>না</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteCollection(c)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
+                                                </TableCell>
                                             </TableRow>
                                         );
                                     })
