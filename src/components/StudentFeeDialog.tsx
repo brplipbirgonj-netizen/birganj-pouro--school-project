@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
@@ -14,13 +15,13 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote, ListTodo, Wallet, Coins } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Skeleton } from './ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DatePicker } from './ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -134,12 +135,17 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 const currentMonthIndex = today.getMonth();
                 const currentMonthName = BENGALI_MONTHS[currentMonthIndex];
                 setDescription(currentMonthName ? `${currentMonthName} মাসের বেতন` : '');
-                setBreakdown(emptyBreakdown);
+                
+                // Prefill breakdown if setup exists
+                const initial: FeeBreakdown = {};
+                if (student.monthlyFee) initial.tuitionCurrent = student.monthlyFee;
+                setBreakdown(initial);
+                
                 setMethod('cash');
                 setSelectedMonths(new Set([currentMonthName]));
             }
         }
-    }, [existingCollection, open]);
+    }, [existingCollection, open, student]);
 
     const handleMonthToggle = (month: string) => {
         const next = new Set(selectedMonths);
@@ -151,6 +157,10 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         const sortedSelected = BENGALI_MONTHS.filter(m => next.has(m));
         if (sortedSelected.length > 0) {
             setDescription(`${sortedSelected.join(', ')} মাসের বেতন`);
+            // Update total tuition based on number of months
+            if (student.monthlyFee) {
+                setBreakdown(prev => ({ ...prev, tuitionCurrent: student.monthlyFee! * sortedSelected.length }));
+            }
         } else {
             setDescription('');
         }
@@ -265,12 +275,6 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
             onOpenChange(false);
         } catch (error) {
             console.error(error);
-            const permissionError = new FirestorePermissionError({
-                path: 'feeCollections/ or transactions/',
-                operation: 'write',
-                requestResourceData: feeCollectionData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
         }
     };
     
@@ -322,7 +326,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="date" className="font-bold">আদায়ের তারিখ</Label>
-                            <DatePicker value={collectionDate} onChange={setStartDate => setCollectionDate(setStartDate)} />
+                            <DatePicker value={collectionDate} onChange={date => setCollectionDate(date)} />
                         </div>
                         <div className="space-y-2">
                             <Label className="font-bold">লেনদেনের মাধ্যম</Label>
@@ -443,6 +447,63 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         return months;
     }, [feeCollections]);
 
+    // Enhanced Dues Calculation
+    const duesSummary = useMemo(() => {
+        if (!student) return { tuitionDue: 0, tuitionDueMonths: [], examDues: [], otherDues: 0 };
+        
+        const currentMonthIdx = new Date().getMonth();
+        const tuitionDueMonths = BENGALI_MONTHS.filter((m, idx) => idx <= currentMonthIdx && !paidMonths.has(m));
+        const tuitionDueAmount = tuitionDueMonths.length * (student.monthlyFee || 0);
+
+        const examDues = [];
+        const paidCategories = new Set<string>();
+        feeCollections.forEach(c => {
+            if (c.breakdown) {
+                Object.entries(c.breakdown).forEach(([k, v]) => {
+                    if (v && v > 0) paidCategories.add(k);
+                });
+            }
+        });
+
+        const examCheck = [
+            { key: 'examFeeHalfYearly', label: 'অর্ধ-বার্ষিক পরীক্ষা ফি' },
+            { key: 'examFeeAnnual', label: 'বার্ষিক পরীক্ষা ফি' },
+            { key: 'examFeePreNirbachoni', label: 'প্রাক-নির্বাচনী ফি' },
+            { key: 'examFeeNirbachoni', label: 'নির্বাচনী পরীক্ষা ফি' },
+        ];
+
+        examCheck.forEach(exam => {
+            const setupVal = student[exam.key as keyof Student] as number;
+            if (setupVal && setupVal > 0 && !paidCategories.has(exam.key)) {
+                examDues.push({ label: exam.label, amount: setupVal });
+            }
+        });
+
+        let otherDuesAmount = 0;
+        const otherCheck = [
+            { key: 'sessionFee', label: 'সেশন চার্জ' },
+            { key: 'admissionFee', label: 'ভর্তি ফি' },
+            { key: 'scoutFee', label: 'স্কাউট ফি' },
+            { key: 'developmentFee', label: 'উন্নয়ন ফি' },
+            { key: 'libraryFee', label: 'লাইব্রেরি ফি' },
+            { key: 'tiffinFee', label: 'টিফিন ফি' },
+        ];
+
+        otherCheck.forEach(item => {
+            const setupVal = student[item.key as keyof Student] as number;
+            if (setupVal && setupVal > 0 && !paidCategories.has(item.key)) {
+                otherDuesAmount += setupVal;
+            }
+        });
+
+        return { 
+            tuitionDue: tuitionDueAmount, 
+            tuitionDueMonths, 
+            examDues, 
+            otherDues: otherDuesAmount 
+        };
+    }, [student, paidMonths, feeCollections]);
+
     const handleEdit = (collection: FeeCollection) => {
         if (!canEditTransaction) {
             toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
@@ -490,8 +551,6 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
             onFeeCollected();
         } catch(error) {
              console.error(error);
-             const permissionError = new FirestorePermissionError({ path: 'feeCollections/', operation: 'delete' });
-             errorEmitter.emit('permission-error', permissionError);
         }
     };
     
@@ -531,10 +590,56 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                  ) : (
                 <>
                     <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 bg-slate-50/50">
-                        {/* Due Status Summary */}
+                        {/* Summary of Dues - NEW SECTION */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Card className="border-[3px] border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
+                                <CardHeader className="p-4 bg-rose-50 border-b-2 border-black">
+                                    <CardTitle className="text-sm font-black flex items-center gap-2 text-rose-700">
+                                        <Clock className="h-4 w-4" /> বকেয়া বেতন
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-2xl font-black text-rose-900">{toBengaliNumber(duesSummary.tuitionDue)} ৳</p>
+                                        <Badge variant="outline" className="font-bold border-rose-200">{toBengaliNumber(duesSummary.tuitionDueMonths.length)} মাস</Badge>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-muted-foreground mt-2 line-clamp-1">বকেয়া: {duesSummary.tuitionDueMonths.join(', ') || 'নেই'}</p>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-[3px] border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
+                                <CardHeader className="p-4 bg-amber-50 border-b-2 border-black">
+                                    <CardTitle className="text-sm font-black flex items-center gap-2 text-amber-700">
+                                        <ListTodo className="h-4 w-4" /> পরীক্ষার ফি
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    <p className="text-2xl font-black text-amber-900">
+                                        {toBengaliNumber(duesSummary.examDues.reduce((acc, d) => acc + d.amount, 0))} ৳
+                                    </p>
+                                    <p className="text-[10px] font-bold text-muted-foreground mt-2 line-clamp-1">
+                                        বাকি: {duesSummary.examDues.map(d => d.label).join(', ') || 'নেই'}
+                                    </p>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-[3px] border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
+                                <CardHeader className="p-4 bg-indigo-50 border-b-2 border-black">
+                                    <CardTitle className="text-sm font-black flex items-center gap-2 text-indigo-700">
+                                        <Wallet className="h-4 w-4" /> অন্যান্য ফি
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    <p className="text-2xl font-black text-indigo-900">{toBengaliNumber(duesSummary.otherDues)} ৳</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground mt-2">সেশন ও দাপ্তরিক ফি সমূহ</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Monthly Status Board */}
                         <div className="bg-white border-[4px] border-black rounded-[32px] p-6 sm:p-8 shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
                             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-primary" /> মাসিক বেতন স্ট্যাটাস ({toBengaliNumber(selectedYear)})
+                                <CalendarCheck className="h-5 w-5 text-primary" /> মাসিক পরিশোধের অবস্থা ({toBengaliNumber(selectedYear)})
                             </h3>
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                                 {BENGALI_MONTHS.map((month, idx) => {

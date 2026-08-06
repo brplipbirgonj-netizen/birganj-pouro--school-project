@@ -53,10 +53,18 @@ export type Student = {
   permanentDistrict?: string;
   photoUrl: string;
   isStipendReceiver?: boolean;
-  // Fee related fields
+  // Fee related fields (Targets for setup)
   monthlyFee?: number;
-  examFee?: number;
+  examFeeHalfYearly?: number;
+  examFeeAnnual?: number;
+  examFeePreNirbachoni?: number;
+  examFeeNirbachoni?: number;
   sessionFee?: number;
+  admissionFee?: number;
+  scoutFee?: number;
+  developmentFee?: number;
+  libraryFee?: number;
+  tiffinFee?: number;
   otherFee?: number;
   feeCategory?: 'general' | 'half-free' | 'full-free';
   // Firestore specific fields

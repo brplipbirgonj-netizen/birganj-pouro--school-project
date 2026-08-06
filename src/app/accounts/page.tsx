@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -15,7 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles } from 'lucide-react';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -260,10 +261,20 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
     const [selectedClass, setSelectedClass] = useState('6');
     const [isSaving, setIsSaving] = useState(false);
     
-    // Bulk values
-    const [bulkMonthly, setBulkMonthly] = useState<string>('');
-    const [bulkExam, setBulkExam] = useState<string>('');
-    const [bulkSession, setBulkSession] = useState<string>('');
+    // Bulk values state
+    const [bulkValues, setBulkValues] = useState<Record<string, string>>({
+        monthly: '',
+        halfYearly: '',
+        annual: '',
+        preTest: '',
+        test: '',
+        session: '',
+        admission: '',
+        scout: '',
+        dev: '',
+        lib: '',
+        tiffin: ''
+    });
     
     // Local state for editing table
     const [editedStudents, setEditedStudents] = useState<Record<string, Partial<Student>>>({});
@@ -278,9 +289,17 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         const next = { ...editedStudents };
         filteredStudents.forEach(s => {
             if (!next[s.id]) next[s.id] = {};
-            if (bulkMonthly) next[s.id].monthlyFee = parseInt(bulkMonthly, 10);
-            if (bulkExam) next[s.id].examFee = parseInt(bulkExam, 10);
-            if (bulkSession) next[s.id].sessionFee = parseInt(bulkSession, 10);
+            if (bulkValues.monthly) next[s.id].monthlyFee = parseInt(bulkValues.monthly, 10);
+            if (bulkValues.halfYearly) next[s.id].examFeeHalfYearly = parseInt(bulkValues.halfYearly, 10);
+            if (bulkValues.annual) next[s.id].examFeeAnnual = parseInt(bulkValues.annual, 10);
+            if (bulkValues.preTest) next[s.id].examFeePreNirbachoni = parseInt(bulkValues.preTest, 10);
+            if (bulkValues.test) next[s.id].examFeeNirbachoni = parseInt(bulkValues.test, 10);
+            if (bulkValues.session) next[s.id].sessionFee = parseInt(bulkValues.session, 10);
+            if (bulkValues.admission) next[s.id].admissionFee = parseInt(bulkValues.admission, 10);
+            if (bulkValues.scout) next[s.id].scoutFee = parseInt(bulkValues.scout, 10);
+            if (bulkValues.dev) next[s.id].developmentFee = parseInt(bulkValues.dev, 10);
+            if (bulkValues.lib) next[s.id].libraryFee = parseInt(bulkValues.lib, 10);
+            if (bulkValues.tiffin) next[s.id].tiffinFee = parseInt(bulkValues.tiffin, 10);
         });
         setEditedStudents(next);
         toast({ title: 'সকল শিক্ষার্থীর জন্য মানগুলো যুক্ত হয়েছে।', description: 'পরিবর্তন স্থায়ী করতে নিচে সেভ বাটনে ক্লিক করুন।' });
@@ -314,33 +333,44 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row justify-between items-end gap-6 bg-primary/5 p-6 rounded-2xl border-2 border-primary/10">
-                <div className="space-y-2 w-full md:w-48">
-                    <Label className="font-black text-primary">শ্রেণি নির্বাচন</Label>
-                    <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setEditedStudents({}); }}>
-                        <SelectTrigger className="bg-white border-2 h-11 font-bold"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                
-                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground">বেতন (মাসিক)</Label>
-                        <Input type="number" value={bulkMonthly} onChange={e => setBulkMonthly(e.target.value)} className="h-11 font-black bg-white" placeholder="৳" />
+            {/* Control Panel */}
+            <div className="flex flex-col gap-6 bg-primary/5 p-6 rounded-2xl border-2 border-primary/10">
+                <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+                    <div className="space-y-2 w-full md:w-48">
+                        <Label className="font-black text-primary">শ্রেণি নির্বাচন</Label>
+                        <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setEditedStudents({}); }}>
+                            <SelectTrigger className="bg-white border-2 h-11 font-bold"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground">পরীক্ষা ফি</Label>
-                        <Input type="number" value={bulkExam} onChange={e => setBulkExam(e.target.value)} className="h-11 font-black bg-white" placeholder="৳" />
+                    
+                    <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 items-end">
+                        <div className="space-y-1">
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">বেতন</Label>
+                            <Input type="number" value={bulkValues.monthly} onChange={e => setBulkValues({...bulkValues, monthly: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">অর্ধ-বার্ষিক</Label>
+                            <Input type="number" value={bulkValues.halfYearly} onChange={e => setBulkValues({...bulkValues, halfYearly: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">বার্ষিক ফি</Label>
+                            <Input type="number" value={bulkValues.annual} onChange={e => setBulkValues({...bulkValues, annual: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">সেশন চার্জ</Label>
+                            <Input type="number" value={bulkValues.session} onChange={e => setBulkValues({...bulkValues, session: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">স্কাউট/উন্নয়ন</Label>
+                            <Input type="number" value={bulkValues.scout} onChange={e => setBulkValues({...bulkValues, scout: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
+                        </div>
+                        <Button onClick={handleBulkApply} variant="secondary" className="h-9 font-black bg-white border-2 border-primary/20 text-primary hover:bg-primary hover:text-white">
+                            <Sparkles className="h-3.5 w-3.5 mr-2" /> অটো-ফিল
+                        </Button>
                     </div>
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground">সেশন চার্জ</Label>
-                        <Input type="number" value={bulkSession} onChange={e => setBulkSession(e.target.value)} className="h-11 font-black bg-white" placeholder="৳" />
-                    </div>
-                    <Button onClick={handleBulkApply} variant="secondary" className="h-11 font-black bg-white border-2 border-primary/20 text-primary hover:bg-primary hover:text-white">
-                        <PlusCircle className="h-4 w-4 mr-2" /> গ্রুপ আপডেট
-                    </Button>
                 </div>
             </div>
 
@@ -364,33 +394,33 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                             <TableHeader className="bg-slate-50 sticky top-0 z-30">
                                 <TableRow className="border-b-2 border-black">
                                     <TableHead className="w-16 text-center font-black border-r text-black">রোল</TableHead>
-                                    <TableHead className="min-w-[180px] font-black border-r text-black">নাম</TableHead>
-                                    <TableHead className="w-32 text-center font-black border-r text-black">মাসিক বেতন</TableHead>
-                                    <TableHead className="w-32 text-center font-black border-r text-black">পরীক্ষা ফি</TableHead>
-                                    <TableHead className="w-32 text-center font-black border-r text-black">সেশন ফি</TableHead>
-                                    <TableHead className="w-40 text-center font-black border-r text-black">ধরণ (Category)</TableHead>
-                                    <TableHead className="w-24 text-center font-black text-black">উপবৃত্তি</TableHead>
+                                    <TableHead className="min-w-[150px] font-black border-r text-black">নাম</TableHead>
+                                    <TableHead className="w-24 text-center font-black border-r text-black">বেতন</TableHead>
+                                    <TableHead className="w-24 text-center font-black border-r text-black">বার্ষিক ফি</TableHead>
+                                    <TableHead className="w-24 text-center font-black border-r text-black">সেশন ফি</TableHead>
+                                    <TableHead className="w-24 text-center font-black border-r text-black">ভর্তি ফি</TableHead>
+                                    <TableHead className="w-24 text-center font-black border-r text-black">অন্যান্য</TableHead>
+                                    <TableHead className="w-32 text-center font-black border-r text-black">ক্যাটাগরি</TableHead>
+                                    <TableHead className="w-20 text-center font-black text-black">উপবৃত্তি</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredStudents.length === 0 ? (
-                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={9} className="text-center py-20 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</TableCell></TableRow>
                                 ) : filteredStudents.map(student => {
                                     const changes = editedStudents[student.id] || {};
-                                    const mFee = changes.monthlyFee !== undefined ? changes.monthlyFee : (student.monthlyFee || 0);
-                                    const eFee = changes.examFee !== undefined ? changes.examFee : (student.examFee || 0);
-                                    const sFee = changes.sessionFee !== undefined ? changes.sessionFee : (student.sessionFee || 0);
-                                    const category = changes.feeCategory !== undefined ? changes.feeCategory : (student.feeCategory || 'general');
-                                    const stipend = changes.isStipendReceiver !== undefined ? changes.isStipendReceiver : (student.isStipendReceiver || false);
+                                    
+                                    const getVal = (field: keyof Student) => 
+                                        changes[field] !== undefined ? changes[field] : (student[field] || 0);
 
                                     return (
                                         <TableRow key={student.id} className={cn("hover:bg-primary/5 transition-colors", Object.keys(changes).length > 0 && "bg-amber-50")}>
                                             <TableCell className="text-center font-black border-r">{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="font-bold border-r text-slate-800">{student.studentNameBn}</TableCell>
+                                            <TableCell className="font-bold border-r text-slate-800 text-xs">{student.studentNameBn}</TableCell>
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={mFee || ''} 
+                                                    value={getVal('monthlyFee') || ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'monthlyFee', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
@@ -398,34 +428,50 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={eFee || ''} 
-                                                    onChange={e => handleIndividualChange(student.id, 'examFee', parseInt(e.target.value) || 0)} 
+                                                    value={getVal('examFeeAnnual') || ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'examFeeAnnual', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
                                             </TableCell>
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={sFee || ''} 
+                                                    value={getVal('sessionFee') || ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'sessionFee', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
                                             </TableCell>
                                             <TableCell className="p-1 border-r">
-                                                <Select value={category} onValueChange={v => handleIndividualChange(student.id, 'feeCategory', v)}>
-                                                    <SelectTrigger className="h-8 text-[11px] font-bold border-none bg-transparent"><SelectValue /></SelectTrigger>
+                                                <Input 
+                                                    type="number" 
+                                                    value={getVal('admissionFee') || ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'admissionFee', parseInt(e.target.value) || 0)} 
+                                                    className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="p-1 border-r">
+                                                <Input 
+                                                    type="number" 
+                                                    value={getVal('scoutFee') || ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'scoutFee', parseInt(e.target.value) || 0)} 
+                                                    className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="p-1 border-r">
+                                                <Select value={changes.feeCategory !== undefined ? changes.feeCategory : (student.feeCategory || 'general')} onValueChange={v => handleIndividualChange(student.id, 'feeCategory', v)}>
+                                                    <SelectTrigger className="h-8 text-[10px] font-bold border-none bg-transparent"><SelectValue /></SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="general">সাধারণ (General)</SelectItem>
-                                                        <SelectItem value="half-free">হাফ-ফ্রি (Half-Free)</SelectItem>
-                                                        <SelectItem value="full-free">ফুল-ফ্রি (Full-Free)</SelectItem>
+                                                        <SelectItem value="general">সাধারণ</SelectItem>
+                                                        <SelectItem value="half-free">হাফ-ফ্রি</SelectItem>
+                                                        <SelectItem value="full-free">ফুল-ফ্রি</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Switch 
-                                                    checked={stipend} 
+                                                    checked={changes.isStipendReceiver !== undefined ? changes.isStipendReceiver : (student.isStipendReceiver || false)} 
                                                     onCheckedChange={v => handleIndividualChange(student.id, 'isStipendReceiver', v)}
-                                                    className="data-[state=checked]:bg-emerald-600"
+                                                    className="data-[state=checked]:bg-emerald-600 scale-75"
                                                 />
                                             </TableCell>
                                         </TableRow>
@@ -1169,8 +1215,8 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
     const [voucherNo, setVoucherNo] = useState('');
     const [checkNo, setCheckNo] = useState('');
 
-    const incomeHeads = ['বেতন (Tuition Fee)', 'পরীক্ষা ফি (Exam Fee)', 'ভর্তি ফি (Admission Fee)', 'সেশন ফি (Session Fee)', 'অনুদন (Donation)', 'ব্যাংক থেকে উত্তোলন (Bank to Cash)', 'অন্যান্য'];
-    const expenseHeads = ['শিক্ষক/স্টাফ বেতন', 'বিদ্যুৎ ও ইউটিলিটি বিল', 'স্টেশনারি ও খাতা', 'মেরামত ও রক্ষণাবেক্ষণ', 'আপ্যায়ন খরচ', 'ব্যাংকে জমা (Cash to Bank)', 'অন্যান্য'];
+    const incomeHeads = ['Tuition Fee', 'Exam Fee', 'Admission Fee', 'Session Fee', 'Donation', 'Bank to Cash', 'Other'];
+    const expenseHeads = ['Staff Salary', 'Electricity & Utility', 'Stationery', 'Repair & Maintenance', 'Entertainment', 'Cash to Bank', 'Other'];
 
     useEffect(() => { setType(initialType); setAccountHead(''); }, [initialType]);
 
