@@ -5,11 +5,11 @@ import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Student } from '@/lib/student-data';
+import { Student, studentFromDoc } from '@/lib/student-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError, doc, writeBatch, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -60,7 +60,6 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
             const tDate = new Date(t.date);
             const method = t.method || 'cash';
             
-            // Handle Contra Entries (Transfers)
             if (t.accountHead === 'ব্যাংকে জমা (Cash to Bank)') {
                 cashBalance -= amount;
                 bankBalance += amount;
@@ -195,7 +194,7 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                 <Card className="lg:col-span-2 border-2 border-black/10 shadow-lg bg-white rounded-2xl overflow-hidden">
                     <CardHeader className="bg-primary/5 border-b border-black/5">
                         <CardTitle className="text-base font-black flex items-center gap-2">
-                            <BarChart3 className="h-5 w-5 text-primary" /> গত ৭ দিনের আয়-ব্যয় চিত্র (Bar Graph)
+                            <BarChart3 className="h-5 w-5 text-primary" /> গত ৭ দিনের আয়-ব্যয় চিত্র
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6 h-[350px]">
@@ -262,7 +261,6 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
     const [selectedClass, setSelectedClass] = useState('6');
     const [isSaving, setIsSaving] = useState(false);
     
-    // Bulk values state
     const [bulkValues, setBulkValues] = useState<Record<string, string>>({
         monthly: '',
         halfYearly: '',
@@ -277,7 +275,6 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         tiffin: ''
     });
     
-    // Local state for editing table
     const [editedStudents, setEditedStudents] = useState<Record<string, Partial<Student>>>({});
     const [configFreeStudent, setConfigFreeStudent] = useState<Student | null>(null);
 
@@ -291,7 +288,14 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         const next = { ...editedStudents };
         filteredStudents.forEach(s => {
             if (!next[s.id]) next[s.id] = {};
-            if (bulkValues.monthly) next[s.id].monthlyFee = parseInt(bulkValues.monthly, 10);
+            const cat = next[s.id].feeCategory || s.feeCategory || 'general';
+
+            if (bulkValues.monthly) {
+                const val = parseInt(bulkValues.monthly, 10);
+                if (cat === 'full-free') next[s.id].monthlyFee = 0;
+                else if (cat === 'half-free') next[s.id].monthlyFee = Math.floor(val / 2);
+                else next[s.id].monthlyFee = val;
+            }
             if (bulkValues.halfYearly) next[s.id].examFeeHalfYearly = parseInt(bulkValues.halfYearly, 10);
             if (bulkValues.annual) next[s.id].examFeeAnnual = parseInt(bulkValues.annual, 10);
             if (bulkValues.preTest) next[s.id].examFeePreNirbachoni = parseInt(bulkValues.preTest, 10);
@@ -304,7 +308,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
             if (bulkValues.tiffin) next[s.id].tiffinFee = parseInt(bulkValues.tiffin, 10);
         });
         setEditedStudents(next);
-        toast({ title: 'সকল শিক্ষার্থীর জন্য মানগুলো যুক্ত হয়েছে।', description: 'পরিবর্তন স্থায়ী করতে নিচে সেভ বাটনে ক্লিক করুন।' });
+        toast({ title: 'সকল শিক্ষার্থীর জন্য মানগুলো যুক্ত হয়েছে।' });
     };
 
     const handleIndividualChange = (id: string, field: keyof Student, value: any) => {
@@ -335,13 +339,14 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
 
     const handleFreeConfigUpdate = (studentId: string, waivers: Record<string, any>) => {
         const next = { ...(editedStudents[studentId] || {}) };
+        const student = allStudents.find(s => s.id === studentId);
         
-        // Handle Tuition specifically with categories
         if (waivers.tuition === 'full') {
             next.monthlyFee = 0;
             next.feeCategory = 'full-free';
         } else if (waivers.tuition === 'half') {
-            const currentFee = next.monthlyFee !== undefined ? next.monthlyFee : (allStudents.find(s => s.id === studentId)?.monthlyFee || 0);
+            const baseFee = next.monthlyFee !== undefined ? next.monthlyFee : (student?.monthlyFee || 0);
+            next.monthlyFee = Math.floor(baseFee / 2);
             next.feeCategory = 'half-free';
         } else if (waivers.tuition === 'none') {
             next.feeCategory = 'general';
@@ -369,7 +374,6 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Control Panel */}
             <div className="flex flex-col gap-6 bg-primary/5 p-6 rounded-2xl border-2 border-primary/10">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6">
                     <div className="space-y-2 w-full md:w-48">
@@ -554,7 +558,6 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                 </CardContent>
             </Card>
 
-            {/* Individual Free Config Dialog */}
             <StudentFreeConfigDialog 
                 student={configFreeStudent} 
                 open={!!configFreeStudent} 
@@ -799,7 +802,6 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                 </CardContent>
             </Card>
 
-            {/* Reminder Message Preview Dialog */}
             <Dialog open={!!reminderStudent} onOpenChange={(o) => !o && setReminderStudent(null)}>
                 <DialogContent className="font-kalpurush">
                     <DialogHeader>
@@ -810,7 +812,6 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
                         <div className="p-4 bg-muted/30 rounded-lg border-2 border-dashed font-bold leading-relaxed text-slate-700">
                             {reminderMsg}
                         </div>
-                        <p className="text-[10px] text-muted-foreground italic font-medium">*** নিচের যেকোনো একটি বাটন ক্লিক করলে আপনার ফোনের মেসেজ অ্যাপ বা হোয়াটসঅ্যাপ ওপেন হবে।</p>
                     </div>
                     <DialogFooter className="gap-2 sm:gap-0">
                         <Button variant="outline" className="flex-1 font-bold h-11 border-blue-200 text-blue-700 hover:bg-blue-50" onClick={handleSendSMS}>
@@ -965,26 +966,19 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
         }
 
         const batch = writeBatch(db);
-        
-        // Delete the fee collection document
-        const feeCollectionRef = doc(db, 'feeCollections', collectionData.id);
-        batch.delete(feeCollectionRef);
+        batch.delete(doc(db, 'feeCollections', collectionData.id));
 
-        // Delete all associated transaction documents
-        if (collectionData.transactionIds && collectionData.transactionIds.length > 0) {
+        if (collectionData.transactionIds) {
             collectionData.transactionIds.forEach(id => {
-                const transRef = doc(db, 'transactions', id);
-                batch.delete(transRef);
+                batch.delete(doc(db, 'transactions', id));
             });
         }
 
         try {
             await batch.commit();
             toast({ title: "আদায়ের রেকর্ডটি মুছে ফেলা হয়েছে।" });
-            onDeleteSuccess(); // Trigger refetch in parent
-        } catch (error) {
-            // Contextual errors handled by FirebaseErrorListener
-        }
+            onDeleteSuccess();
+        } catch (error) {}
     };
 
     return (
@@ -1055,12 +1049,7 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
                                                                 </Button>
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent className="font-kalpurush">
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>রেকর্ডটি মুছতে চান?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        আপনি কি নিশ্চিতভাবে এই আদায়ের রেকর্ডটি মুছে ফেলতে চান? এটি ক্যাশবুক থেকেও স্থায়ীভাবে মুছে যাবে।
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
+                                                                <AlertDialogHeader><AlertDialogTitle>রেকর্ডটি মুছতে চান?</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই আদায়ের রেকর্ডটি মুছে ফেলতে চান?</AlertDialogDescription></AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>না</AlertDialogCancel>
                                                                     <AlertDialogAction onClick={() => handleDeleteCollection(c)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ, মুছুন</AlertDialogAction>
@@ -1079,15 +1068,10 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
                 </CardContent>
             </Card>
 
-            {/* Hidden Printable Area for Receipts */}
             {printingCollection && printingStudent && (
                 <div className="hidden print:block printable-area bg-white">
                     <div className="flex items-center justify-center min-h-[297mm]">
-                        <MoneyReceipt 
-                            collection={printingCollection} 
-                            student={printingStudent} 
-                            schoolInfo={schoolInfo} 
-                        />
+                        <MoneyReceipt collection={printingCollection} student={printingStudent} schoolInfo={schoolInfo} />
                     </div>
                 </div>
             )}
@@ -1190,16 +1174,9 @@ const ExpenseReportTab = ({ transactions, isLoading, onDeleteSuccess }: { transa
                                             <TableCell className="text-right no-print">
                                                 {canDelete && (
                                                     <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50">
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
+                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                                                         <AlertDialogContent className="font-kalpurush">
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>ব্যয়ের রেকর্ডটি মুছতে চান?</AlertDialogTitle>
-                                                                <AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই ব্যয়ের রেকর্ডটি মুছে ফেলতে চান?</AlertDialogDescription>
-                                                            </AlertDialogHeader>
+                                                            <AlertDialogHeader><AlertDialogTitle>ব্যয়ের রেকর্ডটি মুছতে চান?</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই ব্যয়ের রেকর্ডটি মুছে ফেলতে চান?</AlertDialogDescription></AlertDialogHeader>
                                                             <AlertDialogFooter>
                                                                 <AlertDialogCancel>না</AlertDialogCancel>
                                                                 <AlertDialogAction onClick={() => handleDelete(e.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ, মুছুন</AlertDialogAction>
@@ -1242,7 +1219,6 @@ const MonthlyReportTab = ({ transactions, selectedYear }: { transactions: Transa
             const method = t.method || 'cash';
 
             if (isBefore(tDate, firstDayOfMonth)) {
-                // Opening Balance calculation
                 if (t.accountHead === 'ব্যাংকে জমা (Cash to Bank)') {
                     openingCash -= amount; openingBank += amount;
                 } else if (t.accountHead === 'ব্যাংক থেকে উত্তোলন (Bank to Cash)') {
@@ -1253,7 +1229,6 @@ const MonthlyReportTab = ({ transactions, selectedYear }: { transactions: Transa
                     if (method === 'cash') openingCash -= amount; else openingBank -= amount;
                 }
             } else if (tDate >= firstDayOfMonth && tDate <= lastDayOfMonth) {
-                // Monthly detailed summary
                 if (t.accountHead.includes('উত্তোলন') || t.accountHead.includes('জমা')) return;
                 
                 if (t.type === 'income') {
@@ -1345,7 +1320,6 @@ const MonthlyReportTab = ({ transactions, selectedYear }: { transactions: Transa
                     <div className="text-center w-48 border-t-2 border-black pt-1 font-black">অডিটর / কমিটির স্বাক্ষর</div>
                     <div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div>
                 </div>
-                <div className="mt-10 text-center text-[8px] text-slate-400 no-print">রিপোর্ট তৈরির তারিখ: {format(new Date(), 'PPpp', { locale: bn })}</div>
             </div>
         </div>
     );
@@ -1428,11 +1402,8 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
                         </div>
                         <div className="space-y-2">
                             <Label className="text-xs font-bold">টাকার পরিমাণ</Label>
-                            <div className="relative"><span className="absolute left-3 top-2.5 font-bold text-muted-foreground">৳</span><input type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-8 text-lg font-black ring-offset-background" /></div>
+                            <Input type="number" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} required className="h-10 text-lg font-black" />
                         </div>
-                        {type === 'expense' && <div className="space-y-2"><Label className="text-xs font-bold">ভাউচার নং</Label><Input value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="উদা: ই-১২৩" className="h-9 text-xs" /></div>}
-                        {method === 'bank' && <div className="space-y-2"><Label className="text-xs font-bold">চেক নং</Label><Input value={checkNo} onChange={e => setCheckNo(e.target.value)} placeholder="উদা: ৪০২৩৪৫" className="h-9 text-xs" /></div>}
-                        <div className="lg:col-span-3 space-y-2"><Label className="text-xs font-bold">বিবরণ / মন্তব্য (ঐচ্ছিক)</Label><Input value={description} onChange={e => setDescription(e.target.value)} placeholder="বিস্তারিত তথ্য লিখুন..." className="h-9 text-xs" /></div>
                     </div>
                     <div className="flex justify-end pt-4"><Button type="submit" size="lg" className={cn("px-12 font-black shadow-lg h-12", type === 'income' ? "bg-emerald-600" : "bg-rose-600")}>সেভ করুন</Button></div>
                 </form>
@@ -1528,11 +1499,6 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
                                         <TableCell className="text-right font-black text-primary">{tx.balance.toLocaleString('bn-BD')} ৳</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
-                                                {hasPermission('special:edit-transaction') && !tx.feeCollectionId && (
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500">
-                                                        <FilePen className="h-4 w-4" />
-                                                    </Button>
-                                                )}
                                                 {canDeleteTransaction && (
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId && !isAdmin} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
@@ -1657,14 +1623,20 @@ export default function AccountsPage() {
   const fetchStudents = useCallback(() => {
     if (!db || !user) return;
     setIsLoadingStudents(true);
-    const unsubscribe = onSnapshot(query(collection(db, "students")), (snap) => {
-        setAllStudents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]);
+    const q = query(collection(db, 'students'), where('academicYear', '==', selectedYear));
+    const unsubscribe = onSnapshot(q, (snap) => {
+        setAllStudents(snap.docs.map(studentFromDoc));
         setIsLoadingStudents(false);
     }, (error) => { setIsLoadingStudents(false); });
     return unsubscribe;
-  }, [db, user]);
+  }, [db, user, selectedYear]);
 
-  useEffect(() => { setIsClient(true); fetchTransactions(); const unsub = fetchStudents(); return () => unsub?.(); }, [fetchTransactions, fetchStudents]);
+  useEffect(() => { 
+    setIsClient(true); 
+    fetchTransactions(); 
+    const unsub = fetchStudents(); 
+    return () => unsub?.(); 
+  }, [fetchTransactions, fetchStudents]);
 
   const canCollectFees = hasPermission('collect:fees');
   const canViewReports = hasPermission('view:collection-report');
@@ -1676,27 +1648,19 @@ export default function AccountsPage() {
 
   const sidebarItems = useMemo(() => {
     const items = [{ id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
-    
-    if (canManageFeeSetup) {
-        items.push({ id: 'fee-setup', label: 'ফি সেটআপ', icon: Settings2, color: 'text-blue-600 bg-blue-50' });
-    }
-    
+    if (canManageFeeSetup) items.push({ id: 'fee-setup', label: 'ফি সেটআপ', icon: Settings2, color: 'text-blue-600 bg-blue-50' });
     if (canCollectFees) {
         items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' });
         items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
     }
-    
     if (canViewReports) items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
     if (canViewExpenseReport) items.push({ id: 'expense-report', label: 'ব্যয় রিপোর্ট', icon: Receipt, color: 'text-rose-600 bg-rose-50' });
-    
     if (canViewCashbook) {
         items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' });
         items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' });
     }
-    
     if (canViewMonthlyReport) items.push({ id: 'monthly-report', label: 'মাসিক রিপোর্ট', icon: FileBarChart, color: 'text-emerald-600 bg-emerald-50' });
     if (canManageTransactions) items.push({ id: 'new-transaction', label: 'আয়/ব্যয় এন্ট্রি', icon: PlusCircle, color: 'text-primary bg-primary/10' });
-    
     return items;
   }, [canCollectFees, canViewReports, canViewExpenseReport, canManageTransactions, canViewMonthlyReport, canViewCashbook, canManageFeeSetup]);
 
@@ -1706,8 +1670,6 @@ export default function AccountsPage() {
     <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
       <Header />
       <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
-        
-        {/* Sidebar Navigation - Fixed/Sticky */}
         <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
             <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হিসাব শাখা</h2>
             <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
