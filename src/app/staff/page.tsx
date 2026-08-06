@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -38,6 +37,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, orderBy, FirestoreError, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isAfter, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -54,6 +54,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 
+// --- Constants ---
 const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
     { id: 'CL', label: 'নৈমিত্তিক (CL)', color: 'bg-blue-100 text-blue-700' },
     { id: 'SL', label: 'অসুস্থতা (SL)', color: 'bg-rose-100 text-rose-700' },
@@ -227,7 +228,7 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label className="font-bold">হতে</Label>
+                    <Label className="font-bold">হাতে</Label>
                     <DatePicker value={startDate} onChange={setStartDate} />
                 </div>
                 <div className="space-y-2">
@@ -243,7 +244,6 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                 </div>
             ) : selectedStaff ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Column 1: Info & Stats */}
                     <div className="lg:col-span-1 space-y-6">
                         <Card className="border-[4px] border-black rounded-3xl overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,0.1)] bg-white">
                             <div className="h-24 bg-primary relative">
@@ -311,7 +311,6 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                         </Card>
                     </div>
 
-                    {/* Column 2 & 3: Routine & Schedule */}
                     <div className="lg:col-span-2 space-y-6">
                         <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
                             <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center">
@@ -365,7 +364,6 @@ const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], ac
                             </CardContent>
                         </Card>
 
-                        {/* Recent History Table */}
                         <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)] overflow-hidden">
                             <CardHeader className="bg-muted/30 border-b-[3px] border-black">
                                 <CardTitle className="text-lg font-black flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-slate-800" /> সময়সীমার মধ্যে হাজিরা রেকর্ড</CardTitle>
@@ -1340,4 +1338,3 @@ export default function StaffListPage() {
     </div>
   );
 }
-
