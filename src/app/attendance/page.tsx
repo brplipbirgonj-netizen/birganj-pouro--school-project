@@ -957,7 +957,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                     if (att?.status === 'absent') count++;
                 });
                 return { student, count };
-            }).filter(res => res.count > 0).sort((a, b) => b.count - a.count);
+            }).filter(res => res.count > 0).sort((a, b) => (Number(a.student.roll) || 0) - (Number(b.student.roll) || 0));
 
             setAbsentData(results);
         } catch (e) {
