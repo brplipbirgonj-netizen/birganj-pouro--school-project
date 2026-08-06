@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
@@ -55,19 +54,15 @@ const religionMapBn: Record<string, string> = {
     'islam': 'ইসলাম', 'hinduism': 'হিন্দু', 'buddhism': 'বৌদ্ধ', 'christianity': 'খ্রিস্টান', 'other': 'অন্যান্য'
 };
 
-/**
- * Generates constructive feedback based on the percentage of marks obtained.
- */
 const getAutoComment = (percentage: number, subjectName: string) => {
     if (percentage < 33) return `${subjectName} বিষয়ের ভিত্তি বেশ দুর্বল। নিয়মিত অনুশীলন এবং বিশেষ ক্লাস প্রয়োজন।`;
-    if (percentage < 45) return `${subjectName} বিষয়ে কাঙ্ক্ষিত ফলাফল আসেনি। মৌলিক ধারণাগুলো আরও ঝালাই করতে হবে।`;
+    if (percentage < 45) return `${subjectName} বিষয়ে কাঙ্ক্ষিত ফলাফল আসেনি। মৌলিক ধারণাগুলো আরও ঝালাই করতে হবে।`;
     if (percentage < 60) return `ফলাফল ভালো হয়েছে, তবে ${subjectName} বিষয়ে আরও উন্নতির সুযোগ রয়েছে।`;
     if (percentage < 75) return `${subjectName} বিষয়ে পারফরম্যান্স চমৎকার। ধারাবাহিকতা বজায় রাখলে আরও ভালো করবে।`;
     if (percentage < 85) return `খুবই উৎসাহব্যঞ্জক ফলাফল! ${subjectName} বিষয়ে তুমি ক্লাসের অন্যতম সেরা।`;
     return `${subjectName} বিষয়ে তোমার দখল অসাধারণ। এই মেধা ভবিষ্যতেও বজায় রাখো।`;
 };
 
-// Heatmap Component
 const AttendanceHeatmap = ({ records, year, holidays }: { records: DailyAttendance[], year: string, holidays: string[] }) => {
     const monthIndices = Array.from({ length: 12 }, (_, i) => i);
     const dayLabels = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
@@ -426,12 +421,14 @@ function StudentProfileSearchContent() {
                 </main>
             </div>
 
-            {/* Profile Dialog */}
             <Dialog open={showProfile} onOpenChange={setShowProfile}>
                 <DialogContent className="sm:max-w-6xl h-[95vh] flex flex-col p-0 no-print font-kalpurush border-none shadow-2xl overflow-hidden rounded-2xl">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>শিক্ষার্থী প্রোফাইল: {studentData?.studentNameBn}</DialogTitle>
+                        <DialogDescription>শিক্ষার্থীর বিস্তারিত তথ্য, হাজিরা এবং বেতন সংক্রান্ত পরিসংখ্যান</DialogDescription>
+                    </DialogHeader>
                     {studentData && (
                         <div className="flex flex-col h-full overflow-hidden">
-                            {/* Header Summary */}
                             <div className="flex-shrink-0 bg-white border-b-2 border-slate-200 p-6 overflow-hidden">
                                 <div className="flex flex-col sm:flex-row gap-6 items-start">
                                     <div className="flex flex-col items-center gap-3 shrink-0">
@@ -480,7 +477,6 @@ function StudentProfileSearchContent() {
                                 </div>
                             </div>
 
-                            {/* Main Content Area */}
                             <div className="flex-1 overflow-y-auto bg-slate-100/50 p-6 sm:p-10">
                                 <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full">
                                     <TabsContent value="details" className="mt-0 space-y-6 animate-in fade-in duration-500">

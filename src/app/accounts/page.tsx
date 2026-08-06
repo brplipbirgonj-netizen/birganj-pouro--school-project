@@ -289,7 +289,6 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         filteredStudents.forEach(s => {
             if (!next[s.id]) next[s.id] = {};
             
-            // Set base fees. The discount logic is handled in the StudentFeeDialog during collection.
             if (bulkValues.monthly) next[s.id].monthlyFee = parseInt(bulkValues.monthly, 10);
             if (bulkValues.halfYearly) next[s.id].examFeeHalfYearly = parseInt(bulkValues.halfYearly, 10);
             if (bulkValues.annual) next[s.id].examFeeAnnual = parseInt(bulkValues.annual, 10);
@@ -343,7 +342,6 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
             next.feeCategory = 'general';
         }
 
-        // For other fees, setting to 0 is a direct waiver
         if (waivers.exam) {
             next.examFeeHalfYearly = 0;
             next.examFeeAnnual = 0;
