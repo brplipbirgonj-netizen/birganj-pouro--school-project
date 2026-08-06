@@ -28,7 +28,13 @@
         "academicYear": { "type": "string" },
         "studentNameBn": { "type": "string" },
         "studentNameEn": { "type": "string" },
-        "photoUrl": { "type": "string" }
+        "photoUrl": { "type": "string" },
+        "monthlyFee": { "type": "number" },
+        "examFee": { "type": "number" },
+        "sessionFee": { "type": "number" },
+        "otherFee": { "type": "number" },
+        "feeCategory": { "type": "string", "enum": ["general", "half-free", "full-free"] },
+        "isStipendReceiver": { "type": "boolean" }
       },
       "required": ["roll", "className", "academicYear", "studentNameBn", "photoUrl"]
     },

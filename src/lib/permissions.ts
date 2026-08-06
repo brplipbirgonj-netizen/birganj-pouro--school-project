@@ -1,3 +1,4 @@
+
 'use client';
 
 // This is a list of available permissions in the system.
@@ -40,6 +41,7 @@ export const availablePermissions = [
   
   { id: 'view:accounts', label: 'হিসাব শাখা দেখুন' },
   { id: 'collect:fees', label: 'বেতন আদায় করুন' },
+  { id: 'manage:fee-setup', label: 'শিক্ষার্থীর ফি নির্ধারণ (সেটআপ)' },
   { id: 'special:edit-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় এডিট করুন' },
   { id: 'special:delete-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় ডিলিট করুন' },
   { id: 'view:collection-report', label: 'বেতন আদায়ের রিপোর্ট দেখুন' },
@@ -81,6 +83,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:merit-list',
     'view:accounts',
     'collect:fees',
+    'manage:fee-setup',
     'view:collection-report',
     'view:expense-report',
     'view:accounts-monthly-report',

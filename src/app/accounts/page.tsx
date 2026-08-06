@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -9,13 +10,13 @@ import { Student } from '@/lib/student-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError, doc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck } from 'lucide-react';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { MoneyReceipt } from '@/components/MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
+import { Switch } from '@/components/ui/switch';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -248,6 +250,206 @@ const AccountsDashboardTab = ({ transactions, isLoading, onActionClick }: { tran
                     </CardContent>
                 </Card>
             </div>
+        </div>
+    );
+};
+
+// Fee Setup Tab Component
+const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], selectedYear: string }) => {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [selectedClass, setSelectedClass] = useState('6');
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Bulk values
+    const [bulkMonthly, setBulkMonthly] = useState<string>('');
+    const [bulkExam, setBulkExam] = useState<string>('');
+    const [bulkSession, setBulkSession] = useState<string>('');
+    
+    // Local state for editing table
+    const [editedStudents, setEditedStudents] = useState<Record<string, Partial<Student>>>({});
+
+    const filteredStudents = useMemo(() => {
+        return allStudents
+            .filter(s => s.academicYear === selectedYear && s.className === selectedClass)
+            .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+    }, [allStudents, selectedYear, selectedClass]);
+
+    const handleBulkApply = () => {
+        const next = { ...editedStudents };
+        filteredStudents.forEach(s => {
+            if (!next[s.id]) next[s.id] = {};
+            if (bulkMonthly) next[s.id].monthlyFee = parseInt(bulkMonthly, 10);
+            if (bulkExam) next[s.id].examFee = parseInt(bulkExam, 10);
+            if (bulkSession) next[s.id].sessionFee = parseInt(bulkSession, 10);
+        });
+        setEditedStudents(next);
+        toast({ title: 'সকল শিক্ষার্থীর জন্য মানগুলো যুক্ত হয়েছে।', description: 'পরিবর্তন স্থায়ী করতে নিচে সেভ বাটনে ক্লিক করুন।' });
+    };
+
+    const handleIndividualChange = (id: string, field: keyof Student, value: any) => {
+        setEditedStudents(prev => ({
+            ...prev,
+            [id]: { ...prev[id], [field]: value }
+        }));
+    };
+
+    const handleSaveAll = async () => {
+        if (!db || Object.keys(editedStudents).length === 0) return;
+        setIsSaving(true);
+        const batch = writeBatch(db);
+        
+        Object.entries(editedStudents).forEach(([id, data]) => {
+            const ref = doc(db, 'students', id);
+            batch.update(ref, { ...data, updatedAt: serverTimestamp() });
+        });
+
+        try {
+            await batch.commit();
+            toast({ title: 'সকল তথ্য সফলভাবে আপডেট হয়েছে।' });
+            setEditedStudents({});
+        } catch (e) {} finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6 bg-primary/5 p-6 rounded-2xl border-2 border-primary/10">
+                <div className="space-y-2 w-full md:w-48">
+                    <Label className="font-black text-primary">শ্রেণি নির্বাচন</Label>
+                    <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setEditedStudents({}); }}>
+                        <SelectTrigger className="bg-white border-2 h-11 font-bold"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                
+                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">বেতন (মাসিক)</Label>
+                        <Input type="number" value={bulkMonthly} onChange={e => setBulkMonthly(e.target.value)} className="h-11 font-black bg-white" placeholder="৳" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">পরীক্ষা ফি</Label>
+                        <Input type="number" value={bulkExam} onChange={e => setBulkExam(e.target.value)} className="h-11 font-black bg-white" placeholder="৳" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">সেশন চার্জ</Label>
+                        <Input type="number" value={bulkSession} onChange={e => setBulkSession(e.target.value)} className="h-11 font-black bg-white" placeholder="৳" />
+                    </div>
+                    <Button onClick={handleBulkApply} variant="secondary" className="h-11 font-black bg-white border-2 border-primary/20 text-primary hover:bg-primary hover:text-white">
+                        <PlusCircle className="h-4 w-4 mr-2" /> গ্রুপ আপডেট
+                    </Button>
+                </div>
+            </div>
+
+            <Card className="border-2 border-black overflow-hidden shadow-xl">
+                <CardHeader className="bg-muted/30 border-b-2 border-black">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle className="text-lg font-black text-primary">শিক্ষার্থী ভিত্তিক ফি সেটআপ</CardTitle>
+                            <CardDescription className="font-bold">ব্যক্তিগতভাবে ফি বা ক্যাটাগরি সংশোধন করুন</CardDescription>
+                        </div>
+                        {Object.keys(editedStudents).length > 0 && (
+                            <Badge className="bg-amber-600 font-black animate-pulse">
+                                {Object.keys(editedStudents).length.toLocaleString('bn-BD')} টি পরিবর্তন করা হয়েছে
+                            </Badge>
+                        )}
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="table-container !max-h-[600px] !border-0 !rounded-none">
+                        <Table>
+                            <TableHeader className="bg-slate-50 sticky top-0 z-30">
+                                <TableRow className="border-b-2 border-black">
+                                    <TableHead className="w-16 text-center font-black border-r text-black">রোল</TableHead>
+                                    <TableHead className="min-w-[180px] font-black border-r text-black">নাম</TableHead>
+                                    <TableHead className="w-32 text-center font-black border-r text-black">মাসিক বেতন</TableHead>
+                                    <TableHead className="w-32 text-center font-black border-r text-black">পরীক্ষা ফি</TableHead>
+                                    <TableHead className="w-32 text-center font-black border-r text-black">সেশন ফি</TableHead>
+                                    <TableHead className="w-40 text-center font-black border-r text-black">ধরণ (Category)</TableHead>
+                                    <TableHead className="w-24 text-center font-black text-black">উপবৃত্তি</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredStudents.length === 0 ? (
+                                    <TableRow><TableCell colSpan={7} className="text-center py-20 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</TableCell></TableRow>
+                                ) : filteredStudents.map(student => {
+                                    const changes = editedStudents[student.id] || {};
+                                    const mFee = changes.monthlyFee !== undefined ? changes.monthlyFee : (student.monthlyFee || 0);
+                                    const eFee = changes.examFee !== undefined ? changes.examFee : (student.examFee || 0);
+                                    const sFee = changes.sessionFee !== undefined ? changes.sessionFee : (student.sessionFee || 0);
+                                    const category = changes.feeCategory !== undefined ? changes.feeCategory : (student.feeCategory || 'general');
+                                    const stipend = changes.isStipendReceiver !== undefined ? changes.isStipendReceiver : (student.isStipendReceiver || false);
+
+                                    return (
+                                        <TableRow key={student.id} className={cn("hover:bg-primary/5 transition-colors", Object.keys(changes).length > 0 && "bg-amber-50")}>
+                                            <TableCell className="text-center font-black border-r">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="font-bold border-r text-slate-800">{student.studentNameBn}</TableCell>
+                                            <TableCell className="p-1 border-r">
+                                                <Input 
+                                                    type="number" 
+                                                    value={mFee || ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'monthlyFee', parseInt(e.target.value) || 0)} 
+                                                    className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="p-1 border-r">
+                                                <Input 
+                                                    type="number" 
+                                                    value={eFee || ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'examFee', parseInt(e.target.value) || 0)} 
+                                                    className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="p-1 border-r">
+                                                <Input 
+                                                    type="number" 
+                                                    value={sFee || ''} 
+                                                    onChange={e => handleIndividualChange(student.id, 'sessionFee', parseInt(e.target.value) || 0)} 
+                                                    className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="p-1 border-r">
+                                                <Select value={category} onValueChange={v => handleIndividualChange(student.id, 'feeCategory', v)}>
+                                                    <SelectTrigger className="h-8 text-[11px] font-bold border-none bg-transparent"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="general">সাধারণ (General)</SelectItem>
+                                                        <SelectItem value="half-free">হাফ-ফ্রি (Half-Free)</SelectItem>
+                                                        <SelectItem value="full-free">ফুল-ফ্রি (Full-Free)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Switch 
+                                                    checked={stipend} 
+                                                    onCheckedChange={v => handleIndividualChange(student.id, 'isStipendReceiver', v)}
+                                                    className="data-[state=checked]:bg-emerald-600"
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <div className="flex justify-between items-center p-6 border-t-2 border-black bg-slate-50">
+                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-emerald-600" /> তথ্য পরিবর্তন করার পর অবশ্যই নিচের সেভ বাটনে ক্লিক করবেন।
+                        </p>
+                        <Button 
+                            onClick={handleSaveAll} 
+                            disabled={isSaving || Object.keys(editedStudents).length === 0}
+                            className="px-12 h-14 text-lg font-black shadow-2xl transition-all"
+                        >
+                            {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+                            সবগুলো তথ্য সেভ করুন
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };
@@ -516,7 +718,7 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs
                 .map(doc => feeCollectionFromDoc(doc))
-                .filter((c): c is FeeCollection => c !== null)
+                .filter((c): c is FeeCollection => f !== null)
                 .sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime());
             setCollections(data);
             setIsLoading(false);
@@ -1273,23 +1475,33 @@ export default function AccountsPage() {
   const canManageTransactions = hasPermission('manage:transactions');
   const canViewMonthlyReport = hasPermission('view:accounts-monthly-report');
   const canViewCashbook = hasPermission('view:cashbook-ledger');
+  const canManageFeeSetup = hasPermission('manage:fee-setup');
 
   const sidebarItems = useMemo(() => {
     const items = [{ id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
+    
+    if (canManageFeeSetup) {
+        items.push({ id: 'fee-setup', label: 'ফি সেটআপ', icon: Settings2, color: 'text-blue-600 bg-blue-50' });
+    }
+    
     if (canCollectFees) {
         items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' });
         items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
     }
+    
     if (canViewReports) items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' });
     if (canViewExpenseReport) items.push({ id: 'expense-report', label: 'ব্যয় রিপোর্ট', icon: Receipt, color: 'text-rose-600 bg-rose-50' });
+    
     if (canViewCashbook) {
         items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' });
         items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' });
     }
+    
     if (canViewMonthlyReport) items.push({ id: 'monthly-report', label: 'মাসিক রিপোর্ট', icon: FileBarChart, color: 'text-emerald-600 bg-emerald-50' });
     if (canManageTransactions) items.push({ id: 'new-transaction', label: 'আয়/ব্যয় এন্ট্রি', icon: PlusCircle, color: 'text-primary bg-primary/10' });
+    
     return items;
-  }, [canCollectFees, canViewReports, canViewExpenseReport, canManageTransactions, canViewMonthlyReport, canViewCashbook]);
+  }, [canCollectFees, canViewReports, canViewExpenseReport, canManageTransactions, canViewMonthlyReport, canViewCashbook, canManageFeeSetup]);
 
   if (!isClient) return null;
 
@@ -1333,6 +1545,7 @@ export default function AccountsPage() {
                         </div>
 
                         {activeSection === 'dashboard' && <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={(t) => { setPendingEntryType(t); setActiveSection('new-transaction'); }} />}
+                        {activeSection === 'fee-setup' && <FeeSetupTab allStudents={allStudents} selectedYear={selectedYear} />}
                         {activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}
                         {activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}
                         {activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} onDeleteSuccess={fetchTransactions} />}

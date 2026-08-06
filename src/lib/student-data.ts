@@ -1,3 +1,4 @@
+
 import {
   collection,
   doc,
@@ -52,6 +53,12 @@ export type Student = {
   permanentDistrict?: string;
   photoUrl: string;
   isStipendReceiver?: boolean;
+  // Fee related fields
+  monthlyFee?: number;
+  examFee?: number;
+  sessionFee?: number;
+  otherFee?: number;
+  feeCategory?: 'general' | 'half-free' | 'full-free';
   // Firestore specific fields
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
