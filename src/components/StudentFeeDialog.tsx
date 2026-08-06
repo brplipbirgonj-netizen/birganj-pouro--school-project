@@ -14,7 +14,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
 import { collection, doc, writeBatch, serverTimestamp, Timestamp, WithFieldValue, DocumentData, query, where, getDocs, limit } from 'firebase/firestore';
-import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck } from 'lucide-react';
+import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, CheckCircle2, Clock, CalendarCheck, Banknote } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
