@@ -133,6 +133,24 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         setMarks(newMarks);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Get all number inputs within the table body
+            const table = e.currentTarget.closest('table');
+            if (!table) return;
+            
+            const inputs = Array.from(table.querySelectorAll('tbody input[type="number"]')) as HTMLInputElement[];
+            const index = inputs.indexOf(e.currentTarget);
+            
+            if (index >= 0 && index < inputs.length - 1) {
+                const nextInput = inputs[index + 1];
+                nextInput.focus();
+                nextInput.select(); // Select content for easier overwriting
+            }
+        }
+    };
+
     const handleSaveResults = () => {
         if (!db || !user) return;
         if (!isSubjectPermitted(className, subject)) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
@@ -256,9 +274,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableRow key={student.id} className="hover:bg-accent/5">
                                             <TableCell className="font-black text-center">{student.roll.toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.written || ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq || ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
-                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical || ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>}
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.written || ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq || ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
+                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical || ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>}
                                         </TableRow>
                                     ))}
                                 </TableBody>
