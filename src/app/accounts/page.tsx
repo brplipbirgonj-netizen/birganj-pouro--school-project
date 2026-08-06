@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -37,6 +36,7 @@ import { MoneyReceipt } from '@/components/MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -341,10 +341,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
             next.monthlyFee = 0;
             next.feeCategory = 'full-free';
         } else if (waivers.tuition === 'half') {
-            // Logic to calculate half: take the student's existing monthlyFee OR use a default
             const currentFee = next.monthlyFee !== undefined ? next.monthlyFee : (allStudents.find(s => s.id === studentId)?.monthlyFee || 0);
-            // If it's already set to half, we shouldn't keep halving it. 
-            // Better to assume we are setting category here.
             next.feeCategory = 'half-free';
         } else if (waivers.tuition === 'none') {
             next.feeCategory = 'general';
