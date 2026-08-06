@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Transaction, NewTransactionData, addTransaction, getTransactions, deleteTransaction, TransactionType, PaymentMethod } from '@/lib/transactions-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
@@ -974,7 +974,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
             <CardContent className="px-0 pt-4">
                 <div className="table-container">
                     <Table className="min-w-[950px]">
-                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
                             <TableRow>
                                 <TableHead>তারিখ</TableHead>
                                 <TableHead>বিবরণ</TableHead>
