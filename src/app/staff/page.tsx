@@ -12,7 +12,7 @@ import { deleteStaff, Staff, staffFromDoc } from '@/lib/staff-data';
 import { 
     Eye, FilePen, Trash2, Clock, Calendar, Briefcase, Check, X, Search, 
     Loader2, List, ClipboardCheck, FileBarChart, ChevronRight, Plus, 
-    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users, LogIn, LogOut, AlertTriangle, LayoutGrid 
+    Printer, Save, RotateCcw, Edit2, CheckCircle2, UserX, UserCheck, Users, LogIn, LogOut, AlertTriangle, LayoutGrid, User, BookOpen, TrendingUp, CalendarDays, MapPin, GraduationCap
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -38,7 +38,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, orderBy, FirestoreError, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isAfter } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isAfter, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -51,6 +51,8 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { getHolidays, isHoliday, Holiday } from '@/lib/holiday-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAcademicYear } from '@/context/AcademicYearContext';
+import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 
 const LEAVE_TYPES: { id: LeaveType; label: string; color: string }[] = [
     { id: 'CL', label: 'নৈমিত্তিক (CL)', color: 'bg-blue-100 text-blue-700' },
@@ -79,15 +81,16 @@ const STAFF_ORDER = [
     'মোছা: নুর নেহার বেগম'
 ];
 
+const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
+const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ"];
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+
 function toBengaliNumber(str: string | number) {
   if (!str && str !== 0) return '';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
 
-/**
- * Converts Bengali digits and AM/PM strings to English for consistent storage
- */
 const convertToEnglishDigits = (str: string) => {
     if (!str) return '';
     const bnToEn: Record<string, string> = {
@@ -98,21 +101,321 @@ const convertToEnglishDigits = (str: string) => {
     return result;
 };
 
-/**
- * Helper to get current system time in English format
- */
 const getSystemTimeEn = () => {
     return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
-/**
- * Automatically appends AM or PM to a time string if missing
- */
 const ensureAmPm = (timeStr: string, defaultType: 'AM' | 'PM') => {
     const cleaned = convertToEnglishDigits(timeStr).trim().toUpperCase();
     if (!cleaned) return '';
     if (cleaned.includes('AM') || cleaned.includes('PM')) return cleaned;
     return `${cleaned} ${defaultType}`;
+};
+
+const parseSubjectTeacher = (cell: string): { subject: string, teacher: string | null } => {
+    if (!cell) return { subject: '', teacher: null };
+    const trimmedCell = cell.trim();
+    if (!trimmedCell.includes(' - ')) {
+        return { subject: trimmedCell, teacher: null };
+    }
+    const parts = trimmedCell.split(' - ');
+    const teacher = parts.pop()?.trim() || null;
+    const subject = parts.join(' - ').trim();
+    return { subject, teacher };
+};
+
+// --- Sub Tab: Teacher Profile Section ---
+const TeacherProfileTab = ({ staffList, academicYear }: { staffList: Staff[], academicYear: string }) => {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const [selectedStaffId, setSelectedStaffId] = useState<string>('');
+    const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
+    const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+    const [isLoading, setIsLoading] = useState(false);
+    const [attendanceData, setAttendanceData] = useState<StaffDailyAttendance[]>([]);
+    const [routineRecords, setRoutineRecords] = useState<ClassRoutine[]>([]);
+    const [holidays, setHolidays] = useState<string[]>([]);
+
+    const selectedStaff = useMemo(() => staffList.find(s => s.id === selectedStaffId), [staffList, selectedStaffId]);
+
+    const fetchData = useCallback(async () => {
+        if (!db || !selectedStaffId) return;
+        setIsLoading(true);
+        try {
+            const [attRes, routineRes, holidayRes] = await Promise.all([
+                getStaffAttendanceForRange(db, format(startDate!, 'yyyy-MM-dd'), format(endDate!, 'yyyy-MM-dd')),
+                getFullRoutine(db, academicYear),
+                getHolidays(db)
+            ]);
+            setAttendanceData(attRes);
+            setRoutineRecords(routineRes);
+            setHolidays(holidayRes.map(h => h.date));
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    }, [db, selectedStaffId, startDate, endDate, academicYear]);
+
+    useEffect(() => {
+        if (selectedStaffId) fetchData();
+    }, [fetchData, selectedStaffId]);
+
+    const teacherRoutineInfo = useMemo(() => {
+        if (!selectedStaff || routineRecords.length === 0) return null;
+        
+        const teacherName = selectedStaff.nameBn;
+        const dailySchedule: Record<string, any[]> = {};
+        const subjectSet = new Set<string>();
+        let totalClasses = 0;
+
+        routineRecords.forEach(routine => {
+            const day = routine.day;
+            if (!dailySchedule[day]) dailySchedule[day] = Array(6).fill(null);
+            
+            routine.periods.forEach((cell, idx) => {
+                const { subject, teacher } = parseSubjectTeacher(cell);
+                if (teacher && teacher.includes(teacherName)) {
+                    dailySchedule[day][idx] = { className: routine.className, subject };
+                    subjectSet.add(subject);
+                    totalClasses++;
+                }
+            });
+        });
+
+        return { dailySchedule, subjects: Array.from(subjectSet), totalClasses };
+    }, [selectedStaff, routineRecords]);
+
+    const attStats = useMemo(() => {
+        if (!selectedStaffId || !attendanceData) return { present: 0, leave: 0, absent: 0, total: 0 };
+        
+        const daysInRange = eachDayOfInterval({ start: startDate!, end: endDate! });
+        let present = 0, leave = 0, absent = 0, totalWorkDays = 0;
+
+        daysInRange.forEach(day => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            const isWeekend = day.getDay() === 5 || day.getDay() === 6;
+            const isHolidayDay = holidays.includes(dateStr);
+            
+            if (!isWeekend && !isHolidayDay && !isAfter(day, new Date())) {
+                totalWorkDays++;
+                const record = attendanceData.find(r => r.date === dateStr);
+                const att = record?.attendance.find(a => a.staffId === selectedStaffId);
+                if (att) {
+                    if (att.status === 'present') present++;
+                    else if (att.status === 'leave') leave++;
+                } else {
+                    absent++;
+                }
+            }
+        });
+
+        return { present, leave, absent, total: totalWorkDays };
+    }, [selectedStaffId, attendanceData, holidays, startDate, endDate]);
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
+                <div className="space-y-2 md:col-span-1">
+                    <Label className="font-black text-primary flex items-center gap-2"><User className="h-4 w-4" /> শিক্ষক নির্বাচন করুন</Label>
+                    <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                        <SelectTrigger className="h-11 bg-slate-50 border-2 font-bold"><SelectValue placeholder="নাম সিলেক্ট করুন" /></SelectTrigger>
+                        <SelectContent>
+                            {staffList.filter(s => s.staffType === 'teacher').map(s => (
+                                <SelectItem key={s.id} value={s.id}>{s.nameBn}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold">হতে</Label>
+                    <DatePicker value={startDate} onChange={setStartDate} />
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold">পর্যন্ত</Label>
+                    <DatePicker value={endDate} onChange={setEndDate} />
+                </div>
+            </div>
+
+            {selectedStaff && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Column 1: Info & Stats */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <Card className="border-[4px] border-black rounded-3xl overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,0.1)] bg-white">
+                            <div className="h-24 bg-primary relative">
+                                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
+                                    <Avatar className="h-28 w-28 border-4 border-white shadow-xl">
+                                        <AvatarImage src={selectedStaff.photoUrl} className="object-cover" />
+                                        <AvatarFallback className="bg-muted text-2xl font-black">{selectedStaff.nameBn.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                </div>
+                            </div>
+                            <CardContent className="pt-16 text-center pb-8">
+                                <h2 className="text-2xl font-black text-slate-900">{selectedStaff.nameBn}</h2>
+                                <p className="font-bold text-primary mb-4">{selectedStaff.designation}</p>
+                                <div className="flex justify-center gap-2">
+                                    <Badge variant="outline" className="bg-primary/5 font-black border-primary/20">{selectedStaff.employeeId}</Badge>
+                                    <Badge variant="outline" className={cn("font-black", selectedStaff.isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200")}>
+                                        {selectedStaff.isActive ? 'সক্রিয়' : 'অনিবন্ধিত'}
+                                    </Badge>
+                                </div>
+                                <div className="mt-6 space-y-3 text-left bg-slate-50 p-4 rounded-xl border">
+                                    <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
+                                        <Briefcase className="h-4 w-4 text-primary" /> <span>বিষয়: {selectedStaff.subject || 'N/A'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
+                                        <Clock className="h-4 w-4 text-primary" /> <span>যোগদান: {toBengaliNumber(format(new Date(selectedStaff.joinDate), "dd-MM-yyyy", { locale: bn }))}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm font-bold text-slate-700">
+                                        <ChevronRight className="h-4 w-4 text-primary" /> <span>মোবাইল: {toBengaliNumber(selectedStaff.mobile)}</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
+                            <CardHeader className="bg-emerald-50 border-b-[3px] border-black">
+                                <CardTitle className="text-lg font-black flex items-center gap-2"><TrendingUp className="h-5 w-5 text-emerald-700" /> হাজিরা সারসংক্ষেপ</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 bg-emerald-100 rounded-xl text-center border-2 border-emerald-200">
+                                        <p className="text-[10px] font-black uppercase text-emerald-700">উপস্থিত</p>
+                                        <p className="text-2xl font-black text-emerald-950">{toBengaliNumber(attStats.present)} দিন</p>
+                                    </div>
+                                    <div className="p-3 bg-rose-100 rounded-xl text-center border-2 border-rose-200">
+                                        <p className="text-[10px] font-black uppercase text-rose-700">অনুপস্থিত</p>
+                                        <p className="text-2xl font-black text-rose-950">{toBengaliNumber(attStats.absent)} দিন</p>
+                                    </div>
+                                    <div className="p-3 bg-blue-100 rounded-xl text-center border-2 border-blue-200">
+                                        <p className="text-[10px] font-black uppercase text-blue-700">ছুটি (Leave)</p>
+                                        <p className="text-2xl font-black text-blue-950">{toBengaliNumber(attStats.leave)} দিন</p>
+                                    </div>
+                                    <div className="p-3 bg-slate-100 rounded-xl text-center border-2 border-slate-200">
+                                        <p className="text-[10px] font-black uppercase text-slate-600">মোট কর্মদিবস</p>
+                                        <p className="text-2xl font-black text-slate-900">{toBengaliNumber(attStats.total)} দিন</p>
+                                    </div>
+                                </div>
+                                <div className="pt-2">
+                                    <div className="flex justify-between text-xs font-black mb-1">
+                                        <span>উপস্থিতির হার</span>
+                                        <span className="text-emerald-700">{toBengaliNumber(attStats.total > 0 ? ((attStats.present / attStats.total) * 100).toFixed(1) : 0)}%</span>
+                                    </div>
+                                    <Progress value={attStats.total > 0 ? (attStats.present / attStats.total) * 100 : 0} className="h-2" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Column 2 & 3: Routine & Schedule */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
+                            <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center">
+                                <div>
+                                    <CardTitle className="text-xl font-black flex items-center gap-2"><CalendarDays className="h-6 w-6 text-primary" /> সাপ্তাহিক ক্লাস সিডিউল</CardTitle>
+                                    <CardDescription className="font-bold">রুটিন অনুযায়ী ক্লাস লোড</CardDescription>
+                                </div>
+                                <Badge variant="secondary" className="font-black text-base h-10 px-6 bg-primary text-white shadow-md">মোট ক্লাস: {toBengaliNumber(teacherRoutineInfo?.totalClasses || 0)} টি</Badge>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                {teacherRoutineInfo?.totalClasses === 0 ? (
+                                    <div className="p-12 text-center border-2 border-dashed rounded-2xl italic text-muted-foreground font-bold">রুটিনে এই শিক্ষকের কোনো ক্লাস পাওয়া যায়নি।</div>
+                                ) : (
+                                    <div className="space-y-8">
+                                        <div className="p-4 bg-muted/20 rounded-2xl border-2 border-dashed">
+                                            <p className="text-xs font-black text-muted-foreground uppercase mb-2 flex items-center gap-2"><BookOpen className="h-4 w-4" /> নিয়মিত পাঠদানের বিষয়সমূহ:</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {teacherRoutineInfo?.subjects.map(s => <Badge key={s} className="font-black bg-white text-primary border-2 border-primary/20 h-8 px-4">{s}</Badge>)}
+                                            </div>
+                                        </div>
+
+                                        <div className="overflow-x-auto rounded-xl border-2 border-black">
+                                            <Table>
+                                                <TableHeader className="bg-slate-100">
+                                                    <TableRow className="h-12 border-b-2 border-black">
+                                                        <TableHead className="font-black text-black border-r-2 border-black text-center w-24">বার</TableHead>
+                                                        {periodLabels.map(p => <TableHead key={p} className="text-center font-black text-black border-r last:border-0 text-xs">{p} পিরিয়ড</TableHead>)}
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার"].map(day => (
+                                                        <TableRow key={day} className="h-16 hover:bg-slate-50 border-b last:border-0 transition-colors">
+                                                            <TableCell className="font-black border-r-2 border-black text-center bg-gray-50/50">{day}</TableCell>
+                                                            {teacherRoutineInfo?.dailySchedule[day].map((period, pIdx) => (
+                                                                <TableCell key={pIdx} className="text-center border-r last:border-0 p-1">
+                                                                    {period ? (
+                                                                        <div className="flex flex-col items-center justify-center p-1.5 rounded-lg bg-primary/5 border border-primary/20 h-full">
+                                                                            <span className="font-black text-[11px] leading-tight text-blue-900">{period.subject}</span>
+                                                                            <Badge variant="outline" className="mt-1 h-4 text-[8px] font-black border-slate-300">{classNamesMap[period.className] || period.className} শ্রেণি</Badge>
+                                                                        </div>
+                                                                    ) : <span className="text-muted-foreground/30">-</span>}
+                                                                </TableCell>
+                                                            ))}
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Recent History Table */}
+                        <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[8px_8px_0px_rgba(0,0,0,0.1)] overflow-hidden">
+                            <CardHeader className="bg-muted/30 border-b-[3px] border-black">
+                                <CardTitle className="text-lg font-black flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-slate-800" /> সময়সীমার মধ্যে হাজিরা রেকর্ড</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="max-h-[400px] overflow-y-auto">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
+                                            <TableRow>
+                                                <TableHead className="font-bold pl-6">তারিখ ও বার</TableHead>
+                                                <TableHead className="text-center font-bold">অবস্থা</TableHead>
+                                                <TableHead className="text-center font-bold">সময় (আগমণ - প্রস্থান)</TableHead>
+                                                <TableHead className="text-right pr-6 font-bold">রেকর্ডকৃত</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {attendanceData.length === 0 ? (
+                                                <TableRow><TableCell colSpan={4} className="text-center py-20 italic">তথ্য পাওয়া যায়নি</TableCell></TableRow>
+                                            ) : (
+                                                attendanceData.sort((a,b) => b.date.localeCompare(a.date)).map(record => {
+                                                    const att = record.attendance.find(a => a.staffId === selectedStaffId);
+                                                    const dateObj = new Date(record.date.replace(/-/g, '/'));
+                                                    return (
+                                                        <TableRow key={record.id} className="h-12 border-b last:border-0 hover:bg-slate-50">
+                                                            <TableCell className="pl-6">
+                                                                <span className="font-bold">{toBengaliNumber(format(dateObj, 'dd-MM-yyyy'))}</span>
+                                                                <span className="text-[10px] ml-2 text-muted-foreground">({format(dateObj, 'EEEE', { locale: bn })})</span>
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                {att ? (
+                                                                    <Badge className={att.status === 'present' ? "bg-emerald-600" : "bg-blue-600"}>
+                                                                        {att.status === 'present' ? 'উপস্থিত' : 'ছুটি'}
+                                                                    </Badge>
+                                                                ) : <Badge variant="destructive">অনুপস্থিত</Badge>}
+                                                            </TableCell>
+                                                            <TableCell className="text-center font-black text-[11px] text-blue-900">
+                                                                {att?.status === 'present' ? `${toBengaliNumber(att.checkIn || '-')} হতে ${toBengaliNumber(att.checkOut || '-')}` : '-'}
+                                                            </TableCell>
+                                                            <TableCell className="text-right pr-6 text-[10px] font-bold text-muted-foreground">
+                                                                {toBengaliNumber(att?.entryTime || '-')}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default function StaffListPage() {
@@ -124,6 +427,7 @@ export default function StaffListPage() {
   const [isClient, setIsClient] = useState(false);
   const { user, hasPermission } = useAuth();
   const { schoolInfo } = useSchoolInfo();
+  const { selectedYear } = useAcademicYear();
   
   const canManageStaff = hasPermission('manage:staff');
   const canManageAttendance = hasPermission('manage:staff-attendance');
@@ -146,10 +450,6 @@ export default function StaffListPage() {
   const [rangeRecords, setRangeRecords] = useState<StaffDailyAttendance[]>([]);
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [holidays, setHolidays] = useState<string[]>([]);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
     if (!db || !user) return;
@@ -175,7 +475,6 @@ export default function StaffListPage() {
     setIsAttendanceLoading(true);
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     
-    // Check if it's a holiday
     const holidayToday = await isHoliday(db, dateStr);
     setActiveHoliday(holidayToday);
 
@@ -236,8 +535,6 @@ export default function StaffListPage() {
           const idx = nextAtt.findIndex(a => a.staffId === selectedStaffId);
           
           let updatedEntry: StaffMemberAttendance;
-          
-          // Apply time formatting and normalization
           const processedEntry = { ...tempEntry };
           if (processedEntry.checkIn) processedEntry.checkIn = ensureAmPm(processedEntry.checkIn, 'AM');
           if (processedEntry.checkOut) processedEntry.checkOut = ensureAmPm(processedEntry.checkOut, 'PM');
@@ -336,7 +633,8 @@ export default function StaffListPage() {
 
   const sidebarItems = useMemo(() => {
       const items = [
-          { id: 'list', label: 'স্টাফ তালিকা', icon: List, color: 'text-orange-600 bg-orange-50' }
+          { id: 'list', label: 'স্টাফ তালিকা', icon: List, color: 'text-orange-600 bg-orange-50' },
+          { id: 'teacher-profile', label: 'শিক্ষক প্রোফাইল', icon: User, color: 'text-primary bg-primary/10' }
       ];
       if (canManageAttendance) {
           items.push({ id: 'attendance', label: 'দৈনিক হাজিরা ও ছুটি', icon: ClipboardCheck, color: 'text-emerald-600 bg-emerald-50' });
@@ -372,7 +670,7 @@ export default function StaffListPage() {
                     <TableCell className="text-xs font-bold">{toBengaliNumber(staff.mobile)}</TableCell>
                     <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStaffToView(staff)} title="দেখুন"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStaffToView(staff)} title="देखুন"><Eye className="h-4 w-4" /></Button>
                             {canManageStaff && (
                                 <>
                                     <Link href={`/edit-staff/${staff.id}`}><Button variant="outline" size="icon" className="h-8 w-8 text-blue-600" title="এডিট"><FilePen className="h-4 w-4" /></Button></Link>
@@ -661,6 +959,10 @@ export default function StaffListPage() {
                     </div>
                 )}
 
+                {activeSection === 'teacher-profile' && (
+                    <TeacherProfileTab staffList={activeStaffList} academicYear={selectedYear} />
+                )}
+
                 {activeSection === 'attendance' && (
                     <div className="space-y-8 animate-in fade-in duration-500 no-print">
                         <div className={cn(
@@ -730,7 +1032,6 @@ export default function StaffListPage() {
                                             </div>
                                         ) : (
                                             <>
-                                                {/* Arrival Button: Show if NOT already arrived */}
                                                 {!existingInToday?.checkIn && (
                                                     <Button 
                                                         size="lg" 
@@ -740,8 +1041,6 @@ export default function StaffListPage() {
                                                         <LogIn className="h-5 w-5" /> আগমণ
                                                     </Button>
                                                 )}
-
-                                                {/* Departure Button: Always visible, but disabled if no check-in */}
                                                 <Button 
                                                     size="lg" 
                                                     disabled={!existingInToday?.checkIn}
@@ -755,8 +1054,6 @@ export default function StaffListPage() {
                                                 >
                                                     <LogOut className="h-5 w-5" /> প্রস্থান
                                                 </Button>
-
-                                                {/* Leave Button: Show if NOT already arrived */}
                                                 {!existingInToday?.checkIn && (
                                                     <Button 
                                                         size="lg" 
