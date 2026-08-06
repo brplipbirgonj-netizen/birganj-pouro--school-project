@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
@@ -16,9 +15,9 @@ import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult,
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +29,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { getExams, Exam } from '@/lib/exam-data';
 import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
+import { format } from 'date-fns';
+import { bn } from 'date-fns/locale';
+import { useSchoolInfo } from '@/context/SchoolInfoContext';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
@@ -283,6 +286,160 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                             </Table>
                         </div>
                         <div className="flex justify-end p-4 border-t bg-muted/10"><Button onClick={handleSaveResults} size="lg" className="px-10 font-black shadow-md">প্রাপ্ত নম্বর সেভ করুন</Button></div>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+    );
+};
+
+const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Student[], onPrintRequested: (data: any) => void }) => {
+    const { toast } = useToast();
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user, hasPermission } = useAuth();
+    
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
+    const [className, setClassName] = useState('');
+    const [group, setGroup] = useState('');
+    const [subject, setSubject] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [availableSubjects, setAvailableSubjects] = useState<SubjectType[]>([]);
+    const [results, setResults] = useState<ClassResult | null>(null);
+
+    const isSubjectPermitted = useCallback((cls: string, sub: string) => {
+        if (user?.role === 'admin') return true;
+        if (hasPermission('manage:results')) return true;
+        return (user as any)?.marksPermissions?.[cls]?.includes(sub) ?? false;
+    }, [user, hasPermission]);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
+    useEffect(() => {
+        let newSubjects = getSubjects(className, group).filter(s => s.isExamSubject !== false);
+        if (user?.role !== 'admin' && !hasPermission('manage:results') && className) {
+            newSubjects = newSubjects.filter(s => isSubjectPermitted(className, s.name));
+        }
+        setAvailableSubjects(newSubjects);
+    }, [className, group, user, hasPermission, isSubjectPermitted]);
+
+    const handleLoadReport = async () => {
+        if (!examName || !className || !subject || !db) {
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const data = await getResultsForClass(db, selectedYear, examName, className, subject, group);
+            if (!data) {
+                toast({ title: 'কোনো ফলাফল পাওয়া যায়নি' });
+                setResults(null);
+            } else {
+                setResults(data);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const reportStudents = useMemo(() => {
+        if (!results) return [];
+        return allStudents
+            .filter(s => s.academicYear === selectedYear && s.className === className && (!group || s.group === group))
+            .sort((a, b) => a.roll - b.roll)
+            .map(student => {
+                const res = results.results.find(r => r.studentId === student.id);
+                return {
+                    student,
+                    marks: res || { studentId: student.id }
+                };
+            });
+    }, [results, allStudents, selectedYear, className, group]);
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
+                <div className="space-y-2">
+                    <Label className="text-xs font-bold">পরীক্ষা</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-xs font-bold">শ্রেণি</Label>
+                    <Select value={className} onValueChange={setClassName}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                        <SelectContent>{Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                {parseInt(className) >= 9 && (
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold">শাখা</Label>
+                        <Select value={group} onValueChange={setGroup}>
+                            <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সকল" /></SelectTrigger>
+                            <SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent>
+                        </Select>
+                    </div>
+                )}
+                <div className="space-y-2">
+                    <Label className="text-xs font-bold">বিষয়</Label>
+                    <Select value={subject} onValueChange={setSubject} disabled={!className}>
+                        <SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="বিষয়" /></SelectTrigger>
+                        <SelectContent>{availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <Button onClick={handleLoadReport} disabled={isLoading || !subject || !examName} className="h-9 text-xs font-black">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'রিপোর্ট দেখুন'}
+                </Button>
+            </div>
+
+            {results && (
+                <Card className="border-2 shadow-lg overflow-hidden">
+                    <CardHeader className="bg-primary/5 p-4 border-b flex flex-row justify-between items-center space-y-0">
+                        <div>
+                            <CardTitle className="text-base font-black text-primary">{subject} - নম্বর ফর্দ ({examName})</CardTitle>
+                            <CardDescription className="text-[10px] font-bold">শ্রেণি: {classNamesMap[className]} | শাখা: {groupNamesMap[group || 'all']}</CardDescription>
+                        </div>
+                        <Button variant="outline" className="font-black h-9 border-primary text-primary" onClick={() => onPrintRequested({ studentData: reportStudents, info: { examName, className, subject, group, fullMarks: results.fullMarks } })}>
+                            <Printer className="mr-2 h-4 w-4" /> প্রিন্ট (PDF)
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="table-container !max-h-[500px]">
+                            <Table>
+                                <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
+                                    <TableRow>
+                                        <TableHead className="w-20 text-center font-black">রোল</TableHead>
+                                        <TableHead className="font-black">নাম</TableHead>
+                                        <TableHead className="text-center font-black">লিখিত</TableHead>
+                                        <TableHead className="text-center font-black">MCQ</TableHead>
+                                        <TableHead className="text-center font-black">ব্যবহারিক</TableHead>
+                                        <TableHead className="text-right pr-6 font-black text-primary">মোট নম্বর</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {reportStudents.map(({ student, marks }) => (
+                                        <TableRow key={student.id} className="hover:bg-slate-50 h-10">
+                                            <TableCell className="text-center font-black">{student.roll.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
+                                            <TableCell className="text-center">{marks.written ?? '-'}</TableCell>
+                                            <TableCell className="text-center">{marks.mcq ?? '-'}</TableCell>
+                                            <TableCell className="text-center">{marks.practical ?? '-'}</TableCell>
+                                            <TableCell className="text-right pr-6 font-black text-blue-900">
+                                                {((marks.written || 0) + (marks.mcq || 0) + (marks.practical || 0)).toLocaleString('bn-BD')}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             )}
@@ -1009,12 +1166,14 @@ export default function ResultsPage() {
     const db = useFirestore(); 
     const { selectedYear } = useAcademicYear(); 
     const { user, hasPermission } = useAuth();
+    const { schoolInfo } = useSchoolInfo();
     
     const canViewRes = hasPermission('manage:results') || hasPermission('input:results');
     const canManageFullMarks = hasPermission('manage:full-marks') || hasPermission('manage:results');
     const canUploadMarks = hasPermission('upload:marks');
 
     const [activeSection, setActiveSection] = useState('management');
+    const [printingReport, setPrintingReport] = useState<any>(null);
 
     useEffect(() => {
         setIsClient(true); 
@@ -1035,11 +1194,20 @@ export default function ResultsPage() {
         else if (hasPermission('view:merit-list')) setActiveSection('merit');
     }, [canViewRes, canManageFullMarks, hasPermission]);
 
+    const handleSubjectPrint = (data: any) => {
+        setPrintingReport(data);
+        setTimeout(() => {
+            window.print();
+            setPrintingReport(null);
+        }, 300);
+    };
+
     const sidebarItems = useMemo(() => {
         const items = [];
         if (canViewRes) {
             items.push({ id: 'management', label: 'নম্বর ইনপুট', icon: FilePen, color: 'text-indigo-600 bg-indigo-50' });
-            items.push({ id: 'sheet', label: 'ফলাফল শিট', icon: FileSpreadsheet, color: 'text-emerald-600 bg-emerald-50' });
+            items.push({ id: 'subject-report', label: 'বিষয় ভিত্তিক রিপোর্ট', icon: FileText, color: 'text-emerald-600 bg-emerald-50' });
+            items.push({ id: 'sheet', label: 'ফলাফল শিট', icon: FileSpreadsheet, color: 'text-blue-600 bg-blue-50' });
         }
         if (canManageFullMarks) {
             items.push({ id: 'full-marks', label: 'বিষয় ও পূর্ণমান', icon: CheckCircle2, color: 'text-violet-600 bg-violet-50' });
@@ -1102,13 +1270,11 @@ export default function ResultsPage() {
                 <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
                     <div className="p-4 sm:p-6 lg:p-8 flex-1">
                         {isLoading ? (
-                            <div className="space-y-4">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-64 w-full" />
-                            </div>
+                            <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>
                         ) : (
                             <>
                                 {activeSection === 'management' && <MarkManagementTab allStudents={allStudents} />}
+                                {activeSection === 'subject-report' && <SubjectReportTab allStudents={allStudents} onPrintRequested={handleSubjectPrint} />}
                                 {activeSection === 'full-marks' && <FullMarksTab />}
                                 {activeSection === 'sheet' && <ResultSheetTab allStudents={allStudents} />}
                                 {activeSection === 'merit' && <MeritListTab allStudents={allStudents} />}
@@ -1119,6 +1285,71 @@ export default function ResultsPage() {
                     </div>
                 </div>
             </main>
+
+            {/* Printable Area for Subject Report */}
+            {printingReport && (
+                <div className="hidden print:block printable-area bg-white text-black p-10 font-kalpurush border-2">
+                    <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-6">
+                        {schoolInfo.logoUrl && (
+                            <div className="relative w-20 h-20">
+                                <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />
+                            </div>
+                        )}
+                        <div className="text-center flex-grow">
+                            <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1">{schoolInfo.name}</h1>
+                            <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                            <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
+                                <h2 className="text-lg font-black uppercase">নম্বর ফর্দ (Mark Sheet) - {toBengaliNumber(selectedYear)}</h2>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="grid grid-cols-2 gap-4 mb-6 text-sm font-bold">
+                        <div className="space-y-1">
+                            <p>পরীক্ষার নাম: <span className="font-black underline">{printingReport.info.examName}</span></p>
+                            <p>শ্রেণি: <span className="font-black underline">{classNamesMap[printingReport.info.className]} শ্রেণি</span></p>
+                            {printingReport.info.group && <p>শাখা: <span className="font-black underline">{groupNamesMap[printingReport.info.group]}</span></p>}
+                        </div>
+                        <div className="text-right space-y-1">
+                            <p>বিষয়: <span className="font-black underline">{printingReport.info.subject}</span></p>
+                            <p>পূর্ণমান: <span className="font-black underline">{toBengaliNumber(printingReport.info.fullMarks)}</span></p>
+                        </div>
+                    </div>
+
+                    <Table className="border-2 border-black">
+                        <TableHeader className="bg-slate-100">
+                            <TableRow className="border-b-2 border-black">
+                                <TableHead className="w-16 text-center font-black border-r-2 border-black text-black">রোল</TableHead>
+                                <TableHead className="font-black border-r-2 border-black text-black">শিক্ষার্থীর নাম</TableHead>
+                                <TableHead className="w-24 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead>
+                                <TableHead className="w-24 text-center font-black border-r-2 border-black text-black">MCQ</TableHead>
+                                <TableHead className="w-24 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead>
+                                <TableHead className="w-24 text-center font-black text-black">মোট নম্বর</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {printingReport.studentData.map((item: any) => (
+                                <TableRow key={item.student.id} className="border-b border-slate-400 h-9">
+                                    <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell>
+                                    <TableCell className="font-bold border-r-2 border-black">{item.student.studentNameBn}</TableCell>
+                                    <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(item.marks.written ?? '-')}</TableCell>
+                                    <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
+                                    <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
+                                    <TableCell className="text-center font-black">
+                                        {toBengaliNumber((item.marks.written || 0) + (item.marks.mcq || 0) + (item.marks.practical || 0))}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+
+                    <footer className="mt-20 flex justify-between px-10">
+                        <div className="text-center w-48 border-t-2 border-black pt-1 font-black">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                        <div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div>
+                    </footer>
+                    <div className="mt-10 text-center text-[8px] text-slate-400">প্রিন্ট সময়: {format(new Date(), 'PPpp', { locale: bn })} | BPHS Management System</div>
+                </div>
+            )}
         </div>
     );
 }
