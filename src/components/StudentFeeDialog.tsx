@@ -39,6 +39,12 @@ const classNamesMap: { [key: string]: string } = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
 };
 
+const toBengaliNumber = (str: string | number) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
+
 const feeFields: { key: keyof FeeBreakdown; label: string }[] = [
     { key: 'tuitionCurrent', label: 'চলতি' },
     { key: 'tuitionAdvance', label: 'অগ্রিম' },
@@ -495,7 +501,7 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
                                         )}>
                                             <span className="text-[10px] font-black leading-none mb-1.5">{month}</span>
                                             <Badge variant="outline" className={cn(
-                                                "h-4 text-[8px] font-black border-none px-2",
+                                                "h-4 text-[7px] sm:text-[8px] font-black border-none px-2",
                                                 isPaid ? "bg-emerald-600 text-white" : isCurrentOrPast ? "bg-rose-600 text-white" : "bg-slate-300 text-white"
                                             )}>
                                                 {isPaid ? 'Paid' : 'Due'}
