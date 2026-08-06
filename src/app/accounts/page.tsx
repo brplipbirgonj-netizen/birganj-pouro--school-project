@@ -16,7 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles, Gift } from 'lucide-react';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { MoneyReceipt } from '@/components/MoneyReceipt';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -278,6 +279,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
     
     // Local state for editing table
     const [editedStudents, setEditedStudents] = useState<Record<string, Partial<Student>>>({});
+    const [configFreeStudent, setConfigFreeStudent] = useState<Student | null>(null);
 
     const filteredStudents = useMemo(() => {
         return allStudents
@@ -331,6 +333,29 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         }
     };
 
+    const handleFreeConfigUpdate = (studentId: string, waivers: Record<string, boolean>) => {
+        const next = { ...(editedStudents[studentId] || {}) };
+        if (waivers.monthly) next.monthlyFee = 0;
+        if (waivers.exam) {
+            next.examFeeHalfYearly = 0;
+            next.examFeeAnnual = 0;
+            next.examFeePreNirbachoni = 0;
+            next.examFeeNirbachoni = 0;
+        }
+        if (waivers.session) next.sessionFee = 0;
+        if (waivers.admission) next.admissionFee = 0;
+        if (waivers.other) {
+            next.scoutFee = 0;
+            next.developmentFee = 0;
+            next.libraryFee = 0;
+            next.tiffinFee = 0;
+        }
+        
+        setEditedStudents(prev => ({ ...prev, [studentId]: next }));
+        setConfigFreeStudent(null);
+        toast({ title: 'ফ্রি সেটিংস প্রয়োগ করা হয়েছে' });
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Control Panel */}
@@ -364,8 +389,8 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                             <Input type="number" value={bulkValues.session} onChange={e => setBulkValues({...bulkValues, session: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
                         </div>
                         <div className="space-y-1">
-                            <Label className="text-[9px] font-black uppercase text-muted-foreground">স্কাউট/উন্নয়ন</Label>
-                            <Input type="number" value={bulkValues.scout} onChange={e => setBulkValues({...bulkValues, scout: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">ভর্তি ফি</Label>
+                            <Input type="number" value={bulkValues.admission} onChange={e => setBulkValues({...bulkValues, admission: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
                         </div>
                         <Button onClick={handleBulkApply} variant="secondary" className="h-9 font-black bg-white border-2 border-primary/20 text-primary hover:bg-primary hover:text-white">
                             <Sparkles className="h-3.5 w-3.5 mr-2" /> অটো-ফিল
@@ -394,7 +419,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                             <TableHeader className="bg-slate-50 sticky top-0 z-30">
                                 <TableRow className="border-b-2 border-black">
                                     <TableHead className="w-16 text-center font-black border-r text-black">রোল</TableHead>
-                                    <TableHead className="min-w-[150px] font-black border-r text-black">নাম</TableHead>
+                                    <TableHead className="min-w-[150px] font-black border-r text-black">নাম ও সেটিংস</TableHead>
                                     <TableHead className="w-24 text-center font-black border-r text-black">বেতন</TableHead>
                                     <TableHead className="w-24 text-center font-black border-r text-black">অর্ধ-বার্ষিক</TableHead>
                                     <TableHead className="w-24 text-center font-black border-r text-black">বার্ষিক ফি</TableHead>
@@ -417,11 +442,24 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                     return (
                                         <TableRow key={student.id} className={cn("hover:bg-primary/5 transition-colors", Object.keys(changes).length > 0 && "bg-amber-50")}>
                                             <TableCell className="text-center font-black border-r">{student.roll.toLocaleString('bn-BD')}</TableCell>
-                                            <TableCell className="font-bold border-r text-slate-800 text-xs">{student.studentNameBn}</TableCell>
+                                            <TableCell className="font-bold border-r text-slate-800 text-xs">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="truncate">{student.studentNameBn}</span>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-6 w-6 text-primary hover:bg-primary/10" 
+                                                        onClick={() => setConfigFreeStudent(student)}
+                                                        title="ফ্রি সেটিংস"
+                                                    >
+                                                        <Gift className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={getVal('monthlyFee') || ''} 
+                                                    value={getVal('monthlyFee') ?? ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'monthlyFee', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
@@ -429,7 +467,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={getVal('examFeeHalfYearly') || ''} 
+                                                    value={getVal('examFeeHalfYearly') ?? ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'examFeeHalfYearly', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
@@ -437,7 +475,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={getVal('examFeeAnnual') || ''} 
+                                                    value={getVal('examFeeAnnual') ?? ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'examFeeAnnual', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
@@ -445,7 +483,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={getVal('sessionFee') || ''} 
+                                                    value={getVal('sessionFee') ?? ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'sessionFee', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
@@ -453,7 +491,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={getVal('admissionFee') || ''} 
+                                                    value={getVal('admissionFee') ?? ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'admissionFee', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
@@ -461,7 +499,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="p-1 border-r">
                                                 <Input 
                                                     type="number" 
-                                                    value={getVal('scoutFee') || ''} 
+                                                    value={getVal('scoutFee') ?? ''} 
                                                     onChange={e => handleIndividualChange(student.id, 'scoutFee', parseInt(e.target.value) || 0)} 
                                                     className="h-8 text-center font-black text-blue-900 border-none bg-transparent"
                                                 />
@@ -504,7 +542,74 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Individual Free Config Dialog */}
+            <StudentFreeConfigDialog 
+                student={configFreeStudent} 
+                open={!!configFreeStudent} 
+                onOpenChange={(o) => !o && setConfigFreeStudent(null)} 
+                onApply={handleFreeConfigUpdate}
+            />
         </div>
+    );
+};
+
+const StudentFreeConfigDialog = ({ student, open, onOpenChange, onApply }: { student: Student | null, open: boolean, onOpenChange: (o: boolean) => void, onApply: (id: string, waivers: any) => void }) => {
+    const [waivers, setWaivers] = useState({
+        monthly: false,
+        exam: false,
+        session: false,
+        admission: false,
+        other: false
+    });
+
+    useEffect(() => {
+        if (open) setWaivers({ monthly: false, exam: false, session: false, admission: false, other: false });
+    }, [open]);
+
+    if (!student) return null;
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-md font-kalpurush">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-black flex items-center gap-2 text-primary">
+                        <Gift className="h-5 w-5" /> ফ্রি সেটিংস (Exemption)
+                    </DialogTitle>
+                    <DialogDescription className="font-bold">
+                        {student.studentNameBn} এর জন্য কোন কোন ফি মওকুফ (ফ্রি) করতে চান?
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-6 space-y-4">
+                    <div className="grid grid-cols-1 gap-3">
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                            <Checkbox id="waiver-monthly" checked={waivers.monthly} onCheckedChange={(v) => setWaivers({...waivers, monthly: !!v})} />
+                            <Label htmlFor="waiver-monthly" className="font-black text-sm cursor-pointer">মাসিক বেতন মওকুফ করুন (০ টাকা)</Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                            <Checkbox id="waiver-exam" checked={waivers.exam} onCheckedChange={(v) => setWaivers({...waivers, exam: !!v})} />
+                            <Label htmlFor="waiver-exam" className="font-black text-sm cursor-pointer">সকল পরীক্ষা ফি মওকুফ করুন (০ টাকা)</Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                            <Checkbox id="waiver-session" checked={waivers.session} onCheckedChange={(v) => setWaivers({...waivers, session: !!v})} />
+                            <Label htmlFor="waiver-session" className="font-black text-sm cursor-pointer">সেশন ফি মওকুফ করুন (০ টাকা)</Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                            <Checkbox id="waiver-admission" checked={waivers.admission} onCheckedChange={(v) => setWaivers({...waivers, admission: !!v})} />
+                            <Label htmlFor="waiver-admission" className="font-black text-sm cursor-pointer">ভর্তি ফি মওকুফ করুন (০ টাকা)</Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 border rounded-lg bg-slate-50">
+                            <Checkbox id="waiver-other" checked={waivers.other} onCheckedChange={(v) => setWaivers({...waivers, other: !!v})} />
+                            <Label htmlFor="waiver-other" className="font-black text-sm cursor-pointer">অন্যান্য সকল ফি মওকুফ করুন (০ টাকা)</Label>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter className="gap-2">
+                    <Button variant="ghost" onClick={() => onOpenChange(false)}>বাতিল</Button>
+                    <Button className="font-black px-8" onClick={() => onApply(student.id, waivers)}>প্রয়োগ করুন</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 };
 
