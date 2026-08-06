@@ -1,7 +1,7 @@
 'use client';
 import { ReactNode, useMemo } from 'react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 
 import { firebaseConfig } from './config';
@@ -19,7 +19,13 @@ if (typeof window !== 'undefined') {
   } else {
     app = getApp();
   }
-  firestore = getFirestore(app);
+
+  // Use initializeFirestore with force long polling for better workstation compatibility
+  // and stability in flaky internet environments.
+  firestore = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  });
+
   auth = getAuth(app);
 
   // Enable offline persistence
