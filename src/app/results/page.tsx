@@ -561,7 +561,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 .map(name => subjects.find(s => s.name === name)!);
 
                             return (
-                                <AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
+                                AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
                                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/10">
                                         <span className="font-black text-lg text-slate-800">{classNamesMap[cls]} শ্রেণি</span>
                                         <Badge variant="secondary" className="ml-2 font-bold">{uniqueSubjects.length.toLocaleString('bn-BD')} টি বিষয়</Badge>
@@ -1449,7 +1449,7 @@ export default function ResultsPage() {
                                         <thead>
                                             <tr className="bg-slate-50">
                                                 <th rowSpan={2} className="border-2 border-black font-black p-1 w-8">রোল</th>
-                                                <th rowSpan={2} className="border-2 border-black font-black p-1 text-left min-w-[120px]">নাম</th>
+                                                <th rowSpan={2} className="border-2 border-black font-black p-0.5 text-left w-24">নাম</th>
                                                 {subs.map(s => (
                                                     <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="border-2 border-black font-black p-1">
                                                         {s.name}
@@ -1484,7 +1484,7 @@ export default function ResultsPage() {
                                             {results.map((res: any) => (
                                                 <tr key={res.student.id} className={cn("h-6 border-b border-black", !res.isPass && "bg-rose-50")}>
                                                     <td className="border-2 border-black text-center font-black">{toBengaliNumber(res.student.roll)}</td>
-                                                    <td className="border-2 border-black font-bold px-1 whitespace-nowrap overflow-hidden text-ellipsis">{res.student.studentNameBn}</td>
+                                                    <td className="border-2 border-black font-bold px-0.5 leading-[1.1] w-24 text-[9px] break-words">{res.student.studentNameBn}</td>
                                                     {subs.map(s => {
                                                         const sr = res.subjectResults.get(s.name);
                                                         const isEng = s.name.includes('ইংরেজি');
