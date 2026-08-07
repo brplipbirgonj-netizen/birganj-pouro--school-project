@@ -23,7 +23,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Transaction, NewTransactionData, addTransaction, getTransactions, deleteTransaction, TransactionType, PaymentMethod } from '@/lib/transactions-data';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/AlertDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -1550,7 +1550,7 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
     return (
          <Card className="border-none shadow-none animate-in fade-in duration-500">
             <CardHeader className="px-0 pt-0">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex justify-between items-center">
                     <CardTitle className="text-xl">খতিয়ান (লেজার)</CardTitle>
                     <div className="flex items-center gap-2">
                         <Label className="font-bold text-xs">মাস নির্বাচন:</Label>
@@ -1793,7 +1793,7 @@ export default function AccountsPage() {
   const canManageFeeSetup = hasPermission('manage:fee-setup');
 
   const sidebarItems = useMemo(() => {
-    const items = [{ id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
+    const items = [{ id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
     if (canManageFeeSetup) items.push({ id: 'fee-setup', label: 'ফি সেটআপ', icon: Settings2, color: 'text-blue-600 bg-blue-50' });
     if (canCollectFees) {
         items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' });
