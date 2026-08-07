@@ -579,7 +579,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     {uniqueSubjects.map((subInfo, i) => {
                                                         const existingRecord = savedResults.find(r => 
                                                             r.className === cls && 
-                                                            r.subject === subInfo.name && 
+                                                            normalize(r.subject) === normalize(subInfo.name) && 
                                                             r.examName === examName
                                                         );
                                                         
@@ -589,19 +589,19 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                             : (existingRecord?.fullMarks?.toString() || subInfo.fullMarks.toString());
                                                         
                                                         const isPermitted = isSubjectPermitted(cls, subInfo.name);
-                                                        const hasData = existingRecord && existingRecord.results.length > 0;
-
-                                                        // Calculate posting statistics
+                                                        
+                                                        // Calculate posting statistics with fixed normalization logic
                                                         const totalClassStudents = allStudents.filter(s => {
                                                             if (s.academicYear !== selectedYear || s.className !== cls) return false;
                                                             if (parseInt(cls) < 9) return true;
                                                             // For 9-10, check if the subject is part of the student's group
-                                                            const studentSubjects = getSubjects(s.className, s.group);
-                                                            return studentSubjects.some(sub => sub.name === subInfo.name);
+                                                            const studentGroupSubjects = getSubjects(s.className, s.group);
+                                                            return studentGroupSubjects.some(sub => normalize(sub.name) === normalize(subInfo.name));
                                                         }).length;
 
                                                         const postedCount = existingRecord?.results.length || 0;
-                                                        const remaining = totalClassStudents - postedCount;
+                                                        const remaining = Math.max(0, totalClassStudents - postedCount);
+                                                        const hasData = postedCount > 0;
 
                                                         return (
                                                             <TableRow key={i} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
@@ -617,7 +617,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                                         )}
                                                                         <div className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
                                                                             পোস্টিং: {toBengaliNumber(postedCount)} / {toBengaliNumber(totalClassStudents)} 
-                                                                            {remaining > 0 && <span className="text-rose-600 ml-1">(বাকি: {toBengaliNumber(remaining)})</span>}
+                                                                            {remaining > 0 && postedCount > 0 && <span className="text-rose-600 ml-1">(বাকি: {toBengaliNumber(remaining)})</span>}
                                                                             {remaining === 0 && postedCount > 0 && <span className="text-emerald-600 ml-1">(সম্পন্ন)</span>}
                                                                         </div>
                                                                     </div>
@@ -1251,11 +1251,11 @@ export default function ResultsPage() {
         if (hasPermission('promote:students')) {
             items.push({ id: 'special-promotion', label: 'বিশেষ পাশ', icon: Star, color: 'text-rose-600 bg-rose-50' });
         }
-        if (canUploadMarks) {
+        if (hasPermission('upload:marks')) {
             items.push({ id: 'upload', label: 'Excel আপলোড', icon: FileUp, color: 'text-blue-600 bg-blue-50' });
         }
         return items;
-    }, [canViewRes, canManageFullMarks, hasPermission, canUploadMarks]);
+    }, [canViewRes, canManageFullMarks, hasPermission]);
 
     if (isClient && !canViewRes && !hasPermission('view:merit-list') && user?.role !== 'admin' && !canManageFullMarks) return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50">
