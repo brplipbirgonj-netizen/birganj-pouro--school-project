@@ -19,12 +19,13 @@ service cloud.firestore {
     }
 
     function hasPermission(permission) {
-      return isAuthed() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        (
-          getUserData().role == 'admin' || 
-          (permission in getUserData().get('permissions', []))
-        );
+      if (!isAuthed()) return false;
+      // Optimize by combining exists and get
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData != null && (
+        userData.role == 'admin' || 
+        (permission in userData.get('permissions', []))
+      );
     }
 
     // --- কালেকশন ভিত্তিক রুলস ---
@@ -129,8 +130,9 @@ service cloud.firestore {
 
     match /transactions/{id} {
       allow read: if isAuthed();
+      // Allow write and delete for fee collectors to support editing existing collections
       allow write: if isAuthed() && (hasPermission('manage:transactions') || hasPermission('collect:fees') || isAdmin());
-      allow delete: if isAdmin();
+      allow delete: if isAuthed() && (hasPermission('manage:transactions') || hasPermission('collect:fees') || isAdmin());
     }
   }
 }
