@@ -561,7 +561,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 .map(name => subjects.find(s => s.name === name)!);
 
                             return (
-                                AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
+                                <AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
                                     <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/10">
                                         <span className="font-black text-lg text-slate-800">{classNamesMap[cls]} শ্রেণি</span>
                                         <Badge variant="secondary" className="ml-2 font-bold">{uniqueSubjects.length.toLocaleString('bn-BD')} টি বিষয়</Badge>
