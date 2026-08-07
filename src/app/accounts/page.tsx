@@ -679,13 +679,11 @@ const ExpenseReportTab = ({ transactions, isLoading, onDeleteSuccess }: { transa
 };
 
 // Income Comparison Tab Component
-const IncomeComparisonTab = ({ allStudents, selectedYear, onPrintDetailedReport }: { allStudents: Student[], selectedYear: string, onPrintDetailedReport: (month: string, cls: string) => void }) => {
+const IncomeComparisonTab = ({ allStudents, selectedYear, onPrintPotentialReport }: { allStudents: Student[], selectedYear: string, onPrintPotentialReport: (cls: string) => void }) => {
     const db = useFirestore();
     const [collections, setCollections] = useState<FeeCollection[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    
-    const [printMonth, setPrintMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
-    const [printClass, setPrintClass] = useState<string>('6');
+    const [previewClass, setPreviewClass] = useState<string>('6');
 
     useEffect(() => {
         if (!db) return;
@@ -721,102 +719,95 @@ const IncomeComparisonTab = ({ allStudents, selectedYear, onPrintDetailedReport 
         return { potential, actual, due: Math.max(0, potential - actual) };
     }, [chartData]);
 
+    const potentialPreviewData = useMemo(() => {
+        const students = allStudents
+            .filter(s => s.academicYear === selectedYear && s.className === previewClass)
+            .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+
+        return students.map(student => {
+            let tuition = student.monthlyFee || 0;
+            if (student.feeCategory === 'full-free') tuition = 0;
+            else if (student.feeCategory === 'half-free') tuition = Math.floor(tuition / 2);
+
+            const admission = student.admissionFee || 0;
+            const session = student.sessionFee || 0;
+            const exam = (student.examFeeHalfYearly || 0) + (student.examFeeAnnual || 0) + (student.examFeePreNirbachoni || 0) + (student.examFeeNirbachoni || 0);
+            const other = (student.otherFee || 0) + (student.scoutFee || 0) + (student.developmentFee || 0) + (student.libraryFee || 0) + (student.tiffinFee || 0);
+            const total = admission + session + (tuition * 12) + exam + other;
+
+            return { roll: student.roll, name: student.studentNameBn, admission, session, tuition, exam, other, total };
+        });
+    }, [allStudents, selectedYear, previewClass]);
+
     if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> ডাটা বিশ্লেষণ করা হচ্ছে...</div>;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-2 border-primary/20 bg-primary/5 shadow-md"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-black uppercase text-primary tracking-widest">বার্ষিক মোট সম্ভাব্য আয়</CardTitle></CardHeader><CardContent><div className="text-3xl font-black text-slate-900">{stats.potential.toLocaleString('bn-BD')} ৳</div><p className="text-[10px] font-bold text-muted-foreground mt-1">টিউশন ও সকল ওয়ান-টাইম ফি মিলিয়ে</p></CardContent></Card>
+                <Card className="border-2 border-primary/20 bg-primary/5 shadow-md"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-black uppercase text-primary tracking-widest">বার্ষিক মোট সম্ভাব্য পাওনা</CardTitle></CardHeader><CardContent><div className="text-3xl font-black text-slate-900">{stats.potential.toLocaleString('bn-BD')} ৳</div><p className="text-[10px] font-bold text-muted-foreground mt-1">টিউশন ও সকল ওয়ান-টাইম ফি মিলিয়ে</p></CardContent></Card>
                 <Card className="border-2 border-emerald-500/20 bg-emerald-50/30 shadow-md"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-black uppercase text-emerald-700 tracking-widest">বার্ষিক মোট প্রকৃত আদায়</CardTitle></CardHeader><CardContent><div className="text-3xl font-black text-emerald-950">{stats.actual.toLocaleString('bn-BD')} ৳</div><p className="text-[10px] font-bold text-emerald-600 mt-1">নগদ ও ব্যাংক আদায়ের সমষ্টি</p></CardContent></Card>
                 <Card className="border-2 border-rose-500/20 bg-rose-50/30 shadow-md"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-black uppercase text-rose-700 tracking-widest">মোট বকেয়া / অনাদায়ী</CardTitle></CardHeader><CardContent><div className="text-3xl font-black text-rose-950">{stats.due.toLocaleString('bn-BD')} ৳</div><p className="text-[10px] font-bold text-rose-600 mt-1">প্রাক্কলিত অবশিষ্ট পাওনা</p></CardContent></Card>
             </div>
-            <Card className="border-2 border-black/10 shadow-xl bg-white rounded-2xl overflow-hidden"><CardHeader className="bg-primary/5 border-b border-black/5"><div><CardTitle className="text-base font-black flex items-center gap-2 text-primary"><BarChart3 className="h-5 w-5" /> সম্ভাব্য আয় বনাম প্রকৃত আদায় (তুলনামূলক চিত্র)</CardTitle><CardDescription className="font-bold text-[10px]">প্রতি মাসের সম্ভাব্য পাওনা এবং আদায়ের গ্রাফ</CardDescription></div></CardHeader><CardContent className="pt-8 h-[400px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} /><YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} /><Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }} formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']} /><Legend verticalAlign="top" align="right" iconType="circle" /><Bar dataKey="potential" name="সম্ভাব্য আয়" fill="#6366f1" radius={[4, 4, 0, 0]} /><Bar dataKey="actual" name="প্রকৃত আদায়" fill="#10b981" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></CardContent></Card>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="border-2 border-black/10 shadow-lg overflow-hidden">
-                    <CardHeader className="bg-muted/30 border-b">
-                        <CardTitle className="text-base font-black flex items-center gap-2">
-                            <ListChecks className="h-5 w-5 text-primary" /> মাসভিত্তিক বিস্তারিত বিবরণী
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="table-container">
-                            <Table>
-                                <TableHeader className="bg-muted/50 sticky top-0">
-                                    <TableRow>
-                                        <TableHead className="font-black text-black">মাস</TableHead>
-                                        <TableHead className="text-right font-black text-black">সম্ভাব্য পাওনা (৳)</TableHead>
-                                        <TableHead className="text-right font-black text-black">প্রকৃত আদায় (৳)</TableHead>
-                                        <TableHead className="text-center font-black text-black">হার (%)</TableHead>
+            <Card className="border-2 border-black/10 shadow-xl bg-white rounded-2xl overflow-hidden"><CardHeader className="bg-primary/5 border-b border-black/5"><div><CardTitle className="text-base font-black flex items-center gap-2 text-primary"><BarChart3 className="h-5 w-5" /> সম্ভাব্য আয় বনাম প্রকৃত আদায় (তুলনামূলক চিত্র)</CardTitle><CardDescription className="font-bold text-[10px]">প্রতি মাসের সম্ভাব্য পাওনা এবং আদায়ের গ্রাফ</CardDescription></div></CardHeader><CardContent className="pt-8 h-[400px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} /><YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} /><Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }} formatter={(value: number) => [`${value.toLocaleString('bn-BD')} ৳`, '']} /><Legend verticalAlign="top" align="right" iconType="circle" /><Bar dataKey="potential" name="সম্ভাব্য পাওনা" fill="#6366f1" radius={[4, 4, 0, 0]} /><Bar dataKey="actual" name="প্রকৃত আদায়" fill="#10b981" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+            
+            <Card className="border-2 border-emerald-100 bg-white shadow-lg overflow-hidden">
+                <CardHeader className="bg-emerald-50/50 border-b flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-lg font-black text-emerald-800 flex items-center gap-2"><TableIcon className="h-5 w-5" /> শ্রেণিভিত্তিক বার্ষিক সম্ভাব্য পাওনা বিবরণী</CardTitle>
+                        <CardDescription className="font-bold">সারা বছরের সম্ভাব্য পাওনার বিস্তারিত প্রিভিউ এবং প্রিন্ট</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-4 no-print">
+                        <div className="flex items-center gap-2">
+                            <Label className="font-black text-xs">শ্রেণি:</Label>
+                            <Select value={previewClass} onValueChange={setPreviewClass}>
+                                <SelectTrigger className="w-40 bg-white border-2 font-bold h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>{['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <Button onClick={() => onPrintPotentialReport(previewClass)} className="font-black h-9 bg-emerald-600 hover:bg-emerald-700 shadow-md"><Printer className="mr-2 h-4 w-4" /> প্রিন্ট করুন</Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="table-container !max-h-[500px] !border-0 !rounded-none">
+                        <Table className="border-separate border-spacing-0 w-full min-w-[1300px] border-collapse border-2 border-black">
+                            <TableHeader className="bg-slate-100 sticky top-0 z-30 shadow-sm">
+                                <TableRow className="h-8 border-b-2 border-black">
+                                    <TableHead className="border-r border-b border-black font-black text-[13px] text-center w-14 text-black sticky left-0 z-40 bg-slate-100">রোল</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[150px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">ভর্তি ফি</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">সেশন চার্জ</TableHead>
+                                    {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-r border-b border-black font-black text-[11px] text-center text-black px-1">{m}</TableHead>)}
+                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">পরীক্ষা ফি</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">অন্যান্য</TableHead>
+                                    <TableHead className="font-black border-b border-black text-[13px] text-right pr-4 text-white bg-blue-900 sticky right-0 z-40">মোট পাওনা</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {potentialPreviewData.map((row, i) => (
+                                    <TableRow key={i} className="h-7 border-b border-black hover:bg-slate-50 transition-colors">
+                                        <TableCell className="border-r border-black text-center font-black text-[13px] sticky left-0 z-20 bg-white">{toBengaliNumber(row.roll)}</TableCell>
+                                        <TableCell className="border-r border-black font-black text-[13px] truncate sticky left-14 z-20 bg-white">{row.name}</TableCell>
+                                        <TableCell className="border-r border-black text-center text-[12px] font-black">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
+                                        <TableCell className="border-r border-black text-center text-[12px] font-black">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
+                                        {Array(12).fill(row.tuition).map((val, j) => (
+                                            <TableCell key={j} className="border-r border-black text-center text-[11px] font-black">{val > 0 ? toBengaliNumber(val) : '-'}</TableCell>
+                                        ))}
+                                        <TableCell className="border-r border-black text-center text-[12px] font-black">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
+                                        <TableCell className="border-r border-black text-center text-[12px] font-black">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
+                                        <TableCell className="text-right pr-4 font-black text-[14px] bg-blue-50 text-blue-900 sticky right-0 z-20 border-l border-black">{toBengaliNumber(row.total)}</TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {chartData.map((row, idx) => {
-                                        const rate = row.potential > 0 ? (row.actual / row.potential) * 100 : 0;
-                                        return (
-                                            <TableRow key={idx} className="hover:bg-slate-50 transition-colors h-11">
-                                                <TableCell className="font-bold text-slate-700">{row.name}</TableCell>
-                                                <TableCell className="text-right font-black text-slate-800">{row.potential.toLocaleString('bn-BD')}</TableCell>
-                                                <TableCell className="text-right font-black text-emerald-700">{row.actual.toLocaleString('bn-BD')}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge className={cn(
-                                                        "font-black text-[10px] min-w-[50px] justify-center",
-                                                        rate >= 90 ? "bg-emerald-600" : rate >= 50 ? "bg-amber-600" : "bg-rose-600"
-                                                    )}>
-                                                        {toBengaliNumber(rate.toFixed(1))}%
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-2 border-emerald-100 bg-emerald-50/10 shadow-lg">
-                    <CardHeader className="bg-emerald-50/50 border-b">
-                        <CardTitle className="text-base font-black flex items-center gap-2 text-emerald-800">
-                            <Printer className="h-5 w-5" /> মাসিক সম্ভাব্য আদায় রিপোর্ট প্রিন্ট
-                        </CardTitle>
-                        <CardDescription className="font-bold">শ্রেণি অনুযায়ী মাসিক পাওনার বিস্তারিত তালিকা প্রিন্ট করুন</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="font-black text-xs text-muted-foreground">মাস নির্বাচন করুন</Label>
-                                <Select value={printMonth} onValueChange={setPrintMonth}>
-                                    <SelectTrigger className="bg-white border-2 font-black h-11"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-black text-xs text-muted-foreground">শ্রেণি নির্বাচন করুন</Label>
-                                <Select value={printClass} onValueChange={setPrintClass}>
-                                    <SelectTrigger className="bg-white border-2 font-black h-11"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {['6', '7', '8', '9', '10'].map(c => <SelectItem key={c} value={c}>{classNamesMap[c]}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <Button 
-                            onClick={() => onPrintDetailedReport(printMonth, printClass)} 
-                            className="w-full h-14 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-xl"
-                        >
-                            <Printer className="mr-2 h-6 w-6" /> রিপোর্ট প্রিন্ট করুন
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };
 
-// --- NEW COMPONENT: Class-wise Annual Collection Report ---
+// Class-wise Annual Collection Report
 const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allStudents: Student[], selectedYear: string, onPrint: (reportData: any[]) => void }) => {
     const db = useFirestore();
     const [selectedClass, setSelectedClass] = useState('6');
@@ -828,7 +819,7 @@ const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allS
         setIsLoading(true);
         const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
         const snap = await getDocs(q);
-        setCollections(snap.docs.map(feeCollectionFromDoc).filter((c): c is FeeCollection => f !== null));
+        setCollections(snap.docs.map(feeCollectionFromDoc).filter((c): c is FeeCollection => c !== null));
         setIsLoading(false);
     }, [db, selectedYear]);
 
@@ -951,7 +942,7 @@ const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allS
                                     <TableCell colSpan={2} className="text-right pr-4 border-r border-black text-[13px] sticky left-0 z-50 bg-slate-200">সর্বমোট আদায়:</TableCell>
                                     <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(grandTotals.admission)}</TableCell>
                                     <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(grandTotals.session)}</TableCell>
-                                    {grandTotals.months.map((val, j) => <TableCell key={j} className="border-r border-black text-center text-[11px]">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                                    {grandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border-r border-black text-center text-[11px]">{toBengaliNumber(Math.round(val))}</TableCell>)}
                                     <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(grandTotals.exam)}</TableCell>
                                     <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(grandTotals.other)}</TableCell>
                                     <TableCell className="text-right pr-4 text-[16px] bg-blue-950 text-white sticky right-0 z-50 border-l border-black">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
@@ -981,7 +972,7 @@ const MonthlyReportTab = ({ transactions, selectedYear }: { transactions: Transa
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-end gap-4 no-print bg-white p-4 rounded-xl border-2 border-indigo-100"><div className="space-y-2 flex-1"><Label className="font-bold text-xs">মাস নির্বাচন করুন:</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="h-10 font-bold border-2"><SelectValue /></SelectTrigger><SelectContent>{BENGALI_MONTHS.map((m, i) => <SelectItem key={m} value={i.toString()}>{m}</SelectItem>)}</SelectContent></Select></div><Button onClick={() => window.print()} className="font-black px-10 h-10 shadow-lg"><Printer className="mr-2 h-4 w-4" /> রিপোর্ট প্রিন্ট করুন</Button></div>
-            <div className="printable-area bg-white text-black p-10 font-kalpurush border-2"><div className="text-center mb-8 border-b-4 border-emerald-800 pb-4"><h1 className="text-3xl font-black text-emerald-900">{schoolInfo.name}</h1><p className="font-bold text-slate-700">{schoolInfo.address}</p><div className="mt-4 inline-block bg-emerald-50 px-6 py-1 rounded-full border-2 border-emerald-200"><h2 className="text-xl font-black uppercase tracking-widest">মাসিক আয়-ব্যয় বিবরণী - {BENGALI_MONTHS[parseInt(selectedMonth)]} {toBengaliNumber(selectedYear)}</h2></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-4"><h3 className="text-xl font-black border-b-2 border-emerald-700 pb-1 text-emerald-800">আয় (Incomes)</h3><Table className="border"><TableHeader className="bg-slate-50"><TableRow><TableHead className="font-black">বিবরণ</TableHead><TableHead className="text-right font-black">পরিমাণ (৳)</TableHead></TableRow></TableHeader><TableBody><TableRow className="bg-emerald-50/30 font-bold"><TableCell>প্রারম্ভিক জের (Opening Balance)</TableCell><TableCell className="text-right">{(reportData.openingCash + reportData.openingBank).toLocaleString('bn-BD')}</TableCell></TableRow>{Object.entries(reportData.incomeHeads).map(([head, amount]) => (<TableRow key={head}><TableCell className="pl-6">{head}</TableCell><TableCell className="text-right">{amount.toLocaleString('bn-BD')}</TableCell></TableRow>))}<TableRow className="bg-emerald-100 font-black text-emerald-900 border-t-2"><TableCell>সর্বমোট আয় (ব্যালেন্স সহ)</TableCell><TableCell className="text-right">{(reportData.openingCash + reportData.openingBank + reportData.totalIncome).toLocaleString('bn-BD')} ৳</TableCell></TableRow></TableBody></Table></div><div className="space-y-4"><h3 className="text-xl font-black border-b-2 border-rose-700 pb-1 text-rose-800">ব্যয় (Expenditures)</h3><Table className="border"><TableHeader className="bg-slate-50"><TableRow><TableHead className="font-black">বিবরণ</TableHead><TableHead className="text-right font-black">পরিমাণ (৳)</TableHead></TableRow></TableHeader><TableBody>{Object.entries(reportData.expenseHeads).map(([head, amount]) => (<TableRow key={head}><TableCell className="pl-6">{head}</TableCell><TableCell className="text-right">{amount.toLocaleString('bn-BD')}</TableCell></TableRow>))}<TableRow className="bg-rose-100 font-black text-rose-900 border-t-2"><TableCell>সর্বমোট ব্যয়</TableCell><TableCell className="text-right">{reportData.totalExpense.toLocaleString('bn-BD')} ৳</TableCell></TableRow><TableRow className="font-bold"><TableCell className="pt-8">সমাপনী জের (Closing Balance):</TableCell><TableCell className="text-right pt-8">{(reportData.closingCash + reportData.closingBank).toLocaleString('bn-BD')} ৳</TableCell></TableRow><TableRow className="text-[10px] italic text-muted-foreground"><TableCell className="pl-6">- হাতে নগদ: {reportData.closingCash.toLocaleString('bn-BD')}</TableCell><TableCell className="text-right">- ব্যাংকে: {reportData.closingBank.toLocaleString('bn-BD')}</TableCell></TableRow></TableBody></Table></div></div><div className="mt-16 flex justify-between px-10"><div className="text-center w-48 border-t-2 border-black pt-1 font-black">ক্যাশিয়ার / হিসাবরক্ষক</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">অডিটর / কমিটির স্বাক্ষর</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div></div></div>
+            <div className="printable-area bg-white text-black p-10 font-kalpurush border-2"><div className="text-center mb-8 border-b-4 border-emerald-800 pb-4"><h1 className="text-3xl font-black text-emerald-950">{schoolInfo.name}</h1><p className="font-bold text-slate-700">{schoolInfo.address}</p><div className="mt-4 inline-block bg-emerald-50 px-6 py-1 rounded-full border-2 border-emerald-200"><h2 className="text-xl font-black uppercase tracking-widest">মাসিক আয়-ব্যয় বিবরণী - {BENGALI_MONTHS[parseInt(selectedMonth)]} {toBengaliNumber(selectedYear)}</h2></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-4"><h3 className="text-xl font-black border-b-2 border-emerald-700 pb-1 text-emerald-800">আয় (Incomes)</h3><Table className="border"><TableHeader className="bg-slate-50"><TableRow><TableHead className="font-black">বিবরণ</TableHead><TableHead className="text-right font-black">পরিমাণ (৳)</TableHead></TableRow></TableHeader><TableBody><TableRow className="bg-emerald-50/30 font-bold"><TableCell>প্রারম্ভিক জের (Opening Balance)</TableCell><TableCell className="text-right">{(reportData.openingCash + reportData.openingBank).toLocaleString('bn-BD')}</TableCell></TableRow>{Object.entries(reportData.incomeHeads).map(([head, amount]) => (<TableRow key={head}><TableCell className="pl-6">{head}</TableCell><TableCell className="text-right">{amount.toLocaleString('bn-BD')}</TableCell></TableRow>))}<TableRow className="bg-emerald-100 font-black text-emerald-900 border-t-2"><TableCell>সর্বমোট আয় (ব্যালেন্স সহ)</TableCell><TableCell className="text-right">{(reportData.openingCash + reportData.openingBank + reportData.totalIncome).toLocaleString('bn-BD')} ৳</TableCell></TableRow></TableBody></Table></div><div className="space-y-4"><h3 className="text-xl font-black border-b-2 border-rose-700 pb-1 text-rose-800">ব্যয় (Expenditures)</h3><Table className="border"><TableHeader className="bg-slate-50"><TableRow><TableHead className="font-black">বিবরণ</TableHead><TableHead className="text-right font-black">পরিমাণ (৳)</TableHead></TableRow></TableHeader><TableBody>{Object.entries(reportData.expenseHeads).map(([head, amount]) => (<TableRow key={head}><TableCell className="pl-6">{head}</TableCell><TableCell className="text-right">{amount.toLocaleString('bn-BD')}</TableCell></TableRow>))}<TableRow className="bg-rose-100 font-black text-rose-900 border-t-2"><TableCell>সর্বমোট ব্যয়</TableCell><TableCell className="text-right">{reportData.totalExpense.toLocaleString('bn-BD')} ৳</TableCell></TableRow><TableRow className="font-bold"><TableCell className="pt-8">সমাপনী জের (Closing Balance):</TableCell><TableCell className="text-right pt-8">{(reportData.closingCash + reportData.closingBank).toLocaleString('bn-BD')} ৳</TableCell></TableRow><TableRow className="text-[10px] italic text-muted-foreground"><TableCell className="pl-6">- হাতে নগদ: {reportData.closingCash.toLocaleString('bn-BD')}</TableCell><TableCell className="text-right">- ব্যাংকে: {reportData.closingBank.toLocaleString('bn-BD')}</TableCell></TableRow></Table></div></div><div className="mt-16 flex justify-between px-10"><div className="text-center w-48 border-t-2 border-black pt-1 font-black">ক্যাশিয়ার / হিসাবরক্ষক</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">অডিটর / কমিটির স্বাক্ষর</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div></div></div>
         </div>
     );
 };
@@ -1015,13 +1006,13 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
     return (<Card className="border-none shadow-none animate-in fade-in duration-500"><CardHeader className="px-0 pt-0"><div className="flex justify-between items-center"><CardTitle className="text-xl">খতিয়ান (লেজার)</CardTitle><div className="flex items-center gap-2"><Label className="font-bold text-xs">মাস নির্বাচন:</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="w-40 bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সকল মাস" /></SelectTrigger><SelectContent><SelectItem value="all">সকল মাস</SelectItem>{BENGALI_MONTHS.map((m, i) => (<SelectItem key={m} value={i.toString()}>{m}</SelectItem>))}</SelectContent></Select></div></div></CardHeader><CardContent className="px-0 pt-4">{isLoading ? <p className="text-center py-20 italic">লোড হচ্ছে...</p> : Object.keys(ledgerData).length === 0 ? <p className="text-center py-20 italic">তথ্য নেই</p> : (<Accordion type="multiple" className="w-full space-y-3">{Object.entries(ledgerData).map(([head, data]) => (<AccordionItem value={head} key={head} className="border-2 rounded-xl px-4 bg-white shadow-sm overflow-hidden"><AccordionTrigger className="hover:no-underline font-black text-base py-4"><div className="flex justify-between w-full pr-4 text-left"><span>{head}</span><div className="flex gap-4 text-[10px]"><Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-100">আয়: {data.income.toLocaleString('bn-BD')}</Badge><Badge variant="outline" className="text-rose-700 bg-rose-50 border-rose-100">ব্যয়: {data.expense.toLocaleString('bn-BD')}</Badge></div></div></AccordionTrigger><AccordionContent className="pt-2 p-0"><div className="table-container max-h-[300px]"><Table><TableHeader className="bg-muted/30"><TableRow><TableHead>তারিখ</TableHead><TableHead>বিবরণ</TableHead><TableHead className="text-right">আয়</TableHead><TableHead className="text-right">ব্যয়</TableHead></TableRow></TableHeader><TableBody>{data.items.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (<TableRow key={tx.id} className="h-10"><TableCell className="text-xs">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell><TableCell className="text-[10px]">{tx.description || '-'}</TableCell><TableCell className="text-right font-bold text-emerald-600 text-xs">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell><TableCell className="text-right font-bold text-rose-600 text-xs">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell></TableRow>))}</TableBody></Table></div></AccordionContent></AccordionItem>))}</Accordion>)}</CardContent></Card>);
 };
 
-type AccountsPrintType = 'fee-setup' | 'potential' | 'annual-collection' | null;
+type AccountsPrintType = 'fee-setup' | 'annual-potential' | 'annual-collection' | null;
 
 export default function AccountsPage() {
   const [isClient, setIsClient] = useState(false); const db = useFirestore(); const { user, hasPermission } = useAuth(); const { selectedYear } = useAcademicYear(); const { schoolInfo } = useSchoolInfo(); const [transactions, setTransactions] = useState<Transaction[]>([]); const [allStudents, setAllStudents] = useState<Student[]>([]); const [isLoading, setIsLoading] = useState(true); const [isLoadingStudents, setIsLoadingStudents] = useState(true); const [activeSection, setActiveSection] = useState("dashboard"); const [pendingEntryType, setPendingEntryType] = useState<TransactionType>('income');
   
   const [activePrintReport, setActivePrintReport] = useState<AccountsPrintType>(null);
-  const [potentialPrintParams, setPotentialPrintParams] = useState<{ month: string, cls: string } | null>(null);
+  const [potentialPrintParams, setPotentialPrintParams] = useState<{ cls: string } | null>(null);
   const [annualReportPrintData, setAnnualReportPrintData] = useState<any[]>([]);
   
   const fetchTransactions = useCallback(async () => { if (!db || !user) return; setIsLoading(true); const fetched = await getTransactions(db, selectedYear); setTransactions(fetched); setIsLoading(false); }, [db, user, selectedYear]);
@@ -1032,7 +1023,7 @@ export default function AccountsPage() {
       const items = [{ id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }]; 
       if (hasPermission('manage:fee-setup')) items.push({ id: 'fee-setup', label: 'ফি সেটআপ', icon: Settings2, color: 'text-blue-600 bg-blue-50' }); 
       if (hasPermission('collect:fees')) { items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' }); items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' }); } 
-      if (hasPermission('view:collection-report')) { items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' }); items.push({ id: 'income-comparison', label: 'সম্ভাব্য আয় বনাম আদায়', icon: BarChart3, color: 'text-amber-600 bg-amber-50' }); items.push({ id: 'classwise-annual-report', label: 'শ্রেণিভিত্তিক বার্ষিক আদায়', icon: TableIcon, color: 'text-emerald-600 bg-emerald-50' }); } 
+      if (hasPermission('view:collection-report')) { items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' }); items.push({ id: 'income-comparison', label: 'সম্ভাব্য পাওনা বনাম আদায়', icon: BarChart3, color: 'text-amber-600 bg-amber-50' }); items.push({ id: 'classwise-annual-report', label: 'শ্রেণিভিত্তিক বার্ষিক আদায়', icon: TableIcon, color: 'text-emerald-600 bg-emerald-50' }); } 
       if (hasPermission('view:expense-report')) items.push({ id: 'expense-report', label: 'ব্যয় রিপোর্ট', icon: Receipt, color: 'text-rose-600 bg-rose-50' }); 
       if (hasPermission('view:cashbook-ledger')) { items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' }); items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' }); } 
       if (hasPermission('view:accounts-monthly-report')) items.push({ id: 'monthly-report', label: 'মাসিক রিপোর্ট', icon: FileBarChart, color: 'text-emerald-600 bg-emerald-50' }); 
@@ -1040,19 +1031,18 @@ export default function AccountsPage() {
       return items; 
   }, [hasPermission]);
   
-  const handlePrintDetailedReport = (month: string, cls: string) => {
-    setPotentialPrintParams({ month, cls });
-    setActivePrintReport('potential');
+  const handlePrintPotentialReport = (cls: string) => {
+    setPotentialPrintParams({ cls });
+    setActivePrintReport('annual-potential');
     setTimeout(() => {
         window.print();
         setActivePrintReport(null);
-    }, 500);
+    }, 1500);
   };
 
   const handlePrintAnnualReport = (data: any[]) => {
       setAnnualReportPrintData(data);
       setActivePrintReport('annual-collection');
-      // Increased timeout to ensure full rendering of large table before print
       setTimeout(() => {
           window.print();
           setActivePrintReport(null);
@@ -1074,18 +1064,17 @@ export default function AccountsPage() {
       <Header />
       <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
         <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start"><h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হিসাব শাখা</h2><div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">{sidebarItems.map(item => (<button key={item.id} onClick={() => setActiveSection(item.id)} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit", activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50")}><div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}><item.icon className="h-3.5 w-3.5" /></div><span className="text-xs">{item.label}</span>{activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}</button>))}</div></aside>
-        <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4"><div className="p-4 sm:p-6 lg:p-8 flex-1">{isLoadingStudents && allStudents.length === 0 ? <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div> : (<><div className="mb-6 border-b pb-4 flex justify-between items-center no-print"><div><h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2><p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p></div></div>{activeSection === 'dashboard' && <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={(t) => { setPendingEntryType(t); setActiveSection('new-transaction'); }} />}{activeSection === 'fee-setup' && <FeeSetupTab allStudents={allStudents} selectedYear={selectedYear} onPrint={handlePrintFeeSetup} />}{activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}{activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}{activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} onDeleteSuccess={fetchTransactions} />}{activeSection === 'income-comparison' && <IncomeComparisonTab allStudents={allStudents} selectedYear={selectedYear} onPrintDetailedReport={handlePrintDetailedReport} />}{activeSection === 'classwise-annual-report' && <ClasswiseAnnualReportTab allStudents={allStudents} selectedYear={selectedYear} onPrint={handlePrintAnnualReport} />}{activeSection === 'expense-report' && <ExpenseReportTab transactions={transactions} isLoading={isLoading} onDeleteSuccess={fetchTransactions} />}{activeSection === 'cashbook' && <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />}{activeSection === 'ledger' && <LedgerTab transactions={transactions} isLoading={isLoading} />}{activeSection === 'monthly-report' && <MonthlyReportTab transactions={transactions} selectedYear={selectedYear} />}{activeSection === 'new-transaction' && <NewTransactionTab onTransactionAdded={fetchTransactions} initialType={pendingEntryType} />}</>)}</div></div>
+        <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4"><div className="p-4 sm:p-6 lg:p-8 flex-1">{isLoadingStudents && allStudents.length === 0 ? <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div> : (<><div className="mb-6 border-b pb-4 flex justify-between items-center no-print"><div><h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2><p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p></div></div>{activeSection === 'dashboard' && <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={(t) => { setPendingEntryType(t); setActiveSection('new-transaction'); }} />}{activeSection === 'fee-setup' && <FeeSetupTab allStudents={allStudents} selectedYear={selectedYear} onPrint={handlePrintFeeSetup} />}{activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}{activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}{activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} onDeleteSuccess={fetchTransactions} />}{activeSection === 'income-comparison' && <IncomeComparisonTab allStudents={allStudents} selectedYear={selectedYear} onPrintPotentialReport={handlePrintPotentialReport} />}{activeSection === 'classwise-annual-report' && <ClasswiseAnnualReportTab allStudents={allStudents} selectedYear={selectedYear} onPrint={handlePrintAnnualReport} />}{activeSection === 'expense-report' && <ExpenseReportTab transactions={transactions} isLoading={isLoading} onDeleteSuccess={fetchTransactions} />}{activeSection === 'cashbook' && <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />}{activeSection === 'ledger' && <LedgerTab transactions={transactions} isLoading={isLoading} />}{activeSection === 'monthly-report' && <MonthlyReportTab transactions={transactions} selectedYear={selectedYear} />}{activeSection === 'new-transaction' && <NewTransactionTab onTransactionAdded={fetchTransactions} initialType={pendingEntryType} />}</>)}</div></div>
       </main>
 
       {/* Printable Areas - Explicitly managed to avoid overlap */}
       {activePrintReport === 'fee-setup' && <PrintableFeeSetupArea allStudents={allStudents} selectedYear={selectedYear} schoolInfo={schoolInfo} />}
       
-      {activePrintReport === 'potential' && potentialPrintParams && (
-        <PrintablePotentialCollectionReport 
+      {activePrintReport === 'annual-potential' && potentialPrintParams && (
+        <PrintablePotentialAnnualReport 
             allStudents={allStudents} 
             selectedYear={selectedYear} 
             schoolInfo={schoolInfo} 
-            month={potentialPrintParams.month}
             cls={potentialPrintParams.cls}
         />
       )}
@@ -1167,84 +1156,118 @@ function PrintableFeeSetupArea({ allStudents, selectedYear, schoolInfo }: { allS
     );
 }
 
-function PrintablePotentialCollectionReport({ allStudents, selectedYear, schoolInfo, month, cls }: { allStudents: Student[], selectedYear: string, schoolInfo: any, month: string, cls: string }) {
-    const monthIdx = BENGALI_MONTHS.indexOf(month);
+function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo, cls }: { allStudents: Student[], selectedYear: string, schoolInfo: any, cls: string }) {
     const students = allStudents
         .filter(s => s.academicYear === selectedYear && s.className === cls)
         .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
 
+    const grandTotals = {
+        admission: 0,
+        session: 0,
+        months: Array(12).fill(0),
+        exam: 0,
+        other: 0,
+        total: 0
+    };
+
+    const studentRows = students.map(student => {
+        let tuition = student.monthlyFee || 0;
+        if (student.feeCategory === 'full-free') tuition = 0;
+        else if (student.feeCategory === 'half-free') tuition = Math.floor(tuition / 2);
+
+        const admission = student.admissionFee || 0;
+        const session = student.sessionFee || 0;
+        const exam = (student.examFeeHalfYearly || 0) + (student.examFeeAnnual || 0) + (student.examFeePreNirbachoni || 0) + (student.examFeeNirbachoni || 0);
+        const other = (student.otherFee || 0) + (student.scoutFee || 0) + (student.developmentFee || 0) + (student.libraryFee || 0) + (student.tiffinFee || 0);
+        
+        const total = admission + session + (tuition * 12) + exam + other;
+
+        // Update grand totals
+        grandTotals.admission += admission;
+        grandTotals.session += session;
+        grandTotals.exam += exam;
+        grandTotals.other += other;
+        grandTotals.total += total;
+        for(let i=0; i<12; i++) grandTotals.months[i] += tuition;
+
+        return {
+            roll: student.roll,
+            name: student.studentNameBn,
+            admission,
+            session,
+            tuition,
+            exam,
+            other,
+            total
+        };
+    });
+
     return (
-        <div className="printable-area bg-white text-black p-10 font-kalpurush">
-            <header className="flex items-center gap-6 border-b-4 border-primary pb-4 mb-6">
-                {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
-                <div className="text-center flex-grow">
-                    <h1 className="text-3xl font-black text-slate-900">{schoolInfo.name}</h1>
-                    <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
-                    <div className="mt-2 inline-block bg-primary/5 px-8 py-1 rounded-full border-2 border-primary">
-                        <h2 className="text-lg font-black uppercase">মাসিক সম্ভাব্য আদায় রিপোর্ট - {month} {toBengaliNumber(selectedYear)}</h2>
+        <div className="printable-area bg-white text-black font-kalpurush p-2 w-full">
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4 landscape; margin: 5mm; }
+                    .printable-area { width: 100% !important; }
+                    .printable-area table { border-collapse: collapse !important; border: 2px solid black !important; width: 100% !important; table-layout: auto !important; }
+                    .printable-area th, .printable-area td { border: 1px solid black !important; padding: 1px !important; }
+                }
+            `}</style>
+            <div className="mb-20 break-after-page min-h-screen w-full">
+                <header className="flex items-center justify-between border-b-4 border-primary pb-2 mb-4">
+                    {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={50} height={50} className="object-contain" />}
+                    <div className="text-center flex-grow">
+                        <h1 className="text-2xl font-black text-slate-900">{schoolInfo.name}</h1>
+                        <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
+                        <h2 className="text-base font-black underline uppercase mt-1 text-black">শ্রেণিভিত্তিক বার্ষিক সম্ভাব্য পাওনা বিবরণী - {toBengaliNumber(selectedYear)}</h2>
+                        <p className="text-xs font-black">শ্রেণি: {classNamesMap[cls]}</p>
                     </div>
-                    <p className="text-sm font-black mt-1">শ্রেণি: {classNamesMap[cls]}</p>
-                </div>
-            </header>
-
-            <Table className="border-2 border-black">
-                <TableHeader className="bg-slate-100">
-                    <TableRow className="border-b-2 border-black">
-                        <TableHead className="w-12 text-center font-black border-r-2 border-black text-black">রোল</TableHead>
-                        <TableHead className="font-black border-r-2 border-black text-black">নাম</TableHead>
-                        <TableHead className="text-center font-black border-r-2 border-black text-black">মাসিক বেতন</TableHead>
-                        <TableHead className="text-center font-black border-r-2 border-black text-black">অন্যান্য পাওনা</TableHead>
-                        <TableHead className="text-right font-black pr-4 text-black">মোট পাওনা (৳)</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {students.length === 0 ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-20 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</TableCell></TableRow>
-                    ) : students.map(student => {
-                        let tuition = student.monthlyFee || 0;
-                        if (student.feeCategory === 'full-free') tuition = 0;
-                        else if (student.feeCategory === 'half-free') tuition = Math.floor(tuition / 2);
-
-                        let others = 0;
-                        let otherDetails = [];
-                        if (monthIdx === 0) {
-                            others += (student.admissionFee || 0) + (student.sessionFee || 0) + (student.otherFee || 0);
-                            if (others > 0) otherDetails.push('ভর্তি/সেশন');
-                        }
-                        if (monthIdx === 5 && student.examFeeHalfYearly) { others += student.examFeeHalfYearly; otherDetails.push('অর্ধ-বার্ষিক'); }
-                        if (monthIdx === 9 && student.examFeePreNirbachoni) { others += student.examFeePreNirbachoni; otherDetails.push('প্রাক-নির্বাচনী'); }
-                        if (monthIdx === 10 && student.examFeeNirbachoni) { others += student.examFeeNirbachoni; otherDetails.push('নির্বাচনী'); }
-                        if (monthIdx === 11 && student.examFeeAnnual) { others += student.examFeeAnnual; otherDetails.push('বার্ষিক'); }
-
-                        const total = tuition + others;
-
-                        return (
-                            <TableRow key={student.id} className="border-b border-slate-300 h-10">
-                                <TableCell className="text-center font-bold border-r-2 border-black">{toBengaliNumber(student.roll)}</TableCell>
-                                <TableCell className="font-bold border-r-2 border-black">
-                                    <div>{student.studentNameBn}</div>
-                                    <div className="text-[10px] text-muted-foreground">{student.feeCategory === 'half-free' ? '(হাফ-ফ্রি)' : student.feeCategory === 'full-free' ? '(ফুল-ফ্রি)' : ''}</div>
-                                </TableCell>
-                                <TableCell className="text-center border-r-2 border-black font-black">{toBengaliNumber(tuition)}</TableCell>
-                                <TableCell className="text-center border-r-2 border-black font-medium">
-                                    {others > 0 ? (
-                                        <div>
-                                            <span className="font-black">{toBengaliNumber(others)}</span>
-                                            <span className="text-[8px] ml-1">({otherDetails.join(',')})</span>
-                                        </div>
-                                    ) : '-'}
-                                </TableCell>
-                                <TableCell className="text-right pr-4 font-black text-primary">{toBengaliNumber(total)}</TableCell>
+                </header>
+                <Table className="border-collapse border-2 border-black w-full text-[10px]">
+                    <TableHeader className="bg-slate-100">
+                        <TableRow className="h-6 border-b-2 border-black bg-slate-100">
+                            <TableHead className="border border-black font-black text-center w-8 text-black">রোল</TableHead>
+                            <TableHead className="border border-black font-black min-w-[120px] text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
+                            <TableHead className="border border-black font-black text-center text-black">ভর্তি ফি</TableHead>
+                            <TableHead className="border border-black font-black text-center text-black">সেশন চার্জ</TableHead>
+                            {BENGALI_MONTHS.map(m => <TableHead key={m} className="border border-black font-black text-center text-black px-0.5">{m.slice(0,3)}</TableHead>)}
+                            <TableHead className="border border-black font-black text-center text-black">পরীক্ষা</TableHead>
+                            <TableHead className="border border-black font-black text-center text-black">অন্যান্য</TableHead>
+                            <TableHead className="font-black border border-black text-right pr-1 text-black bg-slate-200 w-16">মোট পাওনা</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {studentRows.map((row, i) => (
+                            <TableRow key={i} className="h-[18px] border-b border-black">
+                                <TableCell className="border border-black text-center font-black text-black p-0">{toBengaliNumber(row.roll)}</TableCell>
+                                <TableCell className="border border-black font-black whitespace-nowrap text-black text-left pl-2 p-0">{row.name}</TableCell>
+                                <TableCell className="border border-black text-center text-black font-black p-0">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
+                                <TableCell className="border border-black text-center text-black font-black p-0">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
+                                {[...Array(12)].map((_, j) => (
+                                    <TableCell key={j} className="border border-black text-center text-black font-black p-0">{row.tuition > 0 ? toBengaliNumber(row.tuition) : '-'}</TableCell>
+                                ))}
+                                <TableCell className="border border-black text-center text-black font-black p-0">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
+                                <TableCell className="border border-black text-center text-black font-black p-0">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
+                                <TableCell className="text-right pr-1 font-black bg-slate-100 text-black border border-black p-0">{toBengaliNumber(row.total)}</TableCell>
                             </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
-            
-            <footer className="mt-20 flex justify-between px-10">
-                <div className="text-center w-48 border-t-2 border-black pt-1 font-black">হিসাবরক্ষকের স্বাক্ষর</div>
-                <div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div>
-            </footer>
+                        ))}
+                    </TableBody>
+                    <TableFooter>
+                        <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
+                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black">সর্বমোট:</TableCell>
+                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.admission)}</TableCell>
+                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.session)}</TableCell>
+                            {grandTotals.months.map((val, j) => <TableCell key={j} className="border border-black text-center text-black">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.exam)}</TableCell>
+                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.other)}</TableCell>
+                            <TableCell className="text-right pr-1 text-black border border-black">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
+                        </TableRow>
+                    </TableFooter>
+                </Table>
+                <footer className="mt-8 flex justify-between px-10">
+                    <div className="text-center w-40 border-t border-black pt-1 font-black text-[10px]">হিসাবরক্ষক</div>
+                    <div className="text-center w-40 border-t border-black pt-1 font-black text-[10px]">প্রধান শিক্ষক</div>
+                </footer>
+            </div>
         </div>
     );
 }
@@ -1318,7 +1341,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                             <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black">সর্বমোট:</TableCell>
                             <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.admission)}</TableCell>
                             <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.session)}</TableCell>
-                            {grandTotals.months.map((val, j) => <TableCell key={j} className="border border-black text-center text-black">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                            {grandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border border-black text-center text-black">{toBengaliNumber(Math.round(val))}</TableCell>)}
                             <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.exam)}</TableCell>
                             <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.other)}</TableCell>
                             <TableCell className="text-right pr-1 text-black border border-black">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
