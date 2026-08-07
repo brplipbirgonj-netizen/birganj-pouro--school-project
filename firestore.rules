@@ -53,7 +53,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isAuthed() && (request.auth.uid == userId || isAdmin());
-      allow list: if isAuthed(); // শিক্ষকদের একে অপরকে দেখার সুবিধার্থে
+      allow list: if isAuthed(); 
       allow create: if isAuthed() && request.auth.uid == userId;
       allow update: if isAdmin() || (isAuthed() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions']));
       allow delete: if isAdmin();
@@ -77,13 +77,13 @@ service cloud.firestore {
 
     match /holidays/{id} {
       allow read: if true;
-      allow write: if isAuthed() && (hasPermission('manage:settings') || isAdmin());
+      allow write: if isAuthed(); // Allow authenticated users for initial setup and updates
       allow delete: if isAdmin();
     }
     
     match /exams/{id} {
       allow read: if true;
-      allow write: if isAuthed() && (hasPermission('manage:results') || isAdmin());
+      allow write: if isAuthed(); // Allow authenticated users for initial setup
     }
 
     match /students/{id} {

@@ -12,7 +12,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, doc, writeBatch, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles, Gift, Clock } from 'lucide-react';
@@ -23,7 +23,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Transaction, NewTransactionData, addTransaction, getTransactions, deleteTransaction, TransactionType, PaymentMethod } from '@/lib/transactions-data';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/AlertDialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -322,7 +322,9 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
             await batch.commit();
             toast({ title: 'সকল তথ্য সফলভাবে আপডেট হয়েছে।', description: 'পরিবর্তনগুলো বেতন আদায়ের সময় কার্যকর হবে।' });
             setEditedStudents({});
-        } catch (e) {} finally {
+        } catch (e: any) {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'update' }));
+        } finally {
             setIsSaving(false);
         }
     };
@@ -349,10 +351,6 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
         if (waivers.session) next.sessionFee = 0;
         if (waivers.admission) next.admissionFee = 0;
         if (waivers.other) {
-            next.scoutFee = 0;
-            next.developmentFee = 0;
-            next.libraryFee = 0;
-            next.tiffinFee = 0;
             next.otherFee = 0;
         }
         
@@ -669,6 +667,7 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
             setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null));
             setIsLoading(false);
         }, (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' }));
             setIsLoading(false);
         });
         return () => unsubscribe();
@@ -799,7 +798,9 @@ const DefaultersTab = ({ allStudents, selectedYear }: { allStudents: Student[], 
             <Dialog open={!!reminderStudent} onOpenChange={(o) => !o && setReminderStudent(null)}>
                 <DialogContent className="font-kalpurush">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-primary" /> রিমাইন্ডার মেসেজ প্রিভিউ</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                             <Smartphone className="h-5 w-5 text-primary" /> রিমাইন্ডার মেসেজ প্রিভিউ
+                        </DialogTitle>
                         <DialogDescription className="font-bold">{reminderStudent?.studentNameBn} এর অভিভাবককে মেসেজ পাঠান</DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
@@ -915,6 +916,7 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
             setCollections(data);
             setIsLoading(false);
         }, (error: FirestoreError) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' }));
             setIsLoading(false);
         });
         return () => unsubscribe();
@@ -972,7 +974,9 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
             await batch.commit();
             toast({ title: "আদায়ের রেকর্ডটি মুছে ফেলা হয়েছে।" });
             onDeleteSuccess();
-        } catch (error) {}
+        } catch (error) {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'delete' }));
+        }
     };
 
     return (
@@ -1104,7 +1108,9 @@ const ExpenseReportTab = ({ transactions, isLoading, onDeleteSuccess }: { transa
             await deleteTransaction(db, id);
             toast({ title: 'ব্যয়ের রেকর্ডটি মুছে ফেলা হয়েছে।' });
             onDeleteSuccess();
-        } catch (error) {}
+        } catch (error) {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'transactions', operation: 'delete' }));
+        }
     };
 
     return (
@@ -1358,7 +1364,9 @@ const NewTransactionTab = ({ onTransactionAdded, initialType = 'income' }: { onT
             toast({ title: 'লেনদেন সফলভাবে যোগ হয়েছে।' });
             setAccountHead(''); setDescription(''); setAmount(''); setVoucherNo(''); setCheckNo('');
             onTransactionAdded();
-        } catch (error) {}
+        } catch (error) {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'transactions', operation: 'create' }));
+        }
     };
 
     return (
@@ -1437,7 +1445,13 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
             toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
             return;
         }
-        try { await deleteTransaction(db, id); toast({ title: 'লেনদেন মুছে ফেলা হয়েছে।' }); refetch(); } catch (error) {}
+        try { 
+            await deleteTransaction(db, id); 
+            toast({ title: 'লেনদেন মুছে ফেলা হয়েছে।' }); 
+            refetch(); 
+        } catch (error) {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'transactions', operation: 'delete' }));
+        }
     }
 
     return (
@@ -1608,6 +1622,7 @@ const IncomeComparisonTab = ({ allStudents, selectedYear }: { allStudents: Stude
             setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null));
             setIsLoading(false);
         }, (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' }));
             setIsLoading(false);
         });
         return () => unsubscribe();
@@ -1755,7 +1770,10 @@ export default function AccountsPage() {
     const unsubscribe = onSnapshot(q, (snap) => {
         setAllStudents(snap.docs.map(studentFromDoc));
         setIsLoadingStudents(false);
-    }, (error) => { setIsLoadingStudents(false); });
+    }, (error) => { 
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
+        setIsLoadingStudents(false); 
+    });
     return unsubscribe;
   }, [db, user, selectedYear]);
 

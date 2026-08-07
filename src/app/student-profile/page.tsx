@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, onSnapshot, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, Timestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
@@ -34,7 +34,7 @@ import { getExams } from '@/lib/exam-data';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -242,7 +242,10 @@ function StudentProfileSearchContent() {
                 where('className', '==', searchClass),
                 where('roll', '==', rollEn)
             );
-            const studentSnap = await getDocs(studentQuery);
+            const studentSnap = await getDocs(studentQuery).catch(async (err) => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
+                throw err;
+            });
 
             if (studentSnap.empty) {
                 toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি।' });
@@ -253,7 +256,10 @@ function StudentProfileSearchContent() {
             const foundStudent = studentFromDoc(studentSnap.docs[0]);
             setStudentData(foundStudent);
 
-            const holidaySnap = await getDocs(collection(db, 'holidays'));
+            const holidaySnap = await getDocs(collection(db, 'holidays')).catch(async (err) => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'holidays', operation: 'list' }));
+                throw err;
+            });
             setHolidays(holidaySnap.docs.map(d => d.data().date));
 
             const attQuery = query(
@@ -261,7 +267,10 @@ function StudentProfileSearchContent() {
                 where('academicYear', '==', selectedYear),
                 where('className', '==', searchClass)
             );
-            const attSnap = await getDocs(attQuery);
+            const attSnap = await getDocs(attQuery).catch(async (err) => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'attendance', operation: 'list' }));
+                throw err;
+            });
             const records = attSnap.docs.map(doc => {
                 const data = doc.data();
                 const studentAtt = data.attendance?.find((a: any) => a.studentId === foundStudent.id);
@@ -277,7 +286,10 @@ function StudentProfileSearchContent() {
                 where('studentId', '==', foundStudent.id),
                 where('academicYear', '==', selectedYear)
             );
-            const feeSnap = await getDocs(feeQuery);
+            const feeSnap = await getDocs(feeQuery).catch(async (err) => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' }));
+                throw err;
+            });
             const feeRecords = feeSnap.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null);
             setFeeHistory(feeRecords.sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime()));
             
@@ -299,7 +311,10 @@ function StudentProfileSearchContent() {
                 where('academicYear', '==', selectedYear),
                 where('className', '==', foundStudent.className)
             );
-            const classStudentsSnap = await getDocs(classStudentsQuery);
+            const classStudentsSnap = await getDocs(classStudentsQuery).catch(async (err) => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
+                throw err;
+            });
             const classStudents = classStudentsSnap.docs.map(studentFromDoc);
 
             for (const exam of exams) {
@@ -351,7 +366,6 @@ function StudentProfileSearchContent() {
             setActiveProfileTab('details');
         } catch (error: any) {
             console.error("Search Error:", error);
-            toast({ variant: 'destructive', title: 'অনুসন্ধান ব্যর্থ হয়েছে' });
             setIsProgressLoading(false);
         } finally {
             setIsLoading(false);
@@ -469,7 +483,9 @@ function StudentProfileSearchContent() {
 
                             <div className="flex-1 w-full overflow-hidden">
                                 <div className="mb-4 text-center sm:text-left">
-                                    <DialogTitle className="text-3xl font-black text-slate-900">{studentData?.studentNameBn}</DialogTitle>
+                                    <DialogTitle className="text-3xl font-black text-slate-900">
+                                        {studentData ? studentData.studentNameBn : 'শিক্ষার্থী প্রোফাইল'}
+                                    </DialogTitle>
                                     <DialogDescription className="text-sm font-bold text-muted-foreground">
                                         রোল: {studentData ? toBengaliNumber(studentData.roll) : ''} | {studentData ? classNamesMap[studentData.className] : ''} শ্রেণি | আইডি: {studentData ? toBengaliNumber(studentData.generatedId || '') : ''}
                                     </DialogDescription>
