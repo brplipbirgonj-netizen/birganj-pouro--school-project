@@ -9,13 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { Student, studentFromDoc, addStudent } from '@/lib/student-data';
+import { Student, studentFromDoc, addStudent, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult, getGradePoint } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText } from 'lucide-react';
+import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
@@ -34,6 +34,7 @@ import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
@@ -1206,6 +1207,183 @@ const BulkUploadTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
+const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const { toast } = useToast();
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user } = useAuth();
+    
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
+    const [className, setClassName] = useState('');
+    const [roll, setRoll] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [searchResult, setSearchResult] = useState<StudentProcessedResult | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    useEffect(() => {
+        if (db && user) getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!examName || !className || !roll || !db) {
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' });
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
+            const rollEn = parseInt(bnToEn(roll), 10);
+
+            const student = allStudents.find(s => s.academicYear === selectedYear && s.className === className && s.roll === rollEn);
+            
+            if (!student) {
+                toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি' });
+                setIsLoading(false);
+                return;
+            }
+
+            const allResults = await getAllResults(db, selectedYear, examName);
+            const classRes = allResults.filter(r => r.className === className);
+            const subjects = getSubjects(className, student.group).filter(s => s.isExamSubject !== false);
+            
+            const results = processStudentResults(allStudents.filter(s => s.academicYear === selectedYear && s.className === className), classRes, subjects);
+            const studentProcessed = results.find(r => r.student.id === student.id);
+
+            if (studentProcessed) {
+                setSearchResult(studentProcessed);
+                setIsDialogOpen(true);
+            } else {
+                toast({ variant: 'destructive', title: 'ফলাফল পাওয়া যায়নি' });
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <Card className="max-w-md mx-auto shadow-lg border-2 border-primary/10">
+                <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-xl flex items-center gap-2"><Search className="h-5 w-5" /> ব্যক্তিগত ফলাফল অনুসন্ধান</CardTitle>
+                    <CardDescription className="font-bold">রোল ও শ্রেণি দিয়ে ফলাফল দেখুন</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                    <form onSubmit={handleSearch} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label className="font-bold">পরীক্ষা</Label>
+                            <Select value={examName} onValueChange={setExamName}>
+                                <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                                <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="font-bold">শ্রেণি</Label>
+                                <Select value={className} onValueChange={setClassName}>
+                                    <SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                                    <SelectContent>{Object.entries(classNamesMap).map(([id, label]) => <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-bold">রোল নম্বর</Label>
+                                <Input value={roll} onChange={e => setRoll(e.target.value)} placeholder="উদা: ১" className="font-black text-lg" />
+                            </div>
+                        </div>
+                        <Button type="submit" className="w-full h-12 font-black text-lg shadow-xl" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Search className="h-5 w-5 mr-2" />}
+                            ফলাফল দেখুন
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-2xl font-kalpurush p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
+                    {searchResult && (
+                        <div className="flex flex-col">
+                            <DialogHeader className="p-6 bg-primary text-white flex flex-row items-center gap-6">
+                                <div className="h-20 w-20 rounded-full border-4 border-white/30 shadow-lg overflow-hidden shrink-0">
+                                    <Image 
+                                        src={sanitizePhotoUrl(searchResult.student.photoUrl, searchResult.student.gender) || getStudentPlaceholderImage(searchResult.student.gender)} 
+                                        alt="Photo" width={80} height={80} 
+                                        className="object-cover h-full w-full" 
+                                    />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-3xl font-black">{searchResult.student.studentNameBn}</DialogTitle>
+                                    <DialogDescription className="text-white/80 font-bold text-lg">
+                                        রোল: {toBengaliNumber(searchResult.student.roll)} | {classNamesMap[searchResult.student.className]} শ্রেণি | {examName}
+                                    </DialogDescription>
+                                </div>
+                            </DialogHeader>
+                            
+                            <div className="p-6 space-y-6 bg-slate-50 overflow-y-auto max-h-[60vh]">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    <Card className="p-3 text-center border-2 border-black/5 bg-white shadow-sm">
+                                        <p className="text-[10px] font-black text-muted-foreground uppercase">মোট নম্বর</p>
+                                        <p className="text-xl font-black text-primary">{toBengaliNumber(searchResult.totalMarks)}</p>
+                                    </Card>
+                                    <Card className="p-3 text-center border-2 border-black/5 bg-white shadow-sm">
+                                        <p className="text-[10px] font-black text-muted-foreground uppercase">জি.পি.এ</p>
+                                        <p className="text-xl font-black text-primary">{toBengaliNumber(searchResult.gpa.toFixed(2))}</p>
+                                    </Card>
+                                    <Card className="p-3 text-center border-2 border-black/5 bg-white shadow-sm">
+                                        <p className="text-[10px] font-black text-muted-foreground uppercase">গ্রেড</p>
+                                        <p className={cn("text-xl font-black", searchResult.isPass ? "text-emerald-600" : "text-rose-600")}>
+                                            {searchResult.isPass ? searchResult.finalGrade : `F${searchResult.failedSubjectsCount}`}
+                                        </p>
+                                    </Card>
+                                    <Card className="p-3 text-center border-2 border-black/5 bg-white shadow-sm">
+                                        <p className="text-[10px] font-black text-muted-foreground uppercase">মেধাক্রম</p>
+                                        <p className="text-xl font-black text-amber-600">{searchResult.isPass ? toBengaliNumber(searchResult.meritPosition || '-') : 'ফেল'}</p>
+                                    </Card>
+                                </div>
+
+                                <div className="border-2 border-black rounded-xl overflow-hidden bg-white shadow-md">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead className="font-black text-black">বিষয়</TableHead>
+                                                <TableHead className="text-center font-black text-black">প্রাপ্ত নম্বর</TableHead>
+                                                <TableHead className="text-center font-black text-black">গ্রেড</TableHead>
+                                                <TableHead className="text-right pr-6 font-black text-black">পয়েন্ট</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {Array.from(searchResult.subjectResults.entries()).map(([name, res]) => (
+                                                <TableRow key={name} className="h-10">
+                                                    <TableCell className="font-bold text-slate-700">{name}</TableCell>
+                                                    <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.marks)}</TableCell>
+                                                    <TableCell className={cn("text-center font-black", res.isPass ? "text-slate-700" : "text-rose-600")}>{res.grade}</TableCell>
+                                                    <TableCell className="text-right pr-6 font-bold">{toBengaliNumber(res.point.toFixed(2))}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+
+                            <DialogFooter className="p-4 bg-white border-t flex flex-col sm:flex-row gap-3">
+                                <Button variant="outline" className="font-black w-full" onClick={() => setIsDialogOpen(false)}>বন্ধ করুন</Button>
+                                <Link href={`/marksheet/${searchResult.student.id}?academicYear=${selectedYear}&examName=${encodeURIComponent(examName)}`} target="_blank" className="w-full">
+                                    <Button className="font-black w-full shadow-lg bg-primary hover:bg-primary/90 text-white">
+                                        <Printer className="mr-2 h-4 w-4" /> মার্কশিট প্রিন্ট করুন
+                                    </Button>
+                                </Link>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+};
+
 export default function ResultsPage() {
     const [isClient, setIsClient] = useState(false); 
     const [allStudents, setAllStudents] = useState<Student[]>([]); 
@@ -1265,6 +1443,7 @@ export default function ResultsPage() {
             items.push({ id: 'subject-report', label: 'বিষয় ভিত্তিক রিপোর্ট', icon: FileText, color: 'text-emerald-600 bg-emerald-50' });
             items.push({ id: 'sheet', label: 'ফলাফল শিট', icon: FileSpreadsheet, color: 'text-blue-600 bg-blue-50' });
         }
+        items.push({ id: 'search', label: 'ফলাফল অনুসন্ধান', icon: Search, color: 'text-blue-600 bg-blue-50' });
         if (canManageFullMarks) {
             items.push({ id: 'full-marks', label: 'বিষয় ও পূর্ণমান', icon: CheckCircle2, color: 'text-violet-600 bg-violet-50' });
         }
@@ -1329,8 +1508,9 @@ export default function ResultsPage() {
                             <>
                                 {activeSection === 'management' && <MarkManagementTab allStudents={allStudents} />}
                                 {activeSection === 'subject-report' && <SubjectReportTab allStudents={allStudents} onPrintRequested={handleSubjectPrint} />}
-                                {activeSection === 'full-marks' && <FullMarksTab allStudents={allStudents} />}
                                 {activeSection === 'sheet' && <ResultSheetTab allStudents={allStudents} onPrint={handleFullSheetPrint} />}
+                                {activeSection === 'search' && <ResultSearchTab allStudents={allStudents} />}
+                                {activeSection === 'full-marks' && <FullMarksTab allStudents={allStudents} />}
                                 {activeSection === 'merit' && <MeritListTab allStudents={allStudents} />}
                                 {activeSection === 'special-promotion' && <SpecialPromotionTab allStudents={allStudents} />}
                                 {activeSection === 'upload' && <BulkUploadTab allStudents={allStudents} />}
