@@ -19,7 +19,7 @@ import { Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Print
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -209,6 +209,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         reader.readAsArrayBuffer(file);
     };
 
+    // Shared class for inputs to hide spinners
+    const numberInputClass = "h-9 font-bold border-2 border-black focus:ring-primary shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50">
@@ -277,9 +280,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableRow key={student.id} className="hover:bg-accent/5">
                                             <TableCell className="font-black text-center">{student.roll.toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.written ?? ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq ?? ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
-                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical ?? ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>}
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.written ?? ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} onKeyDown={handleKeyDown} className={numberInputClass} /></TableCell>
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq ?? ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} onKeyDown={handleKeyDown} className={numberInputClass} /></TableCell>
+                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical ?? ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} onKeyDown={handleKeyDown} className={numberInputClass} /></TableCell>}
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -640,7 +643,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                                             type="number" 
                                                                             value={inputValue}
                                                                             onChange={(e) => setFullMarksInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
-                                                                            className="h-10 w-24 text-center font-black bg-white border-2 border-black text-lg" 
+                                                                            className="h-10 w-24 text-center font-black bg-white border-2 border-black text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                                                             disabled={!isPermitted} 
                                                                         />
                                                                         <Button 
