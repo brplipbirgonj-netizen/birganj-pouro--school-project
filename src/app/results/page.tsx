@@ -277,9 +277,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableRow key={student.id} className="hover:bg-accent/5">
                                             <TableCell className="font-black text-center">{student.roll.toLocaleString('bn-BD')}</TableCell>
                                             <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.written || ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq || ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
-                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical || ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>}
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.written ?? ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
+                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq ?? ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>
+                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical ?? ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} onKeyDown={handleKeyDown} className="h-9 font-bold border-2 border-black focus:ring-primary shadow-sm" /></TableCell>}
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -549,7 +549,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
             {examName && (
                 <div className="space-y-4">
                     <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2">
-                        <CheckCircle2 className="h-6 w-6" /> বিষয় ভিত্তিক পূর্ণমান তালিকা ({examName})
+                        <CheckCircle2 className="h-6 w-6" /> বিষয় ভিত্তিক পূর্ণমান তালিকায় পোস্টিং পরিসংখ্যান ({examName})
                     </h3>
                     
                     <Accordion type="multiple" defaultValue={['6']} className="w-full space-y-3">
@@ -577,12 +577,13 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {uniqueSubjects.map((subInfo, i) => {
-                                                        const existingRecord = savedResults.find(r => 
+                                                        const matchingRecords = savedResults.filter(r => 
                                                             r.className === cls && 
                                                             normalize(r.subject) === normalize(subInfo.name) && 
                                                             r.examName === examName
                                                         );
                                                         
+                                                        const existingRecord = matchingRecords.length > 0 ? matchingRecords[0] : null;
                                                         const inputKey = `${cls}-${subInfo.name}-${examName}`;
                                                         const inputValue = fullMarksInputs[inputKey] !== undefined 
                                                             ? fullMarksInputs[inputKey] 
@@ -590,16 +591,26 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                         
                                                         const isPermitted = isSubjectPermitted(cls, subInfo.name);
                                                         
-                                                        // Calculate posting statistics with fixed normalization logic
+                                                        // Calculate potential students for this subject in this class
                                                         const totalClassStudents = allStudents.filter(s => {
                                                             if (s.academicYear !== selectedYear || s.className !== cls) return false;
                                                             if (parseInt(cls) < 9) return true;
-                                                            // For 9-10, check if the subject is part of the student's group
                                                             const studentGroupSubjects = getSubjects(s.className, s.group);
                                                             return studentGroupSubjects.some(sub => normalize(sub.name) === normalize(subInfo.name));
                                                         }).length;
 
-                                                        const postedCount = existingRecord?.results.length || 0;
+                                                        // Use Set to count unique students who have marks posted, even if the mark is 0
+                                                        const uniqueStudentsWithMarks = new Set<string>();
+                                                        matchingRecords.forEach(record => {
+                                                            record.results.forEach(res => {
+                                                                // A result is considered "posted" if written or MCQ has a numeric value (including 0)
+                                                                if (res.studentId && (typeof res.written === 'number' || typeof res.mcq === 'number')) {
+                                                                    uniqueStudentsWithMarks.add(res.studentId);
+                                                                }
+                                                            });
+                                                        });
+
+                                                        const postedCount = uniqueStudentsWithMarks.size;
                                                         const remaining = Math.max(0, totalClassStudents - postedCount);
                                                         const hasData = postedCount > 0;
 
@@ -611,14 +622,15 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                                 <TableCell className="text-center">
                                                                     <div className="flex flex-col items-center gap-1">
                                                                         {hasData ? (
-                                                                            <Badge className="bg-emerald-600 text-[10px] font-black">এন্ট্রি হয়েছে</Badge>
+                                                                            <Badge className={cn("font-black text-[10px]", remaining === 0 ? "bg-emerald-600" : "bg-blue-600")}>
+                                                                                {remaining === 0 ? 'সম্পন্ন' : 'চলমান'}
+                                                                            </Badge>
                                                                         ) : (
                                                                             <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">বকেয়া</Badge>
                                                                         )}
                                                                         <div className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
                                                                             পোস্টিং: {toBengaliNumber(postedCount)} / {toBengaliNumber(totalClassStudents)} 
-                                                                            {remaining > 0 && postedCount > 0 && <span className="text-rose-600 ml-1">(বাকি: {toBengaliNumber(remaining)})</span>}
-                                                                            {remaining === 0 && postedCount > 0 && <span className="text-emerald-600 ml-1">(সম্পন্ন)</span>}
+                                                                            {remaining > 0 && postedCount > 0 && <span className="text-rose-600 ml-1 font-black">(বাকি: {toBengaliNumber(remaining)})</span>}
                                                                         </div>
                                                                     </div>
                                                                 </TableCell>
