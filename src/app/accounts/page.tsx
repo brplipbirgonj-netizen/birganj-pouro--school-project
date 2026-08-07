@@ -41,7 +41,7 @@ import { Separator } from '@/components/ui/separator';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+    'জুন', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ শ্রেণি', '7': 'সপ্তম শ্রেণি', '8': 'অষ্টম শ্রেণি', '9': 'নবম শ্রেণি', '10': 'দশম শ্রেণি' };
@@ -385,9 +385,11 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                             <Label className="text-[9px] font-black uppercase text-muted-foreground">অন্যান্য</Label>
                             <Input type="number" value={bulkValues.other} onChange={e => setBulkValues({...bulkValues, other: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
                         </div>
-                        <Button onClick={handleBulkApply} variant="secondary" className="h-9 font-black bg-white border-2 border-primary/20 text-primary hover:bg-primary hover:text-white">
-                            <Sparkles className="h-3.5 w-3.5 mr-2" /> অটো-ফিল
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button onClick={handleBulkApply} variant="secondary" className="h-9 font-black bg-white border-2 border-primary/20 text-primary hover:bg-primary hover:text-white">
+                                <Sparkles className="h-3.5 w-3.5 mr-2" /> অটো-ফিল
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -399,11 +401,16 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                             <CardTitle className="text-lg font-black text-primary">ব্যক্তিগতভাবে ফি বা ক্যাটাগরি সংশোধন করুন</CardTitle>
                             <CardDescription className="font-bold">বেতন হিসাবে প্রকৃত আদায়যোগ্য ফি ব্যবহার করুন।</CardDescription>
                         </div>
-                        {Object.keys(editedStudents).length > 0 && (
-                            <Badge className="bg-amber-600 font-black animate-pulse">
-                                {Object.keys(editedStudents).length.toLocaleString('bn-BD')} টি পরিবর্তন করা হয়েছে
-                            </Badge>
-                        )}
+                        <div className="flex items-center gap-3">
+                            <Button variant="outline" size="sm" onClick={() => window.print()} className="h-10 font-black border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-sm no-print">
+                                <Printer className="h-4 w-4 mr-2" /> প্রিন্ট তালিকা
+                            </Button>
+                            {Object.keys(editedStudents).length > 0 && (
+                                <Badge className="bg-amber-600 font-black animate-pulse">
+                                    {Object.keys(editedStudents).length.toLocaleString('bn-BD')} টি পরিবর্তন করা হয়েছে
+                                </Badge>
+                            )}
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -436,7 +443,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                                             <TableCell className="font-bold border-r text-slate-800 text-xs">
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="truncate">{student.studentNameBn}</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/10" onClick={() => setConfigFreeStudent(student)} title="ফ্রি সেটিংস"><Gift className="h-3.5 w-3.5" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/10 no-print" onClick={() => setConfigFreeStudent(student)} title="ফ্রি সেটিংস"><Gift className="h-3.5 w-3.5" /></Button>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="p-1 border-r"><Input type="number" value={getVal('monthlyFee') ?? ''} onChange={e => handleIndividualChange(student.id, 'monthlyFee', parseInt(e.target.value) || 0)} className="h-8 text-center font-black text-blue-900 border-none bg-transparent" /></TableCell>
@@ -458,7 +465,7 @@ const FeeSetupTab = ({ allStudents, selectedYear }: { allStudents: Student[], se
                             </TableBody>
                         </Table>
                     </div>
-                    <div className="flex justify-between items-center p-6 border-t-2 border-black bg-slate-50">
+                    <div className="flex justify-between items-center p-6 border-t-2 border-black bg-slate-50 no-print">
                         <p className="text-xs font-bold text-muted-foreground flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-600" /> তথ্য পরিবর্তন করার পর অবশ্যই নিচের সেভ বাটনে ক্লিক করবেন।</p>
                         <Button onClick={handleSaveAll} disabled={isSaving || Object.keys(editedStudents).length === 0} className="px-12 h-14 text-lg font-black shadow-2xl transition-all">
                             {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="h-5 w-5 mr-2" />}সবগুলো তথ্য সেভ করুন
@@ -826,11 +833,20 @@ const LedgerTab = ({ transactions, isLoading }: { transactions: Transaction[], i
 };
 
 export default function AccountsPage() {
-  const [isClient, setIsClient] = useState(false); const db = useFirestore(); const { user, hasPermission } = useAuth(); const { selectedYear } = useAcademicYear(); const [transactions, setTransactions] = useState<Transaction[]>([]); const [allStudents, setAllStudents] = useState<Student[]>([]); const [isLoading, setIsLoading] = useState(true); const [isLoadingStudents, setIsLoadingStudents] = useState(true); const [activeSection, setActiveSection] = useState("dashboard"); const [pendingEntryType, setPendingEntryType] = useState<TransactionType>('income');
+  const [isClient, setIsClient] = useState(false); const db = useFirestore(); const { user, hasPermission } = useAuth(); const { selectedYear } = useAcademicYear(); const { schoolInfo } = useSchoolInfo(); const [transactions, setTransactions] = useState<Transaction[]>([]); const [allStudents, setAllStudents] = useState<Student[]>([]); const [isLoading, setIsLoading] = useState(true); const [isLoadingStudents, setIsLoadingStudents] = useState(true); const [activeSection, setActiveSection] = useState("dashboard"); const [pendingEntryType, setPendingEntryType] = useState<TransactionType>('income');
   const fetchTransactions = useCallback(async () => { if (!db || !user) return; setIsLoading(true); const fetched = await getTransactions(db, selectedYear); setTransactions(fetched); setIsLoading(false); }, [db, user, selectedYear]);
   const fetchStudents = useCallback(() => { if (!db || !user) return; setIsLoadingStudents(true); const q = query(collection(db, 'students'), where('academicYear', '==', selectedYear)); const unsubscribe = onSnapshot(q, (snap) => { setAllStudents(snap.docs.map(studentFromDoc)); setIsLoadingStudents(false); }, (error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' })); setIsLoadingStudents(false); }); return unsubscribe; }, [db, user, selectedYear]);
   useEffect(() => { setIsClient(true); fetchTransactions(); const unsub = fetchStudents(); return () => unsub?.(); }, [fetchTransactions, fetchStudents]);
   const sidebarItems = useMemo(() => { const items = [{ id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }]; if (hasPermission('manage:fee-setup')) items.push({ id: 'fee-setup', label: 'ফি সেটআপ', icon: Settings2, color: 'text-blue-600 bg-blue-50' }); if (hasPermission('collect:fees')) { items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' }); items.push({ id: 'defaulters', label: 'বকেয়া তালিকা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' }); } if (hasPermission('view:collection-report')) { items.push({ id: 'collection-report', label: 'আদায় রিপোর্ট', icon: ListChecks, color: 'text-violet-600 bg-violet-50' }); items.push({ id: 'income-comparison', label: 'সম্ভাব্য আয় বনাম আদায়', icon: BarChart3, color: 'text-amber-600 bg-amber-50' }); } if (hasPermission('view:expense-report')) items.push({ id: 'expense-report', label: 'ব্যয় রিপোর্ট', icon: Receipt, color: 'text-rose-600 bg-rose-50' }); if (hasPermission('view:cashbook-ledger')) { items.push({ id: 'cashbook', label: 'ক্যাশবুক', icon: BookOpen, color: 'text-blue-600 bg-blue-50' }); items.push({ id: 'ledger', label: 'খতিয়ান (লেজার)', icon: LayoutGrid, color: 'text-amber-600 bg-amber-50' }); } if (hasPermission('view:accounts-monthly-report')) items.push({ id: 'monthly-report', label: 'মাসিক রিপোর্ট', icon: FileBarChart, color: 'text-emerald-600 bg-emerald-50' }); if (hasPermission('manage:transactions')) items.push({ id: 'new-transaction', label: 'আয়/ব্যয় এন্ট্রি', icon: PlusCircle, color: 'text-primary bg-primary/10' }); return items; }, [hasPermission]);
+  
+  const currentClassStudents = useMemo(() => {
+    // This is needed for the printable setup list which is context-aware
+    // We'll find the selected class from the FeeSetupTab if it's active
+    // For simplicity, we'll just track the current tab class elsewhere or pass it up
+    // For now, let's just make the PrintableFeeSetup a child component or access its state
+    return []; // We'll handle this within the printable area render
+  }, []);
+
   if (!isClient) return null;
 
   return (
@@ -840,8 +856,78 @@ export default function AccountsPage() {
         <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start"><h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হিসাব শাখা</h2><div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">{sidebarItems.map(item => (<button key={item.id} onClick={() => setActiveSection(item.id)} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit", activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50")}><div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}><item.icon className="h-3.5 w-3.5" /></div><span className="text-xs">{item.label}</span>{activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}</button>))}</div></aside>
         <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4"><div className="p-4 sm:p-6 lg:p-8 flex-1">{isLoadingStudents && allStudents.length === 0 ? <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div> : (<><div className="mb-6 border-b pb-4 flex justify-between items-center no-print"><div><h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2><p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p></div></div>{activeSection === 'dashboard' && <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={(t) => { setPendingEntryType(t); setActiveSection('new-transaction'); }} />}{activeSection === 'fee-setup' && <FeeSetupTab allStudents={allStudents} selectedYear={selectedYear} />}{activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}{activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}{activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} onDeleteSuccess={fetchTransactions} />}{activeSection === 'income-comparison' && <IncomeComparisonTab allStudents={allStudents} selectedYear={selectedYear} />}{activeSection === 'expense-report' && <ExpenseReportTab transactions={transactions} isLoading={isLoading} onDeleteSuccess={fetchTransactions} />}{activeSection === 'cashbook' && <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />}{activeSection === 'ledger' && <LedgerTab transactions={transactions} isLoading={isLoading} />}{activeSection === 'monthly-report' && <MonthlyReportTab transactions={transactions} selectedYear={selectedYear} />}{activeSection === 'new-transaction' && <NewTransactionTab onTransactionAdded={fetchTransactions} initialType={pendingEntryType} />}</>)}</div></div>
       </main>
+
+      {/* Printable Area for Fee Setup List */}
+      <PrintableFeeSetupArea allStudents={allStudents} selectedYear={selectedYear} schoolInfo={schoolInfo} />
     </div>
   );
+}
+
+function PrintableFeeSetupArea({ allStudents, selectedYear, schoolInfo }: { allStudents: Student[], selectedYear: string, schoolInfo: any }) {
+    // We'll render all classes that have data
+    const classes = ['6', '7', '8', '9', '10'];
+
+    return (
+        <div className="hidden print:block printable-area bg-white text-black p-10 font-kalpurush">
+            {classes.map(cls => {
+                const classStudents = allStudents
+                    .filter(s => s.academicYear === selectedYear && s.className === cls)
+                    .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+                
+                if (classStudents.length === 0) return null;
+
+                return (
+                    <div key={cls} className="mb-10 break-after-page">
+                        <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-6">
+                            {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
+                            <div className="text-center flex-grow">
+                                <h1 className="text-3xl font-black text-emerald-950">{schoolInfo.name}</h1>
+                                <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                                <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
+                                    <h2 className="text-lg font-black uppercase">শিক্ষার্থীর ফি নির্ধারণ তালিকা - {toBengaliNumber(selectedYear)}</h2>
+                                </div>
+                                <p className="text-sm font-black mt-1">শ্রেণি: {classNamesMap[cls]}</p>
+                            </div>
+                        </header>
+
+                        <Table className="border-2 border-black">
+                            <TableHeader className="bg-slate-100">
+                                <TableRow className="border-b-2 border-black">
+                                    <TableHead className="w-12 text-center font-black border-r-2 border-black text-black">রোল</TableHead>
+                                    <TableHead className="font-black border-r-2 border-black text-black">নাম</TableHead>
+                                    <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">বেতন</TableHead>
+                                    <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">অর্ধ-বার্ষিক</TableHead>
+                                    <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">বার্ষিক ফি</TableHead>
+                                    <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">সেশন ফি</TableHead>
+                                    <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">ভর্তি ফি</TableHead>
+                                    <TableHead className="w-20 text-center font-black text-black">অন্যান্য</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {classStudents.map(student => (
+                                    <TableRow key={student.id} className="border-b border-slate-300 h-9">
+                                        <TableCell className="text-center font-bold border-r-2 border-black">{toBengaliNumber(student.roll)}</TableCell>
+                                        <TableCell className="font-bold border-r-2 border-black">{student.studentNameBn}</TableCell>
+                                        <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(student.monthlyFee || 0)}</TableCell>
+                                        <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(student.examFeeHalfYearly || 0)}</TableCell>
+                                        <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(student.examFeeAnnual || 0)}</TableCell>
+                                        <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(student.sessionFee || 0)}</TableCell>
+                                        <TableCell className="text-center border-r-2 border-black">{toBengaliNumber(student.admissionFee || 0)}</TableCell>
+                                        <TableCell className="text-center">{toBengaliNumber(student.otherFee || 0)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        
+                        <footer className="mt-12 flex justify-between px-10">
+                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black">হিসাবরক্ষক</div>
+                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষক</div>
+                        </footer>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
 function toBengaliNumber(str: string | number) { if (!str && str !== 0) return ''; const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']; return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]); }
