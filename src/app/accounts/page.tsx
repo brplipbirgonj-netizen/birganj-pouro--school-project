@@ -634,7 +634,7 @@ const CollectionReportTab = ({ allStudents, onDeleteSuccess }: { allStudents: St
         if (!db || !user) return;
         setIsLoading(true);
         const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
-        const unsubscribe = onSnapshot(q, (snapshot) => { const data = snapshot.docs.map(doc => feeCollectionFromDoc(doc)).filter((c): c is FeeCollection => c !== null).sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime()); setCollections(data); setIsLoading(false); }, (error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); setIsLoading(false); });
+        const unsubscribe = onSnapshot(q, (snapshot) => { const data = snapshot.docs.map(doc => feeCollectionFromDoc(doc)).filter((c): c is FeeCollection => f !== null).sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime()); setCollections(data); setIsLoading(false); }, (error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); setIsLoading(false); });
         return () => unsubscribe();
     }, [db, user, selectedYear]);
 
@@ -739,6 +739,19 @@ const IncomeComparisonTab = ({ allStudents, selectedYear, onPrintPotentialReport
         });
     }, [allStudents, selectedYear, previewClass]);
 
+    const potentialGrandTotals = useMemo(() => {
+        const totals = { admission: 0, session: 0, months: Array(12).fill(0), exam: 0, other: 0, total: 0 };
+        potentialPreviewData.forEach(row => {
+            totals.admission += row.admission;
+            totals.session += row.session;
+            totals.exam += row.exam;
+            totals.other += row.other;
+            totals.total += row.total;
+            for(let i=0; i<12; i++) totals.months[i] += row.tuition;
+        });
+        return totals;
+    }, [potentialPreviewData]);
+
     if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> ডাটা বিশ্লেষণ করা হচ্ছে...</div>;
 
     return (
@@ -799,6 +812,17 @@ const IncomeComparisonTab = ({ allStudents, selectedYear, onPrintPotentialReport
                                     </TableRow>
                                 ))}
                             </TableBody>
+                            <TableFooter className="sticky bottom-0 z-30">
+                                <TableRow className="h-7 border-t-2 border-black bg-slate-200 font-black">
+                                    <TableCell colSpan={2} className="text-right pr-4 border-r border-black text-[13px] sticky left-0 z-50 bg-slate-200">সর্বমোট সম্ভাব্য পাওনা:</TableCell>
+                                    <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(potentialGrandTotals.admission)}</TableCell>
+                                    <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(potentialGrandTotals.session)}</TableCell>
+                                    {potentialGrandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border-r border-black text-center text-[11px]">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                                    <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(potentialGrandTotals.exam)}</TableCell>
+                                    <TableCell className="border-r border-black text-center text-[12px]">{toBengaliNumber(potentialGrandTotals.other)}</TableCell>
+                                    <TableCell className="text-right pr-4 text-[16px] bg-blue-950 text-white sticky right-0 z-50 border-l border-black">{toBengaliNumber(potentialGrandTotals.total)} ৳</TableCell>
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                     </div>
                 </CardContent>
@@ -819,7 +843,7 @@ const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allS
         setIsLoading(true);
         const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
         const snap = await getDocs(q);
-        setCollections(snap.docs.map(feeCollectionFromDoc).filter((c): c is FeeCollection => c !== null));
+        setCollections(snap.docs.map(feeCollectionFromDoc).filter((c): c is FeeCollection => f !== null));
         setIsLoading(false);
     }, [db, selectedYear]);
 
@@ -907,7 +931,7 @@ const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allS
                 <CardContent className="p-0">
                     <div className="table-container !max-h-[500px] !border-0 !rounded-none">
                         <Table className="border-separate border-spacing-0 w-full min-w-[1300px] border-collapse border-2 border-black">
-                            <TableHeader className="bg-slate-100">
+                            <TableHeader className="bg-slate-100 sticky top-0 z-30">
                                 <TableRow className="h-8 border-b-2 border-black">
                                     <TableHead className="border-r border-b border-black font-black text-[13px] text-center w-14 text-black sticky left-0 z-40 bg-slate-100">রোল</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[150px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
@@ -1126,7 +1150,7 @@ const CashbookTab = ({ transactions, isLoading, refetch }: { transactions: Trans
     const handleDelete = async (id: string) => { if(!db || !canDeleteTransaction) return; try { await deleteTransaction(db, id); toast({ title: 'লেনদেন মুছে ফেলা হয়েছে।' }); refetch(); } catch (error) { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'transactions', operation: 'delete' })); } }
 
     return (
-        <Card className="border-none shadow-none animate-in fade-in duration-500"><CardHeader className="px-0 pt-0"><div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><CardTitle className="text-xl">ক্যাশবুক</CardTitle><div className="flex items-center gap-2"><Label className="font-bold text-xs">মাস নির্বাচন:</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="w-40 bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সকল মাস" /></SelectTrigger><SelectContent><SelectItem value="all">সকল মাস</SelectItem>{BENGALI_MONTHS.map((m, i) => (<SelectItem key={m} value={i.toString()}>{m}</SelectItem>))}</SelectContent></Select></div></div></CardHeader><CardContent className="px-0 pt-4"><div className="table-container"><Table className="min-w-[950px]"><TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm"><TableRow><TableHead>তারিখ</TableHead><TableHead>বিবরণ</TableHead><TableHead className="text-center">পদ্ধতি</TableHead><TableHead className="text-center">ভাউচার/চেক</TableHead><TableHead className="text-right">আয়</TableHead><TableHead className="text-right">ব্যয়</TableHead><TableHead className="text-right">ব্য্যালেন্স</TableHead><TableHead className="text-right">কার্যক্রম</TableHead></TableRow></TableHeader><TableBody>{isLoading ? (<TableRow><TableCell colSpan={8} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>) : cashbookData.length === 0 ? (<TableRow><TableCell colSpan={8} className="text-center py-20 italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>) : ([...cashbookData].reverse().map(tx => (<TableRow key={tx.id}><TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell><TableCell><p className="font-bold text-xs">{tx.accountHead}</p><p className="text-[9px] text-muted-foreground truncate max-w-[200px]">{tx.description}</p></TableCell><TableCell className="text-center"><Badge variant="outline" className={cn("text-[9px] font-black", tx.method === 'bank' ? "text-blue-700 bg-blue-50" : "text-amber-700 bg-amber-50")}>{tx.method === 'bank' ? 'Bank' : 'Cash'}</Badge></TableCell><TableCell className="text-center"><div className="flex flex-col gap-1 items-center">{tx.voucherNo && <Badge className="text-[8px] bg-rose-50 text-rose-600">V: {tx.voucherNo}</Badge>}{tx.checkNo && <Badge className="text-[8px] bg-blue-50 text-blue-600">C: {tx.checkNo}</Badge>}</div></TableCell><TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell><TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell><TableCell className="text-right font-black text-primary">{tx.balance.toLocaleString('bn-BD')} ৳</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1">{canDeleteTransaction && (<AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId && !isAdmin} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle>মুছে ফেলতে চান?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}</div></TableCell></TableRow>)))}</TableBody></Table></div></CardContent></Card>
+        <Card className="border-none shadow-none animate-in fade-in duration-500"><CardHeader className="px-0 pt-0"><div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><CardTitle className="text-xl">ক্যাশবুক</CardTitle><div className="flex items-center gap-2"><Label className="font-bold text-xs">মাস নির্বাচন:</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="w-40 bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সকল মাস" /></SelectTrigger><SelectContent><SelectItem value="all">সকল মাস</SelectItem>{BENGALI_MONTHS.map((m, i) => (<SelectItem key={m} value={i.toString()}>{m}</SelectItem>))}</SelectContent></Select></div></div></CardHeader><CardContent className="px-0 pt-4"><div className="table-container"><Table className="min-w-[950px]"><TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm"><TableRow><TableHead>তারিখ</TableHead>TableHead>বিবরণ</TableHead><TableHead className="text-center">পদ্ধতি</TableHead><TableHead className="text-center">ভাউচার/চেক</TableHead><TableHead className="text-right">আয়</TableHead><TableHead className="text-right">ব্যয়</TableHead><TableHead className="text-right">ব্য্যালেন্স</TableHead><TableHead className="text-right">কার্যক্রম</TableHead></TableRow></TableHeader><TableBody>{isLoading ? (<TableRow><TableCell colSpan={8} className="text-center py-20 italic">লোড হচ্ছে...</TableCell></TableRow>) : cashbookData.length === 0 ? (<TableRow><TableCell colSpan={8} className="text-center py-20 italic">কোনো লেনদেন পাওয়া যায়নি।</TableCell></TableRow>) : ([...cashbookData].reverse().map(tx => (<TableRow key={tx.id}><TableCell className="whitespace-nowrap">{format(new Date(tx.date), 'PP', { locale: bn })}</TableCell><TableCell><p className="font-bold text-xs">{tx.accountHead}</p><p className="text-[9px] text-muted-foreground truncate max-w-[200px]">{tx.description}</p></TableCell><TableCell className="text-center"><Badge variant="outline" className={cn("text-[9px] font-black", tx.method === 'bank' ? "text-blue-700 bg-blue-50" : "text-amber-700 bg-amber-50")}>{tx.method === 'bank' ? 'Bank' : 'Cash'}</Badge></TableCell><TableCell className="text-center"><div className="flex flex-col gap-1 items-center">{tx.voucherNo && <Badge className="text-[8px] bg-rose-50 text-rose-600">V: {tx.voucherNo}</Badge>}{tx.checkNo && <Badge className="text-[8px] bg-blue-50 text-blue-600">C: {tx.checkNo}</Badge>}</div></TableCell><TableCell className="text-right text-emerald-600 font-bold">{tx.type === 'income' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell><TableCell className="text-right text-rose-600 font-bold">{tx.type === 'expense' ? tx.amount.toLocaleString('bn-BD') : '-'}</TableCell><TableCell className="text-right font-black text-primary">{tx.balance.toLocaleString('bn-BD')} ৳</TableCell><TableCell className="text-right"><div className="flex justify-end gap-1">{canDeleteTransaction && (<AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon" disabled={!!tx.feeCollectionId && !isAdmin} className="text-rose-500 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle>মুছে ফেলতে চান?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}</div></TableCell></TableRow>)))}</TableBody></Table></div></CardContent></Card>
     );
 };
 
@@ -1168,7 +1192,7 @@ export default function AccountsPage() {
     setTimeout(() => {
         window.print();
         setActivePrintReport(null);
-    }, 1500);
+    }, 3000);
   };
 
   const handlePrintAnnualReport = (data: any[]) => {
@@ -1194,45 +1218,25 @@ export default function AccountsPage() {
     <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
       <Header />
       <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
-        <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start"><h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হিসাব শাখা</h2><div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">{sidebarItems.map(item => (<button key={item.id} onClick={() => setActiveSection(item.id)} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit", activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50")}><div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}><item.icon className="h-3.5 w-3.5" /></div><span className="text-xs">{item.label}</span>{activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}</button>))}</div></aside>
+        <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start"><h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">হিসাব শাখা</h2><div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">{sidebarItems.map(item => (<button key={item.id} onClick={() => setActiveSection(item.id)} className={cn("flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit", activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50")}><div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}> <item.icon className="h-3.5 w-3.5" /> </div><span className="text-xs">{item.label}</span>{activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}</button>))}</div></aside>
         <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4"><div className="p-4 sm:p-6 lg:p-8 flex-1">{isLoadingStudents && allStudents.length === 0 ? <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div> : (<><div className="mb-6 border-b pb-4 flex justify-between items-center no-print"><div><h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2><p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p></div></div>{activeSection === 'dashboard' && <AccountsDashboardTab transactions={transactions} isLoading={isLoading} onActionClick={(t) => { setPendingEntryType(t); setActiveSection('new-transaction'); }} />}{activeSection === 'fee-setup' && <FeeSetupTab allStudents={allStudents} selectedYear={selectedYear} onPrint={handlePrintFeeSetup} />}{activeSection === 'fee-collection' && <FeeCollectionTab studentsForYear={allStudents.filter(s => s.academicYear === selectedYear)} isLoading={isLoadingStudents} onFeeCollected={fetchTransactions} />}{activeSection === 'defaulters' && <DefaultersTab allStudents={allStudents} selectedYear={selectedYear} />}{activeSection === 'collection-report' && <CollectionReportTab allStudents={allStudents} onDeleteSuccess={fetchTransactions} />}{activeSection === 'income-comparison' && <IncomeComparisonTab allStudents={allStudents} selectedYear={selectedYear} onPrintPotentialReport={handlePrintPotentialReport} />}{activeSection === 'classwise-annual-report' && <ClasswiseAnnualReportTab allStudents={allStudents} selectedYear={selectedYear} onPrint={handlePrintAnnualReport} />}{activeSection === 'expense-report' && <ExpenseReportTab transactions={transactions} isLoading={isLoading} onDeleteSuccess={fetchTransactions} />}{activeSection === 'cashbook' && <CashbookTab transactions={transactions} isLoading={isLoading} refetch={fetchTransactions} />}{activeSection === 'ledger' && <LedgerTab transactions={transactions} isLoading={isLoading} />}{activeSection === 'monthly-report' && <MonthlyReportTab transactions={transactions} selectedYear={selectedYear} />}{activeSection === 'new-transaction' && <NewTransactionTab onTransactionAdded={fetchTransactions} initialType={pendingEntryType} />}</>)}</div></div>
       </main>
 
-      {/* Printable Areas - Explicitly managed to avoid overlap */}
+      {/* Printable Areas */}
       {activePrintReport === 'fee-setup' && <PrintableFeeSetupArea allStudents={allStudents} selectedYear={selectedYear} schoolInfo={schoolInfo} />}
-      
-      {activePrintReport === 'annual-potential' && potentialPrintParams && (
-        <PrintablePotentialAnnualReport 
-            allStudents={allStudents} 
-            selectedYear={selectedYear} 
-            schoolInfo={schoolInfo} 
-            cls={potentialPrintParams.cls}
-        />
-      )}
-
-      {activePrintReport === 'annual-collection' && (
-          <PrintableClasswiseAnnualReport 
-            reportData={annualReportPrintData}
-            selectedYear={selectedYear}
-            schoolInfo={schoolInfo}
-          />
-      )}
+      {activePrintReport === 'annual-potential' && potentialPrintParams && <PrintablePotentialAnnualReport allStudents={allStudents} selectedYear={selectedYear} schoolInfo={schoolInfo} cls={potentialPrintParams.cls} />}
+      {activePrintReport === 'annual-collection' && <PrintableClasswiseAnnualReport reportData={annualReportPrintData} selectedYear={selectedYear} schoolInfo={schoolInfo} />}
     </div>
   );
 }
 
 function PrintableFeeSetupArea({ allStudents, selectedYear, schoolInfo }: { allStudents: Student[], selectedYear: string, schoolInfo: any }) {
     const classes = ['6', '7', '8', '9', '10'];
-
     return (
         <div className="printable-area bg-white text-black p-10 font-kalpurush">
             {classes.map(cls => {
-                const classStudents = allStudents
-                    .filter(s => s.academicYear === selectedYear && s.className === cls)
-                    .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
-                
+                const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === cls).sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
                 if (classStudents.length === 0) return null;
-
                 return (
                     <div key={cls} className="mb-10 break-after-page">
                         <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-6">
@@ -1246,7 +1250,6 @@ function PrintableFeeSetupArea({ allStudents, selectedYear, schoolInfo }: { allS
                                 <p className="text-sm font-black mt-1">শ্রেণি: {classNamesMap[cls]}</p>
                             </div>
                         </header>
-
                         <Table className="border-2 border-black">
                             <TableHeader className="bg-slate-100">
                                 <TableRow className="border-b-2 border-black">
@@ -1275,7 +1278,6 @@ function PrintableFeeSetupArea({ allStudents, selectedYear, schoolInfo }: { allS
                                 ))}
                             </TableBody>
                         </Table>
-                        
                         <footer className="mt-12 flex justify-between px-10">
                             <div className="text-center w-48 border-t-2 border-black pt-1 font-black">হিসাবরক্ষক</div>
                             <div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষক</div>
@@ -1288,61 +1290,25 @@ function PrintableFeeSetupArea({ allStudents, selectedYear, schoolInfo }: { allS
 }
 
 function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo, cls }: { allStudents: Student[], selectedYear: string, schoolInfo: any, cls: string }) {
-    const students = allStudents
-        .filter(s => s.academicYear === selectedYear && s.className === cls)
-        .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
-
-    const grandTotals = {
-        admission: 0,
-        session: 0,
-        months: Array(12).fill(0),
-        exam: 0,
-        other: 0,
-        total: 0
-    };
-
+    const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === cls).sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+    const grandTotals = { admission: 0, session: 0, months: Array(12).fill(0), exam: 0, other: 0, total: 0 };
     const studentRows = students.map(student => {
         let tuition = student.monthlyFee || 0;
-        if (student.feeCategory === 'full-free') tuition = 0;
-        else if (student.feeCategory === 'half-free') tuition = Math.floor(tuition / 2);
-
+        if (student.feeCategory === 'half-free') tuition = Math.floor(tuition / 2);
+        else if (student.feeCategory === 'full-free') tuition = 0;
         const admission = student.admissionFee || 0;
         const session = student.sessionFee || 0;
         const exam = (student.examFeeHalfYearly || 0) + (student.examFeeAnnual || 0) + (student.examFeePreNirbachoni || 0) + (student.examFeeNirbachoni || 0);
-        const other = (student.otherFee || 0) + (student.scoutFee || 0) + (student.developmentFee || 0) + (student.libraryFee || 0) + (student.tiffinFee || 0);
-        
+        const other = student.otherFee || 0;
         const total = admission + session + (tuition * 12) + exam + other;
-
-        // Update grand totals
-        grandTotals.admission += admission;
-        grandTotals.session += session;
-        grandTotals.exam += exam;
-        grandTotals.other += other;
-        grandTotals.total += total;
+        grandTotals.admission += admission; grandTotals.session += session; grandTotals.exam += exam; grandTotals.other += other; grandTotals.total += total;
         for(let i=0; i<12; i++) grandTotals.months[i] += tuition;
-
-        return {
-            roll: student.roll,
-            name: student.studentNameBn,
-            admission,
-            session,
-            tuition,
-            exam,
-            other,
-            total
-        };
+        return { roll: student.roll, name: student.studentNameBn, admission, session, tuition, exam, other, total };
     });
 
     return (
         <div className="printable-area bg-white text-black font-kalpurush p-2 w-full">
-            <style jsx global>{`
-                @media print {
-                    @page { size: A4 landscape; margin: 5mm; }
-                    .printable-area { width: 100% !important; }
-                    .printable-area table { border-collapse: collapse !important; border: 2px solid black !important; width: 100% !important; table-layout: auto !important; }
-                    .printable-area th, .printable-area td { border: 1px solid black !important; padding: 1px !important; }
-                }
-            `}</style>
+            <style jsx global>{`@media print { @page { size: A4 landscape; margin: 5mm; } .printable-area { width: 100% !important; } .printable-area table { border-collapse: collapse !important; border: 2px solid black !important; width: 100% !important; table-layout: auto !important; } .printable-area th, .printable-area td { border: 1px solid black !important; padding: 1px !important; } }`}</style>
             <div className="mb-20 break-after-page min-h-screen w-full">
                 <header className="flex items-center justify-between border-b-4 border-primary pb-2 mb-4">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={50} height={50} className="object-contain" />}
@@ -1385,12 +1351,12 @@ function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo,
                     <TableFooter>
                         <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
                             <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black">সর্বমোট:</TableCell>
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.admission)}</TableCell>
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.session)}</TableCell>
-                            {grandTotals.months.map((val, j) => <TableCell key={j} className="border border-black text-center text-black">{toBengaliNumber(Math.round(val))}</TableCell>)}
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.exam)}</TableCell>
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.other)}</TableCell>
-                            <TableCell className="text-right pr-1 text-black border border-black">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.admission)}</TableCell>
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.session)}</TableCell>
+                            {grandTotals.months.map((val, j) => <TableCell key={j} className="border-black text-center text-black">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.exam)}</TableCell>
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.other)}</TableCell>
+                            <TableCell className="text-right pr-1 text-black border-black">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>
@@ -1407,11 +1373,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
     const grandTotals = useMemo(() => {
         const totals = { admission: 0, session: 0, months: Array(12).fill(0), exam: 0, other: 0, total: 0 };
         reportData.forEach(row => {
-            totals.admission += row.admission;
-            totals.session += row.session;
-            totals.exam += row.exam;
-            totals.other += row.other;
-            totals.total += row.total;
+            totals.admission += row.admission; totals.session += row.session; totals.exam += row.exam; totals.other += row.other; totals.total += row.total;
             row.months.forEach((val: number, i: number) => totals.months[i] += val);
         });
         return totals;
@@ -1421,14 +1383,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
 
     return (
         <div className="printable-area bg-white text-black font-kalpurush p-2 w-full">
-             <style jsx global>{`
-                @media print {
-                    @page { size: A4 landscape; margin: 5mm; }
-                    .printable-area { width: 100% !important; }
-                    .printable-area table { border-collapse: collapse !important; border: 2px solid black !important; width: 100% !important; table-layout: auto !important; }
-                    .printable-area th, .printable-area td { border: 1px solid black !important; padding: 1px !important; }
-                }
-            `}</style>
+             <style jsx global>{`@media print { @page { size: A4 landscape; margin: 5mm; } .printable-area { width: 100% !important; } .printable-area table { border-collapse: collapse !important; border: 2px solid black !important; width: 100% !important; table-layout: auto !important; } .printable-area th, .printable-area td { border: 1px solid black !important; padding: 1px !important; } }`}</style>
             <div className="mb-20 break-after-page min-h-screen w-full">
                 <header className="flex items-center justify-between border-b-4 border-emerald-800 pb-2 mb-4">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={50} height={50} className="object-contain" />}
@@ -1441,41 +1396,41 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                 <Table className="border-collapse border-2 border-black w-full text-[10px]">
                     <TableHeader className="bg-slate-100">
                         <TableRow className="h-6 border-b-2 border-black bg-slate-100">
-                            <TableHead className="border border-black font-black text-center w-8 text-black">রোল</TableHead>
-                            <TableHead className="border border-black font-black min-w-[120px] text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
-                            <TableHead className="border border-black font-black text-center text-black">ভর্তি ফি</TableHead>
-                            <TableHead className="border border-black font-black text-center text-black">সেশন ফি</TableHead>
-                            {BENGALI_MONTHS.map(m => <TableHead key={m} className="border border-black font-black text-center text-black px-0.5">{m.slice(0,3)}</TableHead>)}
-                            <TableHead className="border border-black font-black text-center text-black">পরীক্ষা</TableHead>
-                            <TableHead className="border border-black font-black text-center text-black">অন্যান্য</TableHead>
-                            <TableHead className="font-black border border-black text-right pr-1 text-black bg-slate-200 w-16">মোট</TableHead>
+                            <TableHead className="border-black font-black text-center w-8 text-black">রোল</TableHead>
+                            <TableHead className="border-black font-black min-w-[120px] text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
+                            <TableHead className="border-black font-black text-center text-black">ভর্তি ফি</TableHead>
+                            <TableHead className="border-black font-black text-center text-black">সেশন ফি</TableHead>
+                            {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-black font-black text-center text-black px-0.5">{m.slice(0,3)}</TableHead>)}
+                            <TableHead className="border-black font-black text-center text-black">পরীক্ষা</TableHead>
+                            <TableHead className="border-black font-black text-center text-black">অন্যান্য</TableHead>
+                            <TableHead className="font-black border-black text-right pr-1 text-black bg-slate-200 w-16">মোট</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {reportData.map((row, i) => (
                             <TableRow key={i} className="h-[18px] border-b border-black">
-                                <TableCell className="border border-black text-center font-black text-black p-0">{toBengaliNumber(row.roll)}</TableCell>
-                                <TableCell className="border border-black font-black whitespace-nowrap text-black text-left pl-2 p-0">{row.name}</TableCell>
-                                <TableCell className="border border-black text-center text-black font-black p-0">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
-                                <TableCell className="border border-black text-center text-black font-black p-0">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
+                                <TableCell className="border-black text-center font-black text-black p-0">{toBengaliNumber(row.roll)}</TableCell>
+                                <TableCell className="border-black font-black whitespace-nowrap text-black text-left pl-2 p-0">{row.name}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
                                 {row.months.map((val: number, j: number) => (
-                                    <TableCell key={j} className="border-r border-black text-center text-black font-black p-0">{val > 0 ? toBengaliNumber(Math.round(val)) : '-'}</TableCell>
+                                    <TableCell key={j} className="border-black text-center text-black font-black p-0">{val > 0 ? toBengaliNumber(Math.round(val)) : '-'}</TableCell>
                                 ))}
-                                <TableCell className="border border-black text-center text-black font-black p-0">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
-                                <TableCell className="border border-black text-center text-black font-black p-0">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
-                                <TableCell className="text-right pr-1 font-black bg-slate-100 text-black border border-black p-0">{toBengaliNumber(row.total)}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
+                                <TableCell className="text-right pr-1 font-black bg-slate-100 text-black border-black p-0">{toBengaliNumber(row.total)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                     <TableFooter>
                         <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
                             <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black">সর্বমোট:</TableCell>
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.admission)}</TableCell>
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.session)}</TableCell>
-                            {grandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border border-black text-center text-black">{toBengaliNumber(Math.round(val))}</TableCell>)}
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.exam)}</TableCell>
-                            <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.other)}</TableCell>
-                            <TableCell className="text-right pr-1 text-black border border-black">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.admission)}</TableCell>
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.session)}</TableCell>
+                            {grandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border-black text-center text-black">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.exam)}</TableCell>
+                            <TableCell className="border-black text-center text-black">{toBengaliNumber(grandTotals.other)}</TableCell>
+                            <TableCell className="text-right pr-1 text-black border-black">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>
