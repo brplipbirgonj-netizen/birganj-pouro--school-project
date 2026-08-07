@@ -461,7 +461,7 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
     );
 };
 
-const FullMarksTab = () => {
+const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
@@ -570,7 +570,7 @@ const FullMarksTab = () => {
                                                 <TableHeader className="bg-muted/30">
                                                     <TableRow>
                                                         <TableHead className="pl-6 font-bold">বিষয়ের নাম</TableHead>
-                                                        <TableHead className="text-center font-bold">অবস্থা</TableHead>
+                                                        <TableHead className="text-center font-bold">অবস্থা ও পোস্টিং সংখ্যা</TableHead>
                                                         <TableHead className="w-48 text-center font-bold">পূর্ণমান (Full Marks)</TableHead>
                                                         <TableHead className="text-right pr-6 font-bold">কার্যক্রম</TableHead>
                                                     </TableRow>
@@ -591,17 +591,36 @@ const FullMarksTab = () => {
                                                         const isPermitted = isSubjectPermitted(cls, subInfo.name);
                                                         const hasData = existingRecord && existingRecord.results.length > 0;
 
+                                                        // Calculate posting statistics
+                                                        const totalClassStudents = allStudents.filter(s => {
+                                                            if (s.academicYear !== selectedYear || s.className !== cls) return false;
+                                                            if (parseInt(cls) < 9) return true;
+                                                            // For 9-10, check if the subject is part of the student's group
+                                                            const studentSubjects = getSubjects(s.className, s.group);
+                                                            return studentSubjects.some(sub => sub.name === subInfo.name);
+                                                        }).length;
+
+                                                        const postedCount = existingRecord?.results.length || 0;
+                                                        const remaining = totalClassStudents - postedCount;
+
                                                         return (
                                                             <TableRow key={i} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
                                                                 <TableCell className="font-black pl-6 text-primary text-base">
                                                                     {subInfo.name}
                                                                 </TableCell>
                                                                 <TableCell className="text-center">
-                                                                    {hasData ? (
-                                                                        <Badge className="bg-emerald-600 text-[10px] font-black">নম্বর এন্ট্রি হয়েছে</Badge>
-                                                                    ) : (
-                                                                        <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">বকেয়া</Badge>
-                                                                    )}
+                                                                    <div className="flex flex-col items-center gap-1">
+                                                                        {hasData ? (
+                                                                            <Badge className="bg-emerald-600 text-[10px] font-black">এন্ট্রি হয়েছে</Badge>
+                                                                        ) : (
+                                                                            <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">বকেয়া</Badge>
+                                                                        )}
+                                                                        <div className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                                                                            পোস্টিং: {toBengaliNumber(postedCount)} / {toBengaliNumber(totalClassStudents)} 
+                                                                            {remaining > 0 && <span className="text-rose-600 ml-1">(বাকি: {toBengaliNumber(remaining)})</span>}
+                                                                            {remaining === 0 && postedCount > 0 && <span className="text-emerald-600 ml-1">(সম্পন্ন)</span>}
+                                                                        </div>
+                                                                    </div>
                                                                 </TableCell>
                                                                 <TableCell className="text-center">
                                                                     <div className="flex items-center gap-2 justify-center">
@@ -1287,7 +1306,7 @@ export default function ResultsPage() {
                             <>
                                 {activeSection === 'management' && <MarkManagementTab allStudents={allStudents} />}
                                 {activeSection === 'subject-report' && <SubjectReportTab allStudents={allStudents} onPrintRequested={handleSubjectPrint} />}
-                                {activeSection === 'full-marks' && <FullMarksTab />}
+                                {activeSection === 'full-marks' && <FullMarksTab allStudents={allStudents} />}
                                 {activeSection === 'sheet' && <ResultSheetTab allStudents={allStudents} />}
                                 {activeSection === 'merit' && <MeritListTab allStudents={allStudents} />}
                                 {activeSection === 'special-promotion' && <SpecialPromotionTab allStudents={allStudents} />}
