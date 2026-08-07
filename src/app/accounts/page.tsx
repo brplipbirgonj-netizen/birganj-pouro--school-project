@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -1739,6 +1740,70 @@ const IncomeComparisonTab = ({ allStudents, selectedYear }: { allStudents: Stude
                     </ResponsiveContainer>
                 </CardContent>
             </Card>
+
+            <Card className="border-2 border-black/10 shadow-lg overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b">
+                    <CardTitle className="text-base font-black flex items-center gap-2">
+                        <ListChecks className="h-5 w-5 text-primary" /> মাসভিত্তিক বিস্তারিত বিবরণী
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="table-container">
+                        <Table>
+                            <TableHeader className="bg-muted/50 sticky top-0">
+                                <TableRow>
+                                    <TableHead className="font-black text-black">মাস</TableHead>
+                                    <TableHead className="text-right font-black text-black">সম্ভাব্য পাওনা (৳)</TableHead>
+                                    <TableHead className="text-right font-black text-black">প্রকৃত আদায় (৳)</TableHead>
+                                    <TableHead className="text-right font-black text-black">বকেয়া / অতিরিক্ত (৳)</TableHead>
+                                    <TableHead className="text-center font-black text-black">আদায়ের হার (%)</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {chartData.map((row, idx) => {
+                                    const due = row.potential - row.actual;
+                                    const rate = row.potential > 0 ? (row.actual / row.potential) * 100 : 0;
+                                    return (
+                                        <TableRow key={idx} className="hover:bg-slate-50 transition-colors h-11">
+                                            <TableCell className="font-bold text-slate-700">{row.name}</TableCell>
+                                            <TableCell className="text-right font-black text-slate-800">{row.potential.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className="text-right font-black text-emerald-700">{row.actual.toLocaleString('bn-BD')}</TableCell>
+                                            <TableCell className={cn(
+                                                "text-right font-black",
+                                                due > 0 ? "text-rose-600" : due < 0 ? "text-blue-600" : "text-slate-400"
+                                            )}>
+                                                {Math.abs(due).toLocaleString('bn-BD')}
+                                                {due > 0 ? ' (বকেয়া)' : due < 0 ? ' (বেশি)' : ''}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge className={cn(
+                                                    "font-black text-[10px] min-w-[50px] justify-center",
+                                                    rate >= 90 ? "bg-emerald-600" : rate >= 50 ? "bg-amber-600" : "bg-rose-600"
+                                                )}>
+                                                    {toBengaliNumber(rate.toFixed(1))}%
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                            <tfoot>
+                                <TableRow className="bg-primary/5 font-black h-12 border-t-2">
+                                    <TableCell className="text-primary text-lg">সর্বমোট</TableCell>
+                                    <TableCell className="text-right text-lg">{stats.potential.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="text-right text-emerald-700 text-lg">{stats.actual.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="text-right text-rose-700 text-lg">{stats.due.toLocaleString('bn-BD')}</TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge className="bg-primary px-4 py-1 text-xs font-black">
+                                            গড়: {toBengaliNumber((stats.potential > 0 ? (stats.actual / stats.potential) * 100 : 0).toFixed(1))}%
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            </tfoot>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };
@@ -1793,7 +1858,7 @@ export default function AccountsPage() {
   const canManageFeeSetup = hasPermission('manage:fee-setup');
 
   const sidebarItems = useMemo(() => {
-    const items = [{ id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
+    const items = [{ id: 'dashboard', label: 'ড্যাসবোর্ড', icon: LayoutDashboard, color: 'text-indigo-600 bg-indigo-50' }];
     if (canManageFeeSetup) items.push({ id: 'fee-setup', label: 'ফি সেটআপ', icon: Settings2, color: 'text-blue-600 bg-blue-50' });
     if (canCollectFees) {
         items.push({ id: 'fee-collection', label: 'বেতন আদায়', icon: Banknote, color: 'text-emerald-600 bg-emerald-50' });

@@ -21,7 +21,6 @@ service cloud.firestore {
 
     function hasPermission(permission) {
       if (!isAuthed()) return false;
-      // Optimize by combining exists and get
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       return userData != null && (
         userData.role == 'admin' || 
@@ -79,13 +78,13 @@ service cloud.firestore {
 
     match /holidays/{id} {
       allow read: if true;
-      allow write: if isAuthed(); // Allow authenticated teachers for initial setup and updates
+      allow write: if isAuthed(); 
       allow delete: if isAdmin();
     }
     
     match /exams/{id} {
       allow read: if true;
-      allow write: if isAuthed(); // Allow authenticated teachers for initial setup
+      allow write: if isAuthed(); 
     }
 
     match /students/{id} {
@@ -131,7 +130,6 @@ service cloud.firestore {
 
     match /transactions/{id} {
       allow read: if isAuthed();
-      // Allow write and delete for fee collectors to support editing existing collections
       allow write, delete: if isAuthed() && (hasPermission('manage:transactions') || hasPermission('collect:fees') || isAdmin());
     }
   }
