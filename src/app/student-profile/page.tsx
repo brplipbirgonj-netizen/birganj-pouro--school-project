@@ -16,7 +16,7 @@ import { DailyAttendance } from '@/lib/attendance-data';
 import { FeeCollection, feeCollectionFromDoc } from '@/lib/fees-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, MessageSquareQuote, Target, Star, GraduationCap, CheckCircle2, XCircle, Wallet, ListChecks, Phone, FileText, ListTodo } from 'lucide-react';
+import { Search, User, Banknote, CalendarCheck, AlertTriangle, Printer, LayoutGrid, Info, MapPin, Loader2, TrendingUp, Award, Target, Star, Wallet, ListChecks, CheckCircle2, XCircle, ListTodo } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,14 +27,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAllResults } from '@/lib/results-data';
 import { getSubjects } from '@/lib/subjects';
 import { processStudentResults } from '@/lib/results-calculation';
 import { getExams } from '@/lib/exam-data';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
