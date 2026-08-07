@@ -19,7 +19,7 @@ import { FilePen, Trash2, Smartphone, Printer, Loader2, Save, AlertCircle, Check
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DatePicker } from './ui/date-picker';
@@ -193,8 +193,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         if (existingCollection) batch.update(doc(db, 'feeCollections', feeCollectionId), feeCollectionData);
         else { feeCollectionData.createdAt = serverTimestamp(); batch.set(doc(db, 'feeCollections', feeCollectionId), feeCollectionData); }
 
-        try {
-            await batch.commit();
+        batch.commit().then(() => {
             toast({ title: "ফি আদায় সফল হয়েছে" });
             if (shouldSendSMS && (student.guardianMobile || student.studentMobile)) {
                 const msg = `সম্মানিত অভিভাবক, ${student.studentNameBn} এর ${description} বাবদ মোট ${totalAmount.toLocaleString('bn-BD')} টাকা আদায় করা হয়েছে। বীপৌউবি`;
@@ -202,7 +201,15 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 window.location.href = `sms:${(student.guardianMobile || student.studentMobile)!.replace(/[^\d+]/g, '')}${isIOS ? '&' : '?'}body=${encodeURIComponent(msg)}`;
             }
             onSave(); onOpenChange(false);
-        } catch (error) { console.error(error); }
+        }).catch(async (serverError: any) => {
+            console.error("Batch save error:", serverError);
+            const permissionError = new FirestorePermissionError({
+                path: 'fee-collection-batch',
+                operation: 'write',
+                requestResourceData: { feeCollectionId, totalAmount }
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
     };
     
     return (
@@ -335,7 +342,13 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         const batch = writeBatch(db);
         batch.delete(doc(db, 'feeCollections', collection.id));
         if (collection.transactionIds) collection.transactionIds.forEach(id => batch.delete(doc(db, 'transactions', id)));
-        try { await batch.commit(); toast({title: "মুছে ফেলা হয়েছে"}); fetchFeeData(); onFeeCollected(); } catch(error) {}
+        batch.commit().then(() => { toast({title: "মুছে ফেলা হয়েছে"}); fetchFeeData(); onFeeCollected(); }).catch((serverError: any) => {
+             const permissionError = new FirestorePermissionError({
+                path: 'fee-collection-batch-delete',
+                operation: 'delete',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
     };
     
     return (

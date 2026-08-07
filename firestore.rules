@@ -77,13 +77,13 @@ service cloud.firestore {
 
     match /holidays/{id} {
       allow read: if true;
-      allow write: if isAuthed(); // Allow authenticated users for initial setup and updates
+      allow write: if isAuthed(); // Allow authenticated teachers for initial setup and updates
       allow delete: if isAdmin();
     }
     
     match /exams/{id} {
       allow read: if true;
-      allow write: if isAuthed(); // Allow authenticated users for initial setup
+      allow write: if isAuthed(); // Allow authenticated teachers for initial setup
     }
 
     match /students/{id} {
@@ -129,7 +129,7 @@ service cloud.firestore {
 
     match /transactions/{id} {
       allow read: if isAuthed();
-      allow write: if isAuthed() && (hasPermission('manage:transactions') || isAdmin());
+      allow write: if isAuthed() && (hasPermission('manage:transactions') || hasPermission('collect:fees') || isAdmin());
       allow delete: if isAdmin();
     }
   }
