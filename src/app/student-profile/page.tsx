@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
@@ -35,6 +36,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
