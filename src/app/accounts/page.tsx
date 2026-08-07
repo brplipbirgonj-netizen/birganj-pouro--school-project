@@ -917,7 +917,7 @@ const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allS
                     <div className="table-container !max-h-[600px] !border-0 !rounded-none">
                         <Table className="border-separate border-spacing-0 w-full min-w-[1300px] border-collapse border-2 border-black">
                             <TableHeader className="bg-slate-100">
-                                <TableRow className="h-12 border-b-2 border-black">
+                                <TableRow className="h-8 border-b-2 border-black">
                                     <TableHead className="border-r border-b border-black font-black text-[11px] text-center w-14 text-black sticky left-0 z-40 bg-slate-100">রোল</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[11px] min-w-[150px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[10px] text-center text-black">ভর্তি ফি</TableHead>
@@ -932,7 +932,7 @@ const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allS
                                 {isLoading ? (
                                     <TableRow><TableCell colSpan={19} className="text-center py-20 italic">বিশ্লেষণ করা হচ্ছে...</TableCell></TableRow>
                                 ) : reportData.map((row, i) => (
-                                    <TableRow key={i} className="h-10 border-b border-black hover:bg-slate-50 transition-colors">
+                                    <TableRow key={i} className="h-6 border-b border-black hover:bg-slate-50 transition-colors">
                                         <TableCell className="border-r border-black text-center font-black text-[11px] sticky left-0 z-20 bg-white group-hover:bg-slate-50">{toBengaliNumber(row.roll)}</TableCell>
                                         <TableCell className="border-r border-black font-black text-[11px] truncate sticky left-14 z-20 bg-white group-hover:bg-slate-50">{row.name}</TableCell>
                                         <TableCell className="border-r border-black text-center text-[10px]">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
@@ -947,7 +947,7 @@ const ClasswiseAnnualReportTab = ({ allStudents, selectedYear, onPrint }: { allS
                                 ))}
                             </TableBody>
                             <TableFooter className="sticky bottom-0 z-30">
-                                <TableRow className="h-12 border-t-2 border-black bg-slate-200 font-black">
+                                <TableRow className="h-7 border-t-2 border-black bg-slate-200 font-black">
                                     <TableCell colSpan={2} className="text-right pr-4 border-r border-black text-[11px] sticky left-0 z-50 bg-slate-200">সর্বমোট আদায়:</TableCell>
                                     <TableCell className="border-r border-black text-center text-[10px]">{toBengaliNumber(grandTotals.admission)}</TableCell>
                                     <TableCell className="border-r border-black text-center text-[10px]">{toBengaliNumber(grandTotals.session)}</TableCell>
@@ -1285,7 +1285,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                 </header>
                 <Table className="border-collapse border-2 border-black w-full text-[9px]">
                     <TableHeader className="bg-slate-100">
-                        <TableRow className="h-8 border-b-2 border-black bg-slate-100">
+                        <TableRow className="h-6 border-b-2 border-black bg-slate-100">
                             <TableHead className="border border-black font-black text-center w-10 text-black">রোল</TableHead>
                             <TableHead className="border border-black font-black min-w-[120px] text-black">শিক্ষার্থীর নাম</TableHead>
                             <TableHead className="border border-black font-black text-center text-black">ভর্তি ফি</TableHead>
@@ -1298,7 +1298,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                     </TableHeader>
                     <TableBody>
                         {reportData.map((row, i) => (
-                            <TableRow key={i} className="h-7 border-b border-black">
+                            <TableRow key={i} className="h-4 border-b border-black">
                                 <TableCell className="border border-black text-center font-bold text-black">{toBengaliNumber(row.roll)}</TableCell>
                                 <TableCell className="border border-black font-bold whitespace-nowrap text-black">{row.name}</TableCell>
                                 <TableCell className="border border-black text-center text-black">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
@@ -1313,7 +1313,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                         ))}
                     </TableBody>
                     <TableFooter>
-                        <TableRow className="h-8 border-t-2 border-black bg-slate-200 font-black">
+                        <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
                             <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black">সর্বমোট:</TableCell>
                             <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.admission)}</TableCell>
                             <TableCell className="border border-black text-center text-black">{toBengaliNumber(grandTotals.session)}</TableCell>
