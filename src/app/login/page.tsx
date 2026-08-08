@@ -135,6 +135,10 @@ export default function LoginPage() {
 
     const handleResultSearch = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Helper to convert Bengali numbers to English
+        const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
+
         if (!db || !searchYear || !searchClass || !searchExam || !searchRoll || !searchStudentId) {
             toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'সবগুলো ঘর পূরণ করুন।' });
             return;
@@ -142,31 +146,45 @@ export default function LoginPage() {
 
         setIsSearching(true);
         try {
-            const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
-            const rollEn = parseInt(bnToEn(searchRoll), 10);
-            const idEn = bnToEn(searchStudentId).trim();
+            const cleanRoll = parseInt(bnToEn(searchRoll).trim(), 10);
+            const cleanStudentId = bnToEn(searchStudentId).trim().toUpperCase();
 
+            // Find the student record - using academicYear and generatedId as unique composite key
+            // This is more robust than matching all 4 fields exactly
             const studentQuery = query(
                 collection(db, 'students'),
                 where('academicYear', '==', searchYear),
-                where('className', '==', searchClass),
-                where('roll', '==', rollEn),
-                where('generatedId', '==', idEn),
+                where('generatedId', '==', cleanStudentId),
                 limit(1)
             );
+            
             const studentSnap = await getDocs(studentQuery);
 
             if (studentSnap.empty) {
-                toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি', description: 'রোল বা আইডি সঠিক নয়।' });
+                toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি', description: 'আইডি নম্বরটি সঠিক নয় বা এই শিক্ষাবর্ষের নয়।' });
                 setIsSearching(false);
                 return;
             }
 
             const foundStudent = studentFromDoc(studentSnap.docs[0]);
             
+            // Double check roll and class if needed (optional since generatedId is unique)
+            if (foundStudent.roll !== cleanRoll || foundStudent.className !== searchClass) {
+                 toast({ variant: 'destructive', title: 'তথ্য মেলেনি', description: 'রোল বা শ্রেণি আইডি নম্বরের সাথে মিলছে না।' });
+                 setIsSearching(false);
+                 return;
+            }
+            
+            // Fetch results for the entire class for rank calculation
             const allResults = await getAllResults(db, searchYear, searchExam);
             const classRes = allResults.filter(r => r.className === searchClass);
             
+            if (classRes.length === 0) {
+                toast({ variant: 'destructive', title: 'ফলাফল প্রকাশিত হয়নি', description: 'এই পরীক্ষার কোনো নম্বর এখনো এন্ট্রি করা হয়নি।' });
+                setIsSearching(false);
+                return;
+            }
+
             const classStudentsQuery = query(
                 collection(db, 'students'),
                 where('academicYear', '==', searchYear),
@@ -176,16 +194,17 @@ export default function LoginPage() {
             const classStudents = classStudentsSnap.docs.map(studentFromDoc);
 
             const subs = getSubjects(searchClass, foundStudent.group).filter(s => s.isExamSubject !== false);
-            const results = processStudentResults(classStudents, classRes, subs);
-            const studentProcessed = results.find(r => r.student.id === foundStudent.id);
+            const processedResultsList = processStudentResults(classStudents, classRes, subs);
+            const studentProcessed = processedResultsList.find(r => r.student.id === foundStudent.id);
 
             if (studentProcessed) {
                 setSearchResult(studentProcessed);
             } else {
-                toast({ variant: 'destructive', title: 'ফলাফল পাওয়া যায়নি' });
+                toast({ variant: 'destructive', title: 'ফলাফল পাওয়া যায়নি', description: 'আপনার জন্য এই পরীক্ষার কোনো নম্বর পাওয়া যায়নি।' });
             }
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            console.error("Result Search Error:", error);
+            toast({ variant: 'destructive', title: 'সার্ভার ত্রুটি', description: 'ফলাফল খুঁজতে সমস্যা হচ্ছে। অনুগ্রহ করে পুনরায় চেষ্টা করুন।' });
         } finally {
             setIsSearching(false);
         }
@@ -346,7 +365,7 @@ export default function LoginPage() {
                                     <p className="text-[10px] font-bold text-amber-800 leading-tight">সতর্কতা: রোল এবং আইডি সঠিক হতে হবে। মার্কশিট প্রিন্ট করতে অফিস বা শ্রেণি শিক্ষকের সাথে যোগাযোগ করুন।</p>
                                 </div>
                                 <Button type="submit" className="w-full h-12 text-lg font-black shadow-lg" disabled={isSearching}>
-                                    {isSearching ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : <Search className="mr-2 h-5 w-5" />}
+                                    {isSearching ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Search className="mr-2 h-5 w-5" />}
                                     ফলাফল দেখুন
                                 </Button>
                             </form>
