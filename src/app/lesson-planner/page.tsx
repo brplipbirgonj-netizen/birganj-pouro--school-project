@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -161,7 +160,17 @@ const SyllabusManagementTab = () => {
 
     const availableSubjects = useMemo(() => {
         if (!className) return [];
-        return getSubjects(className);
+        const base = getSubjects(className);
+        // Split religion into Islam and Hindu for syllabus only
+        return base.flatMap(s => {
+            if (s.name === 'ধর্ম ও নৈতিক শিক্ষা') {
+                return [
+                    { ...s, name: 'ইসলাম ধর্ম ও নৈতিক শিক্ষা', englishName: 'Islam Religion & Moral Education' },
+                    { ...s, name: 'হিন্দু ধর্ম ও নৈতিক শিক্ষা', englishName: 'Hindu Religion & Moral Education' }
+                ];
+            }
+            return s;
+        });
     }, [className]);
 
     return (
@@ -722,4 +731,3 @@ export default function LessonPlannerPage() {
         </div>
     );
 }
-
