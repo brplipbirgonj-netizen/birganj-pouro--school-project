@@ -233,17 +233,19 @@ export default function NoticeManagementPage() {
                                             <Label className="font-black text-sm">পিডিএফ বা ডকুমেন্ট লিংক (ঐচ্ছিক)</Label>
                                             <Input placeholder="https://..." value={newNotice.pdfUrl} onChange={e => setNewNotice({...newNotice, pdfUrl: e.target.value})} className="h-11 border-2" />
                                         </div>
-                                        <div className="md:col-span-2 p-4 bg-primary/5 rounded-xl border-2 border-dashed border-primary/20 flex items-center justify-between">
-                                            <div className="space-y-0.5">
-                                                <Label className="font-black text-primary cursor-pointer" htmlFor="is-scrolling-toggle">টিকার/স্ক্রলিং নোটিশ</Label>
-                                                <p className="text-[10px] font-bold text-muted-foreground">এটি অন থাকলে ড্যাশবোর্ডের উপরে স্ক্রল হবে।</p>
+                                        {canManageNotices && (
+                                            <div className="md:col-span-2 p-4 bg-primary/5 rounded-xl border-2 border-dashed border-primary/20 flex items-center justify-between">
+                                                <div className="space-y-0.5">
+                                                    <Label className="font-black text-primary cursor-pointer" htmlFor="is-scrolling-toggle">টিকার/স্ক্রলিং নোটিশ</Label>
+                                                    <p className="text-[10px] font-bold text-muted-foreground">এটি অন থাকলে ড্যাশবোর্ডের উপরে স্ক্রল হবে।</p>
+                                                </div>
+                                                <Switch 
+                                                    id="is-scrolling-toggle"
+                                                    checked={newNotice.isScrolling} 
+                                                    onCheckedChange={v => setNewNotice({...newNotice, isScrolling: v})}
+                                                />
                                             </div>
-                                            <Switch 
-                                                id="is-scrolling-toggle"
-                                                checked={newNotice.isScrolling} 
-                                                onCheckedChange={v => setNewNotice({...newNotice, isScrolling: v})}
-                                            />
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                                 <DialogFooter className="p-6 bg-slate-50 border-t sticky bottom-0">
@@ -262,7 +264,7 @@ export default function NoticeManagementPage() {
                                 <TableRow className="h-16">
                                     <TableHead className="w-16 text-center font-black">ক্রমিক</TableHead>
                                     <TableHead className="font-black">শিরোনাম ও তারিখ</TableHead>
-                                    <TableHead className="text-center font-black">স্ক্রলিং</TableHead>
+                                    {canManageNotices && <TableHead className="text-center font-black">স্ক্রলিং</TableHead>}
                                     <TableHead className="font-black">ধরণ</TableHead>
                                     <TableHead className="font-black">সংযুক্তি</TableHead>
                                     <TableHead className="text-right font-black pr-10">কার্যক্রম</TableHead>
@@ -270,9 +272,9 @@ export default function NoticeManagementPage() {
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center py-24 italic"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> নোটিশ লোড হচ্ছে...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={canManageNotices ? 6 : 5} className="text-center py-24 italic"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> নোটিশ লোড হচ্ছে...</TableCell></TableRow>
                                 ) : notices.length === 0 ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center py-24 text-muted-foreground font-bold">কোনো নোটিশ পাওয়া যায়নি।</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={canManageNotices ? 6 : 5} className="text-center py-24 text-muted-foreground font-bold">কোনো নোটিশ পাওয়া যায়নি।</TableCell></TableRow>
                                 ) : (
                                     notices.map((notice, idx) => (
                                         <TableRow key={notice.id} className="h-20 hover:bg-slate-50 transition-colors">
@@ -281,18 +283,19 @@ export default function NoticeManagementPage() {
                                                 <p className="font-black text-base text-slate-800 line-clamp-1">{notice.title}</p>
                                                 <p className="text-xs font-bold text-muted-foreground mt-1">{format(notice.date, 'PP p', { locale: bn })}</p>
                                             </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <Switch 
-                                                        checked={notice.isScrolling} 
-                                                        onCheckedChange={() => handleToggleScrolling(notice.id, !!notice.isScrolling)}
-                                                        disabled={!canManageNotices}
-                                                    />
-                                                    <span className={cn("text-[9px] font-black uppercase", notice.isScrolling ? "text-emerald-600" : "text-slate-400")}>
-                                                        {notice.isScrolling ? 'অন' : 'অফ'}
-                                                    </span>
-                                                </div>
-                                            </TableCell>
+                                            {canManageNotices && (
+                                                <TableCell className="text-center">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <Switch 
+                                                            checked={notice.isScrolling} 
+                                                            onCheckedChange={() => handleToggleScrolling(notice.id, !!notice.isScrolling)}
+                                                        />
+                                                        <span className={cn("text-[9px] font-black uppercase", notice.isScrolling ? "text-emerald-600" : "text-slate-400")}>
+                                                            {notice.isScrolling ? 'অন' : 'অফ'}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                            )}
                                             <TableCell>
                                                 <Badge variant={notice.priority === 'urgent' ? 'destructive' : notice.priority === 'important' ? 'secondary' : 'outline'} className="font-black px-4 py-0.5">
                                                     {notice.priority === 'urgent' ? 'জরুরি' : notice.priority === 'important' ? 'গুরুত্বপূর্ণ' : 'সাধারণ'}
