@@ -84,11 +84,23 @@ export const CHAPTERS_DATA: SubjectChapters = {
             'Lesson- 32: An Invitation for Robin',
             'Lesson- 33: The Garden'
         ],
+        'ইংরেজি দ্বিতীয়': [
+            'Unit 1: Parts of Speech',
+            'Unit 2: The Tenses',
+            'Unit 3: Articles: a, an, the',
+            'Unit 4: Possessives',
+            'Unit 5: The -ing form of Verb: Gerund and Participle',
+            'Unit 6: Sentences',
+            'Unit 7: Introductory \'There\' and \'It\'',
+            'Unit 8: Punctuation and Capitalisation',
+            'Unit 9: Letters and E-mails',
+            'Unit 10: Writing Paragraphs'
+        ],
     },
     '7': {
         'বাংলা প্রথম': ['কাবুলিওয়ালা', 'লখার একুশে', 'মরু-ভাস্কর', 'শব্দ থেকে কবিতা', 'আমার বাড়ি', 'কুলি-মজুর', 'শুনো একটি মজিবরের থেকে', 'সবার আমি ছাত্র'],
         'গণিত': ['মূলদ ও অমূলদ সংখ্যা', 'সমানুপাত ও লাভ-ক্ষতি', 'বীজগণিতীয় রাশির গুণ ও ভাগ', 'বীজগণিতীয় সূত্রাবলি ও প্রয়োগ', 'বীজগণিতীয় ভগ্নাংশ', 'সরল সমীকরণ', 'ত্রিভুজ', 'সমান্তরাল সরলরেখা'],
-        'সাধারণ বিজ্ঞান': ['নিম্নশ্রেণির জীব', 'উদ্ভিদের বাহ্যিক বৈশিষ্ট্য', 'কোষীয় গঠন', 'শ্বসন', 'অঙ্গসংস্থান', 'পদার্থের গঠন', 'শব্দ', 'নিউটনের গতিসূত্র'],
+        'সাধারণ বিজ্ঞান': ['নিম্নশ্রেণিয়ের জীব', 'উদ্ভিদের বাহ্যিক বৈশিষ্ট্য', 'কোষীয় গঠন', 'শ্বসন', 'অঙ্গসংস্থান', 'পদার্থের গঠন', 'শব্দ', 'নিউটনের গতিসূত্র'],
         'ইংরেজি প্রথম': ['A Dream School', 'Playing with the Words', 'If', 'In the Grid', 'Have You Filled a Bucket Today?', 'A Good Reader', 'Using Verbs to Satisfy'],
     },
     '8': {
