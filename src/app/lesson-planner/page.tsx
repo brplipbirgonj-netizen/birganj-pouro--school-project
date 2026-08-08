@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -66,7 +67,7 @@ const SyllabusManagementTab = () => {
     const [isEditMode, setIsEditMode] = useState(false);
 
     const isAdmin = user?.role === 'admin';
-    const canManageSyllabus = hasPermission('manage:lesson-plans');
+    const canManageSyllabus = hasPermission('manage:syllabus');
 
     useEffect(() => {
         if (db && selectedYear) {
@@ -345,7 +346,7 @@ const SyllabusManagementTab = () => {
                             <CardFooter className="p-8 bg-slate-50 border-t-[3px] border-black flex justify-end">
                                 <Button 
                                     onClick={handleSave} 
-                                    disabled={isLoading || availableChapters.length === 0}
+                                    disabled={isLoading || availableChapters.length === 0 || !canManageSyllabus}
                                     className="h-16 px-16 text-xl font-black shadow-2xl shadow-primary/30"
                                 >
                                     {isLoading ? <Loader2 className="animate-spin mr-2 h-6 w-6" /> : <Save className="mr-2 h-6 w-6" />}
@@ -396,6 +397,7 @@ export default function LessonPlannerPage() {
 
     const isAdmin = user?.role === 'admin';
     const canManagePlans = hasPermission('manage:lesson-plans');
+    const canViewSyllabusMgmt = hasPermission('view:syllabus-mgmt');
     const canViewTracker = hasPermission('view:syllabus-tracker');
 
     const availableSubjects = useMemo(() => {
@@ -524,18 +526,20 @@ export default function LessonPlannerPage() {
                             </div>
                             <span className="text-sm">আমার লেসন প্ল্যান</span>
                         </button>
-                        <button
-                            onClick={() => setActiveTab('syllabus')}
-                            className={cn(
-                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
-                                activeTab === 'syllabus' ? "bg-white shadow-md text-blue-600 scale-105" : "text-muted-foreground hover:bg-slate-200/50"
-                            )}
-                        >
-                            <div className={cn("p-1.5 rounded-lg shrink-0", activeTab === 'syllabus' ? "bg-blue-50 text-blue-600" : "bg-muted")}>
-                                <FileText className="h-4 w-4" />
-                            </div>
-                            <span className="text-sm">সিলেবাস ব্যবস্থাপনা</span>
-                        </button>
+                        {canViewSyllabusMgmt && (
+                            <button
+                                onClick={() => setActiveTab('syllabus')}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                    activeTab === 'syllabus' ? "bg-white shadow-md text-blue-600 scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                                )}
+                            >
+                                <div className={cn("p-1.5 rounded-lg shrink-0", activeTab === 'syllabus' ? "bg-blue-50 text-blue-600" : "bg-muted")}>
+                                    <FileText className="h-4 w-4" />
+                                </div>
+                                <span className="text-sm">সিলেবাস ব্যবস্থাপনা</span>
+                            </button>
+                        )}
                         {(isAdmin || canViewTracker) && (
                             <button
                                 onClick={() => setActiveTab('tracker')}
@@ -671,7 +675,7 @@ export default function LessonPlannerPage() {
                                         <div className="flex justify-end pt-4">
                                             <Button 
                                                 onClick={handleSave} 
-                                                disabled={isLoading || !topic || topic === 'manual-input'}
+                                                disabled={isLoading || !topic || topic === 'manual-input' || !canManagePlans}
                                                 className="px-12 h-14 text-lg font-black shadow-xl"
                                             >
                                                 {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
@@ -797,7 +801,7 @@ export default function LessonPlannerPage() {
                             </div>
                         )}
 
-                        {activeTab === 'syllabus' && (
+                        {activeTab === 'syllabus' && canViewSyllabusMgmt && (
                             <SyllabusManagementTab />
                         )}
 

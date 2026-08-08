@@ -27,6 +27,8 @@ export const availablePermissions = [
   { id: 'view:absent-student-list', label: 'অনুপস্থিত শিক্ষার্থীর তালিকা দেখুন' },
 
   { id: 'manage:lesson-plans', label: 'লেসন প্ল্যান ও প্রগ্রেস ম্যানেজ করুন' },
+  { id: 'view:syllabus-mgmt', label: 'সিলেবাস ব্যবস্থাপনা দেখুন' },
+  { id: 'manage:syllabus', label: 'সিলেবাস তৈরি ও পরিবর্তন করুন' },
   { id: 'view:syllabus-tracker', label: 'সিলেবাস ট্র্যাকার (মনিটরিং) দেখুন' },
 
   { id: 'view:notices', label: 'নোটিশ বোর্ড দেখুন' },
@@ -77,6 +79,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:missed-attendance',
     'view:absent-student-list',
     'manage:lesson-plans',
+    'view:syllabus-mgmt',
     'view:notices',
     'manage:notices',
     'input:results', 
