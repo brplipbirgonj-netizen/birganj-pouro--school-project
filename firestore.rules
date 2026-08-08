@@ -30,6 +30,11 @@ service cloud.firestore {
 
     // --- কালেকশন ভিত্তিক রুলস ---
 
+    match /syllabi/{id} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && (hasPermission('manage:lesson-plans') || isAdmin());
+    }
+
     match /lessonPlans/{id} {
       allow read: if isAuthed();
       allow create: if isAuthed() && hasPermission('manage:lesson-plans');

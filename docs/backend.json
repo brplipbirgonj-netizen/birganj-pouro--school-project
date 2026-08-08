@@ -54,6 +54,20 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["teacherUid", "className", "subject", "academicYear", "week"]
+    },
+    "syllabus": {
+      "title": "Syllabus",
+      "description": "Defined syllabus for an exam containing specific chapters.",
+      "type": "object",
+      "properties": {
+        "academicYear": { "type": "string" },
+        "examName": { "type": "string" },
+        "className": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "chapters": { "type": "array", "items": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["academicYear", "examName", "className", "subjectName", "chapters"]
     }
   },
   "auth": {
@@ -71,6 +85,10 @@
     "/lessonPlans/{id}": {
       "schema": { "$ref": "#/entities/lessonPlan" },
       "description": "Stores teacher lesson plans and progress."
+    },
+    "/syllabi/{id}": {
+      "schema": { "$ref": "#/entities/syllabus" },
+      "description": "Stores subject-wise syllabus configurations for exams."
     }
   }
 }

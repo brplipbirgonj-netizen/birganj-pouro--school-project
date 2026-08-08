@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,15 +19,21 @@ import { useToast } from '@/hooks/use-toast';
 import { 
     BookOpen, CheckCircle2, LayoutGrid, ListTodo, Plus, Save, 
     TrendingUp, Loader2, Calendar, User, ChevronRight, BarChart3, Info,
-    AlertCircle
+    AlertCircle, FileText, Printer, Check, ListChecks
 } from 'lucide-react';
 import { LessonPlan, saveLessonPlan, getLessonPlansForTeacher, getAllLessonPlans } from '@/lib/lesson-plan-data';
+import { getSyllabus, saveSyllabus, Syllabus } from '@/lib/syllabus-data';
+import { getChapters } from '@/lib/subject-chapters';
 import { getSubjects } from '@/lib/subjects';
+import { getExams, Exam } from '@/lib/exam-data';
 import { format, startOfWeek, endOfWeek, addWeeks, getWeek } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useSchoolInfo } from '@/context/SchoolInfoContext';
+import Image from 'next/image';
 
 const classNamesMap: Record<string, string> = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -37,6 +43,279 @@ const toBengaliNumber = (str: string | number) => {
     if (!str && str !== 0) return '';
     const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);
+};
+
+// --- Syllabus Module Components ---
+
+const SyllabusManagementTab = () => {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const { user, hasPermission } = useAuth();
+    const { schoolInfo } = useSchoolInfo();
+    const { toast } = useToast();
+
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [selectedExam, setSelectedExam] = useState('');
+    const [className, setClassName] = useState('');
+    const [subject, setSubject] = useState('');
+    const [availableChapters, setAvailableChapters] = useState<string[]>([]);
+    const [selectedChapters, setSelectedChapters] = useState<Set<string>>(new Set());
+    const [existingSyllabus, setExistingSyllabus] = useState<Syllabus | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+
+    const isAdmin = user?.role === 'admin';
+    const canManageSyllabus = hasPermission('manage:lesson-plans');
+
+    useEffect(() => {
+        if (db && selectedYear) {
+            getExams(db, selectedYear).then(setExams);
+        }
+    }, [db, selectedYear]);
+
+    useEffect(() => {
+        if (className && subject) {
+            const chapters = getChapters(className, subject);
+            setAvailableChapters(chapters);
+        } else {
+            setAvailableChapters([]);
+        }
+    }, [className, subject]);
+
+    const handleLoadSyllabus = useCallback(async () => {
+        if (!db || !selectedExam || !className || !subject) return;
+        setIsLoading(true);
+        try {
+            const data = await getSyllabus(db, selectedYear, selectedExam, className, subject);
+            if (data) {
+                setExistingSyllabus(data);
+                setSelectedChapters(new Set(data.chapters));
+                setIsEditMode(false);
+            } else {
+                setExistingSyllabus(null);
+                setSelectedChapters(new Set());
+                setIsEditMode(true);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    }, [db, selectedYear, selectedExam, className, subject]);
+
+    useEffect(() => {
+        if (selectedExam && className && subject) {
+            handleLoadSyllabus();
+        }
+    }, [handleLoadSyllabus, selectedExam, className, subject]);
+
+    const handleSave = async () => {
+        if (!db || !selectedExam || !className || !subject) return;
+        if (selectedChapters.size === 0) {
+            toast({ variant: 'destructive', title: 'অধ্যায় নির্বাচন করুন', description: 'অন্তত একটি অধ্যায় টিক দিয়ে সিলেক্ট করুন।' });
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await saveSyllabus(db, {
+                academicYear: selectedYear,
+                examName: selectedExam,
+                className,
+                subjectName: subject,
+                chapters: Array.from(selectedChapters)
+            });
+            toast({ title: 'সিলেবাস সংরক্ষিত হয়েছে' });
+            setIsEditMode(false);
+            handleLoadSyllabus();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const toggleChapter = (chapter: string) => {
+        const next = new Set(selectedChapters);
+        if (next.has(chapter)) next.delete(chapter);
+        else next.add(chapter);
+        setSelectedChapters(next);
+    };
+
+    const availableSubjects = useMemo(() => {
+        if (!className) return [];
+        return getSubjects(className);
+    }, [className]);
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Filter Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm no-print">
+                <div className="space-y-2">
+                    <Label className="font-bold text-primary">পরীক্ষা নির্বাচন</Label>
+                    <Select value={selectedExam} onValueChange={setSelectedExam}>
+                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger>
+                        <SelectContent>
+                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold text-primary">শ্রেণি</Label>
+                    <Select value={className} onValueChange={(v) => { setClassName(v); setSubject(''); }}>
+                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold text-primary">বিষয়</Label>
+                    <Select value={subject} onValueChange={setSubject} disabled={!className}>
+                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger>
+                        <SelectContent>
+                            {availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="font-bold text-muted-foreground">সিলেবাস লোড হচ্ছে...</p>
+                </div>
+            ) : selectedExam && className && subject ? (
+                <div className="space-y-6">
+                    {!isEditMode && existingSyllabus ? (
+                        <div className="animate-in zoom-in-95 duration-500">
+                            <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[12px_12px_0px_rgba(0,0,0,0.1)] overflow-hidden">
+                                <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center no-print">
+                                    <div className="space-y-1">
+                                        <CardTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                                            <FileText className="h-7 w-7" /> সিলেবাস প্রিভিউ
+                                        </CardTitle>
+                                        <CardDescription className="font-bold">পরীক্ষা: {selectedExam} | শ্রেণি: {classNamesMap[className]} | বিষয়: {subject}</CardDescription>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" className="font-black border-2 border-primary text-primary hover:bg-primary/5" onClick={() => window.print()}>
+                                            <Printer className="mr-2 h-4 w-4" /> প্রিন্ট করুন
+                                        </Button>
+                                        {canManageSyllabus && (
+                                            <Button className="font-black shadow-lg" onClick={() => setIsEditMode(true)}>
+                                                <FilePen className="mr-2 h-4 w-4" /> এডিট করুন
+                                            </Button>
+                                        )}
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-10 bg-white">
+                                    <div className="printable-area p-8 border-[2px] border-slate-200 rounded-2xl bg-white text-black font-kalpurush">
+                                        <header className="text-center border-b-4 border-emerald-800 pb-4 mb-8">
+                                            <h1 className="text-4xl font-black text-emerald-950 leading-none mb-1">{schoolInfo.name}</h1>
+                                            <p className="text-lg font-bold text-slate-700">{schoolInfo.address}</p>
+                                            <div className="mt-4 inline-block bg-emerald-50 px-8 py-1 rounded-full border-2 border-emerald-800">
+                                                <h2 className="text-2xl font-black uppercase tracking-widest">{selectedExam} - সিলেবাস</h2>
+                                            </div>
+                                        </header>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-8 text-xl font-bold border-b-2 border-dashed border-slate-200 pb-4">
+                                            <p>শ্রেণি: <span className="font-black text-emerald-800">{classNamesMap[className]} শ্রেণি</span></p>
+                                            <p className="text-right">বিষয়: <span className="font-black text-emerald-800">{subject}</span></p>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            <h3 className="text-2xl font-black text-slate-800 border-l-8 border-emerald-600 pl-4 mb-6">পরীক্ষায় অন্তর্ভুক্ত অধ্যায়সমূহ:</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {existingSyllabus.chapters.map((chapter, idx) => (
+                                                    <div key={idx} className="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-2xl bg-slate-50/50 shadow-sm">
+                                                        <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black shrink-0">
+                                                            {toBengaliNumber(idx + 1)}
+                                                        </div>
+                                                        <span className="text-xl font-black text-slate-800">{chapter}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <footer className="mt-20 flex justify-between px-10 no-screen">
+                                            <div className="text-center w-56 border-t-2 border-black pt-1 font-black text-lg">বিষয় শিক্ষক</div>
+                                            <div className="text-center w-56 border-t-2 border-black pt-1 font-black text-lg">প্রধান শিক্ষক</div>
+                                        </footer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    ) : (
+                        <Card className="border-[4px] border-black rounded-3xl bg-white shadow-[12px_12px_0px_rgba(0,0,0,0.1)] overflow-hidden animate-in fade-in duration-500">
+                            <CardHeader className="bg-amber-50 border-b-[3px] border-black flex flex-row justify-between items-center">
+                                <div>
+                                    <CardTitle className="text-2xl font-black text-amber-900 flex items-center gap-2">
+                                        <ListChecks className="h-7 w-7" /> সিলেবাস সেট করুন
+                                    </CardTitle>
+                                    <CardDescription className="font-bold text-amber-800">পরীক্ষার জন্য অধ্যায় নির্বাচন করুন</CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Badge className="bg-amber-600 text-white font-black h-10 px-6 text-base shadow-md">
+                                        নির্বাচিত: {toBengaliNumber(selectedChapters.size)} টি
+                                    </Badge>
+                                    {existingSyllabus && (
+                                        <Button variant="ghost" onClick={() => setIsEditMode(false)} className="text-amber-800 font-bold">বাতিল</Button>
+                                    )}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-8 space-y-8">
+                                {availableChapters.length === 0 ? (
+                                    <div className="p-16 border-2 border-dashed border-amber-200 rounded-2xl flex flex-col items-center justify-center text-center bg-amber-50/20">
+                                        <AlertCircle className="h-12 w-12 text-amber-500 mb-4 opacity-40" />
+                                        <h4 className="text-xl font-black text-amber-900">অধ্যায় তালিকা পাওয়া যায়নি</h4>
+                                        <p className="font-bold text-amber-700 max-w-sm">দুঃখিত, এই বিষয়ের জন্য অধ্যায় তালিকা এখনো সিস্টেমে যুক্ত করা হয়নি।</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {availableChapters.map((chapter) => (
+                                            <div 
+                                                key={chapter} 
+                                                onClick={() => toggleChapter(chapter)}
+                                                className={cn(
+                                                    "group flex items-center gap-4 p-4 border-2 rounded-2xl cursor-pointer transition-all active:scale-[0.98]",
+                                                    selectedChapters.has(chapter) 
+                                                        ? "bg-primary border-primary text-white shadow-lg ring-4 ring-primary/10" 
+                                                        : "bg-white border-slate-100 hover:border-primary/30 hover:bg-primary/5 text-slate-700"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "h-7 w-7 rounded-lg border-2 flex items-center justify-center transition-colors",
+                                                    selectedChapters.has(chapter) ? "bg-white border-white text-primary" : "border-slate-300 bg-white"
+                                                )}>
+                                                    {selectedChapters.has(chapter) && <Check className="h-5 w-5 stroke-[4px]" />}
+                                                </div>
+                                                <span className="font-black text-lg flex-1">{chapter}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                            <CardFooter className="p-8 bg-slate-50 border-t-[3px] border-black flex justify-end">
+                                <Button 
+                                    onClick={handleSave} 
+                                    disabled={isLoading || availableChapters.length === 0}
+                                    className="h-16 px-16 text-xl font-black shadow-2xl shadow-primary/30"
+                                >
+                                    {isLoading ? <Loader2 className="animate-spin mr-2 h-6 w-6" /> : <Save className="mr-2 h-6 w-6" />}
+                                    সিলেবাস সেভ করুন
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    )}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-muted/10 rounded-3xl border-4 border-dashed opacity-40">
+                    <ListTodo className="h-20 w-20 mb-4" />
+                    <p className="text-xl font-black">উপরে তথ্য সিলেক্ট করুন</p>
+                    <p className="font-bold">পরীক্ষা, শ্রেণি ও বিষয় নির্বাচন করলে সিলেবাস দেখা যাবে।</p>
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default function LessonPlannerPage() {
@@ -158,6 +437,18 @@ export default function LessonPlannerPage() {
                                 <ListTodo className="h-4 w-4" />
                             </div>
                             <span className="text-sm">আমার লেসন প্ল্যান</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('syllabus')}
+                            className={cn(
+                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                activeTab === 'syllabus' ? "bg-white shadow-md text-blue-600 scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                            )}
+                        >
+                            <div className={cn("p-1.5 rounded-lg shrink-0", activeTab === 'syllabus' ? "bg-blue-50 text-blue-600" : "bg-muted")}>
+                                <FileText className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm">সিলেবাস ব্যবস্থাপনা</span>
                         </button>
                         {(isAdmin || canViewTracker) && (
                             <button
@@ -381,6 +672,10 @@ export default function LessonPlannerPage() {
                                     })}
                                 </div>
                             </div>
+                        )}
+
+                        {activeTab === 'syllabus' && (
+                            <SyllabusManagementTab />
                         )}
 
                     </div>
