@@ -49,14 +49,14 @@ const periodTimes = [
 
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const classNamesMap: { [key: string]: string } = {
-    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম',
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
 };
 
 // Scrolling Notice Ticker Component
 const NoticeTicker = () => {
     const db = useFirestore();
     const { user } = useAuth();
-    const [latestNotice, setLatestNotice] = useState<Notice | null>(null);
+    const [scrollingNotices, setScrollingNotices] = useState<Notice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
 
@@ -67,18 +67,21 @@ const NoticeTicker = () => {
     useEffect(() => {
         if (!db || !user || !isClient) return;
         
-        const q = query(collection(db, 'notices'), orderBy('date', 'desc'), limit(1));
+        // Fetch recent notices and filter for scrolling status client-side to avoid index complexity
+        const q = query(collection(db, 'notices'), orderBy('date', 'desc'), limit(15));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            if (!snapshot.empty) {
-                const data = snapshot.docs[0].data();
-                setLatestNotice({
-                    id: snapshot.docs[0].id,
-                    ...data,
-                    date: data.date instanceof Timestamp ? data.date.toDate() : (data.date ? new Date(data.date) : new Date()),
-                } as Notice);
-            } else {
-                setLatestNotice(null);
-            }
+            const data = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                return {
+                    id: doc.id,
+                    ...docData,
+                    date: docData.date instanceof Timestamp ? docData.date.toDate() : (docData.date ? new Date(docData.date) : new Date()),
+                } as Notice;
+            });
+            
+            // Filter only those marked for scrolling
+            const scrolling = data.filter(n => !!n.isScrolling);
+            setScrollingNotices(scrolling);
             setIsLoading(false);
         }, async (error: FirestoreError) => {
             if (error.code === 'permission-denied') {
@@ -94,7 +97,7 @@ const NoticeTicker = () => {
 
     if (!isClient) return null;
 
-    if (latestNotice) {
+    if (scrollingNotices.length > 0) {
         return (
             <div className="w-full bg-yellow-100 text-red-700 h-8 flex items-center overflow-hidden border-y-2 border-red-500 shadow-md sticky top-16 md:top-24 z-40 font-kalpurush group cursor-default">
                 <div className="bg-red-600 text-white px-3 h-full flex items-center gap-1.5 shrink-0 z-10 shadow-lg">
@@ -103,12 +106,17 @@ const NoticeTicker = () => {
                 </div>
                 <div className="flex-1 relative overflow-hidden h-full flex items-center">
                     <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-10 group-hover:pause-animation">
-                        <span className="font-black text-xs tracking-tight">
-                            <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
-                        </span>
-                        <span className="font-black text-xs tracking-tight">
-                            <span className="text-blue-800">[{latestNotice.title}]</span> - {latestNotice.content.replace(/\n/g, ' ')}
-                        </span>
+                        {scrollingNotices.map((notice, idx) => (
+                            <span key={`notice-${idx}`} className="font-black text-xs tracking-tight">
+                                <span className="text-blue-800">[{notice.title}]</span> - {notice.content.replace(/\n/g, ' ')}
+                            </span>
+                        ))}
+                        {/* Duplicate for seamless loop */}
+                        {scrollingNotices.map((notice, idx) => (
+                            <span key={`notice-loop-${idx}`} className="font-black text-xs tracking-tight">
+                                <span className="text-blue-800">[{notice.title}]</span> - {notice.content.replace(/\n/g, ' ')}
+                            </span>
+                        ))}
                     </div>
                 </div>
                 <style jsx>{`
@@ -117,7 +125,7 @@ const NoticeTicker = () => {
                         100% { transform: translateX(-50%); }
                     }
                     .animate-marquee {
-                        animation: marquee 35s linear infinite;
+                        animation: marquee 45s linear infinite;
                         display: inline-flex;
                         width: max-content;
                     }
@@ -174,7 +182,7 @@ const GalleryCard = () => {
         <Card className="relative overflow-hidden bg-white border-2 border-black shadow-sm group hover:shadow-lg transition-all duration-500">
             <CardHeader className="p-3 bg-primary/5 border-b border-black/10 relative z-20">
                 <CardTitle className="text-xs font-black text-primary flex items-center gap-1.5 uppercase">
-                    <ImageIcon className="h-3.5 w-3.5" /> বিদ্যালয় গ্যালারি
+                    <ImageIcon className="h-3.5 w-3.5" /> বিদ্যালয় গ্যালারি
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0 relative h-28 sm:h-32 overflow-hidden">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-    Trash2, Plus, Loader2, Bell, Printer, FileText, ExternalLink, Sparkles, ChevronRight, AlertCircle
+    Trash2, Plus, Loader2, Bell, Printer, FileText, ExternalLink, Sparkles, ChevronRight, AlertCircle, RefreshCw, CheckCircle2, XCircle
 } from 'lucide-react';
 import { format } from "date-fns";
 import { bn } from 'date-fns/locale';
@@ -22,11 +22,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { getNotices, addNotice, deleteNotice, Notice } from '@/lib/notice-data';
+import { getNotices, addNotice, deleteNotice, updateNoticeScrolling, Notice } from '@/lib/notice-data';
 import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 const toBengaliNumber = (str: string | number) => {
     if (!str && str !== 0) return '';
@@ -48,7 +50,7 @@ export default function NoticeManagementPage() {
     const [aiTopic, setAiTopic] = useState('');
     const [isClient, setIsClient] = useState(false);
 
-    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'], pdfUrl: '' });
+    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal' as Notice['priority'], pdfUrl: '', isScrolling: true });
     const [printingNotice, setPrintingNotice] = useState<Notice | null>(null);
 
     const canManageNotices = hasPermission('manage:notices');
@@ -116,11 +118,21 @@ export default function NoticeManagementPage() {
                 content: newNotice.content,
                 priority: newNotice.priority,
                 senderName: senderName,
-                pdfUrl: newNotice.pdfUrl || undefined
+                pdfUrl: newNotice.pdfUrl || undefined,
+                isScrolling: newNotice.isScrolling
             });
             toast({ title: 'নোটিশ প্রকাশিত হয়েছে' });
             setIsAddOpen(false);
-            setNewNotice({ title: '', content: '', priority: 'normal', pdfUrl: '' });
+            setNewNotice({ title: '', content: '', priority: 'normal', pdfUrl: '', isScrolling: true });
+            fetchNotices();
+        } catch (e) {}
+    };
+
+    const handleToggleScrolling = async (id: string, currentStatus: boolean) => {
+        if (!db || !canManageNotices) return;
+        try {
+            await updateNoticeScrolling(db, id, !currentStatus);
+            toast({ title: 'স্ক্রল স্ট্যাটাস পরিবর্তন হয়েছে' });
             fetchNotices();
         } catch (e) {}
     };
@@ -150,7 +162,6 @@ export default function NoticeManagementPage() {
         );
     }
 
-    // Access to this page is allowed for anyone who can AT LEAST see the board
     if (!user || !canViewNotices) {
         return (
             <div className="flex min-h-screen flex-col bg-indigo-50 font-kalpurush">
@@ -215,12 +226,23 @@ export default function NoticeManagementPage() {
                                             </Select>
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
-                                            <Label className="font-black text-sm">বিস্তারিত বিষয়বস্তু</Label>
+                                            <Label className="font-black text-sm">বিস্তারিত বিষয়বস্তু</Label>
                                             <Textarea value={newNotice.content} onChange={e => setNewNotice({...newNotice, content: e.target.value})} className="min-h-[200px] border-2 font-medium" placeholder="বিস্তারিত নোটিশ এখানে লিখুন..." />
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
                                             <Label className="font-black text-sm">পিডিএফ বা ডকুমেন্ট লিংক (ঐচ্ছিক)</Label>
                                             <Input placeholder="https://..." value={newNotice.pdfUrl} onChange={e => setNewNotice({...newNotice, pdfUrl: e.target.value})} className="h-11 border-2" />
+                                        </div>
+                                        <div className="md:col-span-2 p-4 bg-primary/5 rounded-xl border-2 border-dashed border-primary/20 flex items-center justify-between">
+                                            <div className="space-y-0.5">
+                                                <Label className="font-black text-primary cursor-pointer" htmlFor="is-scrolling-toggle">টিকার/স্ক্রলিং নোটিশ</Label>
+                                                <p className="text-[10px] font-bold text-muted-foreground">এটি অন থাকলে ড্যাশবোর্ডের উপরে স্ক্রল হবে।</p>
+                                            </div>
+                                            <Switch 
+                                                id="is-scrolling-toggle"
+                                                checked={newNotice.isScrolling} 
+                                                onCheckedChange={v => setNewNotice({...newNotice, isScrolling: v})}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -238,18 +260,19 @@ export default function NoticeManagementPage() {
                         <Table>
                             <TableHeader className="bg-muted/50">
                                 <TableRow className="h-16">
-                                    <TableHead className="w-20 text-center font-black">ক্রমিক</TableHead>
+                                    <TableHead className="w-16 text-center font-black">ক্রমিক</TableHead>
                                     <TableHead className="font-black">শিরোনাম ও তারিখ</TableHead>
-                                    <TableHead className="font-black">ধরণ (Priority)</TableHead>
+                                    <TableHead className="text-center font-black">স্ক্রলিং</TableHead>
+                                    <TableHead className="font-black">ধরণ</TableHead>
                                     <TableHead className="font-black">সংযুক্তি</TableHead>
                                     <TableHead className="text-right font-black pr-10">কার্যক্রম</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={5} className="text-center py-24 italic"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> নোটিশ লোড হচ্ছে...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="text-center py-24 italic"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> নোটিশ লোড হচ্ছে...</TableCell></TableRow>
                                 ) : notices.length === 0 ? (
-                                    <TableRow><TableCell colSpan={5} className="text-center py-24 text-muted-foreground font-bold">কোনো নোটিশ পাওয়া যায়নি।</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="text-center py-24 text-muted-foreground font-bold">কোনো নোটিশ পাওয়া যায়নি।</TableCell></TableRow>
                                 ) : (
                                     notices.map((notice, idx) => (
                                         <TableRow key={notice.id} className="h-20 hover:bg-slate-50 transition-colors">
@@ -257,6 +280,18 @@ export default function NoticeManagementPage() {
                                             <TableCell>
                                                 <p className="font-black text-base text-slate-800 line-clamp-1">{notice.title}</p>
                                                 <p className="text-xs font-bold text-muted-foreground mt-1">{format(notice.date, 'PP p', { locale: bn })}</p>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <Switch 
+                                                        checked={notice.isScrolling} 
+                                                        onCheckedChange={() => handleToggleScrolling(notice.id, !!notice.isScrolling)}
+                                                        disabled={!canManageNotices}
+                                                    />
+                                                    <span className={cn("text-[9px] font-black uppercase", notice.isScrolling ? "text-emerald-600" : "text-slate-400")}>
+                                                        {notice.isScrolling ? 'অন' : 'অফ'}
+                                                    </span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant={notice.priority === 'urgent' ? 'destructive' : notice.priority === 'important' ? 'secondary' : 'outline'} className="font-black px-4 py-0.5">
@@ -281,7 +316,7 @@ export default function NoticeManagementPage() {
                                                             <AlertDialogContent className="font-kalpurush">
                                                                 <AlertDialogHeader>
                                                                     <AlertDialogTitle className="text-2xl font-black text-rose-700">নোটিশটি মুছতে চান?</AlertDialogTitle>
-                                                                    <AlertDialogDescription className="text-lg font-bold">এই নোটিশটি স্থায়ীভাবে মুছে ফেলা হবে এবং ড্যাশবোর্ড থেকে চলে যাবে।</AlertDialogDescription>
+                                                                    <AlertDialogDescription className="text-lg font-bold">এই নোটিশটি স্থায়ীভাবে মুছে ফেলা হবে এবং ড্যাশবোর্ড থেকে চলে যাবে।</AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>

@@ -1,10 +1,10 @@
-
 'use client';
 import {
   collection,
   doc,
   addDoc,
   deleteDoc,
+  updateDoc,
   getDocs,
   query,
   orderBy,
@@ -24,6 +24,7 @@ export interface Notice {
   priority: 'normal' | 'important' | 'urgent';
   senderName: string;
   pdfUrl?: string;
+  isScrolling?: boolean;
 }
 
 export type NewNoticeData = Omit<Notice, 'id' | 'date'>;
@@ -65,7 +66,23 @@ export const addNotice = async (db: Firestore, noticeData: NewNoticeData) => {
             requestResourceData: dataToSave,
         });
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
+    }
+    throw serverError;
+  }
+};
+
+export const updateNoticeScrolling = async (db: Firestore, id: string, isScrolling: boolean) => {
+  const docRef = doc(db, NOTICES_COLLECTION, id);
+  try {
+    return await updateDoc(docRef, { isScrolling });
+  } catch (serverError: any) {
+    if (serverError.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: { isScrolling },
+        });
+        errorEmitter.emit('permission-error', permissionError);
     }
     throw serverError;
   }
@@ -82,7 +99,6 @@ export const deleteNotice = async (db: Firestore, id: string) => {
             operation: 'delete',
         });
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
     }
     throw serverError;
   }
