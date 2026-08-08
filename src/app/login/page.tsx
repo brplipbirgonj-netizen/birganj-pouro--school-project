@@ -149,28 +149,29 @@ export default function LoginPage() {
             const cleanRoll = parseInt(bnToEn(searchRoll).trim(), 10);
             const cleanStudentId = bnToEn(searchStudentId).trim().toUpperCase();
 
-            // Find the student record - using academicYear and generatedId as unique composite key
-            // This is more robust than matching all 4 fields exactly
+            // SENSITIVE FIX: Search by class and roll instead of generatedId
+            // Some records might not have generatedId persisted as a field yet
             const studentQuery = query(
                 collection(db, 'students'),
                 where('academicYear', '==', searchYear),
-                where('generatedId', '==', cleanStudentId),
+                where('className', '==', searchClass),
+                where('roll', '==', cleanRoll),
                 limit(1)
             );
             
             const studentSnap = await getDocs(studentQuery);
 
             if (studentSnap.empty) {
-                toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি', description: 'আইডি নম্বরটি সঠিক নয় বা এই শিক্ষাবর্ষের নয়।' });
+                toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি', description: 'প্রদানকৃত রোল বা শ্রেণি অনুযায়ী শিক্ষার্থী খুঁজে পাওয়া যায়নি।' });
                 setIsSearching(false);
                 return;
             }
 
             const foundStudent = studentFromDoc(studentSnap.docs[0]);
             
-            // Double check roll and class if needed (optional since generatedId is unique)
-            if (foundStudent.roll !== cleanRoll || foundStudent.className !== searchClass) {
-                 toast({ variant: 'destructive', title: 'তথ্য মেলেনি', description: 'রোল বা শ্রেণি আইডি নম্বরের সাথে মিলছে না।' });
+            // Verification step: Check if the provided ID matches the found student
+            if (foundStudent.generatedId?.toUpperCase() !== cleanStudentId) {
+                 toast({ variant: 'destructive', title: 'আইডি মেলেনি', description: 'প্রদানকৃত শিক্ষার্থী আইডি সঠিক নয়।' });
                  setIsSearching(false);
                  return;
             }
