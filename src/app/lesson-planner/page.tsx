@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -19,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
     BookOpen, CheckCircle2, LayoutGrid, ListTodo, Plus, Save, 
     TrendingUp, Loader2, Calendar, User, ChevronRight, BarChart3, Info,
-    AlertCircle, FileText, Printer, Check, ListChecks
+    AlertCircle, FileText, Printer, Check, ListChecks, FilePen
 } from 'lucide-react';
 import { LessonPlan, saveLessonPlan, getLessonPlansForTeacher, getAllLessonPlans } from '@/lib/lesson-plan-data';
 import { getSyllabus, saveSyllabus, Syllabus } from '@/lib/syllabus-data';
