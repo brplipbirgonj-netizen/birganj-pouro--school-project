@@ -57,7 +57,7 @@
     },
     "syllabus": {
       "title": "Syllabus",
-      "description": "Defined syllabus for an exam containing specific chapters.",
+      "description": "Defined syllabus for an exam containing specific chapters and comments.",
       "type": "object",
       "properties": {
         "academicYear": { "type": "string" },
@@ -65,6 +65,7 @@
         "className": { "type": "string" },
         "subjectName": { "type": "string" },
         "chapters": { "type": "array", "items": { "type": "string" } },
+        "chapterComments": { "type": "object", "additionalProperties": { "type": "string" } },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["academicYear", "examName", "className", "subjectName", "chapters"]

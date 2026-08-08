@@ -23,6 +23,7 @@ export interface Syllabus {
   className: string;
   subjectName: string;
   chapters: string[];
+  chapterComments?: Record<string, string>;
   updatedAt: Date;
 }
 

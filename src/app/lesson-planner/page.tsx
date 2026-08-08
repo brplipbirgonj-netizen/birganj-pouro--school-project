@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -59,6 +60,7 @@ const SyllabusManagementTab = () => {
     const [subject, setSubject] = useState('');
     const [availableChapters, setAvailableChapters] = useState<string[]>([]);
     const [selectedChapters, setSelectedChapters] = useState<Set<string>>(new Set());
+    const [chapterComments, setChapterComments] = useState<Record<string, string>>({});
     const [existingSyllabus, setExistingSyllabus] = useState<Syllabus | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -89,10 +91,12 @@ const SyllabusManagementTab = () => {
             if (data) {
                 setExistingSyllabus(data);
                 setSelectedChapters(new Set(data.chapters));
+                setChapterComments(data.chapterComments || {});
                 setIsEditMode(false);
             } else {
                 setExistingSyllabus(null);
                 setSelectedChapters(new Set());
+                setChapterComments({});
                 setIsEditMode(true);
             }
         } catch (e) {
@@ -121,7 +125,8 @@ const SyllabusManagementTab = () => {
                 examName: selectedExam,
                 className,
                 subjectName: subject,
-                chapters: Array.from(selectedChapters)
+                chapters: Array.from(selectedChapters),
+                chapterComments: chapterComments
             });
             toast({ title: 'সিলেবাস সংরক্ষিত হয়েছে' });
             setIsEditMode(false);
@@ -135,9 +140,23 @@ const SyllabusManagementTab = () => {
 
     const toggleChapter = (chapter: string) => {
         const next = new Set(selectedChapters);
-        if (next.has(chapter)) next.delete(chapter);
-        else next.add(chapter);
+        if (next.has(chapter)) {
+            next.delete(chapter);
+            // Also clean up comment if unselected
+            const nextComments = { ...chapterComments };
+            delete nextComments[chapter];
+            setChapterComments(nextComments);
+        } else {
+            next.add(chapter);
+        }
         setSelectedChapters(next);
+    };
+
+    const handleCommentChange = (chapter: string, comment: string) => {
+        setChapterComments(prev => ({
+            ...prev,
+            [chapter]: comment
+        }));
     };
 
     const availableSubjects = useMemo(() => {
@@ -223,13 +242,20 @@ const SyllabusManagementTab = () => {
 
                                         <div className="space-y-6">
                                             <h3 className="text-2xl font-black text-slate-800 border-l-8 border-emerald-600 pl-4 mb-6">পরীক্ষায় অন্তর্ভুক্ত অধ্যায়সমূহ:</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 gap-6">
                                                 {existingSyllabus.chapters.map((chapter, idx) => (
-                                                    <div key={idx} className="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-2xl bg-slate-50/50 shadow-sm">
-                                                        <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black shrink-0">
-                                                            {toBengaliNumber(idx + 1)}
+                                                    <div key={idx} className="flex flex-col p-4 border-2 border-slate-100 rounded-2xl bg-slate-50/50 shadow-sm">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black shrink-0">
+                                                                {toBengaliNumber(idx + 1)}
+                                                            </div>
+                                                            <span className="text-xl font-black text-slate-800">{chapter}</span>
                                                         </div>
-                                                        <span className="text-xl font-black text-slate-800">{chapter}</span>
+                                                        {existingSyllabus.chapterComments?.[chapter] && (
+                                                            <p className="mt-2 ml-12 text-sm font-bold text-slate-600 italic border-l-4 border-emerald-200 pl-3">
+                                                                {existingSyllabus.chapterComments[chapter]}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -250,7 +276,7 @@ const SyllabusManagementTab = () => {
                                     <CardTitle className="text-2xl font-black text-amber-900 flex items-center gap-2">
                                         <ListChecks className="h-7 w-7" /> সিলেবাস সেট করুন
                                     </CardTitle>
-                                    <CardDescription className="font-bold text-amber-800">পরীক্ষার জন্য অধ্যায় নির্বাচন করুন</CardDescription>
+                                    <CardDescription className="font-bold text-amber-800">পরীক্ষার জন্য অধ্যায় নির্বাচন ও মন্তব্য লিখুন</CardDescription>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Badge className="bg-amber-600 text-white font-black h-10 px-6 text-base shadow-md">
@@ -269,25 +295,38 @@ const SyllabusManagementTab = () => {
                                         <p className="font-bold text-amber-700 max-w-sm">দুঃখিত, এই বিষয়ের জন্য অধ্যায় তালিকা এখনো সিস্টেমে যুক্ত করা হয়নি।</p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {availableChapters.map((chapter) => (
                                             <div 
                                                 key={chapter} 
-                                                onClick={() => toggleChapter(chapter)}
                                                 className={cn(
-                                                    "group flex items-center gap-4 p-4 border-2 rounded-2xl cursor-pointer transition-all active:scale-[0.98]",
+                                                    "group flex flex-col p-4 border-2 rounded-2xl transition-all",
                                                     selectedChapters.has(chapter) 
-                                                        ? "bg-primary border-primary text-white shadow-lg ring-4 ring-primary/10" 
-                                                        : "bg-white border-slate-100 hover:border-primary/30 hover:bg-primary/5 text-slate-700"
+                                                        ? "bg-primary/5 border-primary shadow-sm" 
+                                                        : "bg-white border-slate-100 hover:border-primary/20"
                                                 )}
                                             >
-                                                <div className={cn(
-                                                    "h-7 w-7 rounded-lg border-2 flex items-center justify-center transition-colors",
-                                                    selectedChapters.has(chapter) ? "bg-white border-white text-primary" : "border-slate-300 bg-white"
-                                                )}>
-                                                    {selectedChapters.has(chapter) && <Check className="h-5 w-5 stroke-[4px]" />}
+                                                <div className="flex items-center gap-4 cursor-pointer mb-3" onClick={() => toggleChapter(chapter)}>
+                                                    <div className={cn(
+                                                        "h-7 w-7 rounded-lg border-2 flex items-center justify-center transition-colors shrink-0",
+                                                        selectedChapters.has(chapter) ? "bg-primary border-primary text-white" : "border-slate-300 bg-white"
+                                                    )}>
+                                                        {selectedChapters.has(chapter) && <Check className="h-5 w-5 stroke-[4px]" />}
+                                                    </div>
+                                                    <span className="font-black text-lg text-slate-800">{chapter}</span>
                                                 </div>
-                                                <span className="font-black text-lg flex-1">{chapter}</span>
+                                                
+                                                {selectedChapters.has(chapter) && (
+                                                    <div className="animate-in slide-in-from-top-1 duration-300">
+                                                        <Label className="text-[10px] font-black text-primary uppercase mb-1 block">অধ্যায় ভিত্তিক বিশেষ মন্তব্য</Label>
+                                                        <Input 
+                                                            placeholder="উদা: সম্পূর্ণ গদ্য অংশ পড়বে..." 
+                                                            value={chapterComments[chapter] || ''} 
+                                                            onChange={(e) => handleCommentChange(chapter, e.target.value)}
+                                                            className="h-9 text-xs font-bold border-primary/20 bg-white"
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -683,3 +722,4 @@ export default function LessonPlannerPage() {
         </div>
     );
 }
+
