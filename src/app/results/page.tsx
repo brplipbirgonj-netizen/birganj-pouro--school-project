@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -351,6 +352,30 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
         }
     };
 
+    const handlePrintBlank = () => {
+        if (!className || !subject) {
+            toast({ variant: 'destructive', title: 'শ্রেণি ও বিষয় নির্বাচন করুন' });
+            return;
+        }
+        const students = allStudents
+            .filter(s => s.academicYear === selectedYear && s.className === className && (!group || s.group === group))
+            .sort((a, b) => a.roll - b.roll)
+            .map(student => ({
+                student,
+                marks: {},
+                obtainedMarks: '',
+                grade: '',
+                point: 0,
+                isPass: true
+            }));
+
+        onPrintRequested({ 
+            studentData: students, 
+            info: { examName: examName || 'ফাঁকা ফরম', className, subject, group, fullMarks: availableSubjects.find(s => s.name === subject)?.fullMarks || 100 },
+            isBlank: true 
+        });
+    };
+
     const reportStudents = useMemo(() => {
         if (!results) return [];
         return allStudents
@@ -377,7 +402,7 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
                 <div className="space-y-2">
                     <Label className="text-xs font-bold">পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
@@ -411,6 +436,9 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                 <Button onClick={handleLoadReport} disabled={isLoading || !subject || !examName} className="h-9 text-xs font-black">
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'রিপোর্ট দেখুন'}
                 </Button>
+                <Button onClick={handlePrintBlank} variant="outline" className="h-9 text-xs font-black border-amber-600 text-amber-700 hover:bg-amber-50">
+                    <Printer className="mr-2 h-4 w-4" /> ফাঁকা মার্কশিট
+                </Button>
             </div>
 
             {results && (
@@ -420,7 +448,7 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                             <CardTitle className="text-base font-black text-primary">{subject} - নম্বর ফর্দ ({examName})</CardTitle>
                             <CardDescription className="text-[10px] font-bold">শ্রেণি: {classNamesMap[className]} | শাখা: {groupNamesMap[group || 'all']}</CardDescription>
                         </div>
-                        <Button variant="outline" className="font-black h-9 border-primary text-primary" onClick={() => onPrintRequested({ studentData: reportStudents, info: { examName, className, subject, group, fullMarks: results.fullMarks } })}>
+                        <Button variant="outline" className="font-black h-9 border-primary text-primary" onClick={() => onPrintRequested({ studentData: reportStudents, info: { examName, className, subject, group, fullMarks: results.fullMarks }, isBlank: false })}>
                             <Printer className="mr-2 h-4 w-4" /> প্রিন্ট (PDF)
                         </Button>
                     </CardHeader>
@@ -1532,7 +1560,9 @@ export default function ResultsPage() {
                             <h1 className="text-3xl font-black text-emerald-950 leading-none mb-1">{schoolInfo.name}</h1>
                             <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
                             <div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800">
-                                <h2 className="text-lg font-black uppercase">নম্বর ফর্দ (Mark Sheet) - {toBengaliNumber(selectedYear)}</h2>
+                                <h2 className="text-lg font-black uppercase">
+                                    {printingReport.isBlank ? 'ফাঁকা নম্বর ফর্দ (Blank Mark Sheet)' : 'নম্বর ফর্দ (Mark Sheet)'} - {toBengaliNumber(selectedYear)}
+                                </h2>
                             </div>
                         </div>
                     </header>
@@ -1555,30 +1585,34 @@ export default function ResultsPage() {
                                 <TableHead className="w-16 text-center font-black border-r-2 border-black text-black">রোল</TableHead>
                                 <TableHead className="font-black border-r-2 border-black text-black">শিক্ষার্থীর নাম</TableHead>
                                 <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead>
-                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">MCQ</TableHead>
+                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">নৈবেত্তিক</TableHead>
                                 <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead>
-                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">প্রাপ্ত</TableHead>
-                                <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">গ্রেড</TableHead>
-                                <TableHead className="w-20 text-center font-black text-black">পয়েন্ট</TableHead>
+                                <TableHead className={cn("w-20 text-center font-black text-black", !printingReport.isBlank && "border-r-2 border-black")}>{printingReport.isBlank ? 'মোট' : 'প্রাপ্ত'}</TableHead>
+                                {!printingReport.isBlank && <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">গ্রেড</TableHead>}
+                                {!printingReport.isBlank && <TableHead className="w-20 text-center font-black text-black">পয়েন্ট</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {printingReport.studentData.map((item: any) => (
-                                <TableRow key={item.student.id} className={cn("border-b border-slate-400 h-9", !item.isPass && "bg-rose-50/50")}>
+                                <TableRow key={item.student.id} className={cn("border-b border-slate-400", printingReport.isBlank ? "h-12" : "h-9", !item.isPass && "bg-rose-50/50")}>
                                     <TableCell className={cn("text-center font-black border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.student.roll)}</TableCell>
                                     <TableCell className={cn("font-bold border-r-2 border-black", !item.isPass && "text-rose-700")}>{item.student.studentNameBn}</TableCell>
-                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.marks.written ?? '-')}</TableCell>
-                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
-                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
-                                    <TableCell className={cn("text-center font-black border-r-2 border-black", item.isPass ? "text-blue-900" : "text-rose-700")}>
-                                        {toBengaliNumber(item.obtainedMarks)}
+                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell>
+                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
+                                    <TableCell className={cn("text-center border-r-2 border-black", !item.isPass && "text-rose-600")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
+                                    <TableCell className={cn("text-center font-black", !printingReport.isBlank && "border-r-2 border-black text-blue-900", item.isPass ? "" : "text-rose-700")}>
+                                        {printingReport.isBlank ? '' : toBengaliNumber(item.obtainedMarks)}
                                     </TableCell>
-                                    <TableCell className={cn("text-center font-black border-r-2 border-black", item.isPass ? "text-emerald-700" : "text-rose-700")}>
-                                        {item.grade}
-                                    </TableCell>
-                                    <TableCell className={cn("text-center font-black", item.isPass ? "text-slate-800" : "text-rose-700")}>
-                                        {toBengaliNumber(item.point.toFixed(2))}
-                                    </TableCell>
+                                    {!printingReport.isBlank && (
+                                        <TableCell className={cn("text-center font-black border-r-2 border-black", item.isPass ? "text-emerald-700" : "text-rose-700")}>
+                                            {item.grade}
+                                        </TableCell>
+                                    )}
+                                    {!printingReport.isBlank && (
+                                        <TableCell className={cn("text-center font-black", item.isPass ? "text-slate-800" : "text-rose-700")}>
+                                            {toBengaliNumber(item.point.toFixed(2))}
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>
