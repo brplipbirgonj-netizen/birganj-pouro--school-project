@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
     BookOpen, CheckCircle2, LayoutGrid, ListTodo, Plus, Save, 
     TrendingUp, Loader2, Calendar, User, ChevronRight, BarChart3, Info,
-    AlertCircle, FileText, Printer, Check, ListChecks, FilePen
+    AlertCircle, FileText, Printer, Check, ListChecks, FilePen, Book
 } from 'lucide-react';
 import { LessonPlan, saveLessonPlan, getLessonPlansForTeacher, getAllLessonPlans } from '@/lib/lesson-plan-data';
 import { getSyllabus, saveSyllabus, Syllabus } from '@/lib/syllabus-data';
@@ -33,9 +33,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import Image from 'next/image';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const classNamesMap: Record<string, string> = {
-    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম'
 };
 
 const toBengaliNumber = (str: string | number) => {
@@ -389,6 +390,10 @@ export default function LessonPlannerPage() {
         return `${now.getFullYear()}-W${String(getWeek(now)).padStart(2, '0')}`;
     });
 
+    // Syllabus Linked States
+    const [syllabusChapters, setSyllabusChapters] = useState<string[]>([]);
+    const [isSyllabusLoading, setIsSyllabusLoading] = useState(false);
+
     const isAdmin = user?.role === 'admin';
     const canManagePlans = hasPermission('manage:lesson-plans');
     const canViewTracker = hasPermission('view:syllabus-tracker');
@@ -418,6 +423,40 @@ export default function LessonPlannerPage() {
         setIsClient(true);
         fetchData();
     }, [fetchData]);
+
+    // Fetch Syllabus Chapters when class/subject changes
+    useEffect(() => {
+        if (!db || !className || !subject) {
+            setSyllabusChapters([]);
+            return;
+        }
+
+        const fetchSyllabusForPlanning = async () => {
+            setIsSyllabusLoading(true);
+            try {
+                // Fetch syllabi for all exams for this class/subject in this year
+                const q = query(
+                    collection(db, 'syllabi'),
+                    where('academicYear', '==', selectedYear),
+                    where('className', '==', className),
+                    where('subjectName', '==', subject)
+                );
+                const snap = await getDocs(q);
+                const uniqueChapters = new Set<string>();
+                snap.docs.forEach(doc => {
+                    const data = doc.data() as Syllabus;
+                    data.chapters.forEach(ch => uniqueChapters.add(ch));
+                });
+                setSyllabusChapters(Array.from(uniqueChapters).sort());
+            } catch (e) {
+                console.error("Syllabus fetch error:", e);
+            } finally {
+                setIsSyllabusLoading(false);
+            }
+        };
+
+        fetchSyllabusForPlanning();
+    }, [db, className, subject, selectedYear]);
 
     const handleSave = async () => {
         if (!db || !user || !className || !subject || !topic) {
@@ -530,7 +569,7 @@ export default function LessonPlannerPage() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             <div className="space-y-2">
                                                 <Label className="font-bold">শ্রেণি নির্বাচন</Label>
-                                                <Select value={className} onValueChange={setClassName}>
+                                                <Select value={className} onValueChange={(v) => { setClassName(v); setSubject(''); setTopic(''); }}>
                                                     <SelectTrigger className="bg-white"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
                                                     <SelectContent>
                                                         {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
@@ -539,7 +578,7 @@ export default function LessonPlannerPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="font-bold">বিষয় নির্বাচন</Label>
-                                                <Select value={subject} onValueChange={setSubject} disabled={!className}>
+                                                <Select value={subject} onValueChange={(v) => { setSubject(v); setTopic(''); }} disabled={!className}>
                                                     <SelectTrigger className="bg-white"><SelectValue placeholder="বিষয় সিলেক্ট করুন" /></SelectTrigger>
                                                     <SelectContent>
                                                         {availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
@@ -554,13 +593,50 @@ export default function LessonPlannerPage() {
 
                                         <div className="space-y-4 pt-4 border-t border-dashed">
                                             <div className="space-y-2">
-                                                <Label className="font-bold">এই সপ্তাহের প্রধান টপিক</Label>
-                                                <Input 
-                                                    placeholder="উদা: পাটিগণিত - অধ্যায় ৩" 
-                                                    value={topic} 
-                                                    onChange={e => setTopic(e.target.value)} 
-                                                    className="font-bold"
-                                                />
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <Label className="font-bold">এই সপ্তাহের প্রধান টপিক / অধ্যায়</Label>
+                                                    {isSyllabusLoading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                                                </div>
+                                                
+                                                {syllabusChapters.length > 0 ? (
+                                                    <Select value={topic} onValueChange={setTopic}>
+                                                        <SelectTrigger className="bg-white border-2 font-bold h-11 border-primary/20">
+                                                            <SelectValue placeholder="সিলেবাস থেকে অধ্যায় নির্বাচন করুন" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {syllabusChapters.map(ch => (
+                                                                <SelectItem key={ch} value={ch} className="font-bold">{ch}</SelectItem>
+                                                            ))}
+                                                            <SelectItem value="manual-input" className="text-primary italic">ম্যানুয়ালি টপিক লিখতে চাই...</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                ) : (
+                                                    <div className="relative">
+                                                        <Input 
+                                                            placeholder="উদা: পাটিগণিত - অধ্যায় ৩" 
+                                                            value={topic} 
+                                                            onChange={e => setTopic(e.target.value)} 
+                                                            className="font-bold h-11"
+                                                        />
+                                                        {className && subject && !isSyllabusLoading && (
+                                                            <p className="text-[10px] text-amber-600 mt-1 font-bold flex items-center gap-1">
+                                                                <AlertCircle className="h-3 w-3" /> সিলেবাসে কোনো অধ্যায় পাওয়া যায়নি। ম্যানুয়ালি লিখুন।
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* If user chooses manual input when syllabus exists */}
+                                                {topic === 'manual-input' && (
+                                                    <div className="mt-3 animate-in slide-in-from-top-1">
+                                                        <Input 
+                                                            placeholder="টপিক বা অধ্যায়ের নাম লিখুন..." 
+                                                            onChange={e => setTopic(e.target.value)} 
+                                                            autoFocus
+                                                            className="font-bold border-dashed border-2 border-primary"
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="font-bold">শিখনফল ও উদ্দেশ্য (ঐচ্ছিক)</Label>
@@ -595,7 +671,7 @@ export default function LessonPlannerPage() {
                                         <div className="flex justify-end pt-4">
                                             <Button 
                                                 onClick={handleSave} 
-                                                disabled={isLoading || !topic}
+                                                disabled={isLoading || !topic || topic === 'manual-input'}
                                                 className="px-12 h-14 text-lg font-black shadow-xl"
                                             >
                                                 {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
