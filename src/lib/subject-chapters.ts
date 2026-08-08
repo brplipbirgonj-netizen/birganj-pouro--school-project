@@ -277,3 +277,12 @@ export const CHAPTERS_DATA: SubjectChapters = {
         'জীব বিজ্ঞান': ['গ্যাসীয় বিনিময়', 'রেচন প্রক্রিয়া', 'সমন্বয়', 'জীবের বংশগতি ও বিবর্তন', 'জীবের পরিবেশ', 'জীবপ্রযুক্তি'],
     }
 };
+
+/**
+ * Returns an array of chapters for a given class and subject.
+ * @param className The class identifier (e.g., '6').
+ * @param subjectName The name of the subject.
+ */
+export const getChapters = (className: string, subjectName: string): string[] => {
+    return CHAPTERS_DATA[className]?.[subjectName] || [];
+};
