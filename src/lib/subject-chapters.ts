@@ -442,7 +442,7 @@ export const CHAPTERS_DATA: SubjectChapters = {
             'ত্রয়োদশ অধ্যায়: খাদ্য ও পুষ্টি',
             'চতুর্দশ অধ্যায়: পরিবেশ এবং বাস্তুতন্ত্র'
         ],
-        'ইসলাম ধর্ম ও নৈতিক শিক্ষা': [
+        ' ইসলাম ধর্ম ও নৈতিক শিক্ষা': [
             'প্রথম অধ্যায়: আকাইদ (ইমান, নিফাক, আল-আসমাউল হুসনা, রিসালাত, খতমে নবুয়ত, আখিরাত, শাফাআত, জান্নাত, জাহান্নাম, ইমান ও নৈতিকতা)',
             'দ্বিতীয় অধ্যায়: ইবাদত (যাকাত, যাকাত ফরজ হওয়ার শর্ত, যাকাতের মাসারিফ, যাকাতের গুরুত্ব ও তাৎপর্য, হজ, হজের ফরজ, ওয়াজিব ও সুন্নাত, হজ পালনের নিয়ম, কোরবানি, কোরানির শিক্ষা, আকিকা)',
             'তৃতীয় অধ্যায়: কুরআন ও হাদিস শিক্ষা (কুরআন মজিদ, তাজবিদ, নুন সাকিন ও তানবিনের বর্ণনা, মীম সাকিনের বর্ণনা, নাযিরা তিলাওয়াত, সূরা আল-কদর, সূরা আল-যিলযাল, সূরা আল-ফিল, সূরা কুরাইশ, সূরা আন-নাসর, আয়াতুল কুরসি, সূরা আল-হাশরের শেষ তিন আয়াত, আল-কুরআন ও নৈতিক শিক্ষা, মুনাজাতমূলক তিনটি হাদিস, হাদিসের আলোকে নৈতিক শিক্ষা)',
@@ -615,6 +615,22 @@ export const CHAPTERS_DATA: SubjectChapters = {
             'Unit Fourteen: Renewable Energy',
             'Unit Fifteen: Media and Modes of E-communication',
             'Unit Sixteen: Graffiti'
+        ],
+        'ইংরেজি দ্বিতীয়': [
+            'Grammar: Suffixes and Prefixes',
+            'Grammar: Articles',
+            'Grammar: Changing Sentences',
+            'Grammar: Right form of Verbs',
+            'Grammar: Narrative Style',
+            'Grammar: Punctuation and Capitalization',
+            'Grammar: Completing Sentences',
+            'Grammar: Tag Questions',
+            'Grammar: Sentence Connectors',
+            'Composition: CV with Cover Letter',
+            'Composition: Formal Letters (Application)',
+            'Composition: Email Writing',
+            'Composition: Paragraph Writing',
+            'Composition: Descriptive Composition'
         ],
         'গণিত': [
             'প্রথম অধ্যায়: বাস্তব সংখ্যা',
