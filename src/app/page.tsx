@@ -18,7 +18,7 @@ import { getTransactions, Transaction } from '@/lib/transactions-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit, doc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit, doc, Timestamp, getDocs, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -901,7 +901,7 @@ export default function Home() {
                 where('className', '==', quickAttendanceClass),
                 where('academicYear', '==', selectedYear)
             ));
-            classStudents = qSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Student));
+            classStudents = qSnap.docs.map((docSnap: QueryDocumentSnapshot) => ({ id: docSnap.id, ...docSnap.data() } as Student));
         }
 
         if (classStudents.length === 0) {
