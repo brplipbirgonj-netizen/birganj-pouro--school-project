@@ -649,7 +649,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                 key={s.name} 
                                                 colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} 
                                                 className={cn(
-                                                    "text-center border-r-2 border-b-2 border-black font-black py-1 text-[12px] sticky top-0 z-30 px-2 h-[32px] box-border",
+                                                    "text-center border-r-2 border-b-2 border-black font-black py-1 text-[12px] sticky top-0 z-40 px-2 h-[32px] box-border",
                                                     subBgColors[idx % subBgColors.length]
                                                 )}
                                             >
@@ -1725,18 +1725,18 @@ export default function ResultsPage() {
                             @page { size: A4 landscape; margin: 0.4in !important; }
                             .printable-area { width: 100% !important; padding: 0 !important; }
                             table { border-collapse: collapse !important; border: 2px solid black !important; width: 100% !important; }
-                            th, td { border: 1.5px solid black !important; padding: 2px !important; font-size: 8px !important; }
+                            th, td { border: 1.5px solid black !important; padding: 2px !important; font-size: 11px !important; }
                             .no-print { display: none !important; }
                         }
                     `}</style>
                     <header className="text-center border-b-2 border-black pb-2 mb-4 flex flex-col items-center">
                         {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-12 h-12 object-contain mb-1" />}
                         <h1 className="text-xl font-black">{schoolInfo.name}</h1>
-                        <p className="text-[10px] font-bold">{schoolInfo.address}</p>
+                        <p className="text-[12px] font-bold">{schoolInfo.address}</p>
                         <div className="mt-1 inline-block border border-black px-6 py-1 rounded-full font-black text-xs uppercase">
                             {fullSheetPrintData.examName} - ফলাফল বিবরণী শিট ({classNamesMap[fullSheetPrintData.className]})
                         </div>
-                        <p className="text-[10px] font-bold mt-1">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</p>
+                        <p className="text-[12px] font-bold mt-1">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</p>
                     </header>
 
                     {Object.keys(fullSheetPrintData.results).map(groupKey => {
@@ -1761,7 +1761,7 @@ export default function ResultsPage() {
                                             <th rowSpan={2} className="border border-black font-black p-1 w-8">রোল</th>
                                             <th rowSpan={2} className="border border-black font-black p-1 min-w-[120px]">শিক্ষার্থীর নাম</th>
                                             {subjects.map(s => (
-                                                <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="border border-black font-black p-1 text-[8px]">{s.name}</th>
+                                                <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="border border-black font-black p-1 text-[11px]">{s.name}</th>
                                             ))}
                                             <th rowSpan={2} className="border border-black font-black p-1 w-10">মোট</th>
                                             <th rowSpan={2} className="border border-black font-black p-1 w-10">GPA</th>
@@ -1775,14 +1775,14 @@ export default function ResultsPage() {
                                                     <React.Fragment key={`${s.name}-headers`}>
                                                         {!isEng && (
                                                             <>
-                                                                <th className="border border-black font-bold p-0.5 text-[7px]">লি:</th>
-                                                                <th className="border border-black font-bold p-0.5 text-[7px]">M</th>
-                                                                {s.practical && <th className="border border-black font-bold p-0.5 text-[7px]">ব্যাব:</th>}
+                                                                <th className="border border-black font-bold p-0.5 text-[10px]">লি:</th>
+                                                                <th className="border border-black font-bold p-0.5 text-[10px]">M</th>
+                                                                {s.practical && <th className="border border-black font-bold p-0.5 text-[10px]">ব্যাব:</th>}
                                                             </>
                                                         )}
-                                                        <th className="border border-black font-black bg-blue-100 p-0.5 text-[7px]">মোট</th>
-                                                        <th className="border border-black font-bold p-0.5 text-[7px]">গ্রেড</th>
-                                                        <th className="border border-black font-bold p-0.5 text-[7px]">পয়েন্ট</th>
+                                                        <th className="border border-black font-black bg-blue-100 p-0.5 text-[10px]">মোট</th>
+                                                        <th className="border border-black font-bold p-0.5 text-[10px]">গ্রেড</th>
+                                                        <th className="border border-black font-bold p-0.5 text-[10px]">পয়েন্ট</th>
                                                     </React.Fragment>
                                                 )
                                             })}
