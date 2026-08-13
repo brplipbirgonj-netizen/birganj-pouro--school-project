@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
@@ -81,12 +81,9 @@ export default function AddStudentPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [student, setStudent] = useState<NewStudentData>(initialStudentState);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [optionalSubjects, setOptionalSubjects] = useState<Subject[]>([]);
     const [isClient, setIsClient] = useState(false);
     const [isFetchingRoll, setIsFetchingRoll] = useState(false);
-
-    const canUploadStudents = hasPermission('upload:students');
 
     useEffect(() => {
         setIsClient(true);
@@ -98,13 +95,12 @@ export default function AddStudentPage() {
         }
     }, [selectedYear]);
 
-    // Auto-fill Roll Logic (Index and Manual Fallback)
+    // Auto-fill Roll Logic
     useEffect(() => {
         if (db && student.className && student.academicYear && isClient) {
             const fetchNextRoll = async () => {
                 setIsFetchingRoll(true);
                 try {
-                    // Try getting via index (Fastest)
                     const q = query(
                         collection(db, "students"),
                         where("academicYear", "==", student.academicYear),
@@ -120,24 +116,19 @@ export default function AddStudentPage() {
                         handleInputChange('roll', 1);
                     }
                 } catch (e: any) {
-                    // Manual Fallback: Fetch all for this class/year and sort in memory 
-                    if (e.code === 'failed-precondition' || e.message?.includes('index')) {
-                        console.log("Index building... falling back to manual sort.");
-                        const manualQuery = query(
-                            collection(db, "students"),
-                            where("academicYear", "==", student.academicYear),
-                            where("className", "==", student.className)
-                        );
-                        const manualSnap = await getDocs(manualQuery);
-                        if (!manualSnap.empty) {
-                            const rolls = manualSnap.docs.map(d => Number(d.data().roll) || 0);
-                            const maxRoll = Math.max(...rolls);
-                            handleInputChange('roll', maxRoll + 1);
-                        } else {
-                            handleInputChange('roll', 1);
-                        }
+                    // Fallback if index is not ready
+                    const manualQuery = query(
+                        collection(db, "students"),
+                        where("academicYear", "==", student.academicYear),
+                        where("className", "==", student.className)
+                    );
+                    const manualSnap = await getDocs(manualQuery);
+                    if (!manualSnap.empty) {
+                        const rolls = manualSnap.docs.map(d => Number(d.data().roll) || 0);
+                        const maxRoll = Math.max(...rolls);
+                        handleInputChange('roll', maxRoll + 1);
                     } else {
-                        console.error("Error fetching roll:", e);
+                        handleInputChange('roll', 1);
                     }
                 } finally {
                     setIsFetchingRoll(false);
@@ -166,7 +157,7 @@ export default function AddStudentPage() {
     }, [student.className, student.group]);
 
 
-    const handleInputChange = (field: keyof NewStudentData, value: string | number | Date | undefined) => {
+    const handleInputChange = (field: keyof NewStudentData, value: any) => {
         setStudent(prev => ({...prev, [field]: value}));
     };
 
@@ -188,7 +179,12 @@ export default function AddStudentPage() {
 
     const isStepValid = () => {
         if (currentStep === 1) {
-            return !!(student.academicYear && student.className && student.roll);
+            const baseValid = !!(student.academicYear && student.className && student.roll);
+            // Validation for Class 7, 8, 9 Registration Numbers
+            if (['7', '8', '9'].includes(student.className)) {
+                return baseValid && !!student.prevRegNo;
+            }
+            return baseValid;
         }
         if (currentStep === 2) {
             return !!(student.studentNameBn && student.dob && student.gender && student.religion && student.photoUrl);
@@ -334,6 +330,22 @@ export default function AddStudentPage() {
                             {isFetchingRoll && <Loader2 className="h-4 w-4 animate-spin absolute right-3 bottom-3 text-primary" />}
                           </div>
                       </div>
+
+                      {/* Conditional Registration Numbers for Class 7, 8, 9 */}
+                      {['7', '8', '9'].includes(student.className) && (
+                          <div className="space-y-2">
+                              <Label className={cn("font-bold", !student.prevRegNo && "text-red-600")}>
+                                  {student.className === '7' || student.className === '8' ? 'ষষ্ঠ শ্রেণির রেজিষ্ট্রেশন নম্বর *' : 'অষ্টম শ্রেণির রেজিষ্ট্রেশন নম্বর *'}
+                              </Label>
+                              <Input 
+                                  required 
+                                  value={student.prevRegNo || ''} 
+                                  onChange={e => handleInputChange('prevRegNo', e.target.value)} 
+                                  className={cn(inputFocusClasses, !student.prevRegNo && "border-red-300 bg-red-50/30")} 
+                                  placeholder="রেজিষ্ট্রেশন নম্বর দিন"
+                              />
+                          </div>
+                      )}
 
                       <div className="space-y-2 md:col-span-2 lg:col-span-1">
                           <Label className="font-bold">পূর্ববর্তী বিদ্যালয়</Label>
