@@ -507,7 +507,9 @@ function StudentListContent() {
                                                 margin: 0.5in !important;
                                             }
                                             .printable-area {
-                                                position: static !important;
+                                                position: absolute !important;
+                                                top: 0 !important;
+                                                left: 0 !important;
                                                 padding: 0 !important;
                                                 margin: 0 !important;
                                                 width: 100% !important;
