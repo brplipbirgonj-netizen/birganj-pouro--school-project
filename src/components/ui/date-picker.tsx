@@ -135,7 +135,9 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                     day_hidden: "invisible",
                 }}
                 components={{
-                    Dropdown: ({ value, onChange, options }: { value?: string | number; onChange?: React.ChangeEventHandler<HTMLSelectElement>; options?: { value: string | number; label: string }[] }) => {
+                    Dropdown: ({ value, onChange, children }: any) => {
+                    const options = React.Children.toArray(children) as React.ReactElement<React.HTMLProps<HTMLOptionElement>>[];
+                    const selected = options.find((child) => child.props.value === value);
                     const handleChange = (newValue: string) => {
                         const event = {
                         target: { value: newValue },
@@ -147,15 +149,15 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                         value={value?.toString()}
                         onValueChange={(newValue) => handleChange(newValue)}
                         >
-                        <SelectTrigger className="h-8 text-xs truncate">{options?.find(o => o.value?.toString() === value?.toString())?.label ?? value}</SelectTrigger>
+                        <SelectTrigger className="h-8 text-xs truncate">{selected?.props.children}</SelectTrigger>
                         <SelectContent>
                             <ScrollArea className="h-40">
-                            {options?.map((option, i) => (
+                            {options.map((option, i) => (
                                 <SelectItem
-                                key={`${option.value}-${i}`}
-                                value={option.value?.toString() ?? ""}
+                                key={`${option.props.value}-${i}`}
+                                value={option.props.value?.toString() ?? ""}
                                 >
-                                {option.label}
+                                {option.props.children}
                                 </SelectItem>
                             ))}
                             </ScrollArea>

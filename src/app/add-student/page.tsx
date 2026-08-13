@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileUp, Download, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { addStudent, updateStudent, NewStudentData } from '@/lib/student-data';
+import { addStudent, updateStudent, NewStudentData, Student } from '@/lib/student-data';
 import { getSubjects, Subject } from '@/lib/subjects';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAcademicYear } from '@/context/AcademicYearContext';
