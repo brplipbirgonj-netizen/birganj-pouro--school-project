@@ -255,7 +255,7 @@ function StudentListContent() {
     );
 
     const unsubscribe = onSnapshot(studentsQuery, (querySnapshot) => {
-      const studentsData = querySnapshot.docs.map(studentFromDoc);
+      const studentsData = querySnapshot.docs.map(staffFromDoc);
       setAllStudents(studentsData);
       setIsLoading(false);
     }, (error: FirestoreError) => {
@@ -499,16 +499,18 @@ function StudentListContent() {
                             )}
 
                             {activeSection === 'print' && (
-                                <div className="printable-area bg-white text-black p-2 font-kalpurush w-full box-border">
+                                <div className="printable-area bg-white text-black font-kalpurush w-full box-border">
                                     <style jsx global>{`
                                         @media print {
                                             @page {
-                                                margin: 15mm 10mm 10mm 10mm !important;
+                                                size: A4;
+                                                margin: 0.5in !important;
                                             }
                                             .printable-area {
                                                 position: static !important;
                                                 padding: 0 !important;
                                                 margin: 0 !important;
+                                                width: 100% !important;
                                             }
                                         }
                                     `}</style>
@@ -519,52 +521,52 @@ function StudentListContent() {
                                         <div className="mt-2 inline-block border border-black px-6 py-0.5 rounded-full font-black text-sm uppercase">শিক্ষার্থী বিস্তারিত তালিকা - {toBengaliNumber(selectedYear)}</div>
                                         <p className="text-sm font-black mt-1">শ্রেণি: {classNamesMap[activeTab]} শ্রেণি</p>
                                     </header>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full border-collapse border-[1.5px] border-black table-fixed text-[9px]">
+                                    <div className="w-full">
+                                        <table className="w-full border-collapse border-[1.5px] border-black text-[9px]">
                                             <thead>
                                                 <tr className="bg-slate-100">
                                                     <th className="border border-black p-0.5 w-[5%] text-center">ছবি</th>
-                                                    <th className="border border-black p-0.5 w-[11%] text-center">আইডি নং</th>
-                                                    <th className="border border-black p-0.5 w-[5%] text-center">রোল</th>
-                                                    <th className="border border-black p-0.5 w-[17%] text-left">শিক্ষার্থীর নাম</th>
-                                                    <th className="border border-black p-0.5 w-[15%] text-left">পিতার নাম</th>
-                                                    <th className="border border-black p-0.5 w-[15%] text-left">মাতার নাম</th>
+                                                    <th className="border border-black p-0.5 w-[10%] text-center">আইডি নং</th>
+                                                    <th className="border border-black p-0.5 w-[4%] text-center">রোল</th>
+                                                    <th className="border border-black p-0.5 w-[18%] text-left pl-1">শিক্ষার্থীর নাম</th>
+                                                    <th className="border border-black p-0.5 w-[15%] text-left pl-1">পিতার নাম</th>
+                                                    <th className="border border-black p-0.5 w-[15%] text-left pl-1">মাতার নাম</th>
                                                     <th className="border border-black p-0.5 w-[9%] text-center">জন্ম তারিখ</th>
                                                     <th className="border border-black p-0.5 w-[7%] text-center">লিঙ্গ/ধর্ম</th>
                                                     <th className="border border-black p-0.5 w-[10%] text-center">মোবাইল নং</th>
-                                                    <th className="border border-black p-0.5 w-[11%] text-left">ঠিকানা</th>
+                                                    <th className="border border-black p-0.5 w-[7%] text-left pl-1">ঠিকানা</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {getStudentsByClass(activeTab).map(s => (
                                                     <tr key={s.id} className="h-10 border border-black" style={{ breakInside: 'avoid' }}>
                                                         <td className="border border-black text-center p-0.5">
-                                                            <div className="h-8 w-8 mx-auto relative">
+                                                            <div className="h-8 w-8 mx-auto relative overflow-hidden">
                                                                 <img src={sanitizePhotoUrl(s.photoUrl, s.gender) || getStudentPlaceholderImage(s.gender)} alt="Photo" className="object-cover h-full w-full" />
                                                             </div>
                                                         </td>
-                                                        <td className="border border-black text-center font-bold text-[10px]">{toBengaliNumber(s.generatedId || '-')}</td>
+                                                        <td className="border border-black text-center font-bold text-[10px] break-words">{toBengaliNumber(s.generatedId || '-')}</td>
                                                         <td className="border border-black text-center font-black text-[10px]">{toBengaliNumber(s.roll)}</td>
-                                                        <td className="border border-black font-bold text-[10px] leading-tight px-1">
+                                                        <td className="border border-black font-bold text-[10px] leading-tight px-1 break-words">
                                                             <p>{s.studentNameBn}</p>
                                                             <p className="text-[8px] uppercase text-slate-600">{s.studentNameEn || '-'}</p>
                                                         </td>
-                                                        <td className="border border-black font-bold text-[10px] leading-tight px-1">
+                                                        <td className="border border-black font-bold text-[10px] leading-tight px-1 break-words">
                                                             <p>{s.fatherNameBn}</p>
                                                             <p className="text-[8px] uppercase text-slate-600">{s.fatherNameEn || '-'}</p>
                                                         </td>
-                                                        <td className="border border-black font-bold text-[10px] leading-tight px-1">
+                                                        <td className="border border-black font-bold text-[10px] leading-tight px-1 break-words">
                                                             <p>{s.motherNameBn}</p>
                                                             <p className="text-[8px] uppercase text-slate-600">{s.motherNameEn || '-'}</p>
                                                         </td>
                                                         <td className="border border-black text-center text-[10px]">{s.dob ? toBengaliNumber(format(new Date(s.dob), 'dd-MM-yyyy')) : '-'}</td>
-                                                        <td className="border border-black text-center text-[9px] leading-tight">
+                                                        <td className="border border-black text-center text-[9px] leading-tight break-words">
                                                             <p>{s.gender === 'male' || s.gender === 'পুরুষ' ? 'পুরুষ' : 'মহিলা'}</p>
                                                             <p>{religionMapBn[s.religion?.toLowerCase() || ''] || s.religion}</p>
                                                         </td>
                                                         <td className="border border-black text-center font-black text-[10px]">{toBengaliNumber(s.guardianMobile || '-')}</td>
-                                                        <td className="border border-black text-[8px] leading-tight px-1">
-                                                            গ্রাম: {s.presentVillage || '-'}, ইউ: {s.presentUnion || '-'}<br/>ডাকঘর: {s.presentPostOffice || '-'}
+                                                        <td className="border border-black text-[8px] leading-tight px-1 break-words">
+                                                            গ্রাম: {s.presentVillage || '-'}<br/>ডাকঘর: {s.presentPostOffice || '-'}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -583,7 +585,8 @@ function StudentListContent() {
                                     <style jsx global>{`
                                         @media print {
                                             @page {
-                                                margin: 15mm 10mm 10mm 10mm !important;
+                                                size: A4 landscape;
+                                                margin: 0.5in !important;
                                             }
                                         }
                                     `}</style>
@@ -732,3 +735,4 @@ export default function StudentListPage() {
     </Suspense>
   );
 }
+
