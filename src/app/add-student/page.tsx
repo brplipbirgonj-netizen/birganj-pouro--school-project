@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -13,18 +12,23 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileUp, Download, ArrowRight, ArrowLeft, CheckCircle2, User, Users, Home, GraduationCap, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { addStudent, updateStudent, NewStudentData, Student } from '@/lib/student-data';
+import { addStudent, NewStudentData } from '@/lib/student-data';
 import { getSubjects, Subject } from '@/lib/subjects';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { Skeleton } from '@/components/ui/skeleton';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { Separator } from '@/components/ui/separator';
+
+function toBengaliNumber(str: string | number | undefined | null) {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+}
+
+const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 const initialStudentState: NewStudentData = {
   roll: undefined,
@@ -65,8 +69,6 @@ const initialStudentState: NewStudentData = {
 
 const inputFocusClasses = "transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50";
 
-const boards = ['Dhaka', 'Rajshahi', 'Cumilla', 'Jessore', 'Chattogram', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh', 'Madrasah'];
-
 export default function AddStudentPage() {
     const router = useRouter();
     const { toast } = useToast();
@@ -94,12 +96,13 @@ export default function AddStudentPage() {
         }
     }, [selectedYear]);
 
-    // Auto-fill Roll Logic
+    // Auto-fill Roll Logic (Index and Manual Fallback)
     useEffect(() => {
         if (db && student.className && student.academicYear && isClient) {
             const fetchNextRoll = async () => {
                 setIsFetchingRoll(true);
                 try {
+                    // Try getting via index (Fastest)
                     const q = query(
                         collection(db, "students"),
                         where("academicYear", "==", student.academicYear),
@@ -114,8 +117,27 @@ export default function AddStudentPage() {
                     } else {
                         handleInputChange('roll', 1);
                     }
-                } catch (e) {
-                    console.error("Error fetching roll:", e);
+                } catch (e: any) {
+                    // Manual Fallback: Fetch all for this class/year and sort in memory 
+                    // this works even if the index is not created or building
+                    if (e.code === 'failed-precondition' || e.message?.includes('index')) {
+                        console.log("Index building... falling back to manual sort.");
+                        const manualQuery = query(
+                            collection(db, "students"),
+                            where("academicYear", "==", student.academicYear),
+                            where("className", "==", student.className)
+                        );
+                        const manualSnap = await getDocs(manualQuery);
+                        if (!manualSnap.empty) {
+                            const rolls = manualSnap.docs.map(d => Number(d.data().roll) || 0);
+                            const maxRoll = Math.max(...rolls);
+                            handleInputChange('roll', maxRoll + 1);
+                        } else {
+                            handleInputChange('roll', 1);
+                        }
+                    } else {
+                        console.error("Error fetching roll:", e);
+                    }
                 } finally {
                     setIsFetchingRoll(false);
                 }
@@ -163,19 +185,18 @@ export default function AddStudentPage() {
         reader.readAsDataURL(file);
     };
 
-    // Validation Logic
     const isStepValid = () => {
         if (currentStep === 1) {
-            return student.academicYear && student.className && student.roll;
+            return !!(student.academicYear && student.className && student.roll);
         }
         if (currentStep === 2) {
-            return student.studentNameBn && student.dob && student.gender && student.religion && student.photoUrl;
+            return !!(student.studentNameBn && student.dob && student.gender && student.religion && student.photoUrl);
         }
         if (currentStep === 3) {
-            return student.fatherNameBn && student.motherNameBn && student.guardianMobile;
+            return !!(student.fatherNameBn && student.motherNameBn && student.guardianMobile);
         }
         if (currentStep === 4) {
-            return student.presentVillage && student.presentUpazila && student.presentDistrict;
+            return !!(student.presentVillage && student.presentUpazila && student.presentDistrict);
         }
         return true;
     };
@@ -187,7 +208,7 @@ export default function AddStudentPage() {
             toast({
                 variant: "destructive",
                 title: "তথ্য অসম্পূর্ণ",
-                description: "অনুগ্রহ করে লাল চিহ্নিত বা সকল আবশ্যকীয় তথ্য পূরণ করুন।"
+                description: "অনুগ্রহ করে এই ধাপের সকল আবশ্যকীয় (*) তথ্য পূরণ করুন।"
             });
         }
     };
@@ -209,56 +230,6 @@ export default function AddStudentPage() {
         }).catch(() => {});
     };
 
-    const handleSameAddress = (checked: boolean | string) => {
-        if (checked) {
-            setStudent(prev => ({
-                ...prev,
-                permanentVillage: prev.presentVillage,
-                permanentUnion: prev.presentUnion,
-                permanentPostOffice: prev.presentPostOffice,
-                permanentUpazila: prev.presentUpazila,
-                permanentDistrict: prev.presentDistrict,
-            }));
-        } else {
-            setStudent(prev => ({
-                ...prev,
-                permanentVillage: '',
-                permanentUnion: '',
-                permanentPostOffice: '',
-                permanentUpazila: 'বীরগঞ্জ',
-                permanentDistrict: 'দিনাজপুর',
-            }));
-        }
-    }
-
-    const handleDownloadSample = () => {
-        const baseHeaders = ['রোল', 'শ্রেণি', 'নাম (বাংলা)', 'নাম (ইংরেজি)', 'জন্ম তারিখ', 'লিঙ্গ', 'ধর্ম', 'পিতার নাম', 'মাতার নাম', 'মোবাইল'];
-        const ws = XLSX.utils.aoa_to_sheet([baseHeaders]);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Sample');
-        XLSX.writeFile(wb, 'student_sample.xlsx');
-    };
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!db || !canUploadStudents) return;
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                toast({ title: "প্রসেসিং হচ্ছে...", description: `${json.length} জন শিক্ষার্থীর তথ্য পাওয়া গেছে।` });
-                // Bulk logic removed for brevity as per instructions to only focus on requested features
-            } catch (error) {
-                toast({ variant: "destructive", title: "ফাইল রিড এরর" });
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    };
-
     const steps = [
         { id: 1, title: 'প্রাতিষ্ঠানিক তথ্য', icon: GraduationCap },
         { id: 2, title: 'শিক্ষার্থীর তথ্য', icon: User },
@@ -277,17 +248,6 @@ export default function AddStudentPage() {
                     <CardTitle className="text-2xl font-black text-primary">নতুন শিক্ষার্থী ভর্তি</CardTitle>
                     <CardDescription className="font-bold">সঠিক তথ্য দিয়ে ফরমটি ৪টি ধাপে পূরণ করুন</CardDescription>
                 </div>
-                {canUploadStudents && (
-                    <div className="flex items-center flex-wrap gap-2 no-print">
-                        <Button variant="outline" onClick={handleDownloadSample} className="h-9 font-bold">
-                            <Download className="mr-2 h-4 w-4" /> নমুনা
-                        </Button>
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="h-9 font-bold">
-                            <FileUp className="mr-2 h-4 w-4" /> Excel আপলোড
-                        </Button>
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
-                    </div>
-                )}
             </div>
 
             <div className="mt-8 relative px-4">
@@ -314,7 +274,6 @@ export default function AddStudentPage() {
             {isClient ? (
             <form className="space-y-8" onSubmit={handleSubmit}>
               
-              {/* Step 1: Institutional Information */}
               {currentStep === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   <h3 className="font-black text-xl border-b-4 border-primary/10 pb-2 flex items-center gap-2 text-primary">
@@ -341,14 +300,16 @@ export default function AddStudentPage() {
                       </div>
                       <div className="space-y-2 relative">
                           <Label className="font-bold">রোল নম্বর *</Label>
-                          <Input 
-                            type="number" 
-                            required 
-                            value={student.roll || ''} 
-                            onChange={e => handleInputChange('roll', e.target.value === '' ? undefined : parseInt(e.target.value, 10))} 
-                            className={cn(inputFocusClasses, "font-black text-lg", !student.roll && "border-red-300 bg-red-50/30")} 
-                          />
-                          {isFetchingRoll && <Loader2 className="h-4 w-4 animate-spin absolute right-3 bottom-3 text-primary" />}
+                          <div className="relative">
+                            <Input 
+                                type="number" 
+                                required 
+                                value={student.roll || ''} 
+                                onChange={e => handleInputChange('roll', e.target.value === '' ? undefined : parseInt(e.target.value, 10))} 
+                                className={cn(inputFocusClasses, "font-black text-lg", !student.roll && "border-red-300 bg-red-50/30")} 
+                            />
+                            {isFetchingRoll && <Loader2 className="h-4 w-4 animate-spin absolute right-3 bottom-3 text-primary" />}
+                          </div>
                       </div>
 
                       <div className="space-y-2 md:col-span-2 lg:col-span-1">
@@ -387,7 +348,6 @@ export default function AddStudentPage() {
               </div>
               )}
 
-              {/* Step 2: Student Information */}
               {currentStep === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   <h3 className="font-black text-xl border-b-4 border-primary/10 pb-2 flex items-center gap-2 text-primary">
@@ -450,7 +410,6 @@ export default function AddStudentPage() {
               </div>
               )}
               
-              {/* Step 3: Guardian Information */}
               {currentStep === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   <h3 className="font-black text-xl border-b-4 border-primary/10 pb-2 flex items-center gap-2 text-primary">
@@ -477,7 +436,6 @@ export default function AddStudentPage() {
               </div>
               )}
 
-              {/* Step 4: Contact & Address */}
               {currentStep === 4 && (
               <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                   <div className="space-y-6">
@@ -522,11 +480,3 @@ export default function AddStudentPage() {
     </div>
   );
 }
-
-function toBengaliNumber(str: string | number | undefined | null) {
-    if (!str && str !== 0) return '';
-    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
-}
-
-const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
