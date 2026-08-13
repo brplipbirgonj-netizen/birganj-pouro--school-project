@@ -4,10 +4,10 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck } from 'lucide-react';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { getAttendanceForDate } from '@/lib/attendance-data';
+import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
 import { getNotices, Notice } from '@/lib/notice-data';
@@ -668,6 +668,11 @@ export default function Home() {
   const [quickSearchClass, setQuickSearchClass] = useState<string>('');
   const [studentsForYear, setStudentsForYear] = useState<Student[]>([]);
   const [quickFeeStudent, setQuickFeeStudent] = useState<Student | null>(null);
+
+  // Quick Attendance State
+  const [quickAttendanceClass, setQuickAttendanceClass] = useState<string>('6');
+  const [quickAttendanceInput, setQuickAttendanceInput] = useState('');
+  const [isSavingQuickAttendance, setIsSavingQuickAttendance] = useState(false);
   
   useEffect(() => {
     if (!authLoading && !user) {
@@ -810,6 +815,62 @@ export default function Home() {
     }
   };
 
+  const handleQuickAttendanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db) return;
+    if (!quickAttendanceClass) {
+        toast({ variant: 'destructive', title: 'শ্রেণি নির্বাচন করুন' });
+        return;
+    }
+
+    setIsSavingQuickAttendance(true);
+    try {
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        
+        const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
+        const inputRolls = quickAttendanceInput
+            .split(/[\s,]+/)
+            .map(r => parseInt(bnToEn(r.trim()), 10))
+            .filter(r => !isNaN(r));
+
+        const classStudents = (allStudents || []).filter(
+            s => s.className === quickAttendanceClass && (s.academicYear === selectedYear || !s.academicYear)
+        );
+
+        if (classStudents.length === 0) {
+            toast({ variant: 'destructive', title: 'এই শ্রেণিতে কোনো শিক্ষার্থী পাওয়া যায়নি' });
+            setIsSavingQuickAttendance(false);
+            return;
+        }
+
+        const attendanceData: StudentAttendance[] = classStudents.map(student => ({
+            studentId: student.id,
+            status: (student.roll !== undefined && inputRolls.includes(student.roll)) ? 'present' : 'absent'
+        }));
+
+        const dailyAttendance: DailyAttendance = {
+            date: todayStr,
+            academicYear: selectedYear,
+            className: quickAttendanceClass,
+            attendance: attendanceData,
+        };
+
+        await saveDailyAttendance(db, dailyAttendance);
+
+        const label = classNamesMap[quickAttendanceClass] || quickAttendanceClass;
+        toast({
+            title: `আজকের কুইক হাজিরা সংরক্ষিত হয়েছে (${label} শ্রেণি)`,
+            description: `${inputRolls.length} জন উপস্থিত এবং বাকি ${classStudents.length - inputRolls.length} জন অনুপস্থিত হিসেবে সেভ হয়েছে।`
+        });
+        setQuickAttendanceInput('');
+    } catch (err) {
+        console.error("Error saving quick attendance:", err);
+        toast({ variant: 'destructive', title: 'হাজিরা সেভ করতে সমস্যা হয়েছে' });
+    } finally {
+        setIsSavingQuickAttendance(false);
+    }
+  };
+
   if (authLoading || !user) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-sky-100 font-kalpurush">
@@ -862,6 +923,50 @@ export default function Home() {
                 </div>
                 <Button type="submit" className="h-12 px-10 font-black text-base bg-teal-600 hover:bg-teal-700 shadow-xl rounded-xl shrink-0">
                     সার্চ করুন
+                </Button>
+            </form>
+        </div>
+
+        {/* Quick Attendance Section */}
+        <div className="mb-8 flex flex-col lg:flex-row items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border-2 border-black shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
+            <div className="flex items-center gap-3 shrink-0">
+                <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-lg">
+                    <UserCheck className="h-6 w-6" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-black text-slate-800 leading-tight">কুইক হাজিরা</h3>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">আজকের হাজিরা: শ্রেণি সিলেক্ট করে উপস্থিত রোলগুলো লিখুন</p>
+                </div>
+            </div>
+            <form onSubmit={handleQuickAttendanceSubmit} className="flex-1 w-full max-w-2xl flex flex-col sm:flex-row gap-3">
+                <div className="w-full sm:w-40">
+                    <Select value={quickAttendanceClass} onValueChange={setQuickAttendanceClass}>
+                        <SelectTrigger className="h-12 font-black border-2 border-black rounded-xl bg-white focus:ring-emerald-500">
+                            <SelectValue placeholder="শ্রেণি" />
+                        </SelectTrigger>
+                        <SelectContent>
+                             {Object.entries(classNamesMap).map(([id, label]) => (
+                                <SelectItem key={id} value={id} className="font-bold">{label} শ্রেণি</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="relative flex-1">
+                    <Input 
+                        value={quickAttendanceInput}
+                        onChange={(e) => setQuickAttendanceInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleQuickAttendanceSubmit(e);
+                            }
+                        }}
+                        placeholder="উপস্থিত রোলসমূহ লিখুন (যেমন: ১, ২, ৩, ৫ বা 1, 2, 3, 5)..." 
+                        className="h-12 text-base font-black border-2 border-black rounded-xl bg-white focus:ring-emerald-500 px-4"
+                    />
+                </div>
+                <Button type="submit" disabled={isSavingQuickAttendance} className="h-12 px-8 font-black text-base bg-emerald-600 hover:bg-emerald-700 shadow-xl rounded-xl shrink-0 text-white">
+                    {isSavingQuickAttendance ? <Loader2 className="h-5 w-5 animate-spin" /> : 'হাজিরা সম্পন্ন করুন'}
                 </Button>
             </form>
         </div>
