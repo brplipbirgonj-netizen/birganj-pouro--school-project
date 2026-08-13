@@ -708,6 +708,15 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
             </div>
 
             <Card className="border-2 border-primary/20 shadow-xl overflow-hidden printable-area bg-white text-black p-0 sm:p-10">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 landscape; margin: 0.4in !important; }
+                        .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
+                        .printable-area table tr { height: 28px !important; }
+                        .printable-area table td, .printable-area table th { padding: 2px 4px !important; font-size: 9px !important; border: 1px solid black !important; }
+                        .no-print { display: none !important; }
+                    }
+                `}</style>
                 <SchoolPrintHeader 
                     title={`মাসিক হাজিরা সারাংশ - ${BENGALI_MONTHS[parseInt(selectedMonth)]} ${toBengaliNumber(selectedYear)}`} 
                     schoolInfo={schoolInfo} 
@@ -717,7 +726,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                     <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible border-black">
                         <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full print:border-black">
                             <TableHeader className="bg-muted sticky top-0 z-30 print:bg-white print:static">
-                                <TableRow className="h-14 print:h-10 print:border-black">
+                                <TableRow className="h-14 print:h-8 print:border-black">
                                     <TableHead className="text-center font-black border-r border-b w-44 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
                                         <TableHead key={cls} className="text-center font-black border-r border-b text-[11px] leading-tight print:border-black">{classNamesMap[cls]}</TableHead>
@@ -1296,6 +1305,15 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
 
     return (
         <div className="p-0 sm:p-10 bg-white text-black font-kalpurush printable-area min-h-screen">
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4 portrait; margin: 0.4in !important; }
+                    .printable-area { padding: 0 !important; margin: 0 !important; }
+                    .printable-area table tr { height: 28px !important; }
+                    .printable-area table td, .printable-area table th { padding: 2px 4px !important; border: 1px solid black !important; }
+                    .no-print { display: none !important; }
+                }
+            `}</style>
             <SchoolPrintHeader 
                 title={`${classNamesMap[classId]} শ্রেণির হাজিরা রিপোর্ট`} 
                 schoolInfo={schoolInfo} 
