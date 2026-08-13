@@ -805,7 +805,25 @@ function StudentProfileSearchContent() {
 
             {/* Printable Area - Redesigned to match the provided layout */}
             {studentData && (
-                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border">
+                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border border-[8px] border-double border-primary/30">
+                    <style jsx global>{`
+                        @media print {
+                            @page {
+                                size: A4;
+                                margin: 0.4in !important;
+                            }
+                            .printable-area {
+                                position: absolute !important;
+                                top: 0 !important;
+                                left: 0 !important;
+                                width: 100% !important;
+                                height: 100% !important;
+                                padding: 10mm !important;
+                                box-sizing: border-box !important;
+                                border: 8px double rgba(0, 0, 0, 0.3) !important;
+                            }
+                        }
+                    `}</style>
                     {/* Header */}
                     <div className="flex items-center justify-between border-b-4 border-[#2d572c] pb-4 mb-8">
                         <div className="relative w-20 h-20">
