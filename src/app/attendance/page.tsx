@@ -44,7 +44,7 @@ const classNamesMap: { [key: string]: string } = {
     '10': 'দশম শ্রেণি' 
 };
 
-function toBengaliNumber(str: string | number) {
+function toBengaliNumber(str: string | number | undefined | null) {
   if (!str && str !== 0) return '';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
@@ -496,7 +496,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
 
             const attendanceData: StudentAttendance[] = classStudents.map(student => ({
                 studentId: student.id,
-                status: inputRolls.includes(student.roll) ? 'present' : 'absent'
+                status: (student.roll !== undefined && inputRolls.includes(student.roll)) ? 'present' : 'absent'
             }));
 
             const dailyAttendance: DailyAttendance = {

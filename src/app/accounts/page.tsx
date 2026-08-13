@@ -1302,7 +1302,7 @@ function LedgerTab({ transactions, isLoading }: { transactions: Transaction[], i
 
 // --- Helper Functions ---
 
-function toBengaliNumber(str: string | number) { if (!str && str !== 0) return ''; const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']; return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]); }
+function toBengaliNumber(str: string | number | undefined | null) { if (!str && str !== 0) return ''; const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']; return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]); }
 
 // --- Main Page Component ---
 
