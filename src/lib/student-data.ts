@@ -22,7 +22,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 export type Student = {
   id: string; // Firestore IDs are strings
   generatedId?: string;
-  roll?: number;
+  roll: number;
   className: string;
   academicYear: string;
   studentNameBn: string;
@@ -82,7 +82,7 @@ export type Student = {
 };
 
 // Data from form won't have id or timestamps
-export type NewStudentData = Omit<Student, 'id' | 'createdAt' | 'updatedAt'> & { roll?: number };
+export type NewStudentData = Omit<Student, 'id' | 'createdAt' | 'updatedAt' | 'roll'> & { roll?: number };
 export type UpdateStudentData = Partial<NewStudentData>;
 
 // Helpers for gender identification
