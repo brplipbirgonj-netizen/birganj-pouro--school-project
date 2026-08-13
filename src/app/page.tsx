@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
@@ -1199,3 +1199,9 @@ function toBengaliNumber(str: string | number) {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
+
+function Avatar({ children, className }: { children: React.ReactNode, className?: string }) {
+    return <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}>{children}</div>;
+}
+function AvatarImage({ src }: { src?: string }) { return src ? <img src={src} className="aspect-square h-full w-full" alt="avatar" /> : null; }
+function AvatarFallback({ children, className }: { children: React.ReactNode, className?: string }) { return <div className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)}>{children}</div>; }
