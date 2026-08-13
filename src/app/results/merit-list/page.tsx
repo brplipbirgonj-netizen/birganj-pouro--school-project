@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
@@ -153,13 +151,17 @@ function MeritListPrintContent() {
         <div className="bg-slate-200 min-h-screen p-4 sm:p-8 font-kalpurush print:p-0 print:bg-white flex flex-col items-center">
             <style jsx global>{`
                 @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 0.4in !important;
+                    }
                     .merit-print-page {
-                        padding: 12.7mm !important;
+                        padding: 2mm !important;
                         box-sizing: border-box !important;
                         display: flex !important;
                         flex-direction: column !important;
-                        height: 297mm !important;
-                        width: 210mm !important;
+                        height: 100% !important;
+                        width: 100% !important;
                         position: relative !important;
                         page-break-after: always !important;
                     }
@@ -167,6 +169,15 @@ function MeritListPrintContent() {
                         flex-grow: 1 !important;
                         display: block !important;
                         overflow: hidden !important;
+                    }
+                    /* Reduce row height for print */
+                    .merit-main-content table tr {
+                        height: 28px !important;
+                    }
+                    .merit-main-content table td, 
+                    .merit-main-content table th {
+                        padding: 2px 4px !important;
+                        font-size: 10px !important;
                     }
                 }
             `}</style>
@@ -281,7 +292,7 @@ function MeritListPrintContent() {
                                 </div>
                             </main>
 
-                            {/* Ensure footer is always pushed towards the bottom, but above the 12.7mm margin */}
+                            {/* Ensure footer is always pushed towards the bottom */}
                             {pageIdx === paginatedResults.length - 1 ? (
                                 <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto pb-4">
                                     <div className="text-center">
@@ -315,4 +326,3 @@ export default function MeritListPage() {
         </Suspense>
     );
 }
-
