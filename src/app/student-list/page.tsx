@@ -255,7 +255,7 @@ function StudentListContent() {
     );
 
     const unsubscribe = onSnapshot(studentsQuery, (querySnapshot) => {
-      const studentsData = querySnapshot.docs.map(staffFromDoc);
+      const studentsData = querySnapshot.docs.map(studentFromDoc);
       setAllStudents(studentsData);
       setIsLoading(false);
     }, (error: FirestoreError) => {
@@ -735,4 +735,3 @@ export default function StudentListPage() {
     </Suspense>
   );
 }
-
