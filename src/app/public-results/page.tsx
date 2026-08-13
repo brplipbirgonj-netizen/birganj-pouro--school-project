@@ -126,7 +126,7 @@ export default function PublicResultPortalPage() {
                   <Select value={academicYear} onValueChange={setAcademicYear}>
                     <SelectTrigger className="h-12 bg-slate-50"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {availableYears.map(y => <SelectItem key={y} value={y}>{y.toLocaleString('bn-BD')}</SelectItem>)}
+                      {availableYears.map(y => <SelectItem key={y} value={y}>{Number(y).toLocaleString('bn-BD')}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

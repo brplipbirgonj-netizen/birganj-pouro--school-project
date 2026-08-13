@@ -83,7 +83,7 @@ export default function AdmissionsManagementPage() {
             toast({ title: 'সফল', description: 'শিক্ষার্থীকে সফলভাবে ভর্তি করা হয়েছে।' });
             
             // Send confirmation SMS
-            const msg = `সম্মানিত অভিভাবক, অভিনন্দন! বীরগঞ্জ পৌর উচ্চ বিদ্যালয়ে আপনার সন্তান ${selectedApp.studentNameBn}-এর ভর্তি প্রক্রিয়া সফলভাবে সম্পন্ন হয়েছে। রোল নম্বর: ${rollNumber.toLocaleString('bn-BD')}। ধন্যবাদ। - প্রধান শিক্ষক`;
+            const msg = `সম্মানিত অভিভাবক, অভিনন্দন! বীরগঞ্জ পৌর উচ্চ বিদ্যালয়ে আপনার সন্তান ${selectedApp.studentNameBn}-এর ভর্তি প্রক্রিয়া সফলভাবে সম্পন্ন হয়েছে। রোল নম্বর: ${Number(rollNumber).toLocaleString('bn-BD')}। ধন্যবাদ। - প্রধান শিক্ষক`;
             const encodedMsg = encodeURIComponent(msg);
             const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
             const separator = isIOS ? '&' : '?';

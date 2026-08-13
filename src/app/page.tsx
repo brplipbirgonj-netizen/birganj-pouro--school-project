@@ -886,7 +886,7 @@ export default function Home() {
             <CardContent className="relative z-10">
               <div className="text-3xl font-black text-indigo-950 mb-1">{totalStudents.toLocaleString('bn-BD')}</div>
               <p className="text-xs text-indigo-700 font-medium">
-                শিক্ষাবর্ষ {selectedYear.toLocaleString('bn-BD')}
+                শিক্ষাবর্ষ {Number(selectedYear).toLocaleString('bn-BD')}
               </p>
             </CardContent>
           </Card>

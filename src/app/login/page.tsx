@@ -331,7 +331,7 @@ export default function LoginPage() {
                                         <Label className="font-bold text-xs">শিক্ষাবর্ষ</Label>
                                         <Select value={searchYear} onValueChange={setSearchYear}>
                                             <SelectTrigger className="bg-slate-50"><SelectValue /></SelectTrigger>
-                                            <SelectContent>{availableYears.map(y => <SelectItem key={y} value={y}>{y.toLocaleString('bn-BD')}</SelectItem>)}</SelectContent>
+                                            <SelectContent>{availableYears.map(y => <SelectItem key={y} value={y}>{Number(y).toLocaleString('bn-BD')}</SelectItem>)}</SelectContent>
                                         </Select>
                                     </div>
                                     <div className="space-y-2">

@@ -1257,7 +1257,7 @@ export default function RoutinesPage() {
                         <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
                             <div>
                                 <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
-                                <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {selectedYear.toLocaleString('bn-BD')}</p>
+                                <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {Number(selectedYear).toLocaleString('bn-BD')}</p>
                             </div>
                             <div className="flex flex-wrap gap-2 no-print">
                                 {isEditMode ? (
@@ -1330,7 +1330,7 @@ export default function RoutinesPage() {
                     <div className="text-center flex-grow">
                         <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
                         <p className="text-xs font-bold">{schoolInfo.address}</p>
-                        <h2 className="text-lg font-black mt-2 underline">ক্লাস রুটিন - {selectedYear.toLocaleString('bn-BD')}</h2>
+                        <h2 className="text-lg font-black mt-2 underline">ক্লাস রুটিন - {Number(selectedYear).toLocaleString('bn-BD')}</h2>
                     </div>
                 </header>
                 <div className="flex-1">

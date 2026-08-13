@@ -22,7 +22,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 export type Student = {
   id: string; // Firestore IDs are strings
   generatedId?: string;
-  roll: number;
+  roll?: number;
   className: string;
   academicYear: string;
   studentNameBn: string;
