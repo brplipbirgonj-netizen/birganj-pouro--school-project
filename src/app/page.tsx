@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck, AlertCircle } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck, AlertCircle, MousePointer2 } from 'lucide-react';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance, getAttendanceForClassAndDate } from '@/lib/attendance-data';
@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import { StudentFeeDialog } from '@/components/StudentFeeDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
@@ -71,7 +72,6 @@ const NoticeTicker = () => {
     useEffect(() => {
         if (!db || !user || !isClient) return;
         
-        // Fetch recent notices and filter for scrolling status client-side to avoid index complexity
         const q = query(collection(db, 'notices'), orderBy('date', 'desc'), limit(15));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => {
@@ -82,8 +82,6 @@ const NoticeTicker = () => {
                     date: docData.date instanceof Timestamp ? docData.date.toDate() : (docData.date ? new Date(docData.date) : new Date()),
                 } as Notice;
             });
-            
-            // Filter only those marked for scrolling
             const scrolling = data.filter(n => !!n.isScrolling);
             setScrollingNotices(scrolling);
             setIsLoading(false);
@@ -115,7 +113,6 @@ const NoticeTicker = () => {
                                 <span className="text-blue-800">[{notice.title}]</span> - {notice.content.replace(/\n/g, ' ')}
                             </span>
                         ))}
-                        {/* Duplicate for seamless loop */}
                         {scrollingNotices.map((notice, idx) => (
                             <span key={`notice-loop-${idx}`} className="font-black text-xs tracking-tight">
                                 <span className="text-blue-800">[{notice.title}]</span> - {notice.content.replace(/\n/g, ' ')}
@@ -663,13 +660,15 @@ export default function Home() {
   const { selectedYear } = useAcademicYear();
   const db = useFirestore();
 
-  // Quick Payment Search State
+  // Quick Payment States
+  const [isQuickPaymentOpen, setIsQuickPaymentOpen] = useState(false);
   const [quickSearchInput, setQuickSearchInput] = useState('');
   const [quickSearchClass, setQuickSearchClass] = useState<string>('');
   const [studentsForYear, setStudentsForYear] = useState<Student[]>([]);
   const [quickFeeStudent, setQuickFeeStudent] = useState<Student | null>(null);
 
-  // Quick Attendance State
+  // Quick Attendance States
+  const [isQuickAttendanceOpen, setIsQuickAttendanceOpen] = useState(false);
   const [quickAttendanceClass, setQuickAttendanceClass] = useState<string>('6');
   const [quickAttendanceInput, setQuickAttendanceInput] = useState('');
   const [isSavingQuickAttendance, setIsSavingQuickAttendance] = useState(false);
@@ -687,7 +686,6 @@ export default function Home() {
       const studentsQuery = query(collection(db, 'students'), where('academicYear', '==', selectedYear));
       
       const unsubscribeStudents = onSnapshot(studentsQuery, async (studentsSnapshot) => {
-        // Use studentFromDoc helper to ensure generatedId is correctly calculated locally
         const list = studentsSnapshot.docs.map(studentFromDoc);
         setStudentsForYear(list);
         setTotalStudents(list.length);
@@ -783,30 +781,24 @@ export default function Home() {
         return;
     }
 
-    // Helper to convert Bengali numbers to English for comparison
     const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
     const queryEn = bnToEn(queryStr);
     const rollEn = parseInt(queryEn, 10);
 
     const found = studentsForYear.find(s => {
-        // ১. আইডি দিয়ে সার্চ: অবশ্যই পুরো আইডি মিলতে হবে (Exact match for generatedId)
         if (s.generatedId && s.generatedId.toLowerCase() === queryEn) {
             return true;
         }
-        
-        // ২. রোল দিয়ে সার্চ: রোল এবং শ্রেণি উভয়ই নির্বাচন করা থাকতে হবে
         if (quickSearchClass && !isNaN(rollEn)) {
-            // যদি আইডি হিসেবে না মিলে কিন্তু শ্রেণি সিলেক্ট থাকে, তবে রোল হিসেবে চেক করবে
             return s.className === quickSearchClass && s.roll === rollEn;
         }
-
         return false;
     });
 
     if (found) {
         setQuickFeeStudent(found);
         setQuickSearchInput('');
-        // We keep the class selected for consecutive searches if needed
+        setIsQuickPaymentOpen(false);
     } else {
         toast({
             variant: "destructive",
@@ -885,8 +877,6 @@ export default function Home() {
     setIsSavingQuickAttendance(true);
     try {
         const todayStr = format(new Date(), 'yyyy-MM-dd');
-        
-        // 1. Holiday Check
         const activeHoliday = await isHoliday(db, todayStr);
         const dayOfWeek = new Date().getDay();
         const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
@@ -901,7 +891,6 @@ export default function Home() {
             return;
         }
 
-        // 2. Existing Attendance Check
         if (!isConfirmingQuickAttendance) {
             const existing = await getAttendanceForClassAndDate(db, todayStr, quickAttendanceClass, selectedYear);
             if (existing) {
@@ -955,18 +944,18 @@ export default function Home() {
 
         await saveDailyAttendance(db, dailyAttendance);
 
-        const label = classNamesMap[quickAttendanceClass] || quickAttendanceClass;
         toast({
-            title: `আজকের কুইক হাজিরা সংরক্ষিত হয়েছে (${label} শ্রেণি)`,
-            description: `${inputRolls.length} জন উপস্থিত এবং বাকি ${classStudents.length - inputRolls.length} জন অনুপস্থিত হিসেবে সেভ হয়েছে।`
+            title: `আজকের কুইক হাজিরা সংরক্ষিত হয়েছে (${classNamesMap[quickAttendanceClass] || quickAttendanceClass} শ্রেণি)`,
+            description: `${inputRolls.length} জন উপস্থিত হিসেবে সেভ হয়েছে।`
         });
         setQuickAttendanceInput('');
         setIsConfirmingQuickAttendance(false);
+        setIsQuickAttendanceOpen(false);
 
         refreshDashboardAttendance(studentsForYear);
     } catch (err: any) {
         console.error("Error saving quick attendance:", err);
-        toast({ variant: 'destructive', title: 'হাজিরা সেভ করতে সমস্যা হয়েছে', description: err?.message || '' });
+        toast({ variant: 'destructive', title: 'হাজিরা সেভ করতে সমস্যা হয়েছে' });
     } finally {
         setIsSavingQuickAttendance(false);
     }
@@ -989,215 +978,170 @@ export default function Home() {
       <Header />
       <NoticeTicker />
       <main className="p-4 md:p-8 pb-[600px] max-w-[1600px] mx-auto w-full">
-        {/* Quick Payment Search Section */}
-        <div className="mb-8 flex flex-col lg:flex-row items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border-2 border-black shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
-            <div className="flex items-center gap-3 shrink-0">
-                <div className="p-3 bg-teal-600 text-white rounded-2xl shadow-lg">
-                    <Banknote className="h-6 w-6" />
-                </div>
-                <div>
-                    <h3 className="text-xl font-black text-slate-800 leading-tight">কুইক পেমেন্ট ড্যাশবোর্ড</h3>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">আইডি অথবা রোল ও শ্রেণি দিয়ে খুঁজুন</p>
-                </div>
-            </div>
-            <form onSubmit={handleQuickSearch} className="flex-1 w-full max-w-2xl flex flex-col sm:flex-row gap-3">
-                <div className="w-full sm:w-40">
-                    <Select value={quickSearchClass} onValueChange={setQuickSearchClass}>
-                        <SelectTrigger className="h-12 font-black border-2 border-black rounded-xl bg-white focus:ring-teal-500">
-                            <SelectValue placeholder="শ্রেণি" />
-                        </SelectTrigger>
-                        <SelectContent>
-                             {Object.entries(classNamesMap).map(([id, label]) => (
-                                <SelectItem key={id} value={id} className="font-bold">{label} শ্রেণি</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                    <Input 
-                        value={quickSearchInput}
-                        onChange={(e) => setQuickSearchInput(e.target.value)}
-                        placeholder="রোল অথবা আইডি (সম্পূর্ণ) লিখুন..." 
-                        className="h-12 pl-12 text-lg font-black border-2 border-black rounded-xl bg-white focus:ring-teal-500"
-                    />
-                </div>
-                <Button type="submit" className="h-12 px-10 font-black text-base bg-teal-600 hover:bg-teal-700 shadow-xl rounded-xl shrink-0">
-                    সার্চ করুন
-                </Button>
-            </form>
-        </div>
-
-        {/* Quick Attendance Section */}
-        <div className={cn(
-            "mb-8 flex flex-col lg:flex-row items-center justify-between gap-6 p-6 rounded-[2rem] border-2 border-black shadow-[8px_8px_0px_rgba(0,0,0,0.1)] transition-all duration-300",
-            isConfirmingQuickAttendance ? "bg-rose-50 ring-4 ring-rose-200" : "bg-white/60 backdrop-blur-md"
-        )}>
-            <div className="flex items-center gap-3 shrink-0">
-                <div className={cn("p-3 text-white rounded-2xl shadow-lg transition-colors", isConfirmingQuickAttendance ? "bg-rose-600" : "bg-emerald-600")}>
-                    {isConfirmingQuickAttendance ? <AlertCircle className="h-6 w-6 animate-bounce" /> : <UserCheck className="h-6 w-6" />}
-                </div>
-                <div>
-                    <h3 className="text-xl font-black text-slate-800 leading-tight">
-                        {isConfirmingQuickAttendance ? "আবার সেভ করতে চান?" : "কুইক হাজিরা"}
-                    </h3>
-                    <p className={cn("text-xs font-bold uppercase tracking-widest", isConfirmingQuickAttendance ? "text-rose-600" : "text-slate-500")}>
-                        {isConfirmingQuickAttendance ? "এই শ্রেণির হাজিরা আজ একবার নেওয়া হয়েছে।" : "আজকের হাজিরা: শ্রেণি সিলেক্ট করে রোল নম্বর লিখুন"}
-                    </p>
-                </div>
-            </div>
-            <form onSubmit={handleQuickAttendanceSubmit} className="flex-1 w-full max-w-2xl flex flex-col sm:flex-row gap-3">
-                <div className="w-full sm:w-40">
-                    <Select value={quickAttendanceClass} onValueChange={(val) => { setQuickAttendanceClass(val); setIsConfirmingQuickAttendance(false); }}>
-                        <SelectTrigger className="h-12 font-black border-2 border-black rounded-xl bg-white focus:ring-emerald-500">
-                            <SelectValue placeholder="শ্রেণি" />
-                        </SelectTrigger>
-                        <SelectContent>
-                             {Object.entries(classNamesMap).map(([id, label]) => (
-                                <SelectItem key={id} value={id} className="font-bold">{label} শ্রেণি</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="relative flex-1">
-                    <Input 
-                        value={quickAttendanceInput}
-                        onChange={(e) => { setQuickAttendanceInput(e.target.value); setIsConfirmingQuickAttendance(false); }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleQuickAttendanceSubmit(e);
-                            }
-                        }}
-                        placeholder="উপস্থিত রোলসমূহ লিখুন (যেমন: ১, ২, ৫)..." 
-                        className={cn(
-                            "h-12 text-base font-black border-2 border-black rounded-xl bg-white px-4 transition-all",
-                            isConfirmingQuickAttendance ? "focus:ring-rose-500 bg-rose-50/30" : "focus:ring-emerald-500"
-                        )}
-                    />
-                </div>
-                <div className="flex gap-2">
-                    {isConfirmingQuickAttendance && (
-                        <Button 
-                            type="button" 
-                            variant="outline"
-                            onClick={() => setIsConfirmingQuickAttendance(false)}
-                            className="h-12 px-6 font-bold border-rose-300 text-rose-700 bg-white"
-                        >
-                            বাতিল
-                        </Button>
-                    )}
-                    <Button 
-                        type="submit" 
-                        disabled={isSavingQuickAttendance} 
-                        className={cn(
-                            "h-12 px-8 font-black text-base shadow-xl rounded-xl shrink-0 text-white transition-all",
-                            isConfirmingQuickAttendance ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700"
-                        )}
-                    >
-                        {isSavingQuickAttendance ? <Loader2 className="h-5 w-5 animate-spin" /> : (isConfirmingQuickAttendance ? 'হ্যাঁ, সেভ করুন' : 'হাজিরা সম্পন্ন করুন')}
+        
+        {/* Quick Actions Bar */}
+        <div className="mb-8 flex flex-wrap gap-4 items-center justify-center sm:justify-start">
+            <Dialog open={isQuickPaymentOpen} onOpenChange={setIsQuickPaymentOpen}>
+                <DialogTrigger asChild>
+                    <Button className="h-12 px-6 rounded-2xl bg-teal-600 hover:bg-teal-700 shadow-lg font-black gap-2 transition-all active:scale-95">
+                        <Banknote className="h-5 w-5" /> কুইক পেমেন্ট
                     </Button>
-                </div>
-            </form>
+                </DialogTrigger>
+                <DialogContent className="font-kalpurush sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black text-teal-700 flex items-center gap-2">
+                            <Banknote /> কুইক পেমেন্ট সার্চ
+                        </DialogTitle>
+                        <DialogDescription className="font-bold">রোল এবং শ্রেণি নির্বাচন করে শিক্ষার্থী খুঁজুন</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleQuickSearch} className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label className="font-bold">শ্রেণি নির্বাচন</Label>
+                            <Select value={quickSearchClass} onValueChange={setQuickSearchClass}>
+                                <SelectTrigger className="h-11 border-2"><SelectValue placeholder="সিলেক্ট শ্রেণি" /></SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(classNamesMap).map(([id, label]) => (
+                                        <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-bold">রোল অথবা আইডি (ID)</Label>
+                            <Input 
+                                value={quickSearchInput} 
+                                onChange={e => setQuickSearchInput(e.target.value)}
+                                placeholder="এখানে লিখুন..."
+                                className="h-11 border-2 font-black text-lg"
+                            />
+                        </div>
+                        <Button type="submit" className="w-full h-11 bg-teal-600 font-black">সার্চ করুন</Button>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isQuickAttendanceOpen} onOpenChange={(o) => { setIsQuickAttendanceOpen(o); if(!o) setIsConfirmingQuickAttendance(false); }}>
+                <DialogTrigger asChild>
+                    <Button className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg font-black gap-2 transition-all active:scale-95">
+                        <UserCheck className="h-5 w-5" /> কুইক হাজিরা
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className={cn("font-kalpurush sm:max-w-md transition-all duration-300", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
+                    <DialogHeader>
+                        <DialogTitle className={cn("text-xl font-black flex items-center gap-2", isConfirmingQuickAttendance ? "text-rose-700" : "text-emerald-700")}>
+                            {isConfirmingQuickAttendance ? <AlertCircle /> : <UserCheck />}
+                            {isConfirmingQuickAttendance ? "পুনরায় সেভ নিশ্চিত করুন" : "আজকের কুইক হাজিরা"}
+                        </DialogTitle>
+                        <DialogDescription className={cn("font-bold", isConfirmingQuickAttendance && "text-rose-600")}>
+                            {isConfirmingQuickAttendance ? "এই শ্রেণির হাজিরা আজ একবার নেওয়া হয়েছে। আপডেট করতে চান?" : "রোল নম্বরগুলো কমা বা স্পেস দিয়ে লিখুন।"}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleQuickAttendanceSubmit} className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label className="font-bold">শ্রেণি</Label>
+                            <Select value={quickAttendanceClass} onValueChange={(v) => { setQuickAttendanceClass(v); setIsConfirmingQuickAttendance(false); }}>
+                                <SelectTrigger className="h-11 border-2"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(classNamesMap).map(([id, label]) => (
+                                        <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-bold">উপস্থিত রোল নম্বরসমূহ</Label>
+                            <Input 
+                                value={quickAttendanceInput} 
+                                onChange={e => { setQuickAttendanceInput(e.target.value); setIsConfirmingQuickAttendance(false); }}
+                                placeholder="উদা: ১, ২, ৫, ১০"
+                                className={cn("h-11 border-2 font-black text-lg", isConfirmingQuickAttendance && "bg-rose-50")}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            {isConfirmingQuickAttendance && (
+                                <Button type="button" variant="outline" onClick={() => setIsConfirmingQuickAttendance(false)} className="flex-1 font-bold">বাতিল</Button>
+                            )}
+                            <Button type="submit" disabled={isSavingQuickAttendance} className={cn("flex-1 h-11 font-black", isConfirmingQuickAttendance ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700")}>
+                                {isSavingQuickAttendance ? <Loader2 className="animate-spin" /> : (isConfirmingQuickAttendance ? 'হ্যাঁ, আপডেট করুন' : 'হাজিরা সম্পন্ন করুন')}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5 mb-8">
-          {/* Gallery Card */}
           <GalleryCard />
-
-          {/* Total Students Card */}
+          
           <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <Users className="h-28 w-28 text-indigo-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-indigo-900">
-                মোট শিক্ষার্থী
-              </CardTitle>
-              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+              <CardTitle className="text-sm font-bold text-indigo-900">মোট শিক্ষার্থী</CardTitle>
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <Users className="h-4 w-4 text-indigo-700" />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-black text-indigo-950 mb-1">{totalStudents.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-indigo-700 font-medium">
-                শিক্ষাবর্ষ {Number(selectedYear).toLocaleString('bn-BD')}
-              </p>
+              <p className="text-xs text-indigo-700 font-medium">শিক্ষাবর্ষ {Number(selectedYear).toLocaleString('bn-BD')}</p>
             </CardContent>
           </Card>
           
-          {/* Total Present Card */}
            <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <CheckCircle2 className="h-28 w-28 text-teal-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-teal-900">
-                মোট উপস্থিত
-              </CardTitle>
-              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+              <CardTitle className="text-sm font-bold text-teal-900">মোট উপস্থিত</CardTitle>
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <Users className="h-4 w-4 text-teal-700" />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="flex items-baseline gap-2">
                 <div className="text-3xl font-black text-teal-950 mb-1">{totalPresent.toLocaleString('bn-BD')}</div>
-                <div className="text-sm font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-100">
-                  {toBengaliNumber(presentPercentage)}%
-                </div>
+                <div className="text-sm font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-100">{toBengaliNumber(presentPercentage)}%</div>
               </div>
-              <p className="text-xs text-teal-700 font-medium">
-                আজকের মোট উপস্থিত শিক্ষার্থী
-              </p>
             </CardContent>
           </Card>
 
-          {/* Total Absent Card */}
           <Card className="relative overflow-hidden bg-gradient-to-br from-rose-50 to-red-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
             <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <XCircle className="h-28 w-28 text-red-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-red-900">
-                মোট অনুপস্থিত
-              </CardTitle>
-              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+              <CardTitle className="text-sm font-bold text-red-900">মোট অনুপস্থিত</CardTitle>
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <Users className="h-4 w-4 text-red-700" />
               </div>
-            </CardHeader>            <CardContent className="relative z-10">
+            </CardHeader>            
+            <CardContent className="relative z-10">
               <div className="flex items-baseline gap-2">
                 <div className="text-3xl font-black text-red-950 mb-1">{totalAbsent.toLocaleString('bn-BD')}</div>
-                <div className="text-sm font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-100">
-                  {toBengaliNumber(absentPercentage)}%
-                </div>
+                <div className="text-sm font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-100">{toBengaliNumber(absentPercentage)}%</div>
               </div>
-              <p className="text-xs text-red-700 font-medium">
-                আজকের মোট অনুপস্থিত শিক্ষার্থী
-              </p>
             </CardContent>
           </Card>
 
-          {/* Total Teachers Card */}
           <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-100 border-2 border-black shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
              <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                <GraduationCap className="h-28 w-28 text-orange-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-orange-900">
-                মোট শিক্ষক
-              </CardTitle>
-              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm group-hover:bg-white transition-colors">
+              <CardTitle className="text-sm font-bold text-orange-900">মোট শিক্ষক</CardTitle>
+              <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <GraduationCap className="h-4 w-4 text-orange-700" />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-black text-orange-950 mb-1">{totalTeachers.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-orange-700 font-medium">
-                সিস্টেমে নিবন্ধিত সক্রিয় শিক্ষক
-              </p>
+              <p className="text-xs text-orange-700 font-medium">নিবন্ধিত সক্রিয় শিক্ষক</p>
             </CardContent>
           </Card>
         </div>
+
         <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
           <Card className="lg:col-span-1 shadow-md border-2 border-black">
             <CardHeader className="bg-primary/5 rounded-t-lg">
