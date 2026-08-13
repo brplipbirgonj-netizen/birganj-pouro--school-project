@@ -1105,9 +1105,19 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (!db || !selectedClass) return;
         setIsLoading(true);
         const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
-        setAlerts(data);
+        
+        // রোলের ক্রমানুসারে সাজানো (Sort by Roll Number)
+        const sortedData = data.sort((a, b) => {
+            const studentA = allStudents.find(s => s.id === a.studentId);
+            const studentB = allStudents.find(s => s.id === b.studentId);
+            const rollA = Number(studentA?.roll) || 0;
+            const rollB = Number(studentB?.roll) || 0;
+            return rollA - rollB;
+        });
+
+        setAlerts(sortedData);
         setIsLoading(false);
-    }, [db, selectedClass, selectedYear]);
+    }, [db, selectedClass, selectedYear, allStudents]);
 
     useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
 
@@ -1178,7 +1188,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableHead className="w-16 text-center font-black">রোল</TableHead>
                                         <TableHead className="font-black">নাম ও মোবাইল</TableHead>
                                         <TableHead className="text-center font-black">অনুপস্থিতি (টানা)</TableHead>
-                                        <TableHead className="text-right font-black pr-6">কার্যক্রম</TableHead>
+                                        <TableHead className="text-right font-black pr-6">যোগাযোগ</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
