@@ -157,27 +157,41 @@ export const getConsecutiveAbsences = async (db: Firestore, className: string, a
         const allRecords = snap.docs.map(d => d.data() as DailyAttendance);
         if (allRecords.length === 0) return [];
 
-        const records = allRecords.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15);
+        // Sort records by date descending (most recent first)
+        const sortedRecords = allRecords.sort((a, b) => b.date.localeCompare(a.date));
 
         const studentAbsenceMap = new Map<string, number>();
         const studentLastDateMap = new Map<string, string>();
         
+        // Collect all unique student IDs that have at least one record in this class/year
         const allStudentIds = new Set<string>();
-        records.forEach(r => r.attendance.forEach(a => allStudentIds.add(a.studentId)));
+        sortedRecords.forEach(r => r.attendance.forEach(a => allStudentIds.add(a.studentId)));
 
         allStudentIds.forEach(studentId => {
             let consecutive = 0;
-            for (const record of records) {
+            // Iterate from the most recent attendance record backwards to find the length of the current streak
+            for (const record of sortedRecords) {
                 const att = record.attendance.find(a => a.studentId === studentId);
-                if (att?.status === 'absent') {
-                    consecutive++;
-                } else if (att?.status === 'present') {
+                
+                if (att) {
+                    if (att.status === 'absent') {
+                        consecutive++;
+                    } else if (att.status === 'present') {
+                        // Student attended school, reset the current consecutive absence streak
+                        break;
+                    }
+                } else {
+                    // If the student is missing from a record for a day where class attendance was taken, 
+                    // we count that as a break in the consecutive streak to be safe.
                     break;
                 }
             }
+
+            // Requirement: Show alert if absent for 3 or more consecutive days
+            // It will show the full count (e.g. 50 days) if they haven't returned yet.
             if (consecutive >= 3) {
                 studentAbsenceMap.set(studentId, consecutive);
-                studentLastDateMap.set(studentId, records[0].date);
+                studentLastDateMap.set(studentId, sortedRecords[0].date);
             }
         });
 
