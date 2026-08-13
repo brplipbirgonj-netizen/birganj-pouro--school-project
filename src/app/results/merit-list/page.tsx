@@ -162,7 +162,7 @@ function MeritListPrintContent() {
                         box-sizing: border-box !important;
                         display: flex !important;
                         flex-direction: column !important;
-                        height: 280mm !important; /* Adjusted to fit A4 with 0.4in margins */
+                        height: 275mm !important; /* Adjusted to fit A4 with 0.4in margins exactly */
                         width: 100% !important;
                         position: relative !important;
                         page-break-after: always !important;
@@ -173,22 +173,25 @@ function MeritListPrintContent() {
                         flex-grow: 1 !important;
                         display: block !important;
                         padding: 0 5mm !important;
+                        width: 100% !important;
                     }
                     .printable-header {
                         padding: 5mm 5mm 0 5mm !important;
+                        width: 100% !important;
                     }
                     .print-footer {
                         padding: 5mm 5mm 5mm 5mm !important;
+                        width: 100% !important;
                     }
-                    /* Compact rows for print */
+                    /* Extremely Compact rows for print */
                     .merit-main-content table tr {
-                        height: 18px !important;
+                        height: 16px !important;
                     }
                     .merit-main-content table td, 
                     .merit-main-content table th {
-                        padding: 1px 4px !important;
+                        padding: 0.5px 4px !important;
                         font-size: 10px !important;
-                        line-height: 1.1 !important;
+                        line-height: 1 !important;
                         border: 1px solid black !important;
                     }
                     .merit-main-content table th {
@@ -260,7 +263,7 @@ function MeritListPrintContent() {
                             </div>
 
                             <main className="relative z-10 merit-main-content px-6">
-                                <div className="border-[1.5px] border-black overflow-hidden rounded-sm">
+                                <div className="border-[1.5px] border-black overflow-hidden rounded-sm w-full">
                                     <table className="border-collapse w-full">
                                         <thead className="bg-slate-50">
                                             <tr className="h-10 border-b-[1.5px] border-black">
@@ -322,7 +325,7 @@ function MeritListPrintContent() {
                                 </div>
                             </footer>
                             
-                            <div className="text-[8px] text-slate-400 italic text-center relative z-10 mb-4 px-10 flex justify-between">
+                            <div className="text-[8px] text-slate-400 italic text-center relative z-10 mb-4 px-10 flex justify-between w-full">
                                 <span>রিপোর্ট জেনারেট: {format(new Date(), 'PPpp', { locale: bn })}</span>
                                 <span>Digital Management Portal | {schoolInfo.name}</span>
                             </div>
@@ -341,4 +344,3 @@ export default function MeritListPage() {
         </Suspense>
     );
 }
-
