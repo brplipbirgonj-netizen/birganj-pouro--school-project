@@ -28,7 +28,7 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-const STUDENTS_PER_PAGE = 20;
+const STUDENTS_PER_PAGE = 25;
 
 function MeritListPrintContent() {
     const searchParams = useSearchParams();
@@ -156,7 +156,8 @@ function MeritListPrintContent() {
                         margin: 0.4in !important;
                     }
                     .merit-print-page {
-                        padding: 2mm !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
                         box-sizing: border-box !important;
                         display: flex !important;
                         flex-direction: column !important;
@@ -164,20 +165,34 @@ function MeritListPrintContent() {
                         width: 100% !important;
                         position: relative !important;
                         page-break-after: always !important;
+                        border: 6px double rgba(0, 0, 0, 0.3) !important;
                     }
                     .merit-main-content {
                         flex-grow: 1 !important;
                         display: block !important;
                         overflow: hidden !important;
+                        padding: 0 10mm !important;
                     }
-                    /* Reduce row height for print */
+                    .printable-header {
+                        padding: 5mm 10mm 0 10mm !important;
+                    }
+                    .print-footer {
+                        padding: 0 10mm 5mm 10mm !important;
+                    }
+                    /* Reduce row height significantly for print */
                     .merit-main-content table tr {
-                        height: 28px !important;
+                        height: 20px !important;
                     }
                     .merit-main-content table td, 
                     .merit-main-content table th {
-                        padding: 2px 4px !important;
-                        font-size: 10px !important;
+                        padding: 1px 3px !important;
+                        font-size: 9px !important;
+                        line-height: 1.1 !important;
+                        border: 1px solid black !important;
+                    }
+                    .merit-main-content table th {
+                        font-weight: 900 !important;
+                        background-color: #f1f5f9 !important;
                     }
                 }
             `}</style>
@@ -203,53 +218,53 @@ function MeritListPrintContent() {
                     </div>
                 ) : (
                     paginatedResults.map((pageData, pageIdx) => (
-                        <div key={pageIdx} className="printable-area merit-print-page w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 p-[12.7mm] box-border border-[6px] border-double border-primary/40 overflow-hidden">
+                        <div key={pageIdx} className="printable-area merit-print-page w-[210mm] h-[297mm] bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 box-border border-[6px] border-double border-primary/40 overflow-hidden">
                             
                             {schoolInfo.logoUrl && (
                                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-5">
-                                    <Image src={schoolInfo.logoUrl} alt="Watermark" width={450} height={450} />
+                                    <Image src={schoolInfo.logoUrl} alt="Watermark" width={400} height={400} />
                                 </div>
                             )}
 
-                            <header className="relative z-10 flex items-center gap-6 border-b-2 border-primary/50 pb-3 mb-3 printable-header">
+                            <header className="relative z-10 flex items-center gap-6 border-b-2 border-primary/50 pb-2 mb-3 px-10 pt-8 printable-header">
                                 {schoolInfo.logoUrl && (
-                                    <div className="relative w-16 h-16 shrink-0">
+                                    <div className="relative w-14 h-14 shrink-0">
                                         <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />
                                     </div>
                                 )}
                                 <div className="text-center flex-grow">
                                     <h1 className="text-2xl font-black text-primary leading-tight">{schoolInfo.name}</h1>
-                                    <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
-                                    <p className="text-[10px] font-bold text-slate-600 mt-0.5">
+                                    <p className="text-[11px] font-bold text-slate-700">{schoolInfo.address}</p>
+                                    <p className="text-[9px] font-bold text-slate-600 mt-0.5">
                                         EIIN: {toBengaliNumber(schoolInfo.eiin)} | কোড: {toBengaliNumber(schoolInfo.code)} | শিক্ষাবর্ষ: {toBengaliNumber(academicYear)}
                                     </p>
                                 </div>
-                                <div className="w-16 h-16 shrink-0 flex flex-col justify-center items-end text-[10px] font-bold text-muted-foreground">
+                                <div className="w-14 h-14 shrink-0 flex flex-col justify-center items-end text-[9px] font-bold text-muted-foreground">
                                     <span>পৃষ্ঠা: {toBengaliNumber(pageIdx + 1)}/{toBengaliNumber(paginatedResults.length)}</span>
                                 </div>
                             </header>
 
-                            <div className="relative z-10 text-center mb-4">
-                                <h2 className="inline-block bg-primary text-white text-lg font-black px-8 py-1 rounded-full shadow-md">
+                            <div className="relative z-10 text-center mb-3">
+                                <h2 className="inline-block bg-primary text-white text-base font-black px-8 py-0.5 rounded-full shadow-md">
                                     {examName} - মেধা তালিকা
                                 </h2>
-                                <p className="mt-2 font-bold text-slate-700 text-sm">
+                                <p className="mt-1.5 font-bold text-slate-700 text-xs">
                                     শ্রেণি: {classNamesMap[className]} {groupFilter !== 'all' && `(${groupNamesMap[groupFilter] || groupFilter})`}
                                 </p>
                             </div>
 
-                            <main className="relative z-10 merit-main-content">
-                                <div className="border-2 border-slate-800 rounded-sm overflow-hidden">
-                                    <Table className="border-collapse">
+                            <main className="relative z-10 merit-main-content px-10">
+                                <div className="border border-black rounded-sm overflow-hidden">
+                                    <Table className="border-collapse w-full">
                                         <TableHeader>
-                                            <TableRow className="bg-slate-100 border-b-2 border-slate-800 h-9">
-                                                <TableHead className="text-center font-black text-slate-900 border-r border-slate-800 w-16 text-xs">মেধা</TableHead>
-                                                <TableHead className="text-center font-black text-slate-900 border-r border-slate-800 w-16 text-xs">রোল</TableHead>
-                                                <TableHead className="font-black text-slate-900 border-r border-slate-800 text-xs">শিক্ষার্থীর নাম</TableHead>
-                                                <TableHead className="text-center font-black text-slate-900 border-r border-slate-800 text-xs">মোট নম্বর</TableHead>
-                                                <TableHead className="text-center font-black text-slate-900 border-r border-slate-800 text-xs">জি.পি.এ</TableHead>
-                                                <TableHead className="text-center font-black text-slate-900 border-r border-slate-800 text-xs">গ্রেড</TableHead>
-                                                <TableHead className="text-center font-black text-slate-900 text-xs">ফলাফল</TableHead>
+                                            <TableRow className="bg-slate-100 h-8">
+                                                <TableHead className="text-center font-black text-slate-900 border-r border-black w-14 text-[10px]">মেধা</TableHead>
+                                                <TableHead className="text-center font-black text-slate-900 border-r border-black w-14 text-[10px]">রোল</TableHead>
+                                                <TableHead className="font-black text-slate-900 border-r border-black text-[10px]">শিক্ষার্থীর নাম</TableHead>
+                                                <TableHead className="text-center font-black text-slate-900 border-r border-black text-[10px]">মোট নম্বর</TableHead>
+                                                <TableHead className="text-center font-black text-slate-900 border-r border-black text-[10px]">জি.পি.এ</TableHead>
+                                                <TableHead className="text-center font-black text-slate-900 border-r border-black text-[10px]">গ্রেড</TableHead>
+                                                <TableHead className="text-center font-black text-slate-900 text-[10px]">ফলাফল</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -257,29 +272,29 @@ function MeritListPrintContent() {
                                                 const globalIdx = (pageIdx * STUDENTS_PER_PAGE) + pageInternalIdx;
                                                 return (
                                                     <TableRow key={res.student.id} className={cn(
-                                                        "h-10 border-b border-slate-300 last:border-b-0",
+                                                        "h-7 border-b border-black last:border-0",
                                                         !res.isPass && "bg-rose-50/50"
                                                     )}>
-                                                        <TableCell className="text-center font-black border-r border-slate-300 text-[12px]">
+                                                        <TableCell className="text-center font-black border-r border-black text-[11px]">
                                                             {res.isPass ? toBengaliNumber(globalIdx + 1) : '-'}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-bold border-r border-slate-300 text-[12px]">
+                                                        <TableCell className="text-center font-bold border-r border-black text-[11px]">
                                                             {toBengaliNumber(res.student.roll)}
                                                         </TableCell>
-                                                        <TableCell className="font-bold border-r border-slate-300 pl-3 text-[12px]">
+                                                        <TableCell className="font-bold border-r border-black pl-2 text-[11px]">
                                                             {res.student.studentNameBn}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-black border-r border-slate-300 text-primary text-[12px]">
+                                                        <TableCell className="text-center font-black border-r border-black text-primary text-[11px]">
                                                             {toBengaliNumber(res.totalMarks)}
                                                         </TableCell>
-                                                        <TableCell className="text-center font-black border-r border-slate-300 text-[12px]">
+                                                        <TableCell className="text-center font-black border-r border-black text-[11px]">
                                                             {toBengaliNumber(res.gpa.toFixed(2))}
                                                         </TableCell>
-                                                        <TableCell className={cn("text-center font-bold border-r border-slate-300 text-[12px]", !res.isPass && "text-rose-600")}>
+                                                        <TableCell className={cn("text-center font-bold border-r border-black text-[11px]", !res.isPass && "text-rose-600")}>
                                                             {res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}
                                                         </TableCell>
                                                         <TableCell className={cn(
-                                                            "text-center font-black text-[11px]",
+                                                            "text-center font-black text-[10px]",
                                                             res.isPass ? "text-emerald-700" : "text-rose-700"
                                                         )}>
                                                             {res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}
@@ -292,24 +307,23 @@ function MeritListPrintContent() {
                                 </div>
                             </main>
 
-                            {/* Ensure footer is always pushed towards the bottom */}
                             {pageIdx === paginatedResults.length - 1 ? (
-                                <footer className="relative z-10 pt-10 flex justify-around items-end print-footer mt-auto pb-4">
+                                <footer className="relative z-10 pt-6 flex justify-around items-end print-footer mt-auto pb-6 px-10">
                                     <div className="text-center">
-                                        <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                                        <div className="w-40 border-t border-black pt-1 font-bold text-xs">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                                     </div>
                                     <div className="text-center">
-                                        <div className="w-48 border-t border-black pt-1 font-bold text-sm">প্রধান শিক্ষকের স্বাক্ষর</div>
+                                        <div className="w-40 border-t border-black pt-1 font-bold text-xs">প্রধান শিক্ষকের স্বাক্ষর</div>
                                     </div>
                                 </footer>
                             ) : (
-                                <footer className="relative z-10 pt-4 text-center mt-auto pb-4">
-                                    <p className="text-[9px] text-slate-400 italic">তালিকা পরবর্তী পৃষ্ঠায় চলমান...</p>
+                                <footer className="relative z-10 pt-2 text-center mt-auto pb-4">
+                                    <p className="text-[8px] text-slate-400 italic">তালিকা পরবর্তী পৃষ্ঠায় চলমান...</p>
                                 </footer>
                             )}
                             
-                            <div className="text-[8px] text-slate-400 italic text-center relative z-10 mt-1">
-                                রিপোর্ট জেনারেট করার তারিখ: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Management System
+                            <div className="text-[7px] text-slate-400 italic text-center relative z-10 mb-2">
+                                রিপোর্ট জেনারেট: {format(new Date(), 'PPpp', { locale: bn })} | Birganj Pouro High School Management System
                             </div>
                         </div>
                     ))
