@@ -1,0 +1,12 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  # The CPU of the instance in CPU millicores.
+  cpu: 1000
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 1
+
+# Forcing a restart of the hosting service to resolve "Site Not Found" issue.
+# Triggering a new deployment to force service restart.

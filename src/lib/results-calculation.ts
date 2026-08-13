@@ -1,0 +1,227 @@
+
+'use client';
+import type { Student } from './student-data';
+import { getSubjects, subjectNameNormalization } from './subjects';
+import type { ClassResult } from './results-data';
+import type { Subject } from './subjects';
+
+export interface GradeInfo {
+  grade: string;
+  point: number;
+}
+
+export interface StudentSubjectResult {
+    written?: number;
+    mcq?: number;
+    practical?: number;
+    marks: number;
+    grade: string;
+    point: number;
+    isPass: boolean;
+}
+
+export interface StudentProcessedResult {
+    student: Student;
+    totalMarks: number;
+    totalPossibleMarks: number;
+    gpa: number;
+    finalGrade: string;
+    isPass: boolean;
+    failedSubjectsCount: number;
+    meritPosition?: number;
+    subjectResults: Map<string, StudentSubjectResult>;
+}
+
+export const getGradePoint = (percentage: number): GradeInfo => {
+    if (percentage < 33) return { grade: 'F', point: 0.0 };
+    if (percentage < 40) return { grade: 'D', point: 1.0 };
+    if (percentage < 50) return { grade: 'C', point: 2.0 };
+    if (percentage < 60) return { grade: 'B', point: 3.0 };
+    if (percentage < 70) return { grade: 'A-', point: 3.5 };
+    if (percentage < 80) return { grade: 'A', point: 4.0 };
+    return { grade: 'A+', point: 5.0 };
+};
+
+const getFinalGrade = (gpa: number): string => {
+    if (gpa === 5.0) return 'A+';
+    if (gpa >= 4.0) return 'A';
+    if (gpa >= 3.5) return 'A-';
+    if (gpa >= 3.0) return 'B';
+    if (gpa >= 2.0) return 'C';
+    if (gpa >= 1.0) return 'D';
+    return 'F';
+}
+
+/**
+ * Normalizes a subject name for comparison
+ */
+const normalize = (name: string) => {
+    if (!name) return "";
+    const trimmed = name.trim();
+    return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
+};
+
+const groupMap: Record<string, string> = { 
+    'science': 'science', 'বিজ্ঞান': 'science',
+    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts',
+    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce'
+};
+
+export function processStudentResults(
+    students: Student[],
+    resultsBySubject: ClassResult[],
+    allSubjectsForGroup: Subject[]
+): StudentProcessedResult[] {
+
+    const studentResults: StudentProcessedResult[] = students.map(student => {
+        const rawGroup = (student.group || '').toLowerCase().trim();
+        const studentGroupNormalized = groupMap[rawGroup] || rawGroup;
+        const optionalSubjectName = student.optionalSubject;
+        const studentClassNum = parseInt(student.className);
+
+        const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized).map(s => s.name);
+
+        // Filter subjects based on grouping AND if they have effective full marks > 0
+        const subjectsForStudent = allSubjectsForGroup.filter(subjectInfo => {
+            if (studentClassNum < 9) {
+                const matchingRecord = resultsBySubject.find(r => 
+                    normalize(r.subject) === normalize(subjectInfo.name) && 
+                    r.className === student.className
+                );
+                const effectiveFullMarks = matchingRecord?.fullMarks ?? subjectInfo.fullMarks;
+                return effectiveFullMarks > 0;
+            }
+
+            if (!groupAllowedSubjects.some(name => normalize(name) === normalize(subjectInfo.name))) return false;
+            
+            if (optionalSubjectName === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
+            if (optionalSubjectName === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
+
+            // Full marks check for 9-10
+            const matchingRecord = resultsBySubject.find(r => 
+                normalize(r.subject) === normalize(subjectInfo.name) && 
+                r.className === student.className
+            );
+            const effectiveFullMarks = matchingRecord?.fullMarks ?? subjectInfo.fullMarks;
+            return effectiveFullMarks > 0;
+        });
+
+        let totalMarks = 0;
+        let totalPossibleMarks = 0;
+        const subjectResults = new Map<string, StudentSubjectResult>();
+
+        subjectsForStudent.forEach(subjectInfo => {
+            const normalizedSubjectName = normalize(subjectInfo.name);
+            
+            const matchingRecords = resultsBySubject.filter(r => 
+                normalize(r.subject) === normalizedSubjectName && 
+                r.className === student.className
+            );
+
+            let classResult = matchingRecords.find(r => r.results.some(res => res.studentId === student.id));
+            if (!classResult) {
+                classResult = matchingRecords.find(r => {
+                    const recordGroup = (r.group || '').toLowerCase().trim();
+                    const recordGroupNormalized = groupMap[recordGroup] || recordGroup;
+                    return studentClassNum < 9 || recordGroupNormalized === studentGroupNormalized || !recordGroupNormalized || recordGroupNormalized === 'none';
+                });
+            }
+
+            const studentResult = classResult?.results.find(r => r.studentId === student.id);
+            const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
+
+            const written = studentResult?.written;
+            const mcq = studentResult?.mcq;
+            const practical = studentResult?.practical;
+            const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
+            
+            const passMark = Math.ceil(fullMarks * 0.33);
+            const isPassSubject = obtainedMarks >= passMark;
+            
+            const percentageForGrade = (obtainedMarks / fullMarks) * 100;
+            const { grade, point } = getGradePoint(percentageForGrade);
+            
+            totalMarks += obtainedMarks;
+            totalPossibleMarks += fullMarks;
+            
+            subjectResults.set(subjectInfo.name, {
+                written,
+                mcq,
+                practical,
+                marks: obtainedMarks,
+                grade: isPassSubject ? grade : 'F',
+                point: isPassSubject ? point : 0,
+                isPass: isPassSubject
+            });
+        });
+        
+        let totalCompulsoryPoints = 0;
+        let compulsorySubjectsCount = 0;
+        let failedInCompulsoryCount = 0;
+        let bonusPoints = 0;
+
+        subjectsForStudent.forEach(subjectInfo => {
+            const result = subjectResults.get(subjectInfo.name);
+            if (!result) {
+                failedInCompulsoryCount++;
+                compulsorySubjectsCount++;
+                return;
+            }
+    
+            if (subjectInfo.name === optionalSubjectName) {
+                if (result.isPass && result.point > 2.0) {
+                    bonusPoints = result.point - 2.0;
+                }
+            } else {
+                totalCompulsoryPoints += result.point;
+                compulsorySubjectsCount++;
+                if (!result.isPass) {
+                    failedInCompulsoryCount++;
+                }
+            }
+        });
+
+        const isPass = failedInCompulsoryCount === 0;
+        let gpa = 0;
+
+        if (isPass && compulsorySubjectsCount > 0) {
+            gpa = (totalCompulsoryPoints + bonusPoints) / compulsorySubjectsCount;
+        }
+        
+        if (gpa > 5.0) gpa = 5.0;
+        const finalGrade = isPass ? getFinalGrade(gpa) : 'F';
+        
+        return {
+            student,
+            totalMarks,
+            totalPossibleMarks,
+            gpa: isPass ? parseFloat(gpa.toFixed(2)) : 0.0,
+            finalGrade,
+            isPass,
+            failedSubjectsCount: failedInCompulsoryCount,
+            subjectResults,
+        };
+    });
+
+    const passedStudents = studentResults
+        .filter(s => s.isPass)
+        .sort((a, b) => {
+             if (b.totalMarks !== a.totalMarks) {
+                return b.totalMarks - a.totalMarks;
+            }
+            return a.student.roll - b.student.roll;
+        });
+
+    let rank = 1;
+    for (let i = 0; i < passedStudents.length; i++) {
+        if (i > 0 && passedStudents[i].totalMarks < passedStudents[i - 1].totalMarks) {
+            rank = i + 1;
+        }
+        const studentToUpdate = studentResults.find(s => s.student.id === passedStudents[i].student.id);
+        if (studentToUpdate) {
+            studentToUpdate.meritPosition = rank;
+        }
+    }
+
+    return studentResults;
+}

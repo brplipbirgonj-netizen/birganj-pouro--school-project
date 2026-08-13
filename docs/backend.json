@@ -1,0 +1,123 @@
+
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "Represents an application user with a role and online status.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "teacher"] },
+        "photoUrl": { "type": "string" },
+        "displayName": { "type": "string" },
+        "isOnline": { "type": "boolean" },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "student": {
+      "title": "Student",
+      "description": "A student in the school",
+      "type": "object",
+      "properties": {
+        "generatedId": { "type": "string" },
+        "roll": { "type": "number" },
+        "className": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "studentNameBn": { "type": "string" },
+        "studentNameEn": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "monthlyFee": { "type": "number" },
+        "examFee": { "type": "number" },
+        "sessionFee": { "type": "number" },
+        "otherFee": { "type": "number" },
+        "feeCategory": { "type": "string", "enum": ["general", "half-free", "full-free"] },
+        "isStipendReceiver": { "type": "boolean" }
+      },
+      "required": ["roll", "className", "academicYear", "studentNameBn", "photoUrl"]
+    },
+    "lessonPlan": {
+      "title": "Lesson Plan",
+      "description": "Weekly lesson plan and syllabus progress tracked by teachers.",
+      "type": "object",
+      "properties": {
+        "teacherUid": { "type": "string" },
+        "teacherName": { "type": "string" },
+        "className": { "type": "string" },
+        "subject": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "week": { "type": "string" },
+        "topic": { "type": "string" },
+        "progress": { "type": "number", "minimum": 0, "maximum": 100 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teacherUid", "className", "subject", "academicYear", "week"]
+    },
+    "syllabus": {
+      "title": "Syllabus",
+      "description": "Defined syllabus for an exam containing specific chapters and comments.",
+      "type": "object",
+      "properties": {
+        "academicYear": { "type": "string" },
+        "examName": { "type": "string" },
+        "className": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "chapters": { "type": "array", "items": { "type": "string" } },
+        "chapterComments": { "type": "object", "additionalProperties": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["academicYear", "examName", "className", "subjectName", "chapters"]
+    },
+    "specialResult": {
+      "title": "Special Result",
+      "description": "Monthly or weekly special exam marks for students.",
+      "type": "object",
+      "properties": {
+        "academicYear": { "type": "string" },
+        "className": { "type": "string" },
+        "subject": { "type": "string" },
+        "examType": { "type": "string" },
+        "month": { "type": "string" },
+        "fullMarks": { "type": "number" },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "studentId": { "type": "string" },
+              "marks": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["academicYear", "className", "subject", "examType", "month", "fullMarks"]
+    }
+  },
+  "auth": {
+    "providers": ["emailPassword"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/user" },
+      "description": "Stores user profile information."
+    },
+    "/students/{studentId}": {
+      "schema": { "$ref": "#/entities/student" },
+      "description": "Stores individual student records."
+    },
+    "/lessonPlans/{id}": {
+      "schema": { "$ref": "#/entities/lessonPlan" },
+      "description": "Stores teacher lesson plans and progress."
+    },
+    "/syllabi/{id}": {
+      "schema": { "$ref": "#/entities/syllabus" },
+      "description": "Stores subject-wise syllabus configurations for exams."
+    },
+    "/specialResults/{id}": {
+      "schema": { "$ref": "#/entities/specialResult" },
+      "description": "Stores special exam (monthly/weekly) result records."
+    }
+  }
+}

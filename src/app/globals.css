@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@layer base {
+  :root {
+    --background: 170 43% 96.1%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 170 43% 96.1%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 170 43% 96.1%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 246 80% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 170 30% 90%;
+    --secondary-foreground: 224 71.4% 4.1%;
+    --muted: 170 30% 90%;
+    --muted-foreground: 223.9 69.1% 10.2%;
+    --accent: 135 48% 69%;
+    --accent-foreground: 224 71.4% 4.1%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 176 30% 80%;
+    --input: 176 30% 85%;
+    --ring: 246 80% 50%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Custom Scrollbar for Desktop */
+  @media (min-width: 768px) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 5px;
+      border: 2px solid #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a1a1a1;
+    }
+  }
+
+  @media print {
+    @page {
+      margin: 5mm;
+      size: auto;
+    }
+    
+    html, body {
+      background: white !important;
+      color: black !important;
+      height: auto !important;
+      overflow: visible !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* Hide screen elements */
+    body * {
+      visibility: hidden !important;
+    }
+
+    /* Make printable area and all contents visible */
+    .printable-area,
+    .printable-area * {
+      visibility: visible !important;
+    }
+
+    .printable-area {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      min-height: auto !important;
+      margin: 0 !important;
+      padding: 5mm !important;
+      background: white !important;
+      overflow: visible !important;
+      display: block !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Prevent table rows breaking awkwardly */
+    tr {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    /* Prevent text overflowing or table clipping */
+    table, div, section {
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+  }
+}
+
+/* Specific container to make horizontal scrollbar accessible */
+.table-container {
+  @apply overflow-auto border rounded-md shadow-inner bg-white w-full;
+  /* Set a height that keeps the horizontal scrollbar within viewport on most screens */
+  max-height: 70vh;
+  scrollbar-gutter: stable;
+}

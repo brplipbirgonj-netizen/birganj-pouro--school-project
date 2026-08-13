@@ -1,0 +1,199 @@
+'use client';
+import {
+  collection,
+  doc,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  Firestore,
+  setDoc,
+  orderBy,
+  limit,
+} from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+
+export type AttendanceStatus = 'present' | 'absent';
+
+export interface StudentAttendance {
+  studentId: string;
+  status: AttendanceStatus;
+}
+
+export interface DailyAttendance {
+  id?: string;
+  date: string; // YYYY-MM-DD
+  academicYear: string;
+  className: string;
+  attendance: StudentAttendance[];
+}
+
+const ATTENDANCE_COLLECTION = 'attendance';
+
+export const getAttendanceFromStorage = async (db: Firestore): Promise<DailyAttendance[]> => {
+  const q = query(collection(db, ATTENDANCE_COLLECTION), orderBy('date', 'desc'));
+  try {
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAttendance));
+  } catch (e: any) {
+    if (e.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: ATTENDANCE_COLLECTION,
+            operation: 'list',
+        } satisfies SecurityRuleContext));
+    }
+    console.error("Error getting attendance:", e);
+    return [];
+  }
+};
+
+export const saveDailyAttendance = async (db: Firestore, record: DailyAttendance) => {
+  const q = query(
+    collection(db, ATTENDANCE_COLLECTION),
+    where("date", "==", record.date),
+    where("academicYear", "==", record.academicYear),
+    where("className", "==", record.className)
+  );
+
+  const existing = await getDocs(q).catch(async (e) => {
+      if (e.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: ATTENDANCE_COLLECTION,
+              operation: 'list',
+          } satisfies SecurityRuleContext));
+      }
+      throw e;
+  });
+  
+  if (!existing.empty) {
+    const docId = existing.docs[0].id;
+    const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
+    return setDoc(docRef, record, { merge: true }).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'write',
+        requestResourceData: record,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+      throw permissionError;
+    });
+  } else {
+    const collectionRef = collection(db, ATTENDANCE_COLLECTION);
+    return addDoc(collectionRef, record).catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: ATTENDANCE_COLLECTION,
+        operation: 'create',
+        requestResourceData: record,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+      throw permissionError;
+    });
+  }
+};
+
+export const getAttendanceForDate = async (db: Firestore, date: string, academicYear: string): Promise<DailyAttendance[]> => {
+    const q = query(
+        collection(db, ATTENDANCE_COLLECTION),
+        where("date", "==", date),
+        where("academicYear", "==", academicYear)
+    );
+    try {
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyAttendance));
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: ATTENDANCE_COLLECTION,
+                operation: 'list',
+            } satisfies SecurityRuleContext));
+        }
+        console.error("Error getting attendance for date:", e);
+        return [];
+    }
+}
+
+export const getAttendanceForClassAndDate = async (db: Firestore, date: string, className: string, academicYear: string): Promise<DailyAttendance | undefined> => {
+    const q = query(
+        collection(db, ATTENDANCE_COLLECTION),
+        where("date", "==", date),
+        where("className", "==", className),
+        where("academicYear", "==", academicYear)
+    );
+    try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() } as DailyAttendance;
+        }
+        return undefined;
+    } catch(e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: ATTENDANCE_COLLECTION,
+                operation: 'list',
+            } satisfies SecurityRuleContext));
+        }
+        console.error("Error getting attendance for class and date:", e);
+        return undefined;
+    }
+};
+
+export interface StudentConsecutiveAbsence {
+    studentId: string;
+    absentDays: number;
+    lastAbsentDate: string;
+}
+
+export const getConsecutiveAbsences = async (db: Firestore, className: string, academicYear: string): Promise<StudentConsecutiveAbsence[]> => {
+    const q = query(
+        collection(db, ATTENDANCE_COLLECTION),
+        where("academicYear", "==", academicYear),
+        where("className", "==", className)
+    );
+
+    try {
+        const snap = await getDocs(q);
+        const allRecords = snap.docs.map(d => d.data() as DailyAttendance);
+        if (allRecords.length === 0) return [];
+
+        const records = allRecords.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 15);
+
+        const studentAbsenceMap = new Map<string, number>();
+        const studentLastDateMap = new Map<string, string>();
+        
+        const allStudentIds = new Set<string>();
+        records.forEach(r => r.attendance.forEach(a => allStudentIds.add(a.studentId)));
+
+        allStudentIds.forEach(studentId => {
+            let consecutive = 0;
+            for (const record of records) {
+                const att = record.attendance.find(a => a.studentId === studentId);
+                if (att?.status === 'absent') {
+                    consecutive++;
+                } else if (att?.status === 'present') {
+                    break;
+                }
+            }
+            if (consecutive >= 3) {
+                studentAbsenceMap.set(studentId, consecutive);
+                studentLastDateMap.set(studentId, records[0].date);
+            }
+        });
+
+        return Array.from(studentAbsenceMap.entries()).map(([studentId, count]) => ({
+            studentId,
+            absentDays: count,
+            lastAbsentDate: studentLastDateMap.get(studentId) || '',
+        }));
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+                path: ATTENDANCE_COLLECTION, 
+                operation: 'list' 
+            } satisfies SecurityRuleContext));
+        }
+        console.error("Error checking consecutive absences:", e);
+        return [];
+    }
+}
