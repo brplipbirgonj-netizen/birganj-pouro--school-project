@@ -4,10 +4,10 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck, AlertCircle } from 'lucide-react';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance } from '@/lib/attendance-data';
+import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance, getAttendanceForClassAndDate } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
 import { getNotices, Notice } from '@/lib/notice-data';
@@ -673,6 +673,7 @@ export default function Home() {
   const [quickAttendanceClass, setQuickAttendanceClass] = useState<string>('6');
   const [quickAttendanceInput, setQuickAttendanceInput] = useState('');
   const [isSavingQuickAttendance, setIsSavingQuickAttendance] = useState(false);
+  const [isConfirmingQuickAttendance, setIsConfirmingQuickAttendance] = useState(false);
   
   useEffect(() => {
     if (!authLoading && !user) {
@@ -885,6 +886,36 @@ export default function Home() {
     try {
         const todayStr = format(new Date(), 'yyyy-MM-dd');
         
+        // 1. Holiday Check
+        const activeHoliday = await isHoliday(db, todayStr);
+        const dayOfWeek = new Date().getDay();
+        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+
+        if (activeHoliday || isWeekend) {
+            toast({ 
+                variant: 'destructive', 
+                title: 'আজ ছুটির দিন!', 
+                description: activeHoliday ? `আজ ${activeHoliday.description} উপলক্ষে স্কুল বন্ধ।` : 'আজ সাপ্তাহিক ছুটি।' 
+            });
+            setIsSavingQuickAttendance(false);
+            return;
+        }
+
+        // 2. Existing Attendance Check
+        if (!isConfirmingQuickAttendance) {
+            const existing = await getAttendanceForClassAndDate(db, todayStr, quickAttendanceClass, selectedYear);
+            if (existing) {
+                setIsConfirmingQuickAttendance(true);
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'হাজিরা ইতিমধ্যে নেওয়া হয়েছে!', 
+                    description: 'আপনি কি পূর্বের হাজিরা মুছে নতুনভাবে সেভ করতে চান? চাইলে আবার এন্টার দিন।' 
+                });
+                setIsSavingQuickAttendance(false);
+                return;
+            }
+        }
+
         const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
         const inputRolls = quickAttendanceInput
             .split(/[\s,]+/)
@@ -930,6 +961,7 @@ export default function Home() {
             description: `${inputRolls.length} জন উপস্থিত এবং বাকি ${classStudents.length - inputRolls.length} জন অনুপস্থিত হিসেবে সেভ হয়েছে।`
         });
         setQuickAttendanceInput('');
+        setIsConfirmingQuickAttendance(false);
 
         refreshDashboardAttendance(studentsForYear);
     } catch (err: any) {
@@ -997,19 +1029,26 @@ export default function Home() {
         </div>
 
         {/* Quick Attendance Section */}
-        <div className="mb-8 flex flex-col lg:flex-row items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border-2 border-black shadow-[8px_8px_0px_rgba(0,0,0,0.1)]">
+        <div className={cn(
+            "mb-8 flex flex-col lg:flex-row items-center justify-between gap-6 p-6 rounded-[2rem] border-2 border-black shadow-[8px_8px_0px_rgba(0,0,0,0.1)] transition-all duration-300",
+            isConfirmingQuickAttendance ? "bg-rose-50 ring-4 ring-rose-200" : "bg-white/60 backdrop-blur-md"
+        )}>
             <div className="flex items-center gap-3 shrink-0">
-                <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-lg">
-                    <UserCheck className="h-6 w-6" />
+                <div className={cn("p-3 text-white rounded-2xl shadow-lg transition-colors", isConfirmingQuickAttendance ? "bg-rose-600" : "bg-emerald-600")}>
+                    {isConfirmingQuickAttendance ? <AlertCircle className="h-6 w-6 animate-bounce" /> : <UserCheck className="h-6 w-6" />}
                 </div>
                 <div>
-                    <h3 className="text-xl font-black text-slate-800 leading-tight">কুইক হাজিরা</h3>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">আজকের হাজিরা: শ্রেণি সিলেক্ট করে উপস্থিত রোলগুলো লিখুন</p>
+                    <h3 className="text-xl font-black text-slate-800 leading-tight">
+                        {isConfirmingQuickAttendance ? "আবার সেভ করতে চান?" : "কুইক হাজিরা"}
+                    </h3>
+                    <p className={cn("text-xs font-bold uppercase tracking-widest", isConfirmingQuickAttendance ? "text-rose-600" : "text-slate-500")}>
+                        {isConfirmingQuickAttendance ? "এই শ্রেণির হাজিরা আজ একবার নেওয়া হয়েছে।" : "আজকের হাজিরা: শ্রেণি সিলেক্ট করে রোল নম্বর লিখুন"}
+                    </p>
                 </div>
             </div>
             <form onSubmit={handleQuickAttendanceSubmit} className="flex-1 w-full max-w-2xl flex flex-col sm:flex-row gap-3">
                 <div className="w-full sm:w-40">
-                    <Select value={quickAttendanceClass} onValueChange={setQuickAttendanceClass}>
+                    <Select value={quickAttendanceClass} onValueChange={(val) => { setQuickAttendanceClass(val); setIsConfirmingQuickAttendance(false); }}>
                         <SelectTrigger className="h-12 font-black border-2 border-black rounded-xl bg-white focus:ring-emerald-500">
                             <SelectValue placeholder="শ্রেণি" />
                         </SelectTrigger>
@@ -1023,20 +1062,42 @@ export default function Home() {
                 <div className="relative flex-1">
                     <Input 
                         value={quickAttendanceInput}
-                        onChange={(e) => setQuickAttendanceInput(e.target.value)}
+                        onChange={(e) => { setQuickAttendanceInput(e.target.value); setIsConfirmingQuickAttendance(false); }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
                                 handleQuickAttendanceSubmit(e);
                             }
                         }}
-                        placeholder="উপস্থিত রোলসমূহ লিখুন (যেমন: ১, ২, ৩, ৫ বা 1, 2, 3, 5)..." 
-                        className="h-12 text-base font-black border-2 border-black rounded-xl bg-white focus:ring-emerald-500 px-4"
+                        placeholder="উপস্থিত রোলসমূহ লিখুন (যেমন: ১, ২, ৫)..." 
+                        className={cn(
+                            "h-12 text-base font-black border-2 border-black rounded-xl bg-white px-4 transition-all",
+                            isConfirmingQuickAttendance ? "focus:ring-rose-500 bg-rose-50/30" : "focus:ring-emerald-500"
+                        )}
                     />
                 </div>
-                <Button type="submit" disabled={isSavingQuickAttendance} className="h-12 px-8 font-black text-base bg-emerald-600 hover:bg-emerald-700 shadow-xl rounded-xl shrink-0 text-white">
-                    {isSavingQuickAttendance ? <Loader2 className="h-5 w-5 animate-spin" /> : 'হাজিরা সম্পন্ন করুন'}
-                </Button>
+                <div className="flex gap-2">
+                    {isConfirmingQuickAttendance && (
+                        <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => setIsConfirmingQuickAttendance(false)}
+                            className="h-12 px-6 font-bold border-rose-300 text-rose-700 bg-white"
+                        >
+                            বাতিল
+                        </Button>
+                    )}
+                    <Button 
+                        type="submit" 
+                        disabled={isSavingQuickAttendance} 
+                        className={cn(
+                            "h-12 px-8 font-black text-base shadow-xl rounded-xl shrink-0 text-white transition-all",
+                            isConfirmingQuickAttendance ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700"
+                        )}
+                    >
+                        {isSavingQuickAttendance ? <Loader2 className="h-5 w-5 animate-spin" /> : (isConfirmingQuickAttendance ? 'হ্যাঁ, সেভ করুন' : 'হাজিরা সম্পন্ন করুন')}
+                    </Button>
+                </div>
             </form>
         </div>
 
