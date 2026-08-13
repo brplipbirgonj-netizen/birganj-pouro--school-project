@@ -1237,6 +1237,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
             <Dialog open={promotionStatus.open} onOpenChange={(o) => setPromotionStatus(prev => ({ ...prev, open: o }))}>
                 <DialogContent className="max-w-md font-kalpurush p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
+                    <DialogTitle className="sr-only">প্রমোশন ফলাফল</DialogTitle>
                     <div className={cn("p-6 text-white flex items-center gap-4", promotionStatus.isReplace ? "bg-amber-500" : "bg-emerald-600")}>
                         {promotionStatus.isReplace ? <RefreshCw className="h-10 w-10 animate-spin" /> : <CheckCircle2 className="h-10 w-10" />}
                         <div><h3 className="text-xl font-black">{promotionStatus.isReplace ? 'তথ্য রিপ্লেস করা হয়েছে' : 'প্রমোশন সফল হয়েছে'}</h3><p className="font-bold opacity-90">শিক্ষার্থী নতুন সেশনে যুক্ত হয়েছে</p></div>
