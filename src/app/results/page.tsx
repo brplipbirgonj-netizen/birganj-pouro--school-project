@@ -1639,6 +1639,8 @@ export default function ResultsPage() {
         if (canViewRes) setActiveSection('management');
         else if (canManageFullMarks) setActiveSection('full-marks');
         else if (hasPermission('view:merit-list')) setActiveSection('merit');
+        else if (hasPermission('promote:students')) setActiveSection('promotion');
+        else if (hasPermission('manage:special-results')) setActiveSection('special-exam');
     }, [canViewRes, canManageFullMarks, hasPermission]);
 
     const handleSubjectPrint = (data: any) => {
@@ -1668,11 +1670,11 @@ export default function ResultsPage() {
         if (hasPermission('view:merit-list')) items.push({ id: 'merit', label: 'মেধা তালিকা', icon: Trophy, color: 'text-amber-600 bg-amber-50' });
         if (hasPermission('promote:students')) items.push({ id: 'promotion', label: 'প্রমোশন', icon: Star, color: 'text-rose-600 bg-rose-50' });
         if (hasPermission('upload:marks')) items.push({ id: 'upload', label: 'Excel আপলোড', icon: FileUp, color: 'text-blue-600 bg-blue-50' });
-        items.push({ id: 'special-exam', label: 'বিশেষ পরীক্ষা', icon: Sparkles, color: 'text-amber-600 bg-amber-50' });
+        if (hasPermission('manage:special-results') || hasPermission('manage:results') || user?.role === 'admin') items.push({ id: 'special-exam', label: 'বিশেষ পরীক্ষা', icon: Sparkles, color: 'text-amber-600 bg-amber-50' });
         return items;
-    }, [canViewRes, canManageFullMarks, hasPermission]);
+    }, [canViewRes, canManageFullMarks, hasPermission, user]);
 
-    if (isClient && !canViewRes && !hasPermission('view:merit-list') && user?.role !== 'admin' && !canManageFullMarks) return (
+    if (isClient && !canViewRes && !hasPermission('view:merit-list') && !hasPermission('promote:students') && !hasPermission('manage:special-results') && user?.role !== 'admin' && !canManageFullMarks) return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50"><Header /><main className="flex flex-1 items-center justify-center p-4"><Card className="p-8 text-center border-2 border-primary/20"><AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" /><h2 className="text-xl font-bold">প্রবেশাধিকার সংরক্ষিত</h2></Card></main></div>
     );
 

@@ -39,7 +39,8 @@ export const availablePermissions = [
   { id: 'manage:full-marks', label: 'বিষয় ও পূর্ণমান ব্যবস্থাপনা' },
   { id: 'upload:marks', label: 'এক্সেল দিয়ে ফলাফল আপলোড' },
   { id: 'view:merit-list', label: 'মেধা তালিকা দেখুন' },
-  { id: 'promote:students', label: 'শিক্ষার্থী প্রমোশন ও বিশেষ পাশ' },
+  { id: 'promote:students', label: 'প্রমোশন ম্যানেজ করুন' },
+  { id: 'manage:special-results', label: 'বিশেষ পরীক্ষা ম্যানেজ করুন' },
   
   { id: 'view:accounts', label: 'হিসাব শাখা দেখুন' },
   { id: 'collect:fees', label: 'বেতন আদায় করুন' },
@@ -84,6 +85,8 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'manage:notices',
     'input:results', 
     'view:merit-list',
+    'promote:students',
+    'manage:special-results',
     'view:accounts',
     'collect:fees',
     'manage:fee-setup',

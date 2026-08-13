@@ -122,7 +122,7 @@ service cloud.firestore {
 
     match /specialResults/{id} {
       allow read: if isAuthed();
-      allow write: if isAuthed() && (hasPermission('input:results') || hasPermission('manage:results') || isAdmin());
+      allow write: if isAuthed() && (hasPermission('input:results') || hasPermission('manage:results') || hasPermission('manage:special-results') || isAdmin());
       allow delete: if isAdmin();
     }
 
