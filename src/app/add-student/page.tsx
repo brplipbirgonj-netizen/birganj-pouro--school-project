@@ -21,6 +21,8 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 
 function toBengaliNumber(str: string | number | undefined | null) {
     if (!str && str !== 0) return '';
@@ -119,7 +121,6 @@ export default function AddStudentPage() {
                     }
                 } catch (e: any) {
                     // Manual Fallback: Fetch all for this class/year and sort in memory 
-                    // this works even if the index is not created or building
                     if (e.code === 'failed-precondition' || e.message?.includes('index')) {
                         console.log("Index building... falling back to manual sort.");
                         const manualQuery = query(
@@ -214,6 +215,28 @@ export default function AddStudentPage() {
     };
 
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+
+    const handleSameAddress = (checked: boolean | string) => {
+        if (checked) {
+            setStudent(prev => ({
+                ...prev,
+                permanentVillage: prev.presentVillage,
+                permanentUnion: prev.presentUnion,
+                permanentPostOffice: prev.presentPostOffice,
+                permanentUpazila: prev.presentUpazila,
+                permanentDistrict: prev.presentDistrict,
+            }));
+        } else {
+            setStudent(prev => ({
+                ...prev,
+                permanentVillage: '',
+                permanentUnion: '',
+                permanentPostOffice: '',
+                permanentUpazila: 'বীরগঞ্জ',
+                permanentDistrict: 'দিনাজপুর',
+            }));
+        }
+    };
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -442,19 +465,67 @@ export default function AddStudentPage() {
                     <h3 className="font-black text-xl border-b-4 border-primary/10 pb-2 flex items-center gap-2 text-primary">
                         <Home className="h-6 w-6" /> ৪. যোগাযোগ ও ঠিকানা
                     </h3>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label className="font-bold">গ্রাম/মহল্লা *</Label>
-                            <Input required value={student.presentVillage || ''} onChange={e => handleInputChange('presentVillage', e.target.value)} className={cn(inputFocusClasses, !student.presentVillage && "border-red-300 bg-red-50/30")} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                    
+                    <div className="space-y-4">
+                        <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-primary pl-2">বর্তমান ঠিকানা</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label className="font-bold">উপজেলা *</Label>
-                                <Input required value={student.presentUpazila || ''} onChange={e => handleInputChange('presentUpazila', e.target.value)} className={cn(inputFocusClasses, !student.presentUpazila && "border-red-300 bg-red-50/30")} />
+                                <Label className="font-bold">গ্রাম/মহল্লা *</Label>
+                                <Input required value={student.presentVillage || ''} onChange={e => handleInputChange('presentVillage', e.target.value)} className={cn(inputFocusClasses, !student.presentVillage && "border-red-300 bg-red-50/30")} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-bold">জেলা *</Label>
-                                <Input required value={student.presentDistrict || ''} onChange={e => handleInputChange('presentDistrict', e.target.value)} className={cn(inputFocusClasses, !student.presentDistrict && "border-red-300 bg-red-50/30")} />
+                                <Label className="font-bold">ইউনিয়ন</Label>
+                                <Input value={student.presentUnion || ''} onChange={e => handleInputChange('presentUnion', e.target.value)} className={inputFocusClasses} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-bold">ডাকঘর</Label>
+                                <Input value={student.presentPostOffice || ''} onChange={e => handleInputChange('presentPostOffice', e.target.value)} className={inputFocusClasses} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="font-bold">উপজেলা *</Label>
+                                    <Input required value={student.presentUpazila || ''} onChange={e => handleInputChange('presentUpazila', e.target.value)} className={cn(inputFocusClasses, !student.presentUpazila && "border-red-300 bg-red-50/30")} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">জেলা *</Label>
+                                    <Input required value={student.presentDistrict || ''} onChange={e => handleInputChange('presentDistrict', e.target.value)} className={cn(inputFocusClasses, !student.presentDistrict && "border-red-300 bg-red-50/30")} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Separator className="my-6" />
+
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-emerald-500 pl-2">স্থায়ী ঠিকানা</p>
+                            <div className="flex items-center space-x-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                                <Checkbox id="same-address" onCheckedChange={handleSameAddress} />
+                                <label htmlFor="same-address" className="text-xs font-bold text-emerald-700 cursor-pointer">বর্তমান ঠিকানা আর স্থায়ী একই</label>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label className="font-bold">গ্রাম/মহল্লা</Label>
+                                <Input value={student.permanentVillage || ''} onChange={e => handleInputChange('permanentVillage', e.target.value)} className={inputFocusClasses} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-bold">ইউনিয়ন</Label>
+                                <Input value={student.permanentUnion || ''} onChange={e => handleInputChange('permanentUnion', e.target.value)} className={inputFocusClasses} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-bold">ডাকঘর</Label>
+                                <Input value={student.permanentPostOffice || ''} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} className={inputFocusClasses} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="font-bold">উপজেলা</Label>
+                                    <Input value={student.permanentUpazila || ''} onChange={e => handleInputChange('permanentUpazila', e.target.value)} className={inputFocusClasses} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold">জেলা</Label>
+                                    <Input value={student.permanentDistrict || ''} onChange={e => handleInputChange('permanentDistrict', e.target.value)} className={inputFocusClasses} />
+                                </div>
                             </div>
                         </div>
                     </div>
