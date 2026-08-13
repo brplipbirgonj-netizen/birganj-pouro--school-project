@@ -833,8 +833,8 @@ export default function Home() {
             .map(r => parseInt(bnToEn(r.trim()), 10))
             .filter(r => !isNaN(r));
 
-        const classStudents = (allStudents || []).filter(
-            s => s.className === quickAttendanceClass && (s.academicYear === selectedYear || !s.academicYear)
+        const classStudents = (studentsForYear || []).filter(
+            (s: Student) => s.className === quickAttendanceClass
         );
 
         if (classStudents.length === 0) {
@@ -843,7 +843,7 @@ export default function Home() {
             return;
         }
 
-        const attendanceData: StudentAttendance[] = classStudents.map(student => ({
+        const attendanceData: StudentAttendance[] = classStudents.map((student: Student) => ({
             studentId: student.id,
             status: (student.roll !== undefined && inputRolls.includes(student.roll)) ? 'present' : 'absent'
         }));
