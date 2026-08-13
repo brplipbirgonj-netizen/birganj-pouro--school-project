@@ -121,20 +121,21 @@ export default function NoticeManagementPage() {
         const senderName = user.role === 'admin' ? 'প্রধান শিক্ষক' : (user.displayName || user.email || 'শিক্ষক');
 
         try {
-            // Non-blocking call for optimistic UI experience
+            // addNotice itself handles cleaning and fire-and-forget logic
             addNotice(db, {
                 title: newNotice.title,
                 content: newNotice.content,
                 priority: newNotice.priority,
                 senderName: senderName,
                 pdfUrl: newNotice.pdfUrl.trim() || undefined,
-                isScrolling: newNotice.isScrolling
+                isScrolling: !!newNotice.isScrolling
             });
             
             toast({ title: 'নোটিশ প্রকাশিত হয়েছে' });
             setIsAddOpen(false);
             setNewNotice({ title: '', content: '', priority: 'normal', pdfUrl: '', isScrolling: true });
         } catch (e: any) {
+            console.error("Notice Submit Error:", e);
             toast({ variant: 'destructive', title: 'ত্রুটি', description: 'নোটিশ সেভ করা যায়নি।' });
         }
     };

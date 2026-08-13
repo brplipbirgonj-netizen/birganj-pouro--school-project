@@ -58,10 +58,20 @@ export const getNotices = async (db: Firestore, maxCount = 50): Promise<Notice[]
  */
 export const addNotice = (db: Firestore, noticeData: NewNoticeData) => {
   const collectionRef = collection(db, NOTICES_COLLECTION);
-  const dataToSave = {
-    ...noticeData,
+  
+  // Clean data to remove undefined properties which cause Firestore to throw sync errors
+  const dataToSave: any = {
+    title: noticeData.title,
+    content: noticeData.content,
+    priority: noticeData.priority,
+    senderName: noticeData.senderName,
+    isScrolling: !!noticeData.isScrolling,
     date: serverTimestamp(),
   };
+
+  if (noticeData.pdfUrl) {
+    dataToSave.pdfUrl = noticeData.pdfUrl;
+  }
 
   // Perform the write without awaiting the server response for better UX
   addDoc(collectionRef, dataToSave)
