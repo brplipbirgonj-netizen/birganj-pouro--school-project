@@ -805,7 +805,7 @@ function StudentProfileSearchContent() {
 
             {/* Printable Area - Redesigned to match the provided layout */}
             {studentData && (
-                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border border-[8px] border-double border-primary/30">
+                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border border-[6px] border-double border-black/30">
                     <style jsx global>{`
                         @media print {
                             @page {
@@ -817,133 +817,134 @@ function StudentProfileSearchContent() {
                                 top: 0 !important;
                                 left: 0 !important;
                                 width: 100% !important;
-                                height: 100% !important;
-                                padding: 10mm !important;
+                                min-height: 100% !important;
+                                padding: 8mm !important;
                                 box-sizing: border-box !important;
-                                border: 8px double rgba(0, 0, 0, 0.3) !important;
+                                border: 6px double rgba(0, 0, 0, 0.3) !important;
+                                display: block !important;
                             }
                         }
                     `}</style>
                     {/* Header */}
-                    <div className="flex items-center justify-between border-b-4 border-[#2d572c] pb-4 mb-8">
-                        <div className="relative w-20 h-20">
-                             {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}
+                    <div className="flex items-center justify-between border-b-4 border-[#2d572c] pb-2 mb-6">
+                        <div className="relative w-16 h-16">
+                             {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={64} height={64} className="object-contain" />}
                         </div>
                         <div className="text-center flex-grow">
-                            <h1 className="text-4xl font-black text-[#2d572c] mb-1">{schoolInfo.name}</h1>
-                            <p className="text-lg font-bold text-slate-700">{schoolInfo.address}</p>
-                            <div className="mt-4 inline-block border-2 border-[#2d572c] px-8 py-1 rounded-full bg-[#f0faf9]">
-                                <h2 className="text-xl font-black uppercase text-[#2d572c]">শিক্ষার্থী প্রগতি ও প্রোফাইল রিপোর্ট - {toBengaliNumber(selectedYear)}</h2>
+                            <h1 className="text-3xl font-black text-[#2d572c] mb-0.5">{schoolInfo.name}</h1>
+                            <p className="text-base font-bold text-slate-700">{schoolInfo.address}</p>
+                            <div className="mt-2 inline-block border-2 border-[#2d572c] px-6 py-0.5 rounded-full bg-[#f0faf9]">
+                                <h2 className="text-lg font-black uppercase text-[#2d572c]">শিক্ষার্থী প্রগতি ও প্রোফাইল রিপোর্ট - {toBengaliNumber(selectedYear)}</h2>
                             </div>
                         </div>
-                        <div className="w-20 h-20"></div>
+                        <div className="w-16 h-16"></div>
                     </div>
 
                     {/* Student Info Section */}
-                    <div className="flex justify-between items-start gap-12 mb-10">
-                        <div className="flex-1 space-y-4 font-bold text-base">
+                    <div className="flex justify-between items-start gap-8 mb-6">
+                        <div className="flex-1 space-y-2.5 font-bold text-sm">
                             <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
-                                <span className="w-36 text-slate-600">শিক্ষার্থীর নাম</span>
+                                <span className="w-32 text-slate-600">শিক্ষার্থীর নাম</span>
                                 <span className="font-black">: {studentData.studentNameBn}</span>
                             </div>
                             <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
-                                <span className="w-36 text-slate-600">রোল ও শ্রেণি</span>
+                                <span className="w-32 text-slate-600">রোল ও শ্রেণি</span>
                                 <span className="font-black">: {toBengaliNumber(studentData.roll)}, {classNamesMap[studentData.className]} শ্রেণি</span>
                             </div>
                             <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
-                                <span className="w-36 text-slate-600">শিক্ষার্থী আইডি</span>
+                                <span className="w-32 text-slate-600">শিক্ষার্থী আইডি</span>
                                 <span className="font-black">: {toBengaliNumber(studentData.generatedId || '-')}</span>
                             </div>
                             <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
-                                <span className="w-36 text-slate-600">পিতার নাম</span>
+                                <span className="w-32 text-slate-600">পিতার নাম</span>
                                 <span className="font-black">: {studentData.fatherNameBn}</span>
                             </div>
                             <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
-                                <span className="w-36 text-slate-600">মাতার নাম</span>
+                                <span className="w-32 text-slate-600">মাতার নাম</span>
                                 <span className="font-black">: {studentData.motherNameBn}</span>
                             </div>
                             <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
-                                <span className="w-36 text-slate-600">মোবাইল নম্বর</span>
+                                <span className="w-32 text-slate-600">মোবাইল নম্বর</span>
                                 <span className="font-black">: {toBengaliNumber(studentData.guardianMobile || '-')}</span>
                             </div>
                         </div>
-                        <div className="w-36 h-44 border-4 border-slate-200 p-1 rounded overflow-hidden shadow-sm shrink-0">
-                            <Image src={sanitizePhotoUrl(studentData.photoUrl, studentData.gender) || getStudentPlaceholderImage(studentData.gender)} alt="Profile" width={144} height={176} className="object-cover w-full h-full" />
+                        <div className="w-28 h-36 border-2 border-slate-200 p-0.5 rounded overflow-hidden shadow-sm shrink-0">
+                            <Image src={sanitizePhotoUrl(studentData.photoUrl, studentData.gender) || getStudentPlaceholderImage(studentData.gender)} alt="Profile" width={112} height={144} className="object-cover w-full h-full" />
                         </div>
                     </div>
 
                     {/* Stats Section */}
-                    <div className="grid grid-cols-2 gap-10 mb-10">
+                    <div className="grid grid-cols-2 gap-8 mb-6">
                         {/* Attendance Card */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-black text-slate-800 border-l-8 border-[#2418ff] pl-3">হাজিরা পরিসংখ্যান</h3>
-                            <div className="border-[3px] border-black rounded-[32px] p-6 bg-white shadow-lg space-y-3 font-bold">
-                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-black text-slate-800 border-l-4 border-[#2418ff] pl-2">হাজিরা পরিসংখ্যান</h3>
+                            <div className="border-[2px] border-black rounded-2xl p-4 bg-white shadow-md space-y-2 font-bold text-xs">
+                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-1">
                                     <span className="text-slate-600">মোট কার্যদিবস:</span>
-                                    <span className="font-black text-lg">{toBengaliNumber(attendanceStats.total)} দিন</span>
+                                    <span className="font-black">{toBengaliNumber(attendanceStats.total)} দিন</span>
                                 </div>
-                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-1">
                                     <span className="text-emerald-700">মোট উপস্থিত:</span>
-                                    <span className="font-black text-lg text-emerald-700">{toBengaliNumber(attendanceStats.present)} দিন</span>
+                                    <span className="font-black text-emerald-700">{toBengaliNumber(attendanceStats.present)} দিন</span>
                                 </div>
-                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-2 text-rose-600">
+                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-1 text-rose-600">
                                     <span>মোট অনুপস্থিত:</span>
-                                    <span className="font-black text-lg">{toBengaliNumber(attendanceStats.absent)} দিন</span>
+                                    <span className="font-black">{toBengaliNumber(attendanceStats.absent)} দিন</span>
                                 </div>
                                 <div className="flex justify-between pt-1 font-black text-blue-700">
                                     <span>উপস্থিতির হার:</span>
-                                    <span className="text-xl">{toBengaliNumber(attendancePercentage.toFixed(1))}%</span>
+                                    <span className="text-sm">{toBengaliNumber(attendancePercentage.toFixed(1))}%</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Dues Card */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-black text-slate-800 border-l-8 border-[#2d572c] pl-3">বকেয়া পাওনা সম্বলিত তথ্য</h3>
-                            <div className="border-[3px] border-black rounded-[32px] p-6 bg-white shadow-lg space-y-3 font-bold">
-                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-2 text-rose-600">
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-black text-slate-800 border-l-4 border-[#2d572c] pl-2">বকেয়া পাওনা</h3>
+                            <div className="border-[2px] border-black rounded-2xl p-4 bg-white shadow-md space-y-2 font-bold text-xs">
+                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-1 text-rose-600">
                                     <span>বকেয়া বেতন:</span>
-                                    <span className="font-black text-lg">{toBengaliNumber(duesSummary.tuitionDue)} ৳</span>
+                                    <span className="font-black">{toBengaliNumber(duesSummary.tuitionDue)} ৳</span>
                                 </div>
-                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-2 text-amber-600">
+                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-1 text-amber-600">
                                     <span>পরীক্ষার ফি:</span>
-                                    <span className="font-black text-lg">{toBengaliNumber(duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</span>
+                                    <span className="font-black">{toBengaliNumber(duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</span>
                                 </div>
-                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-2 text-blue-600">
+                                <div className="flex justify-between border-b border-dashed border-slate-200 pb-1 text-blue-600">
                                     <span>অন্যান্য ফি:</span>
-                                    <span className="font-black text-lg">{toBengaliNumber(duesSummary.otherDues)} ৳</span>
+                                    <span className="font-black">{toBengaliNumber(duesSummary.otherDues)} ৳</span>
                                 </div>
                                 <div className="flex justify-between pt-1 font-black text-emerald-800">
                                     <span>সর্বমোট পাওনা:</span>
-                                    <span className="text-xl">{toBengaliNumber(duesSummary.tuitionDue + duesSummary.otherDues + duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</span>
+                                    <span className="text-sm">{toBengaliNumber(duesSummary.tuitionDue + duesSummary.otherDues + duesSummary.examDues.reduce((a, d) => a + d.amount, 0))} ৳</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Academic Results Table */}
-                    <div className="space-y-4">
-                        <h3 className="text-xl font-black text-slate-800 border-l-8 border-violet-700 pl-3">অ্যাকাডেমিক ফলাফল (পরীক্ষাভিত্তিক)</h3>
-                        <div className="border-[3.5px] border-black rounded-lg overflow-hidden">
-                            <table className="w-full text-center border-collapse">
+                    <div className="space-y-3">
+                        <h3 className="text-lg font-black text-slate-800 border-l-4 border-violet-700 pl-2">অ্যাকাডেমিক ফলাফল (পরীক্ষাভিত্তিক)</h3>
+                        <div className="border-[2px] border-black rounded-lg overflow-hidden">
+                            <table className="w-full text-center border-collapse text-xs">
                                 <thead className="bg-slate-100">
-                                    <tr className="border-b-[3.5px] border-black h-12">
-                                        <th className="border-r-[2px] border-black font-black text-base px-4 text-left">পরীক্ষার নাম</th>
-                                        <th className="border-r-[2px] border-black font-black text-base px-4">মোট নম্বর</th>
-                                        <th className="border-r-[2px] border-black font-black text-base px-4">GPA</th>
-                                        <th className="font-black text-base px-4 text-right">মেধাস্থান</th>
+                                    <tr className="border-b-[2px] border-black h-10">
+                                        <th className="border-r-[1.5px] border-black font-black px-4 text-left">পরীক্ষার নাম</th>
+                                        <th className="border-r-[1.5px] border-black font-black px-4">মোট নম্বর</th>
+                                        <th className="border-r-[1.5px] border-black font-black px-4">GPA</th>
+                                        <th className="font-black px-4 text-right">মেধাস্থান</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {academicProgress.length > 0 ? academicProgress.map((p, i) => (
-                                        <tr key={i} className="border-b-2 border-slate-300 h-12 font-bold">
-                                            <td className="border-r-[2px] border-black text-left px-6">{p.exam}</td>
-                                            <td className="border-r-[2px] border-black font-black">{toBengaliNumber(p.marks)}</td>
-                                            <td className="border-r-[2px] border-black font-black text-blue-800">{toBengaliNumber(p.gpa.toFixed(2))}</td>
+                                        <tr key={i} className="border-b-[1px] border-slate-300 h-10 font-bold">
+                                            <td className="border-r-[1.5px] border-black text-left px-6">{p.exam}</td>
+                                            <td className="border-r-[1.5px] border-black font-black">{toBengaliNumber(p.marks)}</td>
+                                            <td className="border-r-[1.5px] border-black font-black text-blue-800">{toBengaliNumber(p.gpa.toFixed(2))}</td>
                                             <td className="text-right px-6 font-black">{p.rank > 0 ? toBengaliNumber(p.rank) : '-'}</td>
                                         </tr>
                                     )) : (
-                                        <tr className="h-20">
+                                        <tr className="h-16">
                                             <td colSpan={4} className="italic text-muted-foreground text-center">এখন পর্যন্ত কোনো ফলাফল নেই।</td>
                                         </tr>
                                     )}
@@ -952,13 +953,13 @@ function StudentProfileSearchContent() {
                         </div>
                     </div>
 
-                    {/* Signatures Footer */}
-                    <div className="mt-32 flex justify-between px-16">
-                        <div className="text-center w-48 border-t-2 border-black pt-1.5 font-black text-base">শ্রেণি শিক্ষকের স্বাক্ষর</div>
-                        <div className="text-center w-48 border-t-2 border-black pt-1.5 font-black text-base">প্রধান শিক্ষকের স্বাক্ষর</div>
+                    {/* Signatures Footer - Reduced mt to fit on one page */}
+                    <div className="mt-12 flex justify-between px-16">
+                        <div className="text-center w-40 border-t-[1.5px] border-black pt-1 font-black text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                        <div className="text-center w-40 border-t-[1.5px] border-black pt-1 font-black text-sm">প্রধান শিক্ষকের স্বাক্ষর</div>
                     </div>
                     
-                    <div className="mt-12 text-center text-[10px] text-slate-400 border-t border-dashed pt-4 flex justify-between">
+                    <div className="mt-8 text-center text-[9px] text-slate-400 border-t border-dashed pt-2 flex justify-between">
                          <span>Digital Management Portal | বীরগঞ্জ পৌর উচ্চ বিদ্যালয়</span>
                          <span>রিপোর্ট জেনারেট: {format(new Date(), 'PPpp', { locale: bn })}</span>
                     </div>
