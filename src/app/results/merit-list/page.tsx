@@ -28,7 +28,7 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
-const STUDENTS_PER_PAGE = 35; // Increased count as rows are now compact
+const STUDENTS_PER_PAGE = 30; // Adjusted for increased row height
 
 function MeritListPrintContent() {
     const searchParams = useSearchParams();
@@ -162,11 +162,11 @@ function MeritListPrintContent() {
                         box-sizing: border-box !important;
                         display: flex !important;
                         flex-direction: column !important;
-                        height: 275mm !important; /* Adjusted to fit A4 with 0.4in margins exactly */
+                        height: 275mm !important;
                         width: 100% !important;
                         position: relative !important;
                         page-break-after: always !important;
-                        border: 5px double black !important;
+                        border: none !important;
                         visibility: visible !important;
                     }
                     .merit-main-content {
@@ -183,15 +183,14 @@ function MeritListPrintContent() {
                         padding: 5mm 5mm 5mm 5mm !important;
                         width: 100% !important;
                     }
-                    /* Extremely Compact rows for print */
                     .merit-main-content table tr {
-                        height: 16px !important;
+                        height: 24px !important;
                     }
                     .merit-main-content table td, 
                     .merit-main-content table th {
-                        padding: 0.5px 4px !important;
-                        font-size: 10px !important;
-                        line-height: 1 !important;
+                        padding: 3px 6px !important;
+                        font-size: 12px !important;
+                        line-height: 1.2 !important;
                         border: 1px solid black !important;
                     }
                     .merit-main-content table th {
@@ -225,7 +224,7 @@ function MeritListPrintContent() {
                     </div>
                 ) : (
                     paginatedResults.map((pageData, pageIdx) => (
-                        <div key={pageIdx} className="printable-area merit-print-page w-full bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 box-border border-[6px] border-double border-primary/20 overflow-hidden mb-8 print:mb-0">
+                        <div key={pageIdx} className="printable-area merit-print-page w-full bg-white mx-auto shadow-2xl relative text-black flex flex-col print:shadow-none print:m-0 box-border overflow-hidden mb-8 print:mb-0">
                             
                             {schoolInfo.logoUrl && (
                                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-5">
