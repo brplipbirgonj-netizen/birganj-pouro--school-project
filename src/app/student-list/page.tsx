@@ -500,6 +500,18 @@ function StudentListContent() {
 
                             {activeSection === 'print' && (
                                 <div className="printable-area bg-white text-black p-2 font-kalpurush w-full box-border">
+                                    <style jsx global>{`
+                                        @media print {
+                                            @page {
+                                                margin: 15mm 10mm 10mm 10mm !important;
+                                            }
+                                            .printable-area {
+                                                position: static !important;
+                                                padding: 0 !important;
+                                                margin: 0 !important;
+                                            }
+                                        }
+                                    `}</style>
                                     <header className="text-center border-b-2 border-black pb-3 mb-6 flex flex-col items-center">
                                         {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain mb-1" />}
                                         <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
@@ -568,6 +580,13 @@ function StudentListContent() {
 
                             {activeSection === 'esif' && (
                                 <div className="space-y-6 animate-in zoom-in-95 duration-500">
+                                    <style jsx global>{`
+                                        @media print {
+                                            @page {
+                                                margin: 15mm 10mm 10mm 10mm !important;
+                                            }
+                                        }
+                                    `}</style>
                                     {['6', '8', '9'].includes(activeTab) ? (
                                         <div className="esif-container printable-area bg-white p-8 border-[4px] border-black rounded-[32px] shadow-2xl overflow-x-auto min-w-fit print:p-0 print:border-none print:shadow-none print:min-w-full">
                                             <div className="w-full mx-auto bg-white p-4">
