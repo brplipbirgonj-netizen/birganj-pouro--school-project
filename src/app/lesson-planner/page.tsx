@@ -39,7 +39,7 @@ const classNamesMap: Record<string, string> = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম'
 };
 
-const toBengaliNumber = (str: string | number) => {
+const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
     const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);

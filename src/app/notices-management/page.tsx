@@ -30,7 +30,7 @@ import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 
-const toBengaliNumber = (str: string | number) => {
+const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);

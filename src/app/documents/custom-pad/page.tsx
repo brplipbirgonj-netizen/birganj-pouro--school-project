@@ -12,7 +12,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Staff } from '@/lib/staff-data';
 import Link from 'next/link';
 
-const toBengaliNumber = (str: string | number) => {
+const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);

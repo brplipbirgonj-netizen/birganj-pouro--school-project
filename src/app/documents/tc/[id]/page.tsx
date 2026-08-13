@@ -18,7 +18,7 @@ const classNamesMap: { [key: string]: string } = {
   '6': 'ষষ্ঠ', '7': 'সপ্তম', '8': 'অষ্টম', '9': 'নবম', '10': 'দশম',
 };
 
-const toBengaliNumber = (str: string | number) => {
+const toBengaliNumber = (str: string | number | undefined | null) => {
   if (!str && str !== 0) return '';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);

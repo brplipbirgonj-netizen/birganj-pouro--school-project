@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 
-const toBengaliNumber = (str: string | number) => {
+const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);

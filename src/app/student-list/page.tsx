@@ -51,7 +51,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Separator } from '@/components/ui/separator';
 
-const toBengaliNumber = (str: string | number) => {
+const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);

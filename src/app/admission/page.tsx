@@ -63,7 +63,7 @@ const inputFocusClasses = "transition-all duration-300 focus:ring-2 focus:ring-p
 const boards = ['Dhaka', 'Rajshahi', 'Cumilla', 'Jessore', 'Chattogram', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh', 'Madrasah'];
 
 const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
-const toBengaliNumber = (str: string | number) => String(str).replace(/[0-9]/g, (w) => ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'][parseInt(w, 10)]);
+const toBengaliNumber = (str: string | number | undefined | null) => String(str).replace(/[0-9]/g, (w) => ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'][parseInt(w, 10)]);
 
 export default function AdmissionPortalPage() {
     const router = useRouter();
