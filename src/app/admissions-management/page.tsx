@@ -245,14 +245,14 @@ export default function AdmissionsManagementPage() {
                                                         <p className="text-xs font-bold text-emerald-700 flex items-center gap-1"><Phone className="h-3 w-3" /> {app.guardianMobile}</p>
                                                         <div className="flex gap-1">
                                                             <button 
-                                                                onClick={() => handleSendDirectSMS(app.guardianMobile, app.studentNameBn)}
+                                                                onClick={() => handleSendDirectSMS(app.guardianMobile || '', app.studentNameBn)}
                                                                 className="text-blue-600 hover:text-blue-800"
                                                                 title="SMS পাঠান"
                                                             >
                                                                 <MessageSquareDashed className="h-3 w-3" />
                                                             </button>
                                                             <button 
-                                                                onClick={() => handleSendWhatsApp(app.guardianMobile, app.studentNameBn)}
+                                                                onClick={() => handleSendWhatsApp(app.guardianMobile || '', app.studentNameBn)}
                                                                 className="text-green-600 hover:text-green-800"
                                                                 title="WhatsApp পাঠান"
                                                             >

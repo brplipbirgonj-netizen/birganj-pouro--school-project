@@ -335,7 +335,7 @@ export default function EditStudentPage() {
                               </SelectTrigger>
                               <SelectContent>
                                   {availableYears.map(year => (
-                                      <SelectItem key={year} value={String(year)}>{String(year).toLocaleString('bn-BD')}</SelectItem>
+                                      <SelectItem key={year} value={String(year)}>{Number().toLocaleString('bn-BD')}</SelectItem>
                                   ))}
                               </SelectContent>
                           </Select>

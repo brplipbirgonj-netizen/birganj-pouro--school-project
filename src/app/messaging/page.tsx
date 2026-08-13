@@ -282,7 +282,7 @@ export default function MessagingPage() {
                     {isLoadingLogs ? <div className="space-y-2"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div> : filteredLogs.length === 0 ? <p className="text-center py-10 text-xs italic text-muted-foreground">কোনো লগ পাওয়া যায়নি।</p> : filteredLogs.map(log => (
                         <div key={log.id} className="p-3 border rounded-xl bg-slate-50/50 space-y-2 group">
                             <div className="flex justify-between items-start">
-                                <Badge variant="secondary" className="text-[9px] font-black">{log.type === 'bulk' || log.type === 'all' ? 'সকলকে' : log.type === 'class' ? 'শ্রেণি' : 'একক'}</Badge>
+                                <Badge variant="secondary" className="text-[9px] font-black">{log.type === 'all' ? 'সকলকে' : log.type === 'class' ? 'শ্রেণি' : 'একক'}</Badge>
                                 <span className="text-[8px] font-bold text-muted-foreground">{format(log.sentAt, 'dd MMM p', { locale: bn })}</span>
                             </div>
                             <p className="text-[11px] font-bold text-slate-800 leading-relaxed line-clamp-2">{log.content}</p>

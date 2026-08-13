@@ -74,13 +74,15 @@ export type Student = {
   tiffinFee?: number;
   otherFee?: number;
   feeCategory?: 'general' | 'half-free' | 'full-free';
+  village?: string;
+  address?: string;
   // Firestore specific fields
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
 
 // Data from form won't have id or timestamps
-export type NewStudentData = Omit<Student, 'id' | 'createdAt' | 'updatedAt'>;
+export type NewStudentData = Omit<Student, 'id' | 'createdAt' | 'updatedAt'> & { roll?: number };
 export type UpdateStudentData = Partial<NewStudentData>;
 
 // Helpers for gender identification

@@ -24,6 +24,7 @@ export type FeeBreakdown = {
   developmentFee?: number;
   libraryFee?: number;
   tiffinFee?: number;
+  otherFee?: number;
 };
 
 export type FeeCollection = {
@@ -35,6 +36,7 @@ export type FeeCollection = {
   totalAmount: number;
   collectorName?: string;
   collectorUid?: string;
+  method?: string;
   transactionIds: string[];
   breakdown: FeeBreakdown;
   createdAt?: Timestamp;

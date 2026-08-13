@@ -690,7 +690,7 @@ function PrintableApplication({ student, schoolInfo }: { student: NewAdmissionDa
                             <p>জেলা: {student.permanentDistrict || student.presentDistrict}</p>
                         </div>
                         <div className="col-span-2 flex items-center gap-2 text-lg font-black text-primary pt-2">
-                            <span>মোবাইল নম্বর: {toBengaliNumber(student.guardianMobile)}</span>
+                            <span>মোবাইল নম্বর: {toBengaliNumber(student.guardianMobile || '')}</span>
                         </div>
                     </div>
                 </section>

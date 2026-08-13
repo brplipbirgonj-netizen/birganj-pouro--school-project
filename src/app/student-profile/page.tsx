@@ -754,7 +754,7 @@ function StudentProfileSearchContent() {
                                                     { label: 'অন্যান্য ফি', key: 'otherFee' }
                                                 ].map(item => {
                                                     const amount = studentData[item.key as keyof Student] as number;
-                                                    const isPaid = feeHistory.some(f => f.breakdown && f.breakdown[item.key as keyof typeof f.breakdown] > 0);
+                                                    const isPaid = feeHistory.some(f => f.breakdown && (f.breakdown[item.key as keyof typeof f.breakdown] ?? 0) > 0);
                                                     return (
                                                         <div key={item.key} className="flex justify-between items-center border-b pb-2 last:border-0">
                                                             <span>{item.label}:</span>

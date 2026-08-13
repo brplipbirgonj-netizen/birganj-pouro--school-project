@@ -4,7 +4,7 @@ import * as React from "react"
 import { format } from "date-fns"
 import { bn } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from "lucide-react"
-import { DayPicker, DropdownProps } from "react-day-picker"
+import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -107,7 +107,7 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                 month={displayMonth}
                 onMonthChange={setDisplayMonth}
                 locale={bn}
-                captionLayout="dropdown-buttons"
+                captionLayout="dropdown"
                 fromYear={startYear}
                 toYear={endYear}
                 classNames={{
@@ -135,9 +135,7 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                     day_hidden: "invisible",
                 }}
                 components={{
-                    Dropdown: ({ value, onChange, children }: DropdownProps) => {
-                    const options = React.Children.toArray(children) as React.ReactElement<React.HTMLProps<HTMLOptionElement>>[];
-                    const selected = options.find((child) => child.props.value === value);
+                    Dropdown: ({ value, onChange, options }: { value?: string | number; onChange?: React.ChangeEventHandler<HTMLSelectElement>; options?: { value: string | number; label: string }[] }) => {
                     const handleChange = (newValue: string) => {
                         const event = {
                         target: { value: newValue },
@@ -149,15 +147,15 @@ export function DatePicker({ value, onChange, triggerClassName, placeholder = ""
                         value={value?.toString()}
                         onValueChange={(newValue) => handleChange(newValue)}
                         >
-                        <SelectTrigger className="h-8 text-xs truncate">{selected?.props.children}</SelectTrigger>
+                        <SelectTrigger className="h-8 text-xs truncate">{options?.find(o => o.value?.toString() === value?.toString())?.label ?? value}</SelectTrigger>
                         <SelectContent>
                             <ScrollArea className="h-40">
-                            {options.map((option, i) => (
+                            {options?.map((option, i) => (
                                 <SelectItem
-                                key={`${option.props.value}-${i}`}
-                                value={option.props.value?.toString() ?? ""}
+                                key={`${option.value}-${i}`}
+                                value={option.value?.toString() ?? ""}
                                 >
-                                {option.props.children}
+                                {option.label}
                                 </SelectItem>
                             ))}
                             </ScrollArea>

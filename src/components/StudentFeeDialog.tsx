@@ -125,7 +125,7 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 setCollectionDate(new Date(existingCollection.collectionDate));
                 setDescription(existingCollection.description);
                 setBreakdown(existingCollection.breakdown || {});
-                setMethod(existingCollection.method || 'cash');
+                setMethod((existingCollection.method as PaymentMethod) || 'cash');
                 const monthsInDesc = new Set<string>();
                 BENGALI_MONTHS.forEach(m => { if (existingCollection.description.includes(m)) monthsInDesc.add(m); });
                 setSelectedMonths(monthsInDesc);

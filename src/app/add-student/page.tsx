@@ -400,7 +400,7 @@ export default function AddStudentPage() {
 
                 const studentsQuery = query(collection(db, "students"), where("academicYear", "==", selectedYear));
                 const querySnapshot = await getDocs(studentsQuery);
-                const allStudents = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                const allStudents = querySnapshot.docs.map(docSnap => ({id: docSnap.id, ...docSnap.data()} as Student));
 
                 let addedCount = 0;
                 let updatedCount = 0;
@@ -547,7 +547,7 @@ export default function AddStudentPage() {
                               </SelectTrigger>
                               <SelectContent>
                                   {availableYears.map(year => (
-                                      <SelectItem key={year} value={String(year)}>{String(year).toLocaleString('bn-BD')}</SelectItem>
+                                      <SelectItem key={year} value={String(year)}>{Number(year).toLocaleString('bn-BD')}</SelectItem>
                                   ))}
                               </SelectContent>
                           </Select>
