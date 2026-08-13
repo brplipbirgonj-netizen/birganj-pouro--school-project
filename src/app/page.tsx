@@ -15,6 +15,7 @@ import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { getStaff } from '@/lib/staff-data';
 import { getGalleryConfig, GalleryConfig, defaultGalleryConfig } from '@/lib/gallery-data';
 import { getTransactions, Transaction } from '@/lib/transactions-data';
+import { isHoliday, Holiday } from '@/lib/holiday-data';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
@@ -510,7 +511,7 @@ const LiveRoutineCard = () => {
                                         <TableHeader className="bg-muted/50">
                                             <TableRow>
                                                 <TableHead>সময়</TableHead>
-                                                <TableHead>শিক্ষক</TableHead>
+                                                <TableHead>শিক্ষকর</TableHead>
                                                 <TableHead>শ্রেণি</TableHead>
                                             </TableRow>
                                         </TableHeader>
