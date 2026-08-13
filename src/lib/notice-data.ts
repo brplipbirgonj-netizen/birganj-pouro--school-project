@@ -14,13 +14,13 @@ import {
   limit,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export interface Notice {
   id: string;
   title: string;
   content: string;
-  date: Date;
+  date: Date | null;
   priority: 'normal' | 'important' | 'urgent';
   senderName: string;
   pdfUrl?: string;
@@ -31,7 +31,11 @@ export type NewNoticeData = Omit<Notice, 'id' | 'date'>;
 
 const NOTICES_COLLECTION = 'notices';
 
-export const getNotices = async (db: Firestore, maxCount = 5): Promise<Notice[]> => {
+/**
+ * Fetches notices with real-time updates not possible here, 
+ * so it's a one-time fetch helper. Main reactive logic is in page component.
+ */
+export const getNotices = async (db: Firestore, maxCount = 50): Promise<Notice[]> => {
   const q = query(collection(db, NOTICES_COLLECTION), orderBy('date', 'desc'), limit(maxCount));
   try {
     const querySnapshot = await getDocs(q);
@@ -40,7 +44,7 @@ export const getNotices = async (db: Firestore, maxCount = 5): Promise<Notice[]>
         return {
             id: doc.id,
             ...data,
-            date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+            date: data.date instanceof Timestamp ? data.date.toDate() : (data.date ? new Date(data.date) : null),
         } as Notice;
     });
   } catch (e) {
@@ -49,57 +53,58 @@ export const getNotices = async (db: Firestore, maxCount = 5): Promise<Notice[]>
   }
 };
 
-export const addNotice = async (db: Firestore, noticeData: NewNoticeData) => {
+/**
+ * Adds a new notice using non-blocking pattern for optimistic UI.
+ */
+export const addNotice = (db: Firestore, noticeData: NewNoticeData) => {
   const collectionRef = collection(db, NOTICES_COLLECTION);
   const dataToSave = {
     ...noticeData,
     date: serverTimestamp(),
   };
 
-  try {
-    return await addDoc(collectionRef, dataToSave);
-  } catch (serverError: any) {
-    if (serverError.code === 'permission-denied') {
-        const permissionError = new FirestorePermissionError({
-            path: NOTICES_COLLECTION,
-            operation: 'create',
-            requestResourceData: dataToSave,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    }
-    throw serverError;
-  }
+  // Perform the write without awaiting the server response for better UX
+  addDoc(collectionRef, dataToSave)
+    .catch(async (serverError: any) => {
+      console.error("Firestore Save Error:", serverError);
+      if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+              path: NOTICES_COLLECTION,
+              operation: 'create',
+              requestResourceData: dataToSave,
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+      }
+    });
 };
 
-export const updateNoticeScrolling = async (db: Firestore, id: string, isScrolling: boolean) => {
+export const updateNoticeScrolling = (db: Firestore, id: string, isScrolling: boolean) => {
   const docRef = doc(db, NOTICES_COLLECTION, id);
-  try {
-    return await updateDoc(docRef, { isScrolling });
-  } catch (serverError: any) {
-    if (serverError.code === 'permission-denied') {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'update',
-            requestResourceData: { isScrolling },
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    }
-    throw serverError;
-  }
+  const dataToUpdate = { isScrolling, updatedAt: serverTimestamp() };
+  
+  updateDoc(docRef, dataToUpdate)
+    .catch(async (serverError: any) => {
+      if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'update',
+              requestResourceData: dataToUpdate,
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+      }
+    });
 };
 
-export const deleteNotice = async (db: Firestore, id: string) => {
+export const deleteNotice = (db: Firestore, id: string) => {
   const docRef = doc(db, NOTICES_COLLECTION, id);
-  try {
-    await deleteDoc(docRef);
-  } catch (serverError: any) {
-    if (serverError.code === 'permission-denied') {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    }
-    throw serverError;
-  }
+  deleteDoc(docRef)
+    .catch(async (serverError: any) => {
+      if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'delete',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+      }
+    });
 };

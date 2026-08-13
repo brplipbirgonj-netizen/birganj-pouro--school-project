@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,20 +15,20 @@ import { useToast } from "@/hooks/use-toast";
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { getNotices, addNotice, deleteNotice, updateNoticeScrolling, Notice } from '@/lib/notice-data';
+import { addNotice, deleteNotice, updateNoticeScrolling, Notice } from '@/lib/notice-data';
 import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
@@ -60,25 +60,33 @@ export default function NoticeManagementPage() {
         setIsClient(true);
     }, []);
 
-    const fetchNotices = useCallback(async () => {
-        if (!db || !user) return;
-        setIsLoading(true);
-        try {
-            const data = await getNotices(db, 50);
-            setNotices(data);
-        } catch (e) {
-            console.error(e);
-        }
-        setIsLoading(false);
-    }, [db, user]);
-
+    // Reactive listener for real-time notice list
     useEffect(() => {
-        if (isClient && !authLoading) {
-            if (user && canViewNotices) {
-                fetchNotices();
+        if (!isClient || authLoading || !user || !canViewNotices || !db) return;
+        
+        setIsLoading(true);
+        const q = query(collection(db, 'notices'), orderBy('date', 'desc'), limit(50));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                return {
+                    id: doc.id,
+                    ...docData,
+                    date: docData.date instanceof Timestamp ? docData.date.toDate() : (docData.date ? new Date(docData.date) : null),
+                } as Notice;
+            });
+            setNotices(data);
+            setIsLoading(false);
+        }, (error) => {
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'notices', operation: 'list' }));
             }
-        }
-    }, [user, fetchNotices, isClient, authLoading, canViewNotices]);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [db, user, isClient, authLoading, canViewNotices]);
 
     const handleAiGenerate = async () => {
       if (!aiTopic.trim()) {
@@ -103,47 +111,44 @@ export default function NoticeManagementPage() {
       }
     };
 
-    const handleAddNotice = async () => {
+    const handleAddNotice = () => {
         if (!db || !user) return;
-        if (!newNotice.title || !newNotice.content) {
-            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' });
+        if (!newNotice.title.trim() || !newNotice.content.trim()) {
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'শিরোনাম এবং বিষয়বস্তু উভয়ই লিখুন।' });
             return;
         }
 
         const senderName = user.role === 'admin' ? 'প্রধান শিক্ষক' : (user.displayName || user.email || 'শিক্ষক');
 
         try {
-            await addNotice(db, {
+            // Non-blocking call for optimistic UI experience
+            addNotice(db, {
                 title: newNotice.title,
                 content: newNotice.content,
                 priority: newNotice.priority,
                 senderName: senderName,
-                pdfUrl: newNotice.pdfUrl || undefined,
+                pdfUrl: newNotice.pdfUrl.trim() || undefined,
                 isScrolling: newNotice.isScrolling
             });
+            
             toast({ title: 'নোটিশ প্রকাশিত হয়েছে' });
             setIsAddOpen(false);
             setNewNotice({ title: '', content: '', priority: 'normal', pdfUrl: '', isScrolling: true });
-            fetchNotices();
-        } catch (e) {}
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'ত্রুটি', description: 'নোটিশ সেভ করা যায়নি।' });
+        }
     };
 
-    const handleToggleScrolling = async (id: string, currentStatus: boolean) => {
+    const handleToggleScrolling = (id: string, currentStatus: boolean) => {
         if (!db || !canManageNotices) return;
-        try {
-            await updateNoticeScrolling(db, id, !currentStatus);
-            toast({ title: 'স্ক্রল স্ট্যাটাস পরিবর্তন হয়েছে' });
-            fetchNotices();
-        } catch (e) {}
+        updateNoticeScrolling(db, id, !currentStatus);
+        toast({ title: 'স্ক্রল স্ট্যাটাস পরিবর্তন হয়েছে' });
     };
 
-    const handleDelete = async (id: string) => {
-        if (!db) return;
-        try {
-            await deleteNotice(db, id);
-            toast({ title: 'নোটিশ মুছে ফেলা হয়েছে' });
-            fetchNotices();
-        } catch (e) {}
+    const handleDelete = (id: string) => {
+        if (!db || !canManageNotices) return;
+        deleteNotice(db, id);
+        toast({ title: 'নোটিশ মুছে ফেলা হয়েছে' });
     };
 
     const handlePrint = (notice: Notice) => {
@@ -281,13 +286,13 @@ export default function NoticeManagementPage() {
                                             <TableCell className="text-center font-black text-lg">{toBengaliNumber(idx + 1)}</TableCell>
                                             <TableCell>
                                                 <p className="font-black text-base text-slate-800 line-clamp-1">{notice.title}</p>
-                                                <p className="text-xs font-bold text-muted-foreground mt-1">{format(notice.date, 'PP p', { locale: bn })}</p>
+                                                <p className="text-xs font-bold text-muted-foreground mt-1">{notice.date ? format(notice.date, 'PP p', { locale: bn }) : 'এখনই'}</p>
                                             </TableCell>
                                             {canManageNotices && (
                                                 <TableCell className="text-center">
                                                     <div className="flex flex-col items-center gap-1">
                                                         <Switch 
-                                                            checked={notice.isScrolling} 
+                                                            checked={!!notice.isScrolling} 
                                                             onCheckedChange={() => handleToggleScrolling(notice.id, !!notice.isScrolling)}
                                                         />
                                                         <span className={cn("text-[9px] font-black uppercase", notice.isScrolling ? "text-emerald-600" : "text-slate-400")}>
@@ -347,7 +352,7 @@ export default function NoticeManagementPage() {
                         <p className="text-lg font-bold text-slate-700">{schoolInfo.address}</p>
                     </div>
                     <div className="text-right mb-8 text-base font-bold">
-                        তারিখ: {format(printingNotice.date, 'dd/MM/yyyy', { locale: bn })} ইং
+                        তারিখ: {printingNotice.date ? format(printingNotice.date, 'dd/MM/yyyy', { locale: bn }) : ''} ইং
                     </div>
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-black underline underline-offset-[12px] uppercase tracking-widest leading-relaxed">
