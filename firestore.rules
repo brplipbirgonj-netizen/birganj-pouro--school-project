@@ -110,7 +110,7 @@ service cloud.firestore {
 
     match /attendance/{id} {
       allow read: if isAuthed();
-      allow write: if isAuthed() && (hasPermission('manage:attendance') || isAdmin());
+      allow write: if isAuthed() && (hasPermission('manage:attendance') || hasPermission('input:quick-roll-attendance') || hasPermission('input:missed-attendance') || isAdmin());
       allow delete: if isAdmin();
     }
     

@@ -815,6 +815,64 @@ export default function Home() {
     }
   };
 
+  const refreshDashboardAttendance = useCallback(async (currentStudents?: Student[]) => {
+      if (!db) return;
+      const list = currentStudents && currentStudents.length > 0 ? currentStudents : studentsForYear;
+      const classMap: Record<string, { present: number; absent: number; total: number }> = {
+          '6': { present: 0, absent: 0, total: 0 },
+          '7': { present: 0, absent: 0, total: 0 },
+          '8': { present: 0, absent: 0, total: 0 },
+          '9': { present: 0, absent: 0, total: 0 },
+          '10': { present: 0, absent: 0, total: 0 },
+      };
+
+      list.forEach(student => {
+          if (classMap[student.className]) {
+              classMap[student.className].total++;
+          }
+      });
+
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      try {
+          const todaysAttendance = await getAttendanceForDate(db, todayStr, selectedYear);
+          setAttendanceTaken(todaysAttendance.length > 0);
+
+          if (todaysAttendance.length > 0) {
+              let totalPresentCount = 0;
+              let totalAbsentCount = 0;
+              todaysAttendance.forEach(classAttendanceRecord => {
+                  const className = classAttendanceRecord.className;
+                  if (classMap[className]) {
+                      let presentCount = 0;
+                      let absentCount = 0;
+                      
+                      classAttendanceRecord.attendance.forEach(studentAttendance => {
+                          const studentExistsInYear = list.some(s => s.id === studentAttendance.studentId && s.className === className);
+                          if (studentExistsInYear) {
+                              if (studentAttendance.status === 'present') {
+                                  presentCount++;
+                              } else {
+                                  absentCount++;
+                              }
+                          }
+                      });
+                      classMap[className].present = presentCount;
+                      classMap[className].absent = absentCount;
+                      totalPresentCount += presentCount;
+                      totalAbsentCount += absentCount;
+                  }
+              });
+              setTotalPresent(totalPresentCount);
+              setTotalAbsent(totalAbsentCount);
+          } else {
+              setTotalPresent(0);
+              setTotalAbsent(0);
+          }
+      } catch (e) {}
+      
+      setClassAttendance(classMap);
+  }, [db, selectedYear, studentsForYear]);
+
   const handleQuickAttendanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db) return;
@@ -833,9 +891,18 @@ export default function Home() {
             .map(r => parseInt(bnToEn(r.trim()), 10))
             .filter(r => !isNaN(r));
 
-        const classStudents = (studentsForYear || []).filter(
-            (s: Student) => s.className === quickAttendanceClass
+        let classStudents = (studentsForYear || []).filter(
+            (s: Student) => String(s.className) === String(quickAttendanceClass)
         );
+
+        if (classStudents.length === 0) {
+            const qSnap = await getDocs(query(
+                collection(db, 'students'),
+                where('className', '==', quickAttendanceClass),
+                where('academicYear', '==', selectedYear)
+            ));
+            classStudents = qSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Student));
+        }
 
         if (classStudents.length === 0) {
             toast({ variant: 'destructive', title: 'এই শ্রেণিতে কোনো শিক্ষার্থী পাওয়া যায়নি' });
@@ -863,9 +930,11 @@ export default function Home() {
             description: `${inputRolls.length} জন উপস্থিত এবং বাকি ${classStudents.length - inputRolls.length} জন অনুপস্থিত হিসেবে সেভ হয়েছে।`
         });
         setQuickAttendanceInput('');
-    } catch (err) {
+
+        refreshDashboardAttendance(studentsForYear);
+    } catch (err: any) {
         console.error("Error saving quick attendance:", err);
-        toast({ variant: 'destructive', title: 'হাজিরা সেভ করতে সমস্যা হয়েছে' });
+        toast({ variant: 'destructive', title: 'হাজিরা সেভ করতে সমস্যা হয়েছে', description: err?.message || '' });
     } finally {
         setIsSavingQuickAttendance(false);
     }
