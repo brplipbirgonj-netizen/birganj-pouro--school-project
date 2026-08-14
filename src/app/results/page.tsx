@@ -1165,6 +1165,13 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 delete (studentData as any).id;
                 delete (studentData as any).createdAt;
 
+                // Sanitize: Firebase doesn't allow undefined values in batch operations
+                Object.keys(studentData).forEach(key => {
+                    if ((studentData as any)[key] === undefined) {
+                        delete (studentData as any)[key];
+                    }
+                });
+
                 if (existing) {
                     const docRef = doc(db, 'students', existing.id);
                     batch.update(docRef, studentData);
@@ -1284,7 +1291,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     
                     <div className="flex-1 overflow-hidden p-6 bg-slate-50 flex flex-col min-h-0">
                         <Card className="border-2 border-black/5 bg-white shadow-inner flex-1 flex flex-col overflow-hidden rounded-xl">
-                            {/* Manual Header for consistent columns */}
+                            {/* Static Header using div to avoid hydration issues */}
                             <div className="bg-muted/80 border-b shrink-0 z-10">
                                 <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
                                     <span>শিক্ষার্থীর নাম</span>
@@ -1294,7 +1301,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </div>
                             </div>
                             
-                            {/* Scrollable list with defined max-height and overflow */}
+                            {/* Scrollable list with fixed height */}
                             <div className="flex-1 overflow-y-auto max-h-[450px]">
                                 <div className="divide-y-2 divide-slate-50">
                                     {projectedPromotions.map((item, i) => (
