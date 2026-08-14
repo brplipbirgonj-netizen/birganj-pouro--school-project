@@ -24,7 +24,7 @@ import {
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, limit, doc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, limit, doc, writeBatch, serverTimestamp, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
@@ -39,9 +39,10 @@ import { bn } from 'date-fns/locale';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { SpecialClassResult, saveSpecialResults, getSpecialResultsForClass } from '@/lib/special-results-data';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const BENGALI_MONTHS = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
@@ -1040,6 +1041,11 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [isPromoting, setIsPromoting] = useState(false);
     
     const [promotionStatus, setPromotionStatus] = useState({ open: false, studentName: '', newRoll: 0, id: '', isReplace: false });
+    
+    // Preview States
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [promotionMode, setPromotionType] = useState<'pass' | 'special'>('pass');
+    const [projectedPromotions, setProjectedPromotions] = useState<any[]>([]);
 
     const handleLoadSource = async () => {
         if (!sourceClass || !db) return;
@@ -1049,7 +1055,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const allRes = await getAllResults(db, selectedYear, 'বার্ষিক পরীক্ষা');
             const classRes = allRes.filter(r => r.className === sourceClass);
             const subs = getSubjects(sourceClass).filter(s => s.isExamSubject !== false);
-            const processed = studentFromDoc ? processStudentResults(classStudents, classRes, subs) : [];
+            const processed = processStudentResults(classStudents, classRes, subs);
             
             setPassedStudents(processed.filter(r => r.isPass).sort((a,b) => (a.meritPosition || 0) - (b.meritPosition || 0)));
             setFailedStudents(processed.filter(r => !r.isPass).sort((a,b) => {
@@ -1061,14 +1067,43 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsLoading(false);
     };
 
+    const handleShowPreview = async (mode: 'pass' | 'special') => {
+        if (isPromoting) return;
+        setPromotionType(mode);
+        const studentsToPromote = mode === 'pass' ? passedStudents : failedStudents.filter(f => selectedIds.has(f.student.id));
+        if (studentsToPromote.length === 0) {
+            toast({ variant: 'destructive', title: 'কোনো শিক্ষার্থী নির্বাচিত করা হয়নি' });
+            return;
+        }
+
+        setIsPromoting(true);
+        try {
+            // Fetch existing students in target class to estimate rolls
+            const targetSnap = await getDocs(query(collection(db!, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass)));
+            const currentTargetStudents = targetSnap.docs.map(studentFromDoc);
+            
+            const projected = studentsToPromote.map((res, index) => {
+                const s = res.student;
+                const existing = currentTargetStudents.find(ts => ts.generatedId === s.generatedId);
+                return {
+                    name: s.studentNameBn,
+                    id: s.id,
+                    generatedId: s.generatedId,
+                    currentRoll: s.roll,
+                    projectedRoll: currentTargetStudents.length + index + 1, // Rough estimate
+                    isReplace: !!existing,
+                    resData: res
+                };
+            });
+
+            setProjectedPromotions(projected);
+            setIsPreviewOpen(true);
+        } catch (e) { console.error(e); }
+        setIsPromoting(false);
+    };
+
     const reIndexClassRolls = async (batch: any, targetStudents: Student[]) => {
         const sorted = targetStudents.sort((a, b) => {
-            const yearSuffix = targetYear.slice(-2);
-            const aIsNew = a.generatedId?.startsWith(yearSuffix);
-            const bIsNew = b.generatedId?.startsWith(yearSuffix);
-
-            if (aIsNew !== bIsNew) return aIsNew ? 1 : -1;
-            
             const aStatus = (a as any)._promoStatus || 'pass';
             const bStatus = (b as any)._promoStatus || 'pass';
             
@@ -1086,6 +1121,13 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         sorted.forEach((s, idx) => {
             const docRef = doc(db!, 'students', s.id);
             const update: any = { roll: idx + 1 };
+            
+            // Recalculate generatedId based on new class, year and new roll
+            const yearSuffix = targetYear.slice(-2);
+            const classCode = String(targetClass).padStart(2, '0');
+            const rollSerial = (idx + 1).toString().padStart(4, '0');
+            update.generatedId = `${yearSuffix}${classCode}${rollSerial}`;
+
             // Clear temporary markers
             delete (update as any)._promoStatus;
             delete (update as any)._promoRank;
@@ -1095,19 +1137,18 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         });
     };
 
-    const handleBulkPromote = async (mode: 'pass' | 'special') => {
+    const handleConfirmPromotion = async () => {
         if (!db || isPromoting) return;
         setIsPromoting(true);
         try {
             const batch = writeBatch(db);
-            const studentsToPromote = mode === 'pass' ? passedStudents : failedStudents.filter(f => selectedIds.has(f.student.id));
+            const studentsToPromote = projectedPromotions;
             
             const targetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass)));
             const currentTargetStudents = targetSnap.docs.map(studentFromDoc);
-            
-            let promotedOne: any = null;
 
-            for (const res of studentsToPromote) {
+            for (const item of studentsToPromote) {
+                const res = item.resData;
                 const s = res.student;
                 const existing = currentTargetStudents.find(ts => ts.generatedId === s.generatedId);
                 
@@ -1127,16 +1168,15 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 if (existing) {
                     const docRef = doc(db, 'students', existing.id);
                     batch.update(docRef, studentData);
-                    promotedOne = { name: s.studentNameBn, id: s.generatedId, isReplace: true };
                 } else {
                     const newDocRef = doc(collection(db, 'students'));
                     batch.set(newDocRef, studentData);
-                    promotedOne = { name: s.studentNameBn, id: s.generatedId, isReplace: false };
                 }
             }
 
             await batch.commit();
             
+            // Re-fetch and Re-index rolls
             const finalTargetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass)));
             const finalTargetList = finalTargetSnap.docs.map(doc => {
                 const data = doc.data();
@@ -1146,15 +1186,13 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             await reIndexClassRolls(reIndexBatch, finalTargetList);
             await reIndexBatch.commit();
 
-            if (studentsToPromote.length === 1 && promotedOne) {
-                const reIndexSnap = await getDocs(query(collection(db, 'students'), where('generatedId', '==', promotedOne.id), where('academicYear', '==', targetYear)));
-                const newRoll = reIndexSnap.docs[0].data().roll;
-                setPromotionStatus({ open: true, studentName: promotedOne.name, id: promotedOne.id, newRoll, isReplace: promotedOne.isReplace });
-            } else {
-                toast({ title: 'প্রমোশন সম্পন্ন হয়েছে', description: `${studentsToPromote.length} জন শিক্ষার্থীকে উন্নীত করা হয়েছে।` });
-            }
+            toast({ title: 'প্রমোশন সম্পন্ন হয়েছে', description: `${studentsToPromote.length} জন শিক্ষার্থীকে উন্নীত করা হয়েছে।` });
+            setIsPreviewOpen(false);
             handleLoadSource();
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e);
+            toast({ variant: 'destructive', title: 'প্রমোশন ব্যর্থ হয়েছে' });
+        }
         setIsPromoting(false);
     };
 
@@ -1167,7 +1205,18 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
-                <div className="space-y-2"><Label className="font-bold text-xs">সোর্স শ্রেণি (বর্তমান)</Label><Select value={sourceClass} onValueChange={v => { setSourceClass(v); setTargetClass(String(parseInt(v)+1)); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['6', '7', '8', '9'].map(v => <SelectItem key={v} value={v}>{classNamesMap[v]} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2">
+                    <Label className="font-bold text-xs">সোর্স শ্রেণি (বর্তমান)</Label>
+                    <Select value={sourceClass} onValueChange={v => { 
+                        setSourceClass(v); 
+                        const next = (parseInt(v)+1);
+                        setTargetClass(String(next)); 
+                        setTargetYear((parseInt(selectedYear) + 1).toString());
+                    }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{['6', '7', '8', '9'].map(v => <SelectItem key={v} value={v}>{classNamesMap[v]} শ্রেণি</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2"><Label className="font-bold text-xs">টার্গেট বছর</Label><Input value={toBengaliNumber(targetYear)} disabled className="bg-slate-50 font-black" /></div>
                 <div className="space-y-2"><Label className="font-bold text-xs">টার্গেট শ্রেণি</Label><Input value={classNamesMap[targetClass] + ' শ্রেণি'} disabled className="bg-slate-50 font-black" /></div>
                 <Button onClick={handleLoadSource} disabled={isLoading} className="h-10 font-black"><Search className="h-4 w-4 mr-2" /> তালিকা লোড করুন</Button>
@@ -1177,7 +1226,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <Card className="border-2 shadow-xl rounded-3xl overflow-hidden">
                     <CardHeader className="bg-emerald-50 border-b-2 border-emerald-100 flex flex-row justify-between items-center p-6">
                         <div><CardTitle className="text-xl font-black text-emerald-800">পাস করা শিক্ষার্থীদের তালিকা</CardTitle><CardDescription className="font-bold">মেধাক্রম অনুযায়ী অটোমেটিক রোল ১ থেকে এসাইন হবে</CardDescription></div>
-                        <Button onClick={() => handleBulkPromote('pass')} className="bg-emerald-600 hover:bg-emerald-700 font-black h-12 px-10 shadow-xl"><CheckCircle2 className="mr-2 h-5 w-5" /> সকল পাসকৃতদের প্রমোশন দিন</Button>
+                        <Button onClick={() => handleShowPreview('pass')} className="bg-emerald-600 hover:bg-emerald-700 font-black h-12 px-10 shadow-xl"><CheckCircle2 className="mr-2 h-5 w-5" /> সকল পাসকৃতদের প্রমোশন দিন</Button>
                     </CardHeader>
                     <CardContent className="p-0 max-h-[400px] overflow-auto">
                         <Table>
@@ -1192,7 +1241,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <Card className="border-2 shadow-xl rounded-3xl overflow-hidden">
                     <CardHeader className="bg-rose-50 border-b-2 border-rose-100 flex flex-row justify-between items-center p-6">
                         <div><CardTitle className="text-xl font-black text-rose-800">অকৃতকার্য শিক্ষার্থীদের তালিকা (বিশেষ পাশ)</CardTitle><CardDescription className="font-bold text-rose-600">কম ফেল এবং বেশি নম্বর অনুযায়ী এরা পাস করাদের পরে সিরিয়াল পাবে</CardDescription></div>
-                        <Button onClick={() => handleBulkPromote('special')} disabled={selectedIds.size === 0} className="bg-rose-600 hover:bg-rose-700 font-black h-12 px-8 shadow-xl"><Plus className="mr-2 h-5 w-5" /> নির্বাচিতদের প্রমোশন দিন</Button>
+                        <Button onClick={() => handleShowPreview('special')} disabled={selectedIds.size === 0} className="bg-rose-600 hover:bg-rose-700 font-black h-12 px-8 shadow-xl"><Plus className="mr-2 h-5 w-5" /> নির্বাচিতদের প্রমোশন দিন</Button>
                     </CardHeader>
                     <CardContent className="p-0 max-h-[400px] overflow-auto">
                         <Table>
@@ -1220,6 +1269,63 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Promotion Preview Dialog */}
+            <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col font-kalpurush p-0 border-none shadow-2xl rounded-2xl overflow-hidden">
+                    <DialogHeader className="p-6 bg-primary text-white shrink-0">
+                        <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                            <Sparkles className="h-6 w-6" /> প্রমোশন কনফার্মেশন ও প্রিভিউ
+                        </DialogTitle>
+                        <DialogDescription className="text-white/80 font-bold">
+                            {classNamesMap[sourceClass]} থেকে {classNamesMap[targetClass]} শ্রেণিতে উন্নীতকরণের তালিকা
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="flex-1 overflow-hidden p-6 bg-slate-50">
+                        <Card className="border-2 border-black/5 bg-white shadow-inner h-full flex flex-col overflow-hidden">
+                            <TableHeader className="bg-muted/50 border-b shrink-0">
+                                <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
+                                    <span>শিক্ষার্থীর নাম</span>
+                                    <span>বর্তমান রোল</span>
+                                    <span>প্রমোশন স্ট্যাটাস</span>
+                                    <span className="text-primary">সম্ভাব্য নতুন রোল</span>
+                                </div>
+                            </TableHeader>
+                            <ScrollArea className="flex-1">
+                                <div className="divide-y-2 divide-slate-50">
+                                    {projectedPromotions.map((item, i) => (
+                                        <div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors">
+                                            <span className="font-black text-slate-800 text-sm">{item.name}</span>
+                                            <span className="font-bold text-slate-500">{toBengaliNumber(item.currentRoll)}</span>
+                                            <span>
+                                                <Badge className={item.resData.isPass ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-rose-100 text-rose-800 border-rose-200"}>
+                                                    {item.resData.isPass ? 'কৃতকার্য' : 'বিশেষ পাশ'}
+                                                </Badge>
+                                            </span>
+                                            <span className="font-black text-xl text-primary">{toBengaliNumber(i + 1)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </Card>
+                    </div>
+
+                    <DialogFooter className="p-6 bg-white border-t flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            "নিশ্চিত করুন" বাটনে ক্লিক করলে ডাটাবেসে তথ্য আপডেট হবে।
+                        </p>
+                        <div className="flex gap-3 w-full sm:w-auto">
+                            <Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="flex-1 font-bold h-12">বাতিল</Button>
+                            <Button onClick={handleConfirmPromotion} disabled={isPromoting} className="flex-1 min-w-[200px] h-12 text-lg font-black shadow-xl bg-emerald-600 hover:bg-emerald-700">
+                                {isPromoting ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
+                                প্রমোশন নিশ্চিত করুন
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={promotionStatus.open} onOpenChange={(o) => setPromotionStatus(prev => ({ ...prev, open: o }))}>
                 <DialogContent className="max-w-md font-kalpurush p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
@@ -1831,7 +1937,7 @@ export default function ResultsPage() {
             )}
 
             {specialPrintData && (
-                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full">
+                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border">
                     <style jsx global>{`
                         @media print {
                             @page { size: A4 landscape; margin: 0.4in !important; }
