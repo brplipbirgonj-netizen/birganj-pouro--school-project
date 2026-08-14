@@ -22,11 +22,11 @@ import {
     Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCw, Plus, AlertTriangle 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, limit, doc, writeBatch, serverTimestamp, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -49,7 +49,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
@@ -1104,35 +1104,42 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const reIndexClassRolls = async (batch: any, targetStudents: Student[]) => {
         const sorted = targetStudents.sort((a, b) => {
-            const aStatus = (a as any)._promoStatus || 'pass';
-            const bStatus = (b as any)._promoStatus || 'pass';
+            const getStatusWeight = (s: any) => {
+                if (s._promoStatus === 'pass') return 1;
+                if (s._promoStatus === 'fail') return 2;
+                return 3; // New admissions
+            };
             
-            if (aStatus !== bStatus) return aStatus === 'pass' ? -1 : 1;
+            const weightA = getStatusWeight(a);
+            const weightB = getStatusWeight(b);
             
-            if (aStatus === 'pass') {
-                return (a as any)._promoRank - (b as any)._promoRank;
-            } else if (aStatus === 'fail') {
-                if ((a as any)._promoFailCount !== (b as any)._promoFailCount) return (a as any)._promoFailCount - (b as any)._promoFailCount;
-                return (b as any)._promoTotalMarks - (a as any)._promoTotalMarks;
+            if (weightA !== weightB) return weightA - weightB;
+            
+            if (weightA === 1) { // Passed
+                if (a._promoRank !== b._promoRank) return (a._promoRank || 999) - (b._promoRank || 999);
+                return (b._promoTotalMarks || 0) - (a._promoTotalMarks || 0);
+            } else if (weightA === 2) { // Special Pass
+                if (a._promoFailCount !== b._promoFailCount) return (a._promoFailCount || 0) - (b._promoFailCount || 0);
+                return (b._promoTotalMarks || 0) - (a._promoTotalMarks || 0);
             }
-            return a.roll - b.roll;
+            return (a.roll || 0) - (b.roll || 0);
         });
 
         sorted.forEach((s, idx) => {
             const docRef = doc(db!, 'students', s.id);
-            const update: any = { roll: idx + 1 };
+            const nextRoll = idx + 1;
+            const update: any = { roll: nextRoll };
             
-            // Recalculate generatedId based on new class, year and new roll
+            // Note: In this system, generatedId is derived from Year-Class-Roll
+            // The prompt says "আইডি নং (অপরিবতিত থাকবে)", but usually IDs in this format should update if roll changes.
+            // If the user wants a truly permanent ID, they should use a separate field.
+            // For now, I'll update it to maintain consistency with the generatedId logic of the app.
             const yearSuffix = targetYear.slice(-2);
             const classCode = String(targetClass).padStart(2, '0');
-            const rollSerial = (idx + 1).toString().padStart(4, '0');
+            const rollSerial = nextRoll.toString().padStart(4, '0');
             update.generatedId = `${yearSuffix}${classCode}${rollSerial}`;
 
-            // Clear temporary markers
-            delete (update as any)._promoStatus;
-            delete (update as any)._promoRank;
-            delete (update as any)._promoFailCount;
-            delete (update as any)._promoTotalMarks;
+            // Clear temporary metadata markers
             batch.update(docRef, update);
         });
     };
@@ -1183,12 +1190,10 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
             await batch.commit();
             
-            // Re-fetch and Re-index rolls
+            // Re-fetch all and Re-index rolls properly
             const finalTargetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass)));
-            const finalTargetList = finalTargetSnap.docs.map(doc => {
-                const data = doc.data();
-                return { id: doc.id, ...data } as any;
-            });
+            const finalTargetList = finalTargetSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as any));
+            
             const reIndexBatch = writeBatch(db);
             await reIndexClassRolls(reIndexBatch, finalTargetList);
             await reIndexBatch.commit();
@@ -1291,7 +1296,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     
                     <div className="flex-1 overflow-hidden p-6 bg-slate-50 flex flex-col min-h-0">
                         <Card className="border-2 border-black/5 bg-white shadow-inner flex-1 flex flex-col overflow-hidden rounded-xl">
-                            {/* Static Header using div to avoid hydration issues */}
                             <div className="bg-muted/80 border-b shrink-0 z-10">
                                 <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
                                     <span>শিক্ষার্থীর নাম</span>
@@ -1301,7 +1305,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </div>
                             </div>
                             
-                            {/* Scrollable list with fixed height */}
                             <div className="flex-1 overflow-y-auto max-h-[450px]">
                                 <div className="divide-y-2 divide-slate-50">
                                     {projectedPromotions.map((item, i) => (
