@@ -39,9 +39,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, FirestoreError, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, FirestoreError, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -170,6 +170,7 @@ function StudentListContent() {
   const [filterReligion, setFilterReligion] = useState<string>('all');
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
 
@@ -293,6 +294,33 @@ function StudentListContent() {
     }).catch(() => {});
   };
 
+  const handleDeleteAll = async () => {
+    if (!db || !user) return;
+    const studentsToDelete = getStudentsByClass(activeTab);
+    if (studentsToDelete.length === 0) return;
+
+    setIsDeletingAll(true);
+    try {
+        const batch = writeBatch(db);
+        studentsToDelete.forEach((student) => {
+            batch.delete(doc(db, 'students', student.id));
+        });
+
+        await batch.commit();
+        toast({ title: "সফল", description: `${classNamesMap[activeTab]} শ্রেণির সকল শিক্ষার্থী ডিলিট হয়েছে।` });
+    } catch (e: any) {
+        console.error("Bulk Delete Error:", e);
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: 'students',
+                operation: 'delete',
+            } satisfies SecurityRuleContext));
+        }
+    } finally {
+        setIsDeletingAll(false);
+    }
+  };
+
   if (!isMounted) return null;
 
   return (
@@ -386,9 +414,34 @@ function StudentListContent() {
                                 <option value="arts">মানবিক ({toBengaliNumber(classStats.group.arts)})</option>
                                 <option value="commerce">ব্যবসায় শিক্ষা ({toBengaliNumber(classStats.group.commerce)})</option>
                             </select>
-                            {hasPermission('manage:students') && (
-                                <Link href="/add-student" className="ml-auto"><Button size="sm" className="h-9 font-black shadow-md"><Plus className="mr-1.5 h-4 w-4" /> নতুন শিক্ষার্থী</Button></Link>
-                            )}
+                            
+                            <div className="ml-auto flex items-center gap-2">
+                                {canDeleteStudent && getStudentsByClass(activeTab).length > 0 && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="outline" size="sm" className="h-9 font-black border-rose-200 text-rose-600 hover:bg-rose-50" disabled={isDeletingAll}>
+                                                {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+                                                সব ডিলিট করুন
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="font-kalpurush">
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle className="text-rose-700 font-black flex items-center gap-2"><AlertCircle /> চূড়ান্ত সতর্কতা!</AlertDialogTitle>
+                                                <AlertDialogDescription className="font-bold text-base leading-relaxed">
+                                                    আপনি কি নিশ্চিতভাবে {classNamesMap[activeTab]} শ্রেণির এই {toBengaliNumber(getStudentsByClass(activeTab).length)} জন শিক্ষার্থীর তথ্য পুরোপুরি মুছে ফেলতে চান? এটি স্থায়ীভাবে ডাটাবেস থেকে ডিলিট হয়ে যাবে।
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                                {hasPermission('manage:students') && (
+                                    <Link href="/add-student"><Button size="sm" className="h-9 font-black shadow-md"><Plus className="mr-1.5 h-4 w-4" /> নতুন শিক্ষার্থী</Button></Link>
+                                )}
+                            </div>
                         </div>
                     )}
 
