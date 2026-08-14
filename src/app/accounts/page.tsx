@@ -123,7 +123,14 @@ function AccountsDashboardTab({ transactions, isLoading, onActionClick }: { tran
         });
     }, [transactions]);
 
-    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> <span>ডেটা লোড হচ্ছে...</span></div>;
+    if (isLoading) {
+        return (
+            <div className="p-12 text-center italic text-muted-foreground">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> 
+                <span>ডেটা লোড হচ্ছে...</span>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -203,8 +210,8 @@ function AccountsDashboardTab({ transactions, isLoading, onActionClick }: { tran
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={last7DaysData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontBold: 'bold', fill: '#64748b' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontBold: 'bold', fill: '#64748b' }} />
                                 <Tooltip 
                                     cursor={{fill: '#f1f5f9'}}
                                     contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }}
@@ -886,7 +893,14 @@ function IncomeComparisonTab({ allStudents, selectedYear, onPrintPotentialReport
         return totals;
     }, [potentialPreviewData]);
 
-    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> <span>ডাটা বিশ্লেষণ করা হচ্ছে...</span></div>;
+    if (isLoading) {
+        return (
+            <div className="p-12 text-center italic text-muted-foreground">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> 
+                <span>ডাটা বিশ্লেষণ করা হচ্ছে...</span>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -896,7 +910,7 @@ function IncomeComparisonTab({ allStudents, selectedYear, onPrintPotentialReport
                 <Card className="border-2 border-rose-500/20 bg-rose-50/30 shadow-md"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-black uppercase text-rose-700 tracking-widest">মোট বকেয়া / অনাদায়ী</CardTitle></CardHeader><CardContent><div className="text-3xl font-black text-rose-950">{toBengaliNumber(stats.due)} ৳</div><p className="text-[10px] font-bold text-rose-600 mt-1">প্রাক্কলিত অবশিষ্ট পাওনা</p></CardContent></Card>
             </div>
             
-            <Card className="border-2 border-black/10 shadow-xl bg-white rounded-2xl overflow-hidden"><CardHeader className="bg-primary/5 border-b border-black/5"><div><CardTitle className="text-base font-black flex items-center gap-2 text-primary"><BarChart3 className="h-5 w-5" /> সম্ভাব্য আয় বনাম প্রকৃত আদায় (তুলনামূলক চিত্র)</CardTitle><CardDescription className="font-bold text-[10px]">প্রতি মাসের সম্ভাব্য পাওনা এবং আদায়ের গ্রাফ</CardDescription></div></CardHeader><CardContent className="pt-8 h-[400px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748b' }} /><YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontBold: 'bold', fill: '#64748b' }} /><Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }} formatter={(value: number) => [`${toBengaliNumber(value)} ৳`, '']} /><Legend verticalAlign="top" align="right" iconType="circle" /><Bar dataKey="potential" name="সম্ভাব্য পাওনা" fill="#6366f1" radius={[4, 4, 0, 0]} /><Bar dataKey="actual" name="প্রকৃত আদায়" fill="#10b981" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+            <Card className="border-2 border-black/10 shadow-xl bg-white rounded-2xl overflow-hidden"><CardHeader className="bg-primary/5 border-b border-black/5"><div><CardTitle className="text-base font-black flex items-center gap-2 text-primary"><BarChart3 className="h-5 w-5" /> সম্ভাব্য আয় বনাম প্রকৃত আদায় (তুলনামূলক চিত্র)</CardTitle><CardDescription className="font-bold text-[10px]">প্রতি মাসের সম্ভাব্য পাওনা এবং আদায়ের গ্রাফ</CardDescription></div></CardHeader><CardContent className="pt-8 h-[400px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontBold: 'bold', fill: '#64748b' }} /><YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontBold: 'bold', fill: '#64748b' }} /><Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '16px', border: '3px solid black', fontWeight: 'bold', fontSize: '12px', boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' }} formatter={(value: number) => [`${toBengaliNumber(value)} ৳`, '']} /><Legend verticalAlign="top" align="right" iconType="circle" /><Bar dataKey="potential" name="সম্ভাব্য পাওনা" fill="#6366f1" radius={[4, 4, 0, 0]} /><Bar dataKey="actual" name="প্রকৃত আদায়" fill="#10b981" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></CardContent></Card>
             
             <Card className="border-2 border-emerald-100 bg-white shadow-lg overflow-hidden">
                 <CardHeader className="bg-emerald-50/50 border-b flex flex-row items-center justify-between">
@@ -921,7 +935,7 @@ function IncomeComparisonTab({ allStudents, selectedYear, onPrintPotentialReport
                             <TableHeader className="bg-slate-100 sticky top-0 z-30 shadow-sm">
                                 <TableRow className="h-8 border-b-2 border-black">
                                     <TableHead className="border-r border-b border-black font-black text-[13px] text-center w-14 text-black sticky left-0 z-40 bg-slate-100">রোল</TableHead>
-                                    <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[150px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[100px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">ভর্তি ফি</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">সেশন চার্জ</TableHead>
                                     {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-r border-b border-black font-black text-[11px] text-center text-black px-1">{m}</TableHead>)}
@@ -1067,7 +1081,7 @@ function ClasswiseAnnualReportTab({ allStudents, selectedYear, onPrint }: { allS
                             <TableHeader className="bg-slate-100 sticky top-0 z-30 shadow-sm">
                                 <TableRow className="h-8 border-b-2 border-black">
                                     <TableHead className="border-r border-b border-black font-black text-[13px] text-center w-14 text-black sticky left-0 z-40 bg-slate-100">রোল</TableHead>
-                                    <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[150px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[100px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">ভর্তি ফি</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">সেশন চার্জ</TableHead>
                                     {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-r border-b border-black font-black text-[11px] text-center text-black px-1">{m}</TableHead>)}
@@ -1078,7 +1092,7 @@ function ClasswiseAnnualReportTab({ allStudents, selectedYear, onPrint }: { allS
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={19} className="text-center py-20 italic">বিশ্লেষণ করা হচ্ছে...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={19} className="text-center py-20 italic"><span>বিশ্লেষণ করা হচ্ছে...</span></TableCell></TableRow>
                                 ) : reportData.map((row, i) => (
                                     <TableRow key={i} className="h-7 border-b border-black hover:bg-slate-50 transition-colors">
                                         <TableCell className="border-r border-black text-center font-black text-[13px] sticky left-0 z-20 bg-white group-hover:bg-slate-50">{toBengaliNumber(row.roll)}</TableCell>
@@ -1473,7 +1487,7 @@ function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo,
                     <TableHeader className="bg-slate-100">
                         <TableRow className="h-6 border-b-2 border-black bg-slate-100">
                             <TableHead className="border border-black font-black text-center w-8 text-black">রোল</TableHead>
-                            <TableHead className="border border-black font-black w-36 text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
+                            <TableHead className="border border-black font-black w-28 text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
                             <TableHead className="border border-black font-black text-center text-black w-12">ভর্তি ফি</TableHead>
                             <TableHead className="border border-black font-black text-center text-black w-12">সেশন চার্জ</TableHead>
                             {BENGALI_MONTHS.map(m => <TableHead key={m} className="border border-black font-black text-center text-black px-0.5 w-7 text-[9px]">{m.slice(0,3)}</TableHead>)}
@@ -1486,7 +1500,7 @@ function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo,
                         {studentRows.map((row, i) => (
                             <TableRow key={i} className="h-[18px] border-b border-black">
                                 <TableCell className="border border-black text-center font-black text-black p-0 w-8">{toBengaliNumber(row.roll)}</TableCell>
-                                <TableCell className="border border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 w-36">{row.name}</TableCell>
+                                <TableCell className="border border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 w-28">{row.name}</TableCell>
                                 <TableCell className="border border-black text-center text-black font-black p-0 w-12">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
                                 <TableCell className="border border-black text-center text-black font-black p-0 w-12">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
                                 {[...Array(12)].map((_, j) => (
@@ -1500,7 +1514,7 @@ function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo,
                     </TableBody>
                     <TableFooter>
                         <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
-                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black w-44">সর্বমোট:</TableCell>
+                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black w-36">সর্বমোট:</TableCell>
                             <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.admission)}</TableCell>
                             <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.session)}</TableCell>
                             {grandTotals.months.map((val, j) => <TableCell key={j} className="border-black text-center text-black w-7 text-[9px]">{toBengaliNumber(Math.round(val))}</TableCell>)}
@@ -1529,7 +1543,13 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
         return totals;
     }, [reportData]);
 
-    if (reportData.length === 0) return <div className="printable-area p-20 text-center font-black">তথ্য লোড হচ্ছে... অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন।</div>;
+    if (reportData.length === 0) {
+        return (
+            <div className="printable-area p-20 text-center font-black">
+                <span>তথ্য লোড হচ্ছে... অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন।</span>
+            </div>
+        );
+    }
 
     return (
         <div className="printable-area bg-white text-black font-kalpurush p-2 w-full">
@@ -1547,7 +1567,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                     <TableHeader className="bg-slate-100">
                         <TableRow className="h-6 border-b-2 border-black bg-slate-100">
                             <TableHead className="border-black font-black text-center w-8 text-black">রোল</TableHead>
-                            <TableHead className="border-black font-black w-36 text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
+                            <TableHead className="border-black font-black w-28 text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
                             <TableHead className="border-black font-black text-center text-black w-12">ভর্তি ফি</TableHead>
                             <TableHead className="border-black font-black text-center text-black w-12">সেশন ফি</TableHead>
                             {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-black font-black text-center text-black px-0.5 w-7 text-[9px]">{m.slice(0,3)}</TableHead>)}
@@ -1560,7 +1580,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                         {reportData.map((row, i) => (
                             <TableRow key={i} className="h-[18px] border-b border-black">
                                 <TableCell className="border-black text-center font-black text-black p-0 w-8">{toBengaliNumber(row.roll)}</TableCell>
-                                <TableCell className="border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 w-36">{row.name}</TableCell>
+                                <TableCell className="border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 w-28">{row.name}</TableCell>
                                 <TableCell className="border-black text-center text-black font-black p-0 w-12">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
                                 <TableCell className="border-black text-center text-black font-black p-0 w-12">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
                                 {row.months.map((val: number, j: number) => (
@@ -1574,7 +1594,7 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                     </TableBody>
                     <TableFooter>
                         <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
-                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black w-44">সর্বমোট:</TableCell>
+                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black w-36">সর্বমোট:</TableCell>
                             <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.admission)}</TableCell>
                             <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.session)}</TableCell>
                             {grandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border-black text-center text-black w-7 text-[9px]">{toBengaliNumber(Math.round(val))}</TableCell>)}
