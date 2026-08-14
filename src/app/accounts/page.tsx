@@ -123,7 +123,7 @@ function AccountsDashboardTab({ transactions, isLoading, onActionClick }: { tran
         });
     }, [transactions]);
 
-    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> ডেটা লোড হচ্ছে...</div>;
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> <span>ডেটা লোড হচ্ছে...</span></div>;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -886,7 +886,7 @@ function IncomeComparisonTab({ allStudents, selectedYear, onPrintPotentialReport
         return totals;
     }, [potentialPreviewData]);
 
-    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> ডাটা বিশ্লেষণ করা হচ্ছে...</div>;
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> <span>ডাটা বিশ্লেষণ করা হচ্ছে...</span></div>;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -1280,7 +1280,7 @@ function NewTransactionTab({ onTransactionAdded, initialType = 'income' }: { onT
 }
 
 function CashbookTab({ transactions, isLoading, refetch }: { transactions: Transaction[], isLoading: boolean, refetch: () => void }) {
-    const db = useFirestore(); const { toast } = useToast(); const { user, hasPermission } = useAuth(); const isAdmin = user?.role === 'admin'; const canDeleteTransaction = hasPermission('special:delete-transaction') || isAdmin; const [selectedMonth, setSelectedMonth] = useState<string>('all');
+    const db = useFirestore(); const { toast } = useToast(); const { user, hasPermission } = useAuth(); const isAdmin = user?.role === 'admin'; const canDeleteTransaction = hasPermission('special:edit-transaction') || isAdmin; const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const cashbookData = useMemo(() => { let balance = 0; const sorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); const calculated = sorted.map(tx => { if (tx.accountHead === 'ব্যাংকে জমা (Cash to Bank)') balance -= tx.amount; else if (tx.accountHead === 'ব্যাংক থেকে উত্তোলন (Bank to Cash)') balance += tx.amount; else if (tx.type === 'income') balance += tx.amount; else balance -= tx.amount; return { ...tx, balance }; }); if (selectedMonth === 'all') return calculated; return calculated.filter(tx => new Date(tx.date).getMonth().toString() === selectedMonth); }, [transactions, selectedMonth]);
     
     const handleDelete = async (id: string) => { 
@@ -1472,40 +1472,40 @@ function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo,
                 <Table className="border-collapse border-2 border-black w-full text-[10px]">
                     <TableHeader className="bg-slate-100">
                         <TableRow className="h-6 border-b-2 border-black bg-slate-100">
-                            <TableHead className="border border-black font-black text-center w-10 text-black">রোল</TableHead>
-                            <TableHead className="border border-black font-black min-w-[100px] text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
-                            <TableHead className="border border-black font-black text-center text-black w-14">ভর্তি ফি</TableHead>
-                            <TableHead className="border border-black font-black text-center text-black w-14">সেশন চার্জ</TableHead>
-                            {BENGALI_MONTHS.map(m => <TableHead key={m} className="border border-black font-black text-center text-black px-0.5 w-8">{m.slice(0,3)}</TableHead>)}
-                            <TableHead className="border border-black font-black text-center text-black w-14">পরীক্ষা</TableHead>
-                            <TableHead className="border border-black font-black text-center text-black w-14">অন্যান্য</TableHead>
+                            <TableHead className="border border-black font-black text-center w-8 text-black">রোল</TableHead>
+                            <TableHead className="border border-black font-black w-36 text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
+                            <TableHead className="border border-black font-black text-center text-black w-12">ভর্তি ফি</TableHead>
+                            <TableHead className="border border-black font-black text-center text-black w-12">সেশন চার্জ</TableHead>
+                            {BENGALI_MONTHS.map(m => <TableHead key={m} className="border border-black font-black text-center text-black px-0.5 w-7 text-[9px]">{m.slice(0,3)}</TableHead>)}
+                            <TableHead className="border border-black font-black text-center text-black w-12">পরীক্ষা</TableHead>
+                            <TableHead className="border border-black font-black text-center text-black w-12">অন্যান্য</TableHead>
                             <TableHead className="font-black border border-black text-right pr-1 text-black bg-slate-200 w-16">মোট পাওনা</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {studentRows.map((row, i) => (
                             <TableRow key={i} className="h-[18px] border-b border-black">
-                                <TableCell className="border border-black text-center font-black text-black p-0 w-10">{toBengaliNumber(row.roll)}</TableCell>
-                                <TableCell className="border border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 min-w-[100px]">{row.name}</TableCell>
-                                <TableCell className="border border-black text-center text-black font-black p-0 w-14">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
-                                <TableCell className="border border-black text-center text-black font-black p-0 w-14">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
+                                <TableCell className="border border-black text-center font-black text-black p-0 w-8">{toBengaliNumber(row.roll)}</TableCell>
+                                <TableCell className="border border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 w-36">{row.name}</TableCell>
+                                <TableCell className="border border-black text-center text-black font-black p-0 w-12">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
+                                <TableCell className="border border-black text-center text-black font-black p-0 w-12">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
                                 {[...Array(12)].map((_, j) => (
-                                    <TableCell key={j} className="border border-black text-center text-black font-black p-0 w-8">{row.tuition > 0 ? toBengaliNumber(row.tuition) : '-'}</TableCell>
+                                    <TableCell key={j} className="border border-black text-center text-black font-black p-0 w-7 text-[9px]">{row.tuition > 0 ? toBengaliNumber(row.tuition) : '-'}</TableCell>
                                 ))}
-                                <TableCell className="border border-black text-center text-black font-black p-0 w-14">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
-                                <TableCell className="border border-black text-center text-black font-black p-0 w-14">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
+                                <TableCell className="border border-black text-center text-black font-black p-0 w-12">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
+                                <TableCell className="border border-black text-center text-black font-black p-0 w-12">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
                                 <TableCell className="text-right pr-1 font-black bg-slate-100 text-black border border-black p-0 w-16">{toBengaliNumber(row.total)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                     <TableFooter>
                         <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
-                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black">সর্বমোট:</TableCell>
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.admission)}</TableCell>
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.session)}</TableCell>
-                            {grandTotals.months.map((val, j) => <TableCell key={j} className="border-black text-center text-black w-8">{toBengaliNumber(Math.round(val))}</TableCell>)}
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.exam)}</TableCell>
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.other)}</TableCell>
+                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black w-44">সর্বমোট:</TableCell>
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.admission)}</TableCell>
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.session)}</TableCell>
+                            {grandTotals.months.map((val, j) => <TableCell key={j} className="border-black text-center text-black w-7 text-[9px]">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.exam)}</TableCell>
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.other)}</TableCell>
                             <TableCell className="text-right pr-1 text-black border-black w-16">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
                         </TableRow>
                     </TableFooter>
@@ -1546,40 +1546,40 @@ function PrintableClasswiseAnnualReport({ reportData, selectedYear, schoolInfo }
                 <Table className="border-collapse border-2 border-black w-full text-[10px]">
                     <TableHeader className="bg-slate-100">
                         <TableRow className="h-6 border-b-2 border-black bg-slate-100">
-                            <TableHead className="border-black font-black text-center w-10 text-black">রোল</TableHead>
-                            <TableHead className="border-black font-black min-w-[100px] text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
-                            <TableHead className="border-black font-black text-center text-black w-14">ভর্তি ফি</TableHead>
-                            <TableHead className="border-black font-black text-center text-black w-14">সেশন ফি</TableHead>
-                            {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-black font-black text-center text-black px-0.5 w-8">{m.slice(0,3)}</TableHead>)}
-                            <TableHead className="border-black font-black text-center text-black w-14">পরীক্ষা</TableHead>
-                            <TableHead className="border-black font-black text-center text-black w-14">অন্যান্য</TableHead>
+                            <TableHead className="border-black font-black text-center w-8 text-black">রোল</TableHead>
+                            <TableHead className="border-black font-black w-36 text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
+                            <TableHead className="border-black font-black text-center text-black w-12">ভর্তি ফি</TableHead>
+                            <TableHead className="border-black font-black text-center text-black w-12">সেশন ফি</TableHead>
+                            {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-black font-black text-center text-black px-0.5 w-7 text-[9px]">{m.slice(0,3)}</TableHead>)}
+                            <TableHead className="border-black font-black text-center text-black w-12">পরীক্ষা</TableHead>
+                            <TableHead className="border-black font-black text-center text-black w-12">অন্যান্য</TableHead>
                             <TableHead className="font-black border-black text-right pr-1 text-black bg-slate-200 w-16">মোট</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {reportData.map((row, i) => (
                             <TableRow key={i} className="h-[18px] border-b border-black">
-                                <TableCell className="border-black text-center font-black text-black p-0 w-10">{toBengaliNumber(row.roll)}</TableCell>
-                                <TableCell className="border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 min-w-[100px]">{row.name}</TableCell>
-                                <TableCell className="border-black text-center text-black font-black p-0 w-14">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
-                                <TableCell className="border-black text-center text-black font-black p-0 w-14">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
+                                <TableCell className="border-black text-center font-black text-black p-0 w-8">{toBengaliNumber(row.roll)}</TableCell>
+                                <TableCell className="border-black font-black whitespace-nowrap text-black text-left pl-2 p-0 w-36">{row.name}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0 w-12">{row.admission > 0 ? toBengaliNumber(row.admission) : '-'}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0 w-12">{row.session > 0 ? toBengaliNumber(row.session) : '-'}</TableCell>
                                 {row.months.map((val: number, j: number) => (
-                                    <TableCell key={j} className="border-black text-center text-black font-black p-0 w-8">{val > 0 ? toBengaliNumber(Math.round(val)) : '-'}</TableCell>
+                                    <TableCell key={j} className="border-black text-center text-black font-black p-0 w-7 text-[9px]">{val > 0 ? toBengaliNumber(Math.round(val)) : '-'}</TableCell>
                                 ))}
-                                <TableCell className="border-black text-center text-black font-black p-0 w-14">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
-                                <TableCell className="border-black text-center text-black font-black p-0 w-14">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0 w-12">{row.exam > 0 ? toBengaliNumber(row.exam) : '-'}</TableCell>
+                                <TableCell className="border-black text-center text-black font-black p-0 w-12">{row.other > 0 ? toBengaliNumber(row.other) : '-'}</TableCell>
                                 <TableCell className="text-right pr-1 font-black bg-slate-100 text-black border-black p-0 w-16">{toBengaliNumber(row.total)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                     <TableFooter>
                         <TableRow className="h-6 border-t-2 border-black bg-slate-200 font-black">
-                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black">সর্বমোট:</TableCell>
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.admission)}</TableCell>
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.session)}</TableCell>
-                            {grandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border-black text-center text-black w-8">{toBengaliNumber(Math.round(val))}</TableCell>)}
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.exam)}</TableCell>
-                            <TableCell className="border-black text-center text-black w-14">{toBengaliNumber(grandTotals.other)}</TableCell>
+                            <TableCell colSpan={2} className="text-right pr-2 border-r border-black text-black w-44">সর্বমোট:</TableCell>
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.admission)}</TableCell>
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.session)}</TableCell>
+                            {grandTotals.months.map((val: number, j: number) => <TableCell key={j} className="border-black text-center text-black w-7 text-[9px]">{toBengaliNumber(Math.round(val))}</TableCell>)}
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.exam)}</TableCell>
+                            <TableCell className="border-black text-center text-black w-12">{toBengaliNumber(grandTotals.other)}</TableCell>
                             <TableCell className="text-right pr-1 text-black border-black w-16">{toBengaliNumber(grandTotals.total)} ৳</TableCell>
                         </TableRow>
                     </TableFooter>
