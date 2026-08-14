@@ -49,7 +49,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
@@ -1282,8 +1282,8 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </DialogDescription>
                     </DialogHeader>
                     
-                    <div className="flex-1 overflow-hidden p-6 bg-slate-50">
-                        <Card className="border-2 border-black/5 bg-white shadow-inner h-full flex flex-col overflow-hidden">
+                    <div className="flex-1 overflow-hidden p-6 bg-slate-50 min-h-0 flex flex-col">
+                        <Card className="border-2 border-black/5 bg-white shadow-inner flex-1 flex flex-col overflow-hidden rounded-xl">
                             <div className="bg-muted/50 border-b shrink-0">
                                 <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
                                     <span>শিক্ষার্থীর নাম</span>
@@ -1293,7 +1293,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </div>
                             </div>
                             <ScrollArea className="flex-1">
-                                <div className="divide-y-2 divide-slate-50">
+                                <div className="divide-y-2 divide-slate-50 min-h-0">
                                     {projectedPromotions.map((item, i) => (
                                         <div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors">
                                             <span className="font-black text-slate-800 text-sm">{item.name}</span>
@@ -1311,7 +1311,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </Card>
                     </div>
 
-                    <DialogFooter className="p-6 bg-white border-t flex flex-col sm:flex-row gap-4 items-center justify-between">
+                    <DialogFooter className="p-6 bg-white border-t flex flex-col sm:flex-row gap-4 items-center justify-between shrink-0">
                         <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
                             <AlertCircle className="h-4 w-4 text-amber-600" />
                             "নিশ্চিত করুন" বাটনে ক্লিক করলে ডাটাবেসে তথ্য আপডেট হবে।
