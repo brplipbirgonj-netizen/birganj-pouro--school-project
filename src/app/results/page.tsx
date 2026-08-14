@@ -1282,9 +1282,10 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </DialogDescription>
                     </DialogHeader>
                     
-                    <div className="flex-1 overflow-hidden p-6 bg-slate-50 min-h-0 flex flex-col">
+                    <div className="flex-1 overflow-hidden p-6 bg-slate-50 flex flex-col min-h-0">
                         <Card className="border-2 border-black/5 bg-white shadow-inner flex-1 flex flex-col overflow-hidden rounded-xl">
-                            <div className="bg-muted/50 border-b shrink-0">
+                            {/* Manual Header for consistent columns */}
+                            <div className="bg-muted/80 border-b shrink-0 z-10">
                                 <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
                                     <span>শিক্ষার্থীর নাম</span>
                                     <span>বর্তমান রোল</span>
@@ -1292,11 +1293,13 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <span className="text-primary">সম্ভাব্য নতুন রোল</span>
                                 </div>
                             </div>
-                            <ScrollArea className="flex-1">
-                                <div className="divide-y-2 divide-slate-50 min-h-0">
+                            
+                            {/* Scrollable list with defined max-height and overflow */}
+                            <div className="flex-1 overflow-y-auto max-h-[450px]">
+                                <div className="divide-y-2 divide-slate-50">
                                     {projectedPromotions.map((item, i) => (
                                         <div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors">
-                                            <span className="font-black text-slate-800 text-sm">{item.name}</span>
+                                            <span className="font-black text-slate-800 text-sm truncate px-1">{item.name}</span>
                                             <span className="font-bold text-slate-500">{toBengaliNumber(item.currentRoll)}</span>
                                             <span>
                                                 <Badge className={item.resData.isPass ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-rose-100 text-rose-800 border-rose-200"}>
@@ -1307,7 +1310,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         </div>
                                     ))}
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </Card>
                     </div>
 
@@ -1570,7 +1573,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-6 border-2 border-black/5 bg-white shadow-sm rounded-2xl">
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">মাস</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="মাস" /></SelectTrigger><SelectContent>{BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label className="font-bold text-xs text-primary">পরীক্ষা</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger><SelectContent>{specialExams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label className="font-bold text-xs text-primary">পরীক্ষা</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger><SelectContent>{specialExams.map(e => <SelectItem key={e.id} value={e}>{e}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">শ্রেণি</Label><Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">বিষয়</Label><Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={!selectedClass}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{getSubjects(selectedClass).filter(s => s.isExamSubject !== false).map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent></Select></div>
                         <Button onClick={handleLoadForInput} disabled={isLoading || !selectedMonth || !selectedExam || !selectedSubject} className="font-black h-11 shadow-md">লোড করুন</Button>
