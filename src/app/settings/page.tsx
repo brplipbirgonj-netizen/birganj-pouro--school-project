@@ -329,7 +329,7 @@ function SchoolInfoSettings() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="schoolCode" className="font-bold">স্কুল কোড</Label>
-                        <Input id="schoolCode" value={info.code} onChange={(e) => handleInputChange('code', e.target.value)} />
+                        <Input id=" schoolCode" value={info.code} onChange={(e) => handleInputChange('code', e.target.value)} />
                     </div>
                     <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="address" className="font-bold">ঠিকানা</Label>
@@ -503,6 +503,22 @@ function HolidaySettings() {
     );
 }
 
+const permissionGroups = [
+    { title: 'ড্যাশবোর্ড', ids: ['view:dashboard'] },
+    { title: 'ভর্তি আবেদন', ids: ['manage:admissions'] },
+    { title: 'শিক্ষার্থী ও প্রোফাইল', ids: ['view:students', 'manage:students', 'special:edit-student', 'special:delete-student', 'upload:students', 'view:student-profile'] },
+    { title: 'শিক্ষক ও কর্মচারী', ids: ['view:staff', 'manage:staff', 'manage:staff-attendance', 'manage:staff-attendance-delete', 'view:staff-attendance-report'] },
+    { title: 'হাজিরা ও উপস্থিতি', ids: ['manage:attendance', 'input:quick-roll-attendance', 'view:missed-attendance', 'input:missed-attendance', 'view:absent-student-list'] },
+    { title: 'লেসন প্ল্যান ও সিলেবাস', ids: ['manage:lesson-plans', 'view:syllabus-mgmt', 'manage:syllabus', 'view:syllabus-tracker'] },
+    { title: 'নোটিশ বোর্ড', ids: ['view:notices', 'manage:notices'] },
+    { title: 'ফলাফল ও প্রমোশন', ids: ['input:results', 'manage:results', 'manage:full-marks', 'upload:marks', 'view:merit-list', 'promote:students', 'manage:special-results'] },
+    { title: 'হিসাব ও ফি', ids: ['view:accounts', 'collect:fees', 'manage:fee-setup', 'special:edit-transaction', 'special:delete-transaction', 'view:collection-report', 'view:expense-report', 'view:accounts-monthly-report', 'view:cashbook-ledger', 'manage:transactions'] },
+    { title: 'রুটিন ও বদলি ক্লাস', ids: ['view:routines', 'manage:routines', 'view:proxy-classes', 'manage:proxy-classes'] },
+    { title: 'ডকুমেন্ট', ids: ['manage:documents'] },
+    { title: 'মেসেজিং', ids: ['send:messaging', 'manage:messaging'] },
+    { title: 'সিস্টেম সেটিংস', ids: ['manage:settings'] },
+];
+
 function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { user: SystemUser, open: boolean, onOpenChange: (open: boolean) => void, onPermissionsUpdate: () => void }) {
     const db = useFirestore();
     const { toast } = useToast();
@@ -545,30 +561,65 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto font-kalpurush">
-                <DialogHeader><DialogTitle>পারমিশন সেটিংস - {user.email}</DialogTitle></DialogHeader>
-                <div className="py-4 space-y-8">
-                    <div className="space-y-4">
-                        <h3 className="font-black text-sm text-primary uppercase tracking-wider">সাধারণ পারমিশন</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {availablePermissions.map(p => (
-                                <div key={p.id} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/20">
-                                    <Checkbox checked={permissions.has(p.id)} onCheckedChange={c => { const n = new Set(permissions); if (c) n.add(p.id); else n.delete(p.id); setPermissions(n); }} />
-                                    <Label className="text-xs font-bold leading-none cursor-pointer">{p.label}</Label>
-                                </div>
-                            ))}
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto font-kalpurush p-0 border-none shadow-2xl rounded-2xl">
+                <DialogHeader className="p-6 bg-primary text-white border-b-0 shrink-0">
+                    <DialogTitle className="text-2xl font-black">পারমিশন সেটিংস - {user.email}</DialogTitle>
+                </DialogHeader>
+                
+                <div className="p-8 space-y-10 bg-white">
+                    <div className="space-y-8">
+                        <h3 className="font-black text-xl text-primary border-b-2 border-primary/10 pb-2 flex items-center gap-2">
+                            <ShieldAlert className="h-6 w-6" /> সাধারণ পারমিশন (মডিউল ভিত্তিক)
+                        </h3>
+                        
+                        <div className="space-y-10">
+                            {permissionGroups.map(group => {
+                                const groupPerms = availablePermissions.filter(p => group.ids.includes(p.id));
+                                if (groupPerms.length === 0) return null;
+                                
+                                return (
+                                    <div key={group.title} className="space-y-4">
+                                        <p className="text-xs font-black uppercase text-muted-foreground tracking-widest border-l-4 border-primary pl-2">
+                                            {group.title}
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {groupPerms.map(p => (
+                                                <div key={p.id} className={cn(
+                                                    "flex items-center gap-3 p-3 border-2 rounded-xl transition-all",
+                                                    permissions.has(p.id) ? "bg-primary/5 border-primary/30 shadow-sm" : "bg-muted/10 border-transparent"
+                                                )}>
+                                                    <Checkbox 
+                                                        id={`perm-${p.id}`}
+                                                        checked={permissions.has(p.id)} 
+                                                        onCheckedChange={c => { 
+                                                            const n = new Set(permissions); 
+                                                            if (c) n.add(p.id); else n.delete(p.id); 
+                                                            setPermissions(n); 
+                                                        }} 
+                                                    />
+                                                    <Label htmlFor={`perm-${p.id}`} className="text-xs font-bold leading-tight cursor-pointer">
+                                                        {p.label}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    <Separator />
+                    <Separator className="my-8" />
 
-                    <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <h3 className="font-black text-sm text-emerald-700 uppercase tracking-wider">শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন</h3>
-                            <div className="flex items-center gap-2">
-                                <Label className="text-[10px] font-black uppercase">শ্রেণি নির্বাচন:</Label>
+                    <div className="space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h3 className="font-black text-xl text-emerald-700 border-b-2 border-emerald-100 pb-2 flex items-center gap-2">
+                                <FilePen className="h-6 w-6" /> শ্রেণি ও বিষয় ভিত্তিক নম্বর এন্ট্রি পারমিশন
+                            </h3>
+                            <div className="flex items-center gap-3 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 shadow-sm">
+                                <Label className="text-[10px] font-black uppercase text-emerald-900 whitespace-nowrap">শ্রেণি নির্বাচন:</Label>
                                 <Select value={selectedClass} onValueChange={setSelectedClass}>
-                                    <SelectTrigger className="h-7 w-24 text-[10px] font-bold bg-white"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-8 w-28 text-[11px] font-black bg-white border-2 border-emerald-200"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         {Object.entries(classNamesMap).map(([id, label]) => (
                                             <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>
@@ -578,45 +629,56 @@ function PermissionDialog({ user, open, onOpenChange, onPermissionsUpdate }: { u
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3">
                             {availableSubjects.map(s => {
                                 const isChecked = marksPermissions[selectedClass]?.includes(s.name);
                                 return (
                                     <div key={s.name} className={cn(
-                                        "flex items-center gap-2 p-2 border rounded-lg transition-colors",
-                                        isChecked ? "bg-emerald-50 border-emerald-300" : "bg-muted/10 border-transparent"
+                                        "flex items-center gap-3 p-3 border-2 rounded-xl transition-all",
+                                        isChecked ? "bg-emerald-50 border-emerald-300 shadow-sm" : "bg-muted/10 border-transparent"
                                     )}>
                                         <Checkbox 
                                             id={`sub-${selectedClass}-${s.name}`}
                                             checked={isChecked} 
                                             onCheckedChange={() => toggleSubject(selectedClass, s.name)} 
                                         />
-                                        <Label htmlFor={`sub-${selectedClass}-${s.name}`} className="text-[11px] font-bold leading-none cursor-pointer">{s.name}</Label>
+                                        <Label htmlFor={`sub-${selectedClass}-${s.name}`} className="text-[11px] font-black leading-tight cursor-pointer">{s.name}</Label>
                                     </div>
                                 );
                             })}
                         </div>
                         
-                        <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-dashed">
-                            <p className="text-[10px] font-black text-muted-foreground mb-2">অনুমোদিত বিষয়সমূহ: ({toBengaliNumber(totalApprovedSubjects)})</p>
+                        <div className="mt-6 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">অনুমোদিত বিষয়ের সারসংক্ষেপ</p>
+                                <Badge className="bg-emerald-600 font-black h-6 px-3">{toBengaliNumber(totalApprovedSubjects)} টি অনুমোদিত</Badge>
+                            </div>
                             {Object.keys(marksPermissions).length > 0 ? (
-                                <div className="flex flex-wrap gap-1">
+                                <div className="flex flex-wrap gap-2">
                                     {Object.entries(marksPermissions).map(([cls, subs]) => (
                                         subs.map(sub => (
-                                            <Badge key={`${cls}-${sub}`} variant="secondary" className="text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                                            <Badge key={`${cls}-${sub}`} variant="secondary" className="text-[10px] font-bold bg-white text-emerald-800 border-2 border-emerald-100 shadow-sm h-7 px-3">
                                                 {classNamesMap[cls] || cls} - {sub}
                                             </Badge>
                                         ))
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-[9px] italic text-muted-foreground">এখনো কোনো বিষয় নির্বাচন করা হয়নি।</p>
+                                <p className="text-xs italic text-muted-foreground font-medium">এখনো কোনো বিষয় নির্বাচন করা হয়নি।</p>
                             )}
                         </div>
                     </div>
                 </div>
-                <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t">
-                    <Button onClick={handleSave} className="w-full font-black h-12 shadow-xl">সবগুলো পারমিশন সেভ করুন</Button>
+
+                <DialogFooter className="p-6 bg-slate-50 border-t sticky bottom-0 z-20">
+                    <div className="flex gap-3 w-full">
+                        <DialogClose asChild>
+                            <Button variant="outline" className="flex-1 font-bold h-12">বাতিল</Button>
+                        </DialogClose>
+                        <Button onClick={handleSave} className="flex-1 min-w-[200px] font-black h-12 text-lg shadow-xl shadow-primary/20">
+                            সবগুলো পারমিশন সেভ করুন
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
