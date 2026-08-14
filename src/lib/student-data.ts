@@ -144,7 +144,7 @@ export const studentFromDoc = (doc: DocumentData): Student => {
     const data = doc.data();
     let generatedId = data.generatedId;
 
-    // Generate ID on the fly if it's missing
+    // Generate ID on the fly if it's missing (for older records)
     if (!generatedId && data.academicYear && data.className && data.roll) {
       const year = String(data.academicYear).slice(-2);
       const classNum = String(data.className).padStart(2, '0');
@@ -192,10 +192,15 @@ export const getStudentById = async (db: Firestore, id: string): Promise<Student
 };
 
 export const addStudent = async (db: Firestore, studentData: NewStudentData) => {
-  const year = String(studentData.academicYear).slice(-2);
-  const classNum = String(studentData.className).padStart(2, '0');
-  const studentSerial = (studentData.roll as number).toString().padStart(4, '0');
-  const generatedId = `${year}${classNum}${studentSerial}`;
+  let generatedId = studentData.generatedId;
+  
+  // Only generate a new ID if it doesn't already exist (Permanent ID logic)
+  if (!generatedId && studentData.academicYear && studentData.className && studentData.roll) {
+    const year = String(studentData.academicYear).slice(-2);
+    const classNum = String(studentData.className).padStart(2, '0');
+    const studentSerial = (studentData.roll as number).toString().padStart(4, '0');
+    generatedId = `${year}${classNum}${studentSerial}`;
+  }
   
   const dataToSave: WithFieldValue<DocumentData> = {
     ...studentData,
@@ -233,19 +238,8 @@ export const updateStudent = async (db: Firestore, id: string, studentData: Upda
     updatedAt: serverTimestamp(),
   };
 
-  // Always regenerate ID to ensure it is correct based on current data,
-  // or add it if it's missing.
-  const existingDoc = await getDoc(docRef);
-  const acadYear = studentData.academicYear || existingDoc.data()?.academicYear;
-  const clsName = studentData.className || existingDoc.data()?.className;
-  const rollNum = studentData.roll || existingDoc.data()?.roll;
-  
-  if (acadYear && clsName && rollNum) {
-      const year = String(acadYear).slice(-2);
-      const classNum = String(clsName).padStart(2, '0');
-      const studentSerial = rollNum.toString().padStart(4, '0');
-      dataToUpdate.generatedId = `${year}${classNum}${studentSerial}`;
-  }
+  // REMOVED: Auto-regeneration of generatedId. 
+  // ID is assigned once and remains unchanged even if Year/Class/Roll changes.
 
   if (studentData.dob) {
     dataToUpdate.dob = Timestamp.fromDate(studentData.dob);

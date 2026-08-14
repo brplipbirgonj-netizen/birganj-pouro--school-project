@@ -1128,13 +1128,12 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         sorted.forEach((s, idx) => {
             const docRef = doc(db!, 'students', s.id);
             const nextRoll = idx + 1;
-            const update: any = { roll: nextRoll };
+            const update: any = { 
+              roll: nextRoll,
+              updatedAt: serverTimestamp()
+            };
             
-            // Note: In this system, generatedId is derived from Year-Class-Roll
-            const yearSuffix = targetYear.slice(-2);
-            const classCode = String(targetClass).padStart(2, '0');
-            const rollSerial = nextRoll.toString().padStart(4, '0');
-            update.generatedId = `${yearSuffix}${classCode}${rollSerial}`;
+            // REMOVED: Auto ID regeneration logic. Student ID is permanent.
 
             batch.update(docRef, update);
         });
@@ -1153,6 +1152,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             for (const item of studentsToPromote) {
                 const res = item.resData;
                 const s = res.student;
+                // Search by Permanent Generated ID to avoid duplicates and enable replace
                 const existing = currentTargetStudents.find(ts => ts.generatedId === s.generatedId);
                 
                 const studentData = {
@@ -1294,10 +1294,10 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <Card className="border-2 border-black/5 bg-white shadow-inner flex-1 flex flex-col overflow-hidden rounded-xl">
                             <div className="bg-muted/80 border-b shrink-0 z-10">
                                 <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
-                                    <span>শিক্ষার্থীর নাম</span>
+                                    <span>শিক্ষার্থীর নাম (আইডি)</span>
                                     <span>বর্তমান রোল</span>
                                     <span>প্রমোশন স্ট্যাটাস</span>
-                                    <span className="text-primary">সম্ভাব্য নতুন রোল</span>
+                                    <span className="text-primary">নতুন রোল</span>
                                 </div>
                             </div>
                             
@@ -1305,7 +1305,10 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <div className="divide-y-2 divide-slate-50">
                                     {projectedPromotions.map((item, i) => (
                                         <div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors">
-                                            <span className="font-black text-slate-800 text-sm truncate px-1">{item.name}</span>
+                                            <div className="flex flex-col items-center">
+                                              <span className="font-black text-slate-800 text-sm truncate px-1">{item.name}</span>
+                                              <span className="text-[10px] font-bold text-muted-foreground">ID: {toBengaliNumber(item.generatedId)}</span>
+                                            </div>
                                             <span className="font-bold text-slate-500">{toBengaliNumber(item.currentRoll)}</span>
                                             <span>
                                                 <Badge className={item.resData.isPass ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-rose-100 text-rose-800 border-rose-200"}>
@@ -1323,12 +1326,12 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <DialogFooter className="p-6 bg-white border-t flex flex-col sm:flex-row gap-4 items-center justify-between shrink-0">
                         <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
                             <AlertCircle className="h-4 w-4 text-amber-600" />
-                            "নিশ্চিত করুন" বাটনে ক্লিক করলে ডাটাবেসে তথ্য আপডেট হবে।
+                            {projectedPromotions.some(p => p.isReplace) ? "কিছু শিক্ষার্থীর তথ্য রিপ্লেস (Replace) হবে।" : "\"নিশ্চিত করুন\" বাটনে ক্লিক করলে ডাটাবেসে তথ্য আপডেট হবে।"}
                         </p>
                         <div className="flex gap-3 w-full sm:w-auto">
                             <Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="flex-1 font-bold h-12">বাতিল</Button>
                             <Button onClick={handleConfirmPromotion} disabled={isPromoting} className="flex-1 min-w-[200px] h-12 text-lg font-black shadow-xl bg-emerald-600 hover:bg-emerald-700">
-                                {isPromoting ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
+                                {isPromoting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                                 প্রমোশন নিশ্চিত করুন
                             </Button>
                         </div>
