@@ -1053,6 +1053,15 @@ function ClasswiseAnnualReportTab({ allStudents, selectedYear, onPrint }: { allS
         return totals;
     }, [reportData]);
 
+    if (isLoading) {
+        return (
+            <div className="p-12 text-center italic text-muted-foreground">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" /> 
+                <span>বিশ্লেষণ করা হচ্ছে...</span>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-end gap-4 p-4 border rounded-xl bg-white/50 no-print">
@@ -1091,9 +1100,7 @@ function ClasswiseAnnualReportTab({ allStudents, selectedYear, onPrint }: { allS
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? (
-                                    <TableRow><TableCell colSpan={19} className="text-center py-20 italic"><span>বিশ্লেষণ করা হচ্ছে...</span></TableCell></TableRow>
-                                ) : reportData.map((row, i) => (
+                                {reportData.map((row, i) => (
                                     <TableRow key={i} className="h-7 border-b border-black hover:bg-slate-50 transition-colors">
                                         <TableCell className="border-r border-black text-center font-black text-[13px] sticky left-0 z-20 bg-white group-hover:bg-slate-50">{toBengaliNumber(row.roll)}</TableCell>
                                         <TableCell className="border-r border-black font-black text-[13px] truncate sticky left-14 z-20 bg-white group-hover:bg-slate-50">{row.name}</TableCell>

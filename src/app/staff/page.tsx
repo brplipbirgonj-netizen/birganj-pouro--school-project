@@ -1266,7 +1266,7 @@ export default function StaffListPage() {
                                 <div className="flex flex-col gap-12 items-center bg-slate-100 p-4 sm:p-10 rounded-3xl border-2 border-slate-200 shadow-inner overflow-x-auto">
                                     {reportPages.map((page, pageIdx) => (
                                         <div key={pageIdx} className="bg-white shadow-2xl shrink-0 overflow-hidden transform scale-95 sm:scale-100 origin-top">
-                                            <div style={{ width: '210mm', minHeight: '297mm', padding: '10mm' }} className="box-border">
+                                            <div style={{ width: '210mm', minHeight: '275mm', padding: '10mm' }} className="box-border">
                                                 {renderReportPage(page, pageIdx)}
                                             </div>
                                         </div>
@@ -1289,8 +1289,7 @@ export default function StaffListPage() {
                   .report-page { 
                       page-break-after: always; 
                       width: 100% !important; 
-                      height: auto !important;
-                      min-height: auto !important;
+                      height: 275mm !important;
                       padding: 0 !important; 
                       margin: 0 !important;
                       box-sizing: border-box;
