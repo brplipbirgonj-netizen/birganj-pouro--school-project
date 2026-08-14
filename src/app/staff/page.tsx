@@ -84,7 +84,7 @@ const STAFF_ORDER = [
 
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ"];
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 function toBengaliNumber(str: string | number) {
   if (!str && str !== 0) return '';
@@ -786,102 +786,104 @@ export default function StaffListPage() {
 
       return (
           <div key={pageIdx} className="report-page bg-white flex flex-col h-full border border-black/5 p-2">
-              <div className="report-header text-center flex flex-col items-center border-b-2 border-black pb-2 mb-4">
-                  {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={55} height={55} className="object-contain mb-1" />}
-                  <h1 className="text-2xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
-                  <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
-                  <div className="mt-2 inline-block border-[1.5px] border-black px-6 py-0.5 rounded-full bg-slate-50">
-                      <h2 className="text-[11px] font-black uppercase tracking-tight">হাজিরা ও ছুটির রিপোর্ট: {displayRange}</h2>
+              <div className="report-header text-center flex flex-col items-center border-b-2 border-black pb-2 mb-3">
+                  {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={50} height={50} className="object-contain mb-1" />}
+                  <h1 className="text-xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
+                  <p className="text-[10px] font-bold text-slate-700">{schoolInfo.address}</p>
+                  <div className="mt-1.5 inline-block border-[1.5px] border-black px-4 py-0.5 rounded-full bg-slate-50">
+                      <h2 className="text-[10px] font-black uppercase tracking-tight">হাজিরা ও ছুটির রিপোর্ট: {displayRange}</h2>
                   </div>
               </div>
 
-              <table className="report-table w-full border-collapse border border-black">
-                  <thead>
-                      <tr className="bg-slate-100">
-                          <th className="w-[110px] font-black py-2 border border-black text-[9px]">তারিখ ও বার</th>
-                          {page.teachers.map((teacher: any) => (
-                              <th key={teacher.id} className="py-2 border border-black">
-                                  <p className="font-black text-[9px] text-blue-900">{teacher.nameBn}</p>
-                                  <p className="text-[7px] italic font-bold text-slate-600">{teacher.designation}</p>
-                              </th>
-                          ))}
-                      </tr>
-                  </thead>
-                  <tbody>
-                      {page.days.map((day: any) => {
-                          const dateStr = format(day, 'yyyy-MM-dd');
-                          const isWeekendDay = day.getDay() === 5 || day.getDay() === 6;
-                          const isHolidayDay = holidays.includes(dateStr);
-                          const isOffDay = isWeekendDay || isHolidayDay;
-                          const displayDate = toBengaliNumber(format(day, "dd-MM-yyyy", { locale: bn })) + " " + format(day, "EEEE", { locale: bn });
+              <div className="flex-1 overflow-hidden">
+                <table className="report-table w-full border-collapse border border-black">
+                    <thead>
+                        <tr className="bg-slate-100">
+                            <th className="w-[100px] font-black py-1.5 border border-black text-[10px]">তারিখ ও বার</th>
+                            {page.teachers.map((teacher: any) => (
+                                <th key={teacher.id} className="py-1.5 border border-black">
+                                    <p className="font-black text-[10px] text-blue-900 leading-none mb-0.5">{teacher.nameBn}</p>
+                                    <p className="text-[7px] italic font-bold text-slate-600 leading-none">{teacher.designation}</p>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {page.days.map((day: any) => {
+                            const dateStr = format(day, 'yyyy-MM-dd');
+                            const isWeekendDay = day.getDay() === 5 || day.getDay() === 6;
+                            const isHolidayDay = holidays.includes(dateStr);
+                            const isOffDay = isWeekendDay || isHolidayDay;
+                            const displayDate = toBengaliNumber(format(day, "dd-MM-yyyy", { locale: bn })) + " " + format(day, "EEEE", { locale: bn });
 
-                          return (
-                              <tr key={dateStr} className={cn("h-8 border border-black", isOffDay && "bg-rose-50/50")}>
-                                  <td className="text-left pl-3 font-bold text-[8.5px] border border-black">{displayDate}</td>
-                                  {page.teachers.map((teacher: any) => {
-                                      const record = rangeRecords.find(r => r.date === dateStr);
-                                      const att = record?.attendance.find(a => a.staffId === teacher.id);
-                                      let cellText = "";
-                                      if (att) {
-                                          if (att.status === 'present') {
-                                              cellText = att.checkIn ? `${att.checkIn}${att.checkOut ? ` - ${att.checkOut}` : ''}` : 'উপস্থিত';
-                                          } else {
-                                              cellText = att.leaveType || 'ছুটি';
-                                          }
-                                      } else if (isHolidayDay) { cellText = "সরকারি ছুটি"; }
-                                      else if (isWeekendDay) { cellText = "সাপ্তাহিক ছুটি"; }
-                                      else { cellText = "অনুপস্থিত"; }
+                            return (
+                                <tr key={dateStr} className={cn("h-7 border border-black", isOffDay && "bg-rose-50/50")}>
+                                    <td className="text-left pl-2 font-bold text-[10px] border border-black">{displayDate}</td>
+                                    {page.teachers.map((teacher: any) => {
+                                        const record = rangeRecords.find(r => r.date === dateStr);
+                                        const att = record?.attendance.find(a => a.staffId === teacher.id);
+                                        let cellText = "";
+                                        if (att) {
+                                            if (att.status === 'present') {
+                                                cellText = att.checkIn ? `${att.checkIn}${att.checkOut ? ` - ${att.checkOut}` : ''}` : 'উপস্থিত';
+                                            } else {
+                                                cellText = att.leaveType || 'ছুটি';
+                                            }
+                                        } else if (isHolidayDay) { cellText = "সরকারি ছুটি"; }
+                                        else if (isWeekendDay) { cellText = "সাপ্তাহিক ছুটি"; }
+                                        else { cellText = "অনুপস্থিত"; }
 
-                                      return (
-                                          <td key={teacher.id} className={cn(
-                                              "font-medium border border-black text-center text-[8.5px]",
-                                              cellText === "অনুপস্থিত" && "text-rose-600 font-black",
-                                              (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400 font-normal"
-                                          )}>
-                                              {toBengaliNumber(cellText)}
-                                          </td>
-                                      );
-                                  })}
-                              </tr>
-                          );
-                      })}
-                      
-                      <tr className="summary-row font-black bg-slate-50 border-t-2 border-black h-9">
-                          <td className="text-right pr-4 border border-black text-[9px]">মোট কর্মদিবস</td>
-                          {page.teachers.map((teacher: any) => {
-                              const totalWorkDays = page.days.filter((d: any) => {
-                                  const ds = format(d, 'yyyy-MM-dd');
-                                  return !((d.getDay() === 5 || d.getDay() === 6) || holidays.includes(ds));
-                              }).length;
-                              return <td key={teacher.id} className="text-blue-900 border border-black text-center text-[9px]">{toBengaliNumber(totalWorkDays)} দিন</td>;
-                          })}
-                      </tr>
-                      <tr className="summary-row font-black h-9">
-                          <td className="text-right pr-4 border border-black text-[9px]">উপস্থিত (মোট)</td>
-                          {page.teachers.map((teacher: any) => {
-                              const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
-                              return <td key={teacher.id} className="text-emerald-700 border border-black text-center text-[9px]">{toBengaliNumber(count)} দিন</td>;
-                          })}
-                      </tr>
-                      <tr className="summary-row font-black h-9">
-                          <td className="text-right pr-4 border border-black text-[9px]">অনুপস্থিত (মোট)</td>
-                          {page.teachers.map((teacher: any) => {
-                              const count = page.days.filter((d: any) => {
-                                  const ds = format(d, 'yyyy-MM-dd');
-                                  if (holidays.includes(ds) || (d.getDay() === 5 || d.getDay() === 6)) return false;
-                                  const r = rangeRecords.find(rec => rec.date === ds);
-                                  const a = r?.attendance.find(at => at.staffId === teacher.id);
-                                  return !a || (a.status !== 'present' && a.status !== 'leave');
-                              }).length;
-                              return <td key={teacher.id} className="text-rose-700 border border-black text-center text-[9px]">{toBengaliNumber(count)} দিন</td>;
-                          })}
-                      </tr>
-                  </tbody>
-              </table>
+                                        return (
+                                            <td key={teacher.id} className={cn(
+                                                "font-bold border border-black text-center text-[10px]",
+                                                cellText === "অনুপস্থিত" && "text-rose-600 font-black",
+                                                (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400 font-normal"
+                                            )}>
+                                                {toBengaliNumber(cellText)}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            );
+                        })}
+                        
+                        <tr className="summary-row font-black bg-slate-50 border-t-2 border-black h-8">
+                            <td className="text-right pr-3 border border-black text-[10px]">মোট কর্মদিবস</td>
+                            {page.teachers.map((teacher: any) => {
+                                const totalWorkDays = page.days.filter((d: any) => {
+                                    const ds = format(d, 'yyyy-MM-dd');
+                                    return !((d.getDay() === 5 || d.getDay() === 6) || holidays.includes(ds));
+                                }).length;
+                                return <td key={teacher.id} className="text-blue-900 border border-black text-center text-[10px]">{toBengaliNumber(totalWorkDays)} দিন</td>;
+                            })}
+                        </tr>
+                        <tr className="summary-row font-black h-8">
+                            <td className="text-right pr-3 border border-black text-[10px]">উপস্থিত (মোট)</td>
+                            {page.teachers.map((teacher: any) => {
+                                const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
+                                return <td key={teacher.id} className="text-emerald-700 border border-black text-center text-[10px]">{toBengaliNumber(count)} দিন</td>;
+                            })}
+                        </tr>
+                        <tr className="summary-row font-black h-8">
+                            <td className="text-right pr-3 border border-black text-[10px]">অনুপস্থিত (মোট)</td>
+                            {page.teachers.map((teacher: any) => {
+                                const count = page.days.filter((d: any) => {
+                                    const ds = format(d, 'yyyy-MM-dd');
+                                    if (holidays.includes(ds) || (d.getDay() === 5 || d.getDay() === 6)) return false;
+                                    const r = rangeRecords.find(rec => rec.date === ds);
+                                    const a = r?.attendance.find(at => at.staffId === teacher.id);
+                                    return !a || (a.status !== 'present' && a.status !== 'leave');
+                                }).length;
+                                return <td key={teacher.id} className="text-rose-700 border border-black text-center text-[10px]">{toBengaliNumber(count)} দিন</td>;
+                            })}
+                        </tr>
+                    </tbody>
+                </table>
+              </div>
               
-              <div className="report-footer flex justify-between items-end mt-auto pt-10 px-8 pb-4">
-                  <div className="sign-box w-44 border-t border-black text-center pt-1 font-black text-[9px]">হিসাবরক্ষকের স্বাক্ষর</div>
-                  <div className="sign-box w-44 border-t border-black text-center pt-1 font-black text-[9px]">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+              <div className="report-footer flex justify-between items-end mt-auto pt-6 px-10 pb-2">
+                  <div className="sign-box w-48 border-t border-black text-center pt-1 font-black text-[10px]">হিসাবরক্ষকের স্বাক্ষর</div>
+                  <div className="sign-box w-48 border-t border-black text-center pt-1 font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
               </div>
           </div>
       );
@@ -1281,13 +1283,13 @@ export default function StaffListPage() {
       <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
           <style jsx global>{`
               @media print {
-                  @page { size: A4 portrait; margin: 3mm; }
+                  @page { size: A4 portrait; margin: 0.4in !important; }
                   html, body { height: auto; overflow: visible; background: white !important; }
                   .report-page { 
                       page-break-after: always; 
-                      width: 204mm; 
-                      min-height: 290mm; 
-                      padding: 2mm; 
+                      width: 100%; 
+                      min-height: 275mm; 
+                      padding: 5mm; 
                       box-sizing: border-box;
                       display: flex;
                       flex-direction: column;
@@ -1304,18 +1306,18 @@ export default function StaffListPage() {
                       align-items: center;
                       width: 100%;
                   }
-                  .report-table { border: 1.2px solid black !important; width: 100%; border-collapse: collapse; }
+                  .report-table { border: 1px solid black !important; width: 100%; border-collapse: collapse; }
                   .report-table th, .report-table td { 
                       border: 1px solid black !important; 
-                      padding: 4.5px 1px !important; 
+                      padding: 4px 2px !important; 
                       text-align: center; 
-                      font-size: 8.5px; 
+                      font-size: 10px; 
                       line-height: 1.2; 
                   }
-                  .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; }
-                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 9px !important; border-top: 1.5px solid black !important; }
+                  .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; font-size: 10px; }
+                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 10px; border-top: 1.5px solid black !important; }
                   .report-footer { margin-top: auto; padding-top: 15px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 10px; }
-                  .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 9px; font-weight: 900; padding-top: 3px; }
+                  .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 10px; font-weight: 900; padding-top: 3px; }
               }
           `}</style>
           {reportPages.map((page, pageIdx) => (
