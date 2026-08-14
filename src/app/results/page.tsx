@@ -804,6 +804,16 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="space-y-4">
+            <div className="max-w-md p-4 bg-white border-2 border-black/5 rounded-2xl mb-4 shadow-sm no-print">
+                <Label className="font-black text-xs text-primary mb-2 block uppercase tracking-wider">পরীক্ষা নির্বাচন করুন</Label>
+                <Select value={examName} onValueChange={setExamName}>
+                    <SelectTrigger className="h-11 border-2 font-black"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                    <SelectContent>
+                        {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+
             <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2">
                 <CheckCircle2 className="h-6 w-6" /> বিষয় ভিত্তিক পূর্ণমান তালিকায় পোস্টিং পরিসংখ্যান ({examName})
             </h3>
@@ -1132,9 +1142,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
               roll: nextRoll,
               updatedAt: serverTimestamp()
             };
-            
-            // REMOVED: Auto ID regeneration logic. Student ID is permanent.
-
             batch.update(docRef, update);
         });
     };
@@ -1301,7 +1308,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </div>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto max-h-[450px]">
+                            <div className="flex-1 overflow-y-auto">
                                 <div className="divide-y-2 divide-slate-50">
                                     {projectedPromotions.map((item, i) => (
                                         <div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors">
@@ -2015,8 +2022,8 @@ export default function ResultsPage() {
                     </table>
 
                     <footer className="mt-16 flex justify-between px-10">
-                        <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-xs">শ্রেণি শিক্ষকের স্বাক্ষর</div>
-                        <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-xs">প্রধান শিক্ষকের স্বাক্ষর</div>
+                        <div className="text-center w-48 border-t border-black pt-1 font-black text-xs">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                        <div className="text-center w-48 border-t border-black pt-1 font-black text-xs">প্রধান শিক্ষকের স্বাক্ষর</div>
                     </footer>
                 </div>
             )}
