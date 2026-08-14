@@ -1284,14 +1284,14 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     
                     <div className="flex-1 overflow-hidden p-6 bg-slate-50">
                         <Card className="border-2 border-black/5 bg-white shadow-inner h-full flex flex-col overflow-hidden">
-                            <TableHeader className="bg-muted/50 border-b shrink-0">
+                            <div className="bg-muted/50 border-b shrink-0">
                                 <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
                                     <span>শিক্ষার্থীর নাম</span>
                                     <span>বর্তমান রোল</span>
                                     <span>প্রমোশন স্ট্যাটাস</span>
                                     <span className="text-primary">সম্ভাব্য নতুন রোল</span>
                                 </div>
-                            </TableHeader>
+                            </div>
                             <ScrollArea className="flex-1">
                                 <div className="divide-y-2 divide-slate-50">
                                     {projectedPromotions.map((item, i) => (
