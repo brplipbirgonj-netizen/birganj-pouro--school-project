@@ -22,7 +22,7 @@ import {
     Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCw, Plus, AlertTriangle 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, limit, doc, writeBatch, serverTimestamp, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -1131,15 +1131,11 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const update: any = { roll: nextRoll };
             
             // Note: In this system, generatedId is derived from Year-Class-Roll
-            // The prompt says "আইডি নং (অপরিবতিত থাকবে)", but usually IDs in this format should update if roll changes.
-            // If the user wants a truly permanent ID, they should use a separate field.
-            // For now, I'll update it to maintain consistency with the generatedId logic of the app.
             const yearSuffix = targetYear.slice(-2);
             const classCode = String(targetClass).padStart(2, '0');
             const rollSerial = nextRoll.toString().padStart(4, '0');
             update.generatedId = `${yearSuffix}${classCode}${rollSerial}`;
 
-            // Clear temporary metadata markers
             batch.update(docRef, update);
         });
     };
