@@ -737,6 +737,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
     
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
+    const [selectedClass, setSelectedClass] = useState('6');
     const [savedResults, setSavedResults] = useState<ClassResult[]>([]);
     const [fullMarksInputs, setFullMarksInputs] = useState<Record<string, string>>({});
     const [isSaving, setIsSaving] = useState<string | null>(null);
@@ -801,159 +802,179 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
     }
 
     const classes = ['6', '7', '8', '9', '10'];
+    const currentSubjects = useMemo(() => {
+        const subjects = getSubjects(selectedClass).filter(s => s.isExamSubject !== false);
+        return Array.from(new Set(subjects.map(s => s.name)))
+            .map(name => subjects.find(s => s.name === name)!);
+    }, [selectedClass]);
 
     return (
-        <div className="space-y-4">
-            <div className="max-w-md p-4 bg-white border-2 border-black/5 rounded-2xl mb-4 shadow-sm no-print">
-                <Label className="font-black text-xs text-primary mb-2 block uppercase tracking-wider">পরীক্ষা নির্বাচন করুন</Label>
-                <Select value={examName} onValueChange={setExamName}>
-                    <SelectTrigger className="h-11 border-2 font-black"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>
-                        {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-6 items-end p-6 bg-white border-2 border-black/5 rounded-3xl shadow-sm no-print sticky top-0 z-[60] backdrop-blur-md">
+                <div className="w-full md:w-64 space-y-2">
+                    <Label className="font-black text-xs text-primary mb-1 block uppercase tracking-wider">১. পরীক্ষা নির্বাচন</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="h-11 border-2 font-black"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                        <SelectContent>
+                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex-1 w-full space-y-2">
+                    <Label className="font-black text-xs text-primary mb-1 block uppercase tracking-wider">২. শ্রেণি নির্বাচন করুন</Label>
+                    <div className="flex flex-wrap gap-2">
+                        {classes.map(cls => (
+                            <Button 
+                                key={cls}
+                                onClick={() => setSelectedClass(cls)}
+                                variant={selectedClass === cls ? "default" : "outline"}
+                                className={cn(
+                                    "font-black h-11 px-6 rounded-xl transition-all shadow-sm",
+                                    selectedClass === cls ? "bg-primary text-white scale-105" : "bg-white text-slate-600 border-2"
+                                )}
+                            >
+                                {classNamesMap[cls]} শ্রেণি
+                            </Button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            <h3 className="font-black text-xl text-primary flex items-center gap-2 px-2">
-                <CheckCircle2 className="h-6 w-6" /> বিষয় ভিত্তিক পূর্ণমান তালিকায় পোস্টিং পরিসংখ্যান ({examName})
-            </h3>
-            
-            <Accordion type="multiple" defaultValue={['6']} className="w-full space-y-3">
-                {classes.map(cls => {
-                    const subjects = getSubjects(cls).filter(s => s.isExamSubject !== false);
-                    const uniqueSubjects = Array.from(new Set(subjects.map(s => s.name)))
-                        .map(name => subjects.find(s => s.name === name)!);
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="flex items-center justify-between px-2">
+                    <h3 className="font-black text-xl text-primary flex items-center gap-2">
+                        <CheckCircle2 className="h-6 w-6" /> {classNamesMap[selectedClass]} শ্রেণির বিষয় ও পূর্ণমান তালিকা
+                    </h3>
+                    <Badge variant="outline" className="font-black border-primary text-primary px-4 h-8">
+                        মোট {toBengaliNumber(currentSubjects.length)} টি বিষয়
+                    </Badge>
+                </div>
+                
+                <Card className="border-2 border-black overflow-hidden shadow-xl rounded-2xl bg-white">
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-muted/50 border-b-2 border-black">
+                                    <TableRow>
+                                        <TableHead className="pl-8 font-black text-black">ক্রমিক</TableHead>
+                                        <TableHead className="font-black text-black">বিষয়ের নাম</TableHead>
+                                        <TableHead className="text-center font-black text-black">পোস্টিং স্ট্যাটাস</TableHead>
+                                        <TableHead className="w-48 text-center font-black text-black">পূর্ণমান (Full Marks)</TableHead>
+                                        <TableHead className="text-right pr-8 font-black text-black">কার্যক্রম</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {currentSubjects.map((subInfo, i) => {
+                                        const matchingRecords = savedResults.filter(r => 
+                                            r.className === selectedClass && 
+                                            normalize(r.subject) === normalize(subInfo.name) && 
+                                            r.examName === examName
+                                        );
+                                        
+                                        const existingRecord = matchingRecords.length > 0 ? matchingRecords[0] : null;
+                                        const inputKey = `${selectedClass}-${subInfo.name}-${examName}`;
+                                        const inputValue = fullMarksInputs[inputKey] !== undefined 
+                                            ? fullMarksInputs[inputKey] 
+                                            : (existingRecord?.fullMarks?.toString() || subInfo.fullMarks.toString());
+                                        
+                                        const isPermitted = isSubjectPermitted(selectedClass, subInfo.name);
+                                        
+                                        const totalClassStudents = allStudents.filter(s => {
+                                            if (s.academicYear !== selectedYear || s.className !== selectedClass) return false;
+                                            if (parseInt(selectedClass) < 9) return true;
+                                            const studentGroupSubjects = getSubjects(s.className, s.group);
+                                            return studentGroupSubjects.some(sub => normalize(sub.name) === normalize(subInfo.name));
+                                        }).length;
 
-                    return (
-                        <AccordionItem value={cls} key={cls} className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
-                            <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/10">
-                                <span className="font-black text-lg text-slate-800">{classNamesMap[cls]} শ্রেণি</span>
-                                <Badge variant="secondary" className="ml-2 font-bold">{toBengaliNumber(uniqueSubjects.length)} টি বিষয়</Badge>
-                            </AccordionTrigger>
-                            <AccordionContent className="p-0 border-t">
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader className="bg-muted/30">
-                                            <TableRow>
-                                                <TableHead className="pl-6 font-bold">বিষয়ের নাম</TableHead>
-                                                <TableHead className="text-center font-bold">অবস্থা ও পোস্টিং সংখ্যা</TableHead>
-                                                <TableHead className="w-48 text-center font-bold">পূর্ণমান (Full Marks)</TableHead>
-                                                <TableHead className="text-right pr-6 font-bold">কার্যক্রম</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {uniqueSubjects.map((subInfo, i) => {
-                                                const matchingRecords = savedResults.filter(r => 
-                                                    r.className === cls && 
-                                                    normalize(r.subject) === normalize(subInfo.name) && 
-                                                    r.examName === examName
-                                                );
-                                                
-                                                const existingRecord = matchingRecords.length > 0 ? matchingRecords[0] : null;
-                                                const inputKey = `${cls}-${subInfo.name}-${examName}`;
-                                                const inputValue = fullMarksInputs[inputKey] !== undefined 
-                                                    ? fullMarksInputs[inputKey] 
-                                                    : (existingRecord?.fullMarks?.toString() || subInfo.fullMarks.toString());
-                                                
-                                                const isPermitted = isSubjectPermitted(cls, subInfo.name);
-                                                
-                                                const totalClassStudents = allStudents.filter(s => {
-                                                    if (s.academicYear !== selectedYear || s.className !== cls) return false;
-                                                    if (parseInt(cls) < 9) return true;
-                                                    const studentGroupSubjects = getSubjects(s.className, s.group);
-                                                    return studentGroupSubjects.some(sub => normalize(sub.name) === normalize(subInfo.name));
-                                                }).length;
+                                        const uniqueStudentsWithMarks = new Set<string>();
+                                        matchingRecords.forEach(record => {
+                                            record.results.forEach(res => {
+                                                if (res.studentId && (typeof res.written === 'number' || typeof res.mcq === 'number' || typeof res.practical === 'number')) {
+                                                    uniqueStudentsWithMarks.add(res.studentId);
+                                                }
+                                            });
+                                        });
 
-                                                const uniqueStudentsWithMarks = new Set<string>();
-                                                matchingRecords.forEach(record => {
-                                                    record.results.forEach(res => {
-                                                        if (res.studentId && (typeof res.written === 'number' || typeof res.mcq === 'number' || typeof res.practical === 'number')) {
-                                                            uniqueStudentsWithMarks.add(res.studentId);
-                                                        }
-                                                    });
-                                                });
+                                        const postedCount = uniqueStudentsWithMarks.size;
+                                        const remaining = Math.max(0, totalClassStudents - postedCount);
+                                        const hasData = postedCount > 0;
 
-                                                const postedCount = uniqueStudentsWithMarks.size;
-                                                const remaining = Math.max(0, totalClassStudents - postedCount);
-                                                const hasData = postedCount > 0;
-
-                                                return (
-                                                    <TableRow key={i} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
-                                                        <TableCell className="font-black pl-6 text-primary text-base">
-                                                            {subInfo.name}
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <div className="flex flex-col items-center gap-1">
-                                                                {hasData ? (
-                                                                    <Badge className={cn("font-black text-[10px]", remaining === 0 ? "bg-emerald-600" : "bg-blue-600")}>
-                                                                        {remaining === 0 ? 'সম্পন্ন' : 'চলমান'}
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">বকেয়া</Badge>
-                                                                )}
-                                                                <div className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
-                                                                    পোস্টিং: {toBengaliNumber(postedCount)} / {toBengaliNumber(totalClassStudents)} 
-                                                                    {remaining > 0 && postedCount > 0 && <span className="text-rose-600 ml-1 font-black">(বাকি: {toBengaliNumber(remaining)})</span>}
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <div className="flex items-center gap-2 justify-center">
-                                                                <Input 
-                                                                    type="number" 
-                                                                    value={inputValue}
-                                                                    onChange={(e) => setFullMarksInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
-                                                                    className="h-10 w-24 text-center font-black bg-white border-2 border-black text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                                                                    disabled={!isPermitted} 
-                                                                />
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="icon" 
-                                                                    className={cn(
-                                                                        "h-10 w-10 shrink-0 shadow-sm border-2",
-                                                                        isSaving === inputKey ? "text-slate-400" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                                                    )}
-                                                                    disabled={!isPermitted || isSaving === inputKey}
-                                                                    onClick={() => handleUpdateFullMarks(cls, subInfo.name, examName, existingRecord || null, inputValue)}
-                                                                >
-                                                                    {isSaving === inputKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-5 w-5" />}
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right pr-6">
-                                                            {existingRecord && (
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <Button variant="outline" size="icon" className="h-9 w-9 text-rose-600 border-rose-100 hover:bg-rose-50" disabled={!isPermitted}>
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </AlertDialogTrigger>
-                                                                    <AlertDialogContent className="font-kalpurush">
-                                                                        <AlertDialogHeader>
-                                                                            <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                            <AlertDialogDescription>
-                                                                                এই বিষয়ের জন্য এন্ট্রি করা সকল ফলাফল মুছে যাবে। (পূর্ণমান সংরক্ষিত থাকবে না)
-                                                                            </AlertDialogDescription>
-                                                                        </AlertDialogHeader>
-                                                                        <AlertDialogFooter>
-                                                                            <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                                                            <AlertDialogAction onClick={() => handleDeleteResult(existingRecord.id!)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">মুছে ফেলুন</AlertDialogAction>
-                                                                        </AlertDialogFooter>
-                                                                    </AlertDialogContent>
-                                                                </AlertDialog>
+                                        return (
+                                            <TableRow key={i} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                <TableCell className="pl-8 font-bold text-muted-foreground">{toBengaliNumber(i + 1)}</TableCell>
+                                                <TableCell className="font-black text-primary text-base">
+                                                    {subInfo.name}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        {hasData ? (
+                                                            <Badge className={cn("font-black text-[10px]", remaining === 0 ? "bg-emerald-600" : "bg-blue-600")}>
+                                                                {remaining === 0 ? 'সম্পন্ন' : 'চলমান'}
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">বকেয়া</Badge>
+                                                        )}
+                                                        <div className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                                                            পোস্টিং: {toBengaliNumber(postedCount)} / {toBengaliNumber(totalClassStudents)} 
+                                                            {remaining > 0 && postedCount > 0 && <span className="text-rose-600 ml-1 font-black">(বাকি: {toBengaliNumber(remaining)})</span>}
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center gap-2 justify-center">
+                                                        <Input 
+                                                            type="number" 
+                                                            value={inputValue}
+                                                            onChange={(e) => setFullMarksInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
+                                                            className="h-10 w-24 text-center font-black bg-white border-2 border-black text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                                            disabled={!isPermitted} 
+                                                        />
+                                                        <Button 
+                                                            variant="outline" 
+                                                            size="icon" 
+                                                            className={cn(
+                                                                "h-10 w-10 shrink-0 shadow-sm border-2",
+                                                                isSaving === inputKey ? "text-slate-400" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                                                             )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    );
-                })}
-            </Accordion>
+                                                            disabled={!isPermitted || isSaving === inputKey}
+                                                            onClick={() => handleUpdateFullMarks(selectedClass, subInfo.name, examName, existingRecord || null, inputValue)}
+                                                        >
+                                                            {isSaving === inputKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-5 w-5" />}
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right pr-8">
+                                                    {existingRecord && (
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="outline" size="icon" className="h-9 w-9 text-rose-600 border-rose-100 hover:bg-rose-50" disabled={!isPermitted}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent className="font-kalpurush">
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle className="font-black text-rose-700">আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                    <AlertDialogDescription className="font-bold">
+                                                                        এই বিষয়ের জন্য এন্ট্রি করা সকল ফলাফল মুছে যাবে। (পূর্ণমান সংরক্ষিত থাকবে না)
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteResult(existingRecord.id!)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">মুছে ফেলুন</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 };
@@ -1423,7 +1444,7 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <div className="space-y-2">
                             <Label className="font-bold">পরীক্ষা</Label>
                             <Select value={searchExam} onValueChange={setSearchExam}>
-                                <SelectTrigger className="h-11 border-2 font-bold"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                                <SelectTrigger className="h-11 border-2 font-black text-lg"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                                 <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
