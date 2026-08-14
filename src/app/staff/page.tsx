@@ -749,7 +749,7 @@ export default function StaffListPage() {
                         </p>
                     </div>
                 </div>
-                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 z-10">
                     <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white" onClick={() => setStaffToView(staff)}>
                         <Eye className="h-4 w-4" />
                     </Button>
@@ -785,25 +785,25 @@ export default function StaffListPage() {
           `${toBengaliNumber(format(reportStartDate, "dd-MM-yyyy", { locale: bn }))} হতে ${toBengaliNumber(format(reportEndDate, "dd-MM-yyyy", { locale: bn }))}` : "";
 
       return (
-          <div key={pageIdx} className="report-page bg-white flex flex-col h-full border border-black/5 p-2">
-              <div className="report-header text-center flex flex-col items-center border-b-2 border-black pb-2 mb-3">
-                  {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={50} height={50} className="object-contain mb-1" />}
+          <div key={pageIdx} className="report-page bg-white flex flex-col h-full border border-black/5 p-0">
+              <div className="report-header text-center flex flex-col items-center border-b-2 border-black pb-2 mb-2 pt-1">
+                  {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="লোগো" width={48} height={48} className="object-contain mb-1" />}
                   <h1 className="text-xl font-black uppercase text-emerald-950 leading-tight">{schoolInfo.name}</h1>
-                  <p className="text-[10px] font-bold text-slate-700">{schoolInfo.address}</p>
-                  <div className="mt-1.5 inline-block border-[1.5px] border-black px-4 py-0.5 rounded-full bg-slate-50">
+                  <p className="text-[10px] font-bold text-slate-700 leading-none">{schoolInfo.address}</p>
+                  <div className="mt-1 inline-block border-[1.5px] border-black px-4 py-0.5 rounded-full bg-slate-50">
                       <h2 className="text-[10px] font-black uppercase tracking-tight">হাজিরা ও ছুটির রিপোর্ট: {displayRange}</h2>
                   </div>
               </div>
 
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden px-1">
                 <table className="report-table w-full border-collapse border border-black">
                     <thead>
-                        <tr className="bg-slate-100">
-                            <th className="w-[100px] font-black py-1.5 border border-black text-[10px]">তারিখ ও বার</th>
+                        <tr className="bg-slate-100 h-8">
+                            <th className="w-[110px] font-black py-1 border border-black text-[11px]">তারিখ ও বার</th>
                             {page.teachers.map((teacher: any) => (
-                                <th key={teacher.id} className="py-1.5 border border-black">
-                                    <p className="font-black text-[10px] text-blue-900 leading-none mb-0.5">{teacher.nameBn}</p>
-                                    <p className="text-[7px] italic font-bold text-slate-600 leading-none">{teacher.designation}</p>
+                                <th key={teacher.id} className="py-1 border border-black">
+                                    <p className="font-black text-[11px] text-blue-900 leading-none mb-0.5">{teacher.nameBn}</p>
+                                    <p className="text-[8px] italic font-bold text-slate-600 leading-none">{teacher.designation}</p>
                                 </th>
                             ))}
                         </tr>
@@ -817,8 +817,8 @@ export default function StaffListPage() {
                             const displayDate = toBengaliNumber(format(day, "dd-MM-yyyy", { locale: bn })) + " " + format(day, "EEEE", { locale: bn });
 
                             return (
-                                <tr key={dateStr} className={cn("h-7 border border-black", isOffDay && "bg-rose-50/50")}>
-                                    <td className="text-left pl-2 font-bold text-[10px] border border-black">{displayDate}</td>
+                                <tr key={dateStr} className={cn("h-[26px] border border-black", isOffDay && "bg-rose-50/50")}>
+                                    <td className="text-left pl-2 font-bold text-[11px] border border-black">{displayDate}</td>
                                     {page.teachers.map((teacher: any) => {
                                         const record = rangeRecords.find(r => r.date === dateStr);
                                         const att = record?.attendance.find(a => a.staffId === teacher.id);
@@ -835,7 +835,7 @@ export default function StaffListPage() {
 
                                         return (
                                             <td key={teacher.id} className={cn(
-                                                "font-bold border border-black text-center text-[10px]",
+                                                "font-bold border border-black text-center text-[11px]",
                                                 cellText === "অনুপস্থিত" && "text-rose-600 font-black",
                                                 (cellText === "সাপ্তাহিক ছুটি" || cellText === "সরকারি ছুটি") && "text-slate-400 font-normal"
                                             )}>
@@ -848,24 +848,24 @@ export default function StaffListPage() {
                         })}
                         
                         <tr className="summary-row font-black bg-slate-50 border-t-2 border-black h-8">
-                            <td className="text-right pr-3 border border-black text-[10px]">মোট কর্মদিবস</td>
+                            <td className="text-right pr-3 border border-black text-[11px]">মোট কর্মদিবস</td>
                             {page.teachers.map((teacher: any) => {
                                 const totalWorkDays = page.days.filter((d: any) => {
                                     const ds = format(d, 'yyyy-MM-dd');
                                     return !((d.getDay() === 5 || d.getDay() === 6) || holidays.includes(ds));
                                 }).length;
-                                return <td key={teacher.id} className="text-blue-900 border border-black text-center text-[10px]">{toBengaliNumber(totalWorkDays)} দিন</td>;
+                                return <td key={teacher.id} className="text-blue-900 border border-black text-center text-[11px]">{toBengaliNumber(totalWorkDays)} দিন</td>;
                             })}
                         </tr>
                         <tr className="summary-row font-black h-8">
-                            <td className="text-right pr-3 border border-black text-[10px]">উপস্থিত (মোট)</td>
+                            <td className="text-right pr-3 border border-black text-[11px]">উপস্থিত (মোট)</td>
                             {page.teachers.map((teacher: any) => {
                                 const count = rangeRecords.filter(r => r.attendance.some(a => a.staffId === teacher.id && a.status === 'present')).length;
-                                return <td key={teacher.id} className="text-emerald-700 border border-black text-center text-[10px]">{toBengaliNumber(count)} দিন</td>;
+                                return <td key={teacher.id} className="text-emerald-700 border border-black text-center text-[11px]">{toBengaliNumber(count)} দিন</td>;
                             })}
                         </tr>
                         <tr className="summary-row font-black h-8">
-                            <td className="text-right pr-3 border border-black text-[10px]">অনুপস্থিত (মোট)</td>
+                            <td className="text-right pr-3 border border-black text-[11px]">অনুপস্থিত (মোট)</td>
                             {page.teachers.map((teacher: any) => {
                                 const count = page.days.filter((d: any) => {
                                     const ds = format(d, 'yyyy-MM-dd');
@@ -874,16 +874,16 @@ export default function StaffListPage() {
                                     const a = r?.attendance.find(at => at.staffId === teacher.id);
                                     return !a || (a.status !== 'present' && a.status !== 'leave');
                                 }).length;
-                                return <td key={teacher.id} className="text-rose-700 border border-black text-center text-[10px]">{toBengaliNumber(count)} দিন</td>;
+                                return <td key={teacher.id} className="text-rose-700 border border-black text-center text-[11px]">{toBengaliNumber(count)} দিন</td>;
                             })}
                         </tr>
                     </tbody>
                 </table>
               </div>
               
-              <div className="report-footer flex justify-between items-end mt-auto pt-6 px-10 pb-2">
-                  <div className="sign-box w-48 border-t border-black text-center pt-1 font-black text-[10px]">হিসাবরক্ষকের স্বাক্ষর</div>
-                  <div className="sign-box w-48 border-t border-black text-center pt-1 font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+              <div className="report-footer flex justify-between items-end mt-auto pt-4 px-10 pb-2">
+                  <div className="sign-box w-48 border-t border-black text-center pt-1 font-black text-[11px]">হিসাবরক্ষকের স্বাক্ষর</div>
+                  <div className="sign-box w-48 border-t border-black text-center pt-1 font-black text-[11px]">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
               </div>
           </div>
       );
@@ -1284,40 +1284,43 @@ export default function StaffListPage() {
           <style jsx global>{`
               @media print {
                   @page { size: A4 portrait; margin: 0.4in !important; }
-                  html, body { height: auto; overflow: visible; background: white !important; }
+                  html, body { height: auto !important; overflow: visible !important; background: white !important; margin: 0 !important; padding: 0 !important; }
+                  .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; padding: 0 !important; margin: 0 !important; width: 100% !important; box-sizing: border-box !important; }
                   .report-page { 
                       page-break-after: always; 
-                      width: 100%; 
-                      min-height: 275mm; 
-                      padding: 5mm; 
+                      width: 100% !important; 
+                      height: auto !important;
+                      min-height: auto !important;
+                      padding: 0 !important; 
+                      margin: 0 !important;
                       box-sizing: border-box;
                       display: flex;
                       flex-direction: column;
                       background: white !important;
-                      margin: 0 auto;
                   }
                   .report-header { 
                       border-bottom: 2px solid black; 
-                      padding-bottom: 4px; 
-                      margin-bottom: 8px; 
+                      padding-bottom: 2px; 
+                      margin-bottom: 4px; 
                       text-align: center;
                       display: flex;
                       flex-direction: column;
                       align-items: center;
                       width: 100%;
+                      margin-top: 0 !important;
                   }
-                  .report-table { border: 1px solid black !important; width: 100%; border-collapse: collapse; }
+                  .report-table { border: 1.5px solid black !important; width: 100%; border-collapse: collapse; }
                   .report-table th, .report-table td { 
                       border: 1px solid black !important; 
-                      padding: 4px 2px !important; 
+                      padding: 2px 1px !important; 
                       text-align: center; 
-                      font-size: 10px; 
-                      line-height: 1.2; 
+                      font-size: 11px; 
+                      line-height: 1.1; 
                   }
-                  .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; font-size: 10px; }
-                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 10px; border-top: 1.5px solid black !important; }
-                  .report-footer { margin-top: auto; padding-top: 15px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 10px; }
-                  .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 10px; font-weight: 900; padding-top: 3px; }
+                  .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; font-size: 11px; }
+                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 11px; border-top: 2px solid black !important; }
+                  .report-footer { margin-top: auto; padding-top: 10px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 5px; }
+                  .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 11px; font-weight: 900; padding-top: 2px; }
               }
           `}</style>
           {reportPages.map((page, pageIdx) => (
