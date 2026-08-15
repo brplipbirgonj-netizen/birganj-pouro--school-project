@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -12,7 +13,8 @@ import {
   Timestamp,
   Firestore,
   DocumentData,
-  WithFieldValue
+  WithFieldValue,
+  updateDoc
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -33,9 +35,10 @@ export interface Transaction {
   checkNo?: string;
   feeCollectionId?: string;
   createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
-export type NewTransactionData = Omit<Transaction, 'id' | 'createdAt'>;
+export type NewTransactionData = Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>;
 
 const TRANSACTIONS_COLLECTION = 'transactions';
 
@@ -46,6 +49,8 @@ export const transactionFromDoc = (doc: DocumentData): Transaction => {
         ...data,
         method: data.method || 'cash',
         date: data.date.toDate(),
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
     } as Transaction;
 }
 
@@ -75,6 +80,7 @@ export const addTransaction = (db: Firestore, transactionData: NewTransactionDat
     ...transactionData,
     date: Timestamp.fromDate(transactionData.date),
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 
   Object.keys(dataToSave).forEach(key => {

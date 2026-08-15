@@ -1,3 +1,4 @@
+
 'use client';
 /**
  * @fileOverview Lesson plan and syllabus progress data services.
@@ -28,10 +29,11 @@ export interface LessonPlan {
   topic: string;
   objectives?: string;
   progress: number; // 0 to 100
+  createdAt: Date;
   updatedAt: Date;
 }
 
-export type NewLessonPlan = Omit<LessonPlan, 'id' | 'updatedAt'>;
+export type NewLessonPlan = Omit<LessonPlan, 'id' | 'createdAt' | 'updatedAt'>;
 
 const COLLECTION_NAME = 'lessonPlans';
 
@@ -45,6 +47,7 @@ export const saveLessonPlan = (db: Firestore, plan: NewLessonPlan) => {
     
     const dataToSave = {
         ...plan,
+        createdAt: serverTimestamp(), // Only effective if creating new
         updatedAt: serverTimestamp(),
     };
 
@@ -61,7 +64,6 @@ export const saveLessonPlan = (db: Firestore, plan: NewLessonPlan) => {
 
 /**
  * Fetches lesson plans for a specific teacher.
- * Sorting is done in-memory to avoid "Missing Index" errors.
  */
 export const getLessonPlansForTeacher = async (db: Firestore, teacherUid: string, academicYear: string): Promise<LessonPlan[]> => {
     const q = query(
@@ -77,11 +79,11 @@ export const getLessonPlansForTeacher = async (db: Firestore, teacherUid: string
             return {
                 id: doc.id,
                 ...data,
+                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date()),
                 updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : new Date()),
             } as LessonPlan;
         });
         
-        // Manual sorting to bypass index requirement
         return plans.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     } catch (e: any) {
         if (e.code === 'permission-denied') {
@@ -97,7 +99,6 @@ export const getLessonPlansForTeacher = async (db: Firestore, teacherUid: string
 
 /**
  * Fetches all lesson plans for admin overview.
- * Sorting is done in-memory to avoid "Missing Index" errors.
  */
 export const getAllLessonPlans = async (db: Firestore, academicYear: string): Promise<LessonPlan[]> => {
     const q = query(
@@ -112,11 +113,11 @@ export const getAllLessonPlans = async (db: Firestore, academicYear: string): Pr
             return {
                 id: doc.id,
                 ...data,
+                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date()),
                 updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : new Date()),
             } as LessonPlan;
         });
         
-        // Manual sorting to bypass index requirement
         return plans.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     } catch (e: any) {
         if (e.code === 'permission-denied') {

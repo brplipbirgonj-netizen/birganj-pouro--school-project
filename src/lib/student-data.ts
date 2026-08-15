@@ -1,3 +1,4 @@
+
 import {
   collection,
   doc,
@@ -52,6 +53,7 @@ export type Student = {
   permanentUpazila?: string;
   permanentDistrict?: string;
   photoUrl: string;
+  balance?: number;
   isStipendReceiver?: boolean;
   
   // Academic History Fields
@@ -212,6 +214,7 @@ export const addStudent = (db: Firestore, studentData: NewStudentData) => {
   const dataToSave: WithFieldValue<DocumentData> = {
     ...studentData,
     generatedId,
+    balance: studentData.balance || 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };

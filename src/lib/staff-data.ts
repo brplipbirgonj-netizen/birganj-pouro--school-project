@@ -1,3 +1,4 @@
+
 import {
   collection,
   doc,
@@ -195,6 +196,7 @@ export const deleteStaff = (db: Firestore, id: string) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
+            requestResourceData: { id },
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });

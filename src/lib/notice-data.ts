@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -12,6 +13,7 @@ import {
   serverTimestamp,
   Timestamp,
   limit,
+  setDoc
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -25,15 +27,16 @@ export interface Notice {
   senderName: string;
   pdfUrl?: string;
   isScrolling?: boolean;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
-export type NewNoticeData = Omit<Notice, 'id' | 'date'>;
+export type NewNoticeData = Omit<Notice, 'id' | 'date' | 'createdAt' | 'updatedAt'>;
 
 const NOTICES_COLLECTION = 'notices';
 
 /**
- * Fetches notices with real-time updates not possible here, 
- * so it's a one-time fetch helper. Main reactive logic is in page component.
+ * Fetches notices with real-time updates.
  */
 export const getNotices = async (db: Firestore, maxCount = 50): Promise<Notice[]> => {
   const q = query(collection(db, NOTICES_COLLECTION), orderBy('date', 'desc'), limit(maxCount));
@@ -45,6 +48,8 @@ export const getNotices = async (db: Firestore, maxCount = 50): Promise<Notice[]
             id: doc.id,
             ...data,
             date: data.date instanceof Timestamp ? data.date.toDate() : (data.date ? new Date(data.date) : null),
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
         } as Notice;
     });
   } catch (e) {
@@ -57,9 +62,8 @@ export const getNotices = async (db: Firestore, maxCount = 50): Promise<Notice[]
  * Adds a new notice using non-blocking pattern for optimistic UI.
  */
 export const addNotice = (db: Firestore, noticeData: NewNoticeData) => {
-  const collectionRef = collection(db, NOTICES_COLLECTION);
+  const docRef = doc(collection(db, NOTICES_COLLECTION));
   
-  // Clean data to remove undefined properties which cause Firestore to throw sync errors
   const dataToSave: any = {
     title: noticeData.title,
     content: noticeData.content,
@@ -67,14 +71,15 @@ export const addNotice = (db: Firestore, noticeData: NewNoticeData) => {
     senderName: noticeData.senderName,
     isScrolling: !!noticeData.isScrolling,
     date: serverTimestamp(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 
   if (noticeData.pdfUrl) {
     dataToSave.pdfUrl = noticeData.pdfUrl;
   }
 
-  // Perform the write without awaiting the server response for better UX
-  addDoc(collectionRef, dataToSave)
+  setDoc(docRef, dataToSave)
     .catch(async (serverError: any) => {
       console.error("Firestore Save Error:", serverError);
       if (serverError.code === 'permission-denied') {
@@ -113,6 +118,7 @@ export const deleteNotice = (db: Firestore, id: string) => {
           const permissionError = new FirestorePermissionError({
               path: docRef.path,
               operation: 'delete',
+              requestResourceData: { id },
           } satisfies SecurityRuleContext);
           errorEmitter.emit('permission-error', permissionError);
       }

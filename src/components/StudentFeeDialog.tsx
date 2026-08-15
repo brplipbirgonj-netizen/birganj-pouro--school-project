@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
@@ -14,7 +15,7 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { NewTransactionData, PaymentMethod } from '@/lib/transactions-data';
-import { collection, doc, writeBatch, serverTimestamp, Timestamp, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, Timestamp, query, where, getDocs, limit, increment } from 'firebase/firestore';
 import { FilePen, Trash2, Printer, Loader2, Save, CalendarCheck, Banknote, Star, CheckCircle2, XCircle, Clock, Wallet, ListTodo } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
@@ -200,7 +201,17 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         if (totalAmount <= 0) { toast({ variant: 'destructive', title: 'টাকার পরিমাণ লিখুন' }); return; }
 
         const batch = writeBatch(db);
-        if (existingCollection?.transactionIds) existingCollection.transactionIds.forEach(id => batch.delete(doc(db, 'transactions', id)));
+        
+        // Reverse previous balance effect if editing
+        if (existingCollection) {
+            batch.update(doc(db, 'students', student.id), {
+                balance: increment(existingCollection.totalAmount),
+                updatedAt: serverTimestamp()
+            });
+            if (existingCollection.transactionIds) {
+                existingCollection.transactionIds.forEach(id => batch.delete(doc(db, 'transactions', id)));
+            }
+        }
 
         const feeCollectionId = existingCollection?.id || doc(collection(db, 'feeCollections')).id;
         const transactionsToCreate: { [head: string]: NewTransactionData } = {};
@@ -217,12 +228,21 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         for (const head in transactionsToCreate) {
             const txRef = doc(collection(db, 'transactions'));
             newTransactionIds.push(txRef.id);
-            batch.set(txRef, { ...transactionsToCreate[head], date: Timestamp.fromDate(transactionsToCreate[head].date) });
+            batch.set(txRef, { ...transactionsToCreate[head], date: Timestamp.fromDate(transactionsToCreate[head].date), updatedAt: serverTimestamp() });
         }
         
         const feeCollectionData: any = { studentId: student.id, academicYear: selectedYear, collectionDate: Timestamp.fromDate(collectionDate), description, method, totalAmount, breakdown, transactionIds: newTransactionIds, collectorName, collectorUid: user.uid, updatedAt: serverTimestamp() };
         if (existingCollection) batch.update(doc(db, 'feeCollections', feeCollectionId), feeCollectionData);
-        else { feeCollectionData.createdAt = serverTimestamp(); batch.set(doc(db, 'feeCollections', feeCollectionId), feeCollectionData); }
+        else { 
+            feeCollectionData.createdAt = serverTimestamp(); 
+            batch.set(doc(db, 'feeCollections', feeCollectionId), feeCollectionData); 
+        }
+
+        // Atomically update student balance
+        batch.update(doc(db, 'students', student.id), {
+            balance: increment(-totalAmount),
+            updatedAt: serverTimestamp()
+        });
 
         // Non-blocking batch commit for offline stability
         batch.commit().catch(async (serverError: any) => {
@@ -372,8 +392,15 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
     };
 
     const handleDelete = async (collection: FeeCollection) => {
-        if(!db || !canDelete) return;
+        if(!db || !canDelete || !student) return;
         const batch = writeBatch(db);
+        
+        // Reverse student balance
+        batch.update(doc(db, 'students', student.id), {
+            balance: increment(collection.totalAmount),
+            updatedAt: serverTimestamp()
+        });
+        
         batch.delete(doc(db, 'feeCollections', collection.id));
         if (collection.transactionIds) collection.transactionIds.forEach(id => batch.delete(doc(db, 'transactions', id)));
         

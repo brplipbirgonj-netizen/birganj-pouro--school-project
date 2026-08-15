@@ -1,3 +1,4 @@
+
 'use client';
 /**
  * @fileOverview Data services for Special Exams (Monthly/Weekly evaluations).
@@ -12,6 +13,7 @@ import {
   where,
   Firestore,
   serverTimestamp,
+  Timestamp,
   limit
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -31,6 +33,8 @@ export interface SpecialClassResult {
   month: string;
   fullMarks: number;
   results: SpecialStudentResult[];
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 const COLLECTION = 'specialResults';
@@ -48,6 +52,7 @@ export const saveSpecialResults = (db: Firestore, data: SpecialClassResult) => {
   
   const dataToSave = {
     ...data,
+    createdAt: serverTimestamp(), // Only effective if creating new
     updatedAt: serverTimestamp()
   };
   delete (dataToSave as any).id;
@@ -80,7 +85,15 @@ export const getSpecialResultsForClass = async (
   );
   try {
     const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SpecialClassResult));
+    return snap.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      } as SpecialClassResult;
+    });
   } catch (e: any) {
     if (e.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({

@@ -13,7 +13,9 @@
         "displayName": { "type": "string" },
         "isOnline": { "type": "boolean" },
         "permissions": { "type": "array", "items": { "type": "string" } },
-        "lastLoginAt": { "type": "string", "format": "date-time" }
+        "lastLoginAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
     },
@@ -29,14 +31,34 @@
         "studentNameBn": { "type": "string" },
         "studentNameEn": { "type": "string" },
         "photoUrl": { "type": "string" },
+        "balance": { "type": "number", "default": 0 },
         "monthlyFee": { "type": "number" },
         "examFee": { "type": "number" },
         "sessionFee": { "type": "number" },
         "otherFee": { "type": "number" },
         "feeCategory": { "type": "string", "enum": ["general", "half-free", "full-free"] },
-        "isStipendReceiver": { "type": "boolean" }
+        "isStipendReceiver": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["roll", "className", "academicYear", "studentNameBn", "photoUrl"]
+    },
+    "feeCollection": {
+      "title": "Fee Collection",
+      "description": "Record of a payment made by a student.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "collectionDate": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "method": { "type": "string" },
+        "transactionIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "academicYear", "totalAmount"]
     },
     "lessonPlan": {
       "title": "Lesson Plan",
@@ -51,6 +73,7 @@
         "week": { "type": "string" },
         "topic": { "type": "string" },
         "progress": { "type": "number", "minimum": 0, "maximum": 100 },
+        "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["teacherUid", "className", "subject", "academicYear", "week"]
@@ -66,6 +89,7 @@
         "subjectName": { "type": "string" },
         "chapters": { "type": "array", "items": { "type": "string" } },
         "chapterComments": { "type": "object", "additionalProperties": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["academicYear", "examName", "className", "subjectName", "chapters"]
@@ -90,7 +114,9 @@
               "marks": { "type": "number" }
             }
           }
-        }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["academicYear", "className", "subject", "examType", "month", "fullMarks"]
     }
@@ -106,6 +132,10 @@
     "/students/{studentId}": {
       "schema": { "$ref": "#/entities/student" },
       "description": "Stores individual student records."
+    },
+    "/feeCollections/{id}": {
+      "schema": { "$ref": "#/entities/feeCollection" },
+      "description": "Stores fee collection records."
     },
     "/lessonPlans/{id}": {
       "schema": { "$ref": "#/entities/lessonPlan" },

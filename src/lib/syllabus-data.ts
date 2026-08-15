@@ -1,3 +1,4 @@
+
 'use client';
 /**
  * @fileOverview Syllabus data services for defining subject chapters for exams.
@@ -23,12 +24,11 @@ export interface Syllabus {
   subjectName: string;
   chapters: string[];
   chapterComments?: Record<string, string>;
+  createdAt?: Date;
   updatedAt: Date;
 }
 
-export type NewSyllabus = Omit<Syllabus, 'id' | 'updatedAt'>;
-
-const COLLECTION_NAME = 'syllabi';
+export type NewSyllabus = Omit<Syllabus, 'id' | 'updatedAt' | 'createdAt'>;
 
 export const getSyllabusId = (academicYear: string, examName: string, className: string, subjectName: string) => {
     const sanitizedExam = examName.replace(/[^\p{L}\p{N}]+/gu, '-');
@@ -45,6 +45,7 @@ export const saveSyllabus = (db: Firestore, data: NewSyllabus) => {
     
     const dataToSave = {
         ...data,
+        createdAt: serverTimestamp(), // Only effective if creating new
         updatedAt: serverTimestamp(),
     };
 
@@ -62,6 +63,8 @@ export const saveSyllabus = (db: Firestore, data: NewSyllabus) => {
     return Promise.resolve();
 };
 
+const COLLECTION_NAME = 'syllabi';
+
 /**
  * Fetches a specific syllabus for an exam, class, and subject.
  */
@@ -76,6 +79,7 @@ export const getSyllabus = async (db: Firestore, academicYear: string, examName:
             return {
                 id: docSnap.id,
                 ...data,
+                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : undefined),
                 updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : new Date()),
             } as Syllabus;
         }

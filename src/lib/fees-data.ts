@@ -1,3 +1,4 @@
+
 'use client';
 import {
   collection,
@@ -6,7 +7,8 @@ import {
   getDocs,
   query,
   where,
-  QueryDocumentSnapshot
+  QueryDocumentSnapshot,
+  serverTimestamp
 } from 'firebase/firestore';
 
 export type FeeBreakdown = {
@@ -74,6 +76,8 @@ export const feeCollectionFromDoc = (docSnap: QueryDocumentSnapshot): FeeCollect
         id: docSnap.id,
         ...data,
         collectionDate: collectionDate,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
     } as FeeCollection;
 }
 
