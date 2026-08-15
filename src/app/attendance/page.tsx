@@ -30,6 +30,11 @@ import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import Image from 'next/image';
 
 // --- Constants ---
+const BENGALI_MONTHS = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+];
+
 const classNamesMap: { [key: string]: string } = { 
     '6': 'ষষ্ঠ শ্রেণি', 
     '7': 'সপ্তম শ্রেণি', 
@@ -1388,11 +1393,11 @@ const AttendanceReportTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <TabsContent value="class" className="space-y-6">
                     <div className="flex flex-col sm:flex-row gap-4 p-4 border-2 border-dashed rounded-lg items-end bg-white/50 no-print">
                         <div className="w-full space-y-2 flex-1">
-                            <Label className="font-bold text-primary flex items-center gap-2">শুরুর তারিখ</Label>
+                            <Label className="font-bold text-primary flex items-gap-2">শুরুর তারিখ</Label>
                             <DatePicker value={startDate} onChange={setStartDate} placeholder="শুরুর তারিখ" />
                         </div>
                         <div className="w-full space-y-2 flex-1">
-                            <Label className="font-bold text-primary flex items-center gap-2">শেষের তারিখ</Label>
+                            <Label className="font-bold text-primary flex items-gap-2">শেষের তারিখ</Label>
                             <DatePicker value={endDate} onChange={setEndDate} placeholder="শেষের তারিখ" />
                         </div>
                         <Button onClick={() => window.print()} className="font-black h-10 px-8 shadow-md">
@@ -1493,71 +1498,73 @@ export default function AttendancePage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
-            <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
-                {/* Sidebar Navigation - Fixed/Sticky */}
-                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
-                    <div className="mb-6 px-4 hidden md:block">
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
-                        <Badge className={cn(
-                            "mt-2 font-black text-[10px] px-3 gap-1",
-                            isOnline ? "bg-emerald-600" : "bg-rose-600"
-                        )}>
-                            {isOnline ? <><Wifi className="h-3 w-3" /> অনলাইন</> : <><WifiOff className="h-3 w-3" /> অফলাইন (লোকাল)</>}
-                        </Badge>
-                    </div>
-                    <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
-                        {sidebarItems.map(item => (
-                            <button
-                                key={item.id}
-                                onClick={() => setActiveSection(item.id)}
-                                className={cn(
-                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
-                                    activeSection === item.id 
-                                        ? "bg-white shadow-md text-primary scale-105" 
-                                        : "text-muted-foreground hover:bg-slate-200/50"
-                                )}
-                            >
-                                <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
-                                    <item.icon className="h-4 w-4" />
-                                </div>
-                                <span className="text-sm font-black">{item.label}</span>
-                                {activeSection === item.id && <ChevronRight className="ml-auto h-4 w-4 hidden md:block" />}
-                            </button>
-                        ))}
-                    </div>
-                </aside>
+            <main className="flex-1 p-4 md:p-10 pb-40">
+                <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
+                    {/* Sidebar Navigation - Fixed/Sticky */}
+                    <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+                        <div className="mb-6 px-4 hidden md:block">
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
+                            <Badge className={cn(
+                                "mt-2 font-black text-[10px] px-3 gap-1",
+                                isOnline ? "bg-emerald-600" : "bg-rose-600"
+                            )}>
+                                {isOnline ? <><Wifi className="h-3 w-3" /> অনলাইন</> : <><WifiOff className="h-3 w-3" /> অফলাইন (লোকাল)</>}
+                            </Badge>
+                        </div>
+                        <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                            {sidebarItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveSection(item.id)}
+                                    className={cn(
+                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                        activeSection === item.id 
+                                            ? "bg-white shadow-md text-primary scale-105" 
+                                            : "text-muted-foreground hover:bg-slate-200/50"
+                                    )}
+                                >
+                                    <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                                        <item.icon className="h-4 w-4" />
+                                    </div>
+                                    <span className="text-sm font-black">{item.label}</span>
+                                    {activeSection === item.id && <ChevronRight className="ml-auto h-4 w-4 hidden md:block" />}
+                                </button>
+                            ))}
+                        </div>
+                    </aside>
 
-                {/* Content Area */}
-                <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
-                    <div className="p-4 sm:p-6 lg:p-8 flex-1">
-                        {!isOnline && (
-                            <div className="mb-6 p-4 bg-rose-50 border-2 border-dashed border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700 animate-pulse no-print">
-                                <WifiOff className="h-6 w-6" />
-                                <p className="font-black">আপনি অফলাইনে আছেন। আপনার দেওয়া হাজিরাগুলো এই ডিভাইসে সংরক্ষিত হচ্ছে এবং ইন্টারনেট সংযোগ পাওয়া মাত্রই সিঙ্ক হবে।</p>
-                            </div>
-                        )}
-                        {isLoading && allStudents.length === 0 ? (
-                            <div className="space-y-4">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-64 w-full" />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="mb-6 border-b pb-4 no-print">
-                                    <h2 className="text-2xl font-black text-slate-800">
-                                        {sidebarItems.find(i => i.id === activeSection)?.label}
-                                    </h2>
-                                    {isClient && <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</p>}
+                    {/* Content Area */}
+                    <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+                        <div className="p-4 sm:p-6 lg:p-8 flex-1">
+                            {!isOnline && (
+                                <div className="mb-6 p-4 bg-rose-50 border-2 border-dashed border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700 animate-pulse no-print">
+                                    <WifiOff className="h-6 w-6" />
+                                    <p className="font-black">আপনি অফলাইনে আছেন। আপনার দেওয়া হাজিরাগুলো এই ডিভাইসে সংরক্ষিত হচ্ছে এবং ইন্টারনেট সংযোগ পাওয়া মাত্রই সিঙ্ক হবে।</p>
                                 </div>
+                            )}
+                            {isLoading && allStudents.length === 0 ? (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-12 w-full" />
+                                    <Skeleton className="h-64 w-full" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="mb-6 border-b pb-4 no-print">
+                                        <h2 className="text-2xl font-black text-slate-800">
+                                            {sidebarItems.find(i => i.id === activeSection)?.label}
+                                        </h2>
+                                        {isClient && <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</p>}
+                                    </div>
 
-                                {activeSection === 'digital-attendance' && <DigitalAttendanceTab allStudents={allStudents} date={attendanceDate} onDateChange={setAttendanceDate} />}
-                                {activeSection === 'quick-roll' && <QuickRollAttendanceTab allStudents={allStudents} date={attendanceDate} onDateChange={setAttendanceDate} />}
-                                {activeSection === 'report' && <AttendanceReportTab allStudents={allStudents} />}
-                                {activeSection === 'absent-list' && <AbsentStudentListTab allStudents={allStudents} />}
-                                {activeSection === 'missed-attendance' && <MissedAttendanceTab onTakeAttendance={handleTakeMissedAttendance} />}
-                                {activeSection === 'alerts' && <AbsenceAlertsTab allStudents={allStudents} />}
-                            </>
-                        )}
+                                    {activeSection === 'digital-attendance' && <DigitalAttendanceTab allStudents={allStudents} date={attendanceDate} onDateChange={setAttendanceDate} />}
+                                    {activeSection === 'quick-roll' && <QuickRollAttendanceTab allStudents={allStudents} date={attendanceDate} onDateChange={setAttendanceDate} />}
+                                    {activeSection === 'report' && <AttendanceReportTab allStudents={allStudents} />}
+                                    {activeSection === 'absent-list' && <AbsentStudentListTab allStudents={allStudents} />}
+                                    {activeSection === 'missed-attendance' && <MissedAttendanceTab onTakeAttendance={handleTakeMissedAttendance} />}
+                                    {activeSection === 'alerts' && <AbsenceAlertsTab allStudents={allStudents} />}
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             </main>
