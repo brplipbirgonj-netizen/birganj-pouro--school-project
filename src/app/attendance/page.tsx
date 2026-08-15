@@ -191,7 +191,7 @@ const AttendanceSheet = ({
         }).catch(() => {});
     };
 
-    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> লোড হচ্ছে...</div>;
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> <span>লোড হচ্ছে...</span></div>;
 
     if (isWeekend) return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">{format(date, 'PPP', { locale: bn })} সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>;
 
@@ -223,7 +223,7 @@ const AttendanceSheet = ({
                     <Table>
                         <TableHeader className="bg-muted/50">
                             <TableRow>
-                                <TableHead className="w-20 text-center">রোল</TableHead>
+                                <TableHead className="w-20 text-center font-black">রোল</TableHead>
                                 <TableHead>শিক্ষার্থীর নাম</TableHead>
                                 <TableHead className="text-right">অবস্থা</TableHead>
                             </TableRow>
@@ -266,7 +266,7 @@ const AttendanceSheet = ({
                 <Table>
                     <TableHeader className="bg-muted/50 sticky top-0 z-10">
                         <TableRow>
-                            <TableHead className="w-20 text-center">রোল</TableHead>
+                            <TableHead className="w-20 text-center font-black">রোল</TableHead>
                             <TableHead>নাম</TableHead>
                             <TableHead className="text-right">হাজিরা বাটন</TableHead>
                         </TableRow>
@@ -523,7 +523,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+            confirm(e.preventDefault());
             handleSave();
         } else {
             // Reset confirmation if user starts typing again
@@ -608,7 +608,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                                 isConfirming ? "bg-rose-600 hover:bg-rose-700 animate-in zoom-in-95" : "bg-primary"
                             )}
                         >
-                            {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                            {isProcessing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2" />}
                             {isConfirming ? "হ্যাঁ, নতুনভাবে সেভ করুন" : "হাজিরা সেভ করুন"}
                         </Button>
                     </div>
@@ -694,16 +694,16 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
         <div className="mt-4 space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-end gap-4 p-4 bg-white border-2 border-primary/10 rounded-xl shadow-sm no-print">
                 <div className="space-y-2 flex-1 w-full max-w-xs">
-                    <Label className="font-black text-primary block">মাস নির্বাচন করুন</Label>
+                    <Label className="font-black text-primary block text-base">মাস নির্বাচন করুন</Label>
                     <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger className="bg-white font-bold h-10"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="bg-white font-bold h-11 text-lg border-2"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             {BENGALI_MONTHS.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={() => window.print()} className="font-black h-10 px-8 shadow-md">
-                    <Printer className="mr-2 h-4 w-4" /> বোর্ড প্রিন্ট করুন
+                <Button onClick={() => window.print()} className="font-black h-11 px-10 shadow-md text-lg">
+                    <Printer className="mr-2 h-5 w-5" /> বোর্ড প্রিন্ট করুন
                 </Button>
             </div>
 
@@ -713,7 +713,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                         @page { size: A4 landscape; margin: 0.4in !important; }
                         .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
                         .printable-area table tr { height: 28px !important; }
-                        .printable-area table td, .printable-area table th { padding: 2px 4px !important; font-size: 9px !important; border: 1px solid black !important; }
+                        .printable-area table td, .printable-area table th { padding: 2px 4px !important; font-size: 11px !important; border: 1px solid black !important; }
                         .no-print { display: none !important; }
                     }
                 `}</style>
@@ -726,19 +726,19 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                     <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible border-black">
                         <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full print:border-black">
                             <TableHeader className="bg-muted sticky top-0 z-30 print:bg-white print:static">
-                                <TableRow className="h-14 print:h-8 print:border-black">
-                                    <TableHead className="text-center font-black border-r border-b w-44 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black">তারিখ ও বার</TableHead>
+                                <TableRow className="h-16 print:h-8 print:border-black">
+                                    <TableHead className="text-center font-black border-r border-b w-48 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black text-[14px]">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
-                                        <TableHead key={cls} className="text-center font-black border-r border-b text-[11px] leading-tight print:border-black">{classNamesMap[cls]}</TableHead>
+                                        <TableHead key={cls} className="text-center font-black border-r border-b text-[14px] leading-tight print:border-black">{classNamesMap[cls]}</TableHead>
                                     ))}
-                                    <TableHead className="text-center font-black border-r border-b bg-indigo-50 text-indigo-900 print:bg-white print:text-black print:border-black">মোট</TableHead>
-                                    <TableHead className="text-center font-black border-r border-b bg-emerald-50 text-emerald-900 print:bg-white print:text-black print:border-black">শতকরা উপস্থিত</TableHead>
-                                    <TableHead className="text-center font-black border-b bg-rose-50 text-rose-900 print:bg-white print:text-black print:border-black">শতকরা অনুপস্থিত</TableHead>
+                                    <TableHead className="text-center font-black border-r border-b bg-indigo-50 text-indigo-900 print:bg-white print:text-black print:border-black text-[14px]">মোট</TableHead>
+                                    <TableHead className="text-center font-black border-r border-b bg-emerald-50 text-emerald-900 print:bg-white print:text-black print:border-black text-[14px]">শতকরা উপস্থিত</TableHead>
+                                    <TableHead className="text-center font-black border-b bg-rose-50 text-rose-900 print:bg-white print:text-black print:border-black text-[14px]">শতকরা অনুপস্থিত</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={9} className="text-center py-20 italic">বিশ্লেষণ করা হচ্ছে...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={9} className="text-center py-24 italic text-lg font-bold">বিশ্লেষণ করা হচ্ছে...</TableCell></TableRow>
                                 ) : boardData.map((row, i) => {
                                     const dateObj = new Date(row.dateStr);
                                     const fullDateStr = format(dateObj, 'dd-MM-yyyy');
@@ -747,27 +747,27 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                     
                                     return (
                                         <TableRow key={i} className={cn(
-                                            "h-10 transition-colors print:border-black",
+                                            "h-12 transition-colors print:border-black",
                                             isOff ? "bg-red-100 hover:bg-red-200 print:bg-gray-100" : "hover:bg-slate-50"
                                         )}>
                                             <TableCell className={cn(
-                                                "text-center font-black border-r text-xs whitespace-nowrap sticky left-0 z-20 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:shadow-none print:border-black",
+                                                "text-center font-black border-r whitespace-nowrap sticky left-0 z-20 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:shadow-none print:border-black text-[14px]",
                                                 isOff ? "text-red-700 bg-red-200 print:bg-gray-100" : "text-slate-600 bg-white"
                                             )}>
                                                 {toBengaliNumber(fullDateStr)} {dayName}
                                             </TableCell>
                                             {classes.map(cls => (
-                                                <TableCell key={cls} className="text-center font-bold border-r border-b print:border-black">
+                                                <TableCell key={cls} className="text-center font-black border-r border-b print:border-black text-base">
                                                     {row[cls] !== null ? toBengaliNumber(row[cls]) : '-'}
                                                 </TableCell>
                                             ))}
-                                            <TableCell className="text-center font-black border-r border-b bg-indigo-50/30 text-indigo-700 print:bg-white print:text-black print:border-black">
+                                            <TableCell className="text-center font-black border-r border-b bg-indigo-50/30 text-indigo-700 print:bg-white print:text-black print:border-black text-base">
                                                 {row.totalPresent > 0 ? toBengaliNumber(row.totalPresent) : '-'}
                                             </TableCell>
-                                            <TableCell className="text-center font-black border-r border-b bg-emerald-50/30 text-emerald-700 print:bg-white print:text-black print:border-black">
+                                            <TableCell className="text-center font-black border-r border-b bg-emerald-50/30 text-emerald-700 print:bg-white print:text-black print:border-black text-base">
                                                 {row.totalPresent > 0 ? toBengaliNumber(row.presentPercent.toFixed(1)) + '%' : '-'}
                                             </TableCell>
-                                            <TableCell className="text-center font-black border-b bg-rose-50/30 text-rose-700 print:bg-white print:text-black print:border-black">
+                                            <TableCell className="text-center font-black border-b bg-rose-50/30 text-rose-700 print:bg-white print:text-black print:border-black text-base">
                                                 {row.totalPresent > 0 ? toBengaliNumber(row.absentPercent.toFixed(1)) + '%' : '-'}
                                             </TableCell>
                                         </TableRow>
@@ -1299,7 +1299,7 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
         fetchAttendance();
     }, [classId, students, selectedYear, db, user, startDate, endDate]);
 
-    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> রিপোর্ট তৈরি হচ্ছে...</div>;
+    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> <span>রিপোর্ট তৈরি হচ্ছে...</span></div>;
 
     if (students.length === 0) return <p className="text-center text-muted-foreground p-8">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>;
 
@@ -1324,27 +1324,27 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
             <div className="table-container !max-h-none !overflow-visible border-black">
                 <Table className="border-collapse border-black print:border-black print:border">
                     <TableHeader className="bg-muted/50 sticky top-0 z-10 print:static print:bg-white">
-                        <TableRow className="print:border-black">
-                            <TableHead className="w-20 text-center font-black print:border-black print:border">রোল</TableHead>
-                            <TableHead className="font-black print:border-black print:border">শিক্ষার্থীর নাম ও মোবাইল</TableHead>
-                            <TableHead className="text-center font-black print:border-black print:border">মোট কার্যদিবস</TableHead>
-                            <TableHead className="text-center font-black print:border-black print:border">উপস্থিত</TableHead>
-                            <TableHead className="text-center font-black print:border-black print:border">অনুপস্থিত</TableHead>
-                            <TableHead className="text-right font-black print:border-black print:border">উপস্থিতি (%)</TableHead>
+                        <TableRow className="print:border-black h-12">
+                            <TableHead className="w-20 text-center font-black print:border-black print:border text-base">রোল</TableHead>
+                            <TableHead className="font-black print:border-black print:border text-base">শিক্ষার্থীর নাম ও মোবাইল</TableHead>
+                            <TableHead className="text-center font-black print:border-black print:border text-base">মোট কার্যদিবস</TableHead>
+                            <TableHead className="text-center font-black print:border-black print:border text-base">উপস্থিত</TableHead>
+                            <TableHead className="text-center font-black print:border-black print:border text-base">অনুপস্থিত</TableHead>
+                            <TableHead className="text-right font-black print:border-black print:border text-base">উপস্থিতি (%)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {reportData.map(report => (
-                            <TableRow key={report.student.id} className="hover:bg-accent/5 transition-colors print:border-black">
-                                <TableCell className="text-center font-black print:border-black print:border">{toBengaliNumber(report.student.roll)}</TableCell>
-                                <TableCell className="print:border-black print:border">
+                            <TableRow key={report.student.id} className="hover:bg-accent/5 transition-colors print:border-black h-12">
+                                <TableCell className="text-center font-black print:border-black print:border text-base">{toBengaliNumber(report.student.roll)}</TableCell>
+                                <TableCell className="print:border-black print:border text-base">
                                     <p className="font-bold text-slate-700">{report.student.studentNameBn}</p>
-                                    <p className="text-[10px] text-muted-foreground font-bold">{report.student.guardianMobile || '-'}</p>
+                                    <p className="text-[12px] text-muted-foreground font-bold">{report.student.guardianMobile || '-'}</p>
                                 </TableCell>
-                                <TableCell className="text-center font-medium print:border-black print:border">{toBengaliNumber(report.totalDays)}</TableCell>
-                                <TableCell className="text-center text-emerald-600 font-black print:border-black print:border">{toBengaliNumber(report.presentDays)}</TableCell>
-                                <TableCell className="text-center text-rose-600 font-black print:border-black print:border">{toBengaliNumber(report.absentDays)}</TableCell>
-                                <TableCell className="text-right font-black text-emerald-700 print:border-black print:border">
+                                <TableCell className="text-center font-medium print:border-black print:border text-base">{toBengaliNumber(report.totalDays)}</TableCell>
+                                <TableCell className="text-center text-emerald-600 font-black print:border-black print:border text-base">{toBengaliNumber(report.presentDays)}</TableCell>
+                                <TableCell className="text-center text-rose-600 font-black print:border-black print:border text-base">{toBengaliNumber(report.absentDays)}</TableCell>
+                                <TableCell className="text-right font-black text-emerald-700 print:border-black print:border text-base">
                                     {report.totalDays > 0 ? 
                                         toBengaliNumber(((report.presentDays / report.totalDays) * 100).toFixed(1)) + '%' 
                                         : 'N/A'
