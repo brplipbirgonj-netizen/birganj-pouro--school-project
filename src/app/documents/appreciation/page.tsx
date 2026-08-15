@@ -15,7 +15,7 @@ import { getSubjects } from '@/lib/subjects';
 import { processStudentResults } from '@/lib/results-calculation';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, ArrowLeft, Award, Info, Loader2, Settings2, Type } from 'lucide-react';
+import { Printer, ArrowLeft, Award, Info, Loader2, Settings2, Type, FilePen } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -46,6 +46,7 @@ export default function AppreciationGeneratorPage() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isFetchingResults, setIsFetchingResults] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
 
   // Customization Settings
   const [customSettings, setCustomSettings] = useState({
@@ -257,7 +258,7 @@ export default function AppreciationGeneratorPage() {
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label className="font-bold text-xs flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-blue-500" /> স্কুল লোগো জলছাপ (Opacity)
+                                            স্কুল লোগো জলছাপ (Opacity)
                                         </Label>
                                         <Select 
                                             value={customSettings.watermarkOpacity.toString()} 
@@ -274,7 +275,7 @@ export default function AppreciationGeneratorPage() {
 
                                     <div className="space-y-2">
                                         <Label className="font-bold text-xs flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500" /> বর্ডার ডিজাইন
+                                            বর্ডার ডিজাইন
                                         </Label>
                                         <Select 
                                             value={customSettings.borderStyle} 
@@ -336,16 +337,29 @@ export default function AppreciationGeneratorPage() {
                 </div>
 
                 <div className="sticky top-24">
-                    <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
-                        <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
-                    </h3>
-                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.55] sm:scale-[0.65] lg:scale-[0.7] xl:scale-[0.85]">
+                    <div className="flex justify-between items-center mb-2 px-1">
+                        <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                            <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
+                        </h3>
+                        {selectedStudent && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className={cn("h-8 font-black gap-2", isEditable ? "bg-amber-100 border-amber-500 text-amber-700" : "bg-white")}
+                                onClick={() => setIsEditable(!isEditable)}
+                            >
+                                <FilePen className="h-4 w-4" /> {isEditable ? 'এডিট মোড বন্ধ' : 'ম্যানুয়ালি এডিট'}
+                            </Button>
+                        )}
+                    </div>
+                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top-left scale-[0.45] sm:scale-[0.52] lg:scale-[0.55] xl:scale-[0.7] min-w-[210mm] min-h-[297mm]">
                         {selectedStudent ? (
                             <AppreciationTemplate 
                                 student={selectedStudent} 
                                 schoolInfo={schoolInfo} 
                                 formData={formData}
                                 settings={customSettings}
+                                isEditable={isEditable}
                             />
                         ) : (
                             <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center bg-white text-muted-foreground gap-4">
@@ -373,16 +387,26 @@ export default function AppreciationGeneratorPage() {
   );
 }
 
-function AppreciationTemplate({ student, schoolInfo, formData, settings }: any) {
+function AppreciationTemplate({ student, schoolInfo, formData, settings, isEditable = false }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
         <div className={cn(
-            "w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-12 box-border overflow-hidden font-kalpurush",
+            "appreciation-container bg-white mx-auto relative text-black flex flex-col p-12 box-border border-blue-900 font-kalpurush overflow-hidden",
             settings?.borderWidth || 'border-[10px]',
-            settings?.borderStyle || 'border-double',
-            "border-blue-900"
+            settings?.borderStyle || 'border-double'
         )}>
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4; margin: 0.4in !important; }
+                    .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; width: 100% !important; }
+                    .appreciation-container { width: 100% !important; min-height: 260mm !important; height: auto !important; padding: 10mm !important; }
+                }
+                @media screen {
+                    .appreciation-container { width: 210mm; min-height: 297mm; }
+                }
+            `}</style>
+
             <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-blue-900 rounded-tl-xl opacity-20"></div>
             <div className="absolute top-4 right-4 w-20 h-20 border-t-4 border-r-4 border-blue-900 rounded-tr-xl opacity-20"></div>
             <div className="absolute bottom-4 left-4 w-20 h-20 border-b-4 border-l-4 border-blue-900 rounded-bl-xl opacity-20"></div>
@@ -393,7 +417,7 @@ function AppreciationTemplate({ student, schoolInfo, formData, settings }: any) 
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}
                 </div>
                 <div className="flex-grow text-center">
-                    <h1 className="text-4xl font-black text-blue-950 mb-1">{schoolInfo.name}</h1>
+                    <h1 className="text-4xl font-black text-blue-950 mb-1 leading-tight">{schoolInfo.name}</h1>
                     <p className="text-lg font-bold text-gray-700">{schoolInfo.address}</p>
                     <p className="text-sm font-bold text-gray-600 mt-1">
                         EIIN: {toBengaliNumber(schoolInfo.eiin)} | স্থাপিত: ২০১৯ ইং
@@ -428,8 +452,13 @@ function AppreciationTemplate({ student, schoolInfo, formData, settings }: any) 
 
             {/* Main Body */}
             <div 
-                className="relative z-10 text-justify leading-[2.2] font-semibold space-y-6 px-6 text-slate-900 pb-[220px]"
+                className={cn(
+                    "relative z-10 text-justify leading-[2.1] font-semibold space-y-6 px-6 text-slate-900 outline-none pb-4",
+                    isEditable && "bg-amber-50/50 p-2 rounded-xl ring-2 ring-amber-200"
+                )}
                 style={{ fontSize: `${settings?.fontSize || 20}px` }}
+                contentEditable={isEditable}
+                suppressContentEditableWarning={true}
             >
                 <p className="indent-20">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
@@ -448,21 +477,20 @@ function AppreciationTemplate({ student, schoolInfo, formData, settings }: any) 
                 <p>
                     অত্র বিদ্যালয়ে অধ্যয়নকালীন মেধা তালিকায় {formData.meritPosition && <>(মেধাক্রম: <span className="font-black px-1">{toBengaliNumber(formData.meritPosition)}</span>)</>} তার অর্জিত GPA: <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
                 </p>
+                
+                <p className="italic text-blue-950 text-2xl font-black text-center pt-4">
+                    আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
+                </p>
             </div>
 
             {/* Footer */}
-            <footer className="absolute bottom-16 left-0 right-0 z-10 px-16 bg-white">
-                <div className="text-center mb-10">
-                    <p className="italic text-blue-950 text-2xl font-black leading-relaxed">
-                        আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
-                    </p>
-                </div>
-                <div className="flex justify-between items-end pt-12">
+            <footer className="relative z-10 px-16 bg-white pb-6 pt-12 print:pt-6 mt-auto">
+                <div className="flex justify-between items-end">
                     <div className="text-center">
-                        <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                        <div className="w-56 border-t-2 border-black pt-1.5 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                     </div>
                     <div className="text-center">
-                        <div className="w-64 border-t-2 border-black pt-2 font-black text-lg text-gray-800">
+                        <div className="w-64 border-t-2 border-black pt-1.5 font-black text-lg text-gray-800">
                             প্রধান শিক্ষকের স্বাক্ষর ও সিল
                         </div>
                     </div>
