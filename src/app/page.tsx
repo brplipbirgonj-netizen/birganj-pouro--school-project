@@ -511,7 +511,7 @@ const LiveRoutineCard = () => {
                                         <TableHeader className="bg-muted/50">
                                             <TableRow>
                                                 <TableHead>সময়</TableHead>
-                                                <TableHead>শিক্ষকর</TableHead>
+                                                <TableHead>শিক্ষক</TableHead>
                                                 <TableHead>শ্রেণি</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -943,7 +943,8 @@ export default function Home() {
             attendance: attendanceData,
         };
 
-        await saveDailyAttendance(db, dailyAttendance);
+        // Initiate save immediately (deterministic ID handles sync automatically)
+        saveDailyAttendance(db, dailyAttendance);
 
         toast({
             title: `আজকের কুইক হাজিরা সংরক্ষিত হয়েছে (${classNamesMap[quickAttendanceClass] || quickAttendanceClass} শ্রেণি)`,
@@ -1200,9 +1201,3 @@ function toBengaliNumber(str: string | number) {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
-
-function Avatar({ children, className }: { children: React.ReactNode, className?: string }) {
-    return <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}>{children}</div>;
-}
-function AvatarImage({ src }: { src?: string }) { return src ? <img src={src} className="aspect-square h-full w-full" alt="avatar" /> : null; }
-function AvatarFallback({ children, className }: { children: React.ReactNode, className?: string }) { return <div className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted", className)}>{children}</div>; }

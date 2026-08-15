@@ -16,7 +16,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday, getHolidays } from '@/lib/holiday-data';
-import { format, eachDayOfInterval, isAfter } from 'date-fns';
+import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,16 +26,10 @@ import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import Image from 'next/image';
 
 // --- Constants ---
-const BENGALI_MONTHS = [
-    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
-];
-
 const classNamesMap: { [key: string]: string } = { 
     '6': 'ষষ্ঠ শ্রেণি', 
     '7': 'সপ্তম শ্রেণি', 
@@ -180,15 +174,16 @@ const AttendanceSheet = ({
             attendance: attendanceData,
         };
 
-        saveDailyAttendance(db, dailyAttendance).then(() => {
-            setSavedAttendance(dailyAttendance);
-            setIsEditing(false);
-            onRefresh();
-            toast({ 
-                title: isEditing ? "হাজিরা আপডেট হয়েছে" : "হাজিরা সেভ হয়েছে",
-                description: currentAttendance.size < students.length ? "বাকি শিক্ষার্থীদের অনুপস্থিত হিসেবে ধরা হয়েছে।" : undefined
-            });
-        }).catch(() => {});
+        // Optimistic save: Update UI state immediately without waiting for server promise
+        saveDailyAttendance(db, dailyAttendance);
+        
+        setSavedAttendance(dailyAttendance);
+        setIsEditing(false);
+        onRefresh();
+        toast({ 
+            title: isEditing ? "হাজিরা আপডেট হয়েছে" : "হাজিরা সেভ হয়েছে",
+            description: currentAttendance.size < students.length ? "বাকি শিক্ষার্থীরা অনুপস্থিত হিসেবে গণ্য হবে।" : "সফলভাবে সংরক্ষিত হয়েছে।"
+        });
     };
 
     if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> <span>লোড হচ্ছে...</span></div>;
@@ -506,7 +501,8 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                 attendance: attendanceData,
             };
 
-            await saveDailyAttendance(db, dailyAttendance);
+            // Initiate offline-first save without awaiting for immediate UI feedback
+            saveDailyAttendance(db, dailyAttendance);
             
             toast({ 
                 title: isConfirming ? 'হাজিরা সফলভাবে আপডেট হয়েছে' : 'হাজিরা সফলভাবে সংরক্ষিত হয়েছে', 
@@ -523,7 +519,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            confirm(e.preventDefault());
+            e.preventDefault();
             handleSave();
         } else {
             // Reset confirmation if user starts typing again
@@ -1537,7 +1533,7 @@ export default function AttendancePage() {
                         {!isOnline && (
                             <div className="mb-6 p-4 bg-rose-50 border-2 border-dashed border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700 animate-pulse no-print">
                                 <WifiOff className="h-6 w-6" />
-                                <p className="font-black">আপনি অফলাইনে আছেন। আপনার দেওয়া হাজিরাগুলো এই ডিভাইসে সুরক্ষিত আছে এবং ইন্টারনেট সংযোগ পাওয়া মাত্রই সিঙ্ক হবে।</p>
+                                <p className="font-black">আপনি অফলাইনে আছেন। আপনার দেওয়া হাজিরাগুলো এই ডিভাইসে সংরক্ষিত হচ্ছে এবং ইন্টারনেট সংযোগ পাওয়া মাত্রই সিঙ্ক হবে।</p>
                             </div>
                         )}
                         {isLoading && allStudents.length === 0 ? (

@@ -2,14 +2,13 @@
 import {
   collection,
   doc,
-  addDoc,
   getDocs,
+  getDoc,
   query,
   where,
   Firestore,
   setDoc,
   orderBy,
-  limit,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -48,48 +47,34 @@ export const getAttendanceFromStorage = async (db: Firestore): Promise<DailyAtte
   }
 };
 
-export const saveDailyAttendance = async (db: Firestore, record: DailyAttendance) => {
-  const q = query(
-    collection(db, ATTENDANCE_COLLECTION),
-    where("date", "==", record.date),
-    where("academicYear", "==", record.academicYear),
-    where("className", "==", record.className)
-  );
+/**
+ * Saves daily attendance. Uses a deterministic ID to support offline writes.
+ */
+export const saveDailyAttendance = (db: Firestore, record: DailyAttendance) => {
+  // Deterministic ID for offline stability (Format: 2026-03-01_6_2026)
+  const docId = `${record.date}_${record.className}_${record.academicYear}`;
+  const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
 
-  const existing = await getDocs(q).catch(async (e) => {
-      if (e.code === 'permission-denied') {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: ATTENDANCE_COLLECTION,
-              operation: 'list',
-          } satisfies SecurityRuleContext));
-      }
-      throw e;
-  });
-  
-  if (!existing.empty) {
-    const docId = existing.docs[0].id;
-    const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
-    return setDoc(docRef, record, { merge: true }).catch(async (serverError) => {
+  const dataToSave = {
+    ...record,
+    updatedAt: new Date().toISOString()
+  };
+  delete (dataToSave as any).id;
+
+  // We do NOT await here in the calling components to allow immediate offline UI updates.
+  // setDoc with merge: true handles both creates and updates seamlessly while offline.
+  return setDoc(docRef, dataToSave, { merge: true }).catch(async (serverError: any) => {
+    console.error("Error saving attendance:", serverError);
+    if (serverError.code === 'permission-denied') {
       const permissionError = new FirestorePermissionError({
         path: docRef.path,
         operation: 'write',
-        requestResourceData: record,
+        requestResourceData: dataToSave,
       } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
-      throw permissionError;
-    });
-  } else {
-    const collectionRef = collection(db, ATTENDANCE_COLLECTION);
-    return addDoc(collectionRef, record).catch(async (serverError) => {
-      const permissionError = new FirestorePermissionError({
-        path: ATTENDANCE_COLLECTION,
-        operation: 'create',
-        requestResourceData: record,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
-      throw permissionError;
-    });
-  }
+    }
+    throw serverError;
+  });
 };
 
 export const getAttendanceForDate = async (db: Firestore, date: string, academicYear: string): Promise<DailyAttendance[]> => {
@@ -114,17 +99,27 @@ export const getAttendanceForDate = async (db: Firestore, date: string, academic
 }
 
 export const getAttendanceForClassAndDate = async (db: Firestore, date: string, className: string, academicYear: string): Promise<DailyAttendance | undefined> => {
-    const q = query(
-        collection(db, ATTENDANCE_COLLECTION),
-        where("date", "==", date),
-        where("className", "==", className),
-        where("academicYear", "==", academicYear)
-    );
+    const docId = `${date}_${className}_${academicYear}`;
+    const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
+    
     try {
+        // Try looking for predictable ID first (faster and offline-friendly)
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return { id: docSnap.id, ...docSnap.data() } as DailyAttendance;
+        }
+
+        // Fallback for older random-id based records
+        const q = query(
+            collection(db, ATTENDANCE_COLLECTION),
+            where("date", "==", date),
+            where("className", "==", className),
+            where("academicYear", "==", academicYear)
+        );
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-            const doc = querySnapshot.docs[0];
-            return { id: doc.id, ...doc.data() } as DailyAttendance;
+            const first = querySnapshot.docs[0];
+            return { id: first.id, ...first.data() } as DailyAttendance;
         }
         return undefined;
     } catch(e: any) {
@@ -157,38 +152,22 @@ export const getConsecutiveAbsences = async (db: Firestore, className: string, a
         const allRecords = snap.docs.map(d => d.data() as DailyAttendance);
         if (allRecords.length === 0) return [];
 
-        // Sort records by date descending (most recent first)
         const sortedRecords = allRecords.sort((a, b) => b.date.localeCompare(a.date));
-
         const studentAbsenceMap = new Map<string, number>();
         const studentLastDateMap = new Map<string, string>();
         
-        // Collect all unique student IDs that have at least one record in this class/year
         const allStudentIds = new Set<string>();
         sortedRecords.forEach(r => r.attendance.forEach(a => allStudentIds.add(a.studentId)));
 
         allStudentIds.forEach(studentId => {
             let consecutive = 0;
-            // Iterate from the most recent attendance record backwards to find the length of the current streak
             for (const record of sortedRecords) {
                 const att = record.attendance.find(a => a.studentId === studentId);
-                
                 if (att) {
-                    if (att.status === 'absent') {
-                        consecutive++;
-                    } else if (att.status === 'present') {
-                        // Student attended school, reset the current consecutive absence streak
-                        break;
-                    }
-                } else {
-                    // If the student is missing from a record for a day where class attendance was taken, 
-                    // we count that as a break in the consecutive streak to be safe.
-                    break;
-                }
+                    if (att.status === 'absent') consecutive++;
+                    else if (att.status === 'present') break;
+                } else break;
             }
-
-            // Requirement: Show alert if absent for 3 or more consecutive days
-            // It will show the full count (e.g. 50 days) if they haven't returned yet.
             if (consecutive >= 3) {
                 studentAbsenceMap.set(studentId, consecutive);
                 studentLastDateMap.set(studentId, sortedRecords[0].date);
