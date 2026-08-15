@@ -302,7 +302,7 @@ export default function AppreciationGeneratorPage() {
                                         </div>
                                         <Slider 
                                             value={[customSettings.fontSize]} 
-                                            min={16} 
+                                            min={10} 
                                             max={28} 
                                             step={1} 
                                             onValueChange={([v]) => setCustomSettings(prev => ({ ...prev, fontSize: v }))} 
@@ -461,7 +461,7 @@ function AppreciationTemplate({ student, schoolInfo, formData, settings, isEdita
                 suppressContentEditableWarning={true}
             >
                 <p className="indent-20">
-                    এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
+                    এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="font-black border-b-2 border-black border-dotted px-2 text-blue-950">{student.studentNameBn}</span>, 
                     পিতা: <span className="border-b-2 border-black border-dotted px-2">{student.fatherNameBn}</span>, 
                     মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>, 
                     গ্রাম: <span className="border-b-2 border-black border-dotted px-2">{student.presentVillage || student.permanentVillage || 'বিবিধ'}</span>, 
@@ -471,14 +471,14 @@ function AppreciationTemplate({ student, schoolInfo, formData, settings, isEdita
                 </p>
 
                 <p>
-                    সে অত্র বিদ্যালয়ে <span className="text-2xl font-black px-2">{toBengaliNumber(formData.passingYear)}</span> শিক্ষাবর্ষে <span className="text-2xl font-black px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে (রোল নম্বর: <span className="font-black px-2">{toBengaliNumber(student.roll)}</span>) নিয়মিত শিক্ষার্থী হিসেবে সফলতার সাথে অধ্যয়ন সম্পন্ন করেছে। বিদ্যালয়ের রেকর্ড অনুযায়ী তার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।
+                    সে অত্র বিদ্যালয়ে <span className="px-2">{toBengaliNumber(formData.passingYear)}</span> শিক্ষাবর্ষে <span className="px-2">{classNamesMap[student.className] || student.className}</span> শ্রেণিতে (রোল নম্বর: <span className="font-black px-2">{toBengaliNumber(student.roll)}</span>) নিয়মিত শিক্ষার্থী হিসেবে সফলতার সাথে অধ্যয়ন সম্পন্ন করেছে। বিদ্যালয়ের রেকর্ড অনুযায়ী তার জন্ম তারিখ: <span className="font-black px-2">{studentDob}</span>।
                 </p>
 
                 <p>
-                    অত্র বিদ্যালয়ে অধ্যয়নকালীন মেধা তালিকায় {formData.meritPosition && <>(মেধাক্রম: <span className="font-black px-1">{toBengaliNumber(formData.meritPosition)}</span>)</>} তার অর্জিত GPA: <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
+                    অত্র বিদ্যালয়ে অধ্যয়নকালীন মেধা তালিকায় {formData.meritPosition && <>(মেধাক্রম: <span className="font-black px-1">{toBengaliNumber(formData.meritPosition)}</span>)</>} তার অর্জিত GPA: <span className="font-black px-2 border-b-2 border-black border-dotted text-blue-950">{toBengaliNumber(formData.gpa)}</span>। আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>। {formData.extraContent}
                 </p>
                 
-                <p className="italic text-blue-950 text-2xl font-black text-center pt-4">
+                <p className="italic text-blue-950 font-black text-center pt-4">
                     আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
                 </p>
             </div>
