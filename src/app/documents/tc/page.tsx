@@ -12,7 +12,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, ArrowLeft, FileText, Info, Settings2, Type } from 'lucide-react';
+import { Printer, ArrowLeft, FileText, Info, Settings2, Type, FilePen } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -42,6 +42,7 @@ export default function TCGeneratorPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
 
   // Customization Settings
   const [customSettings, setCustomSettings] = useState({
@@ -216,7 +217,7 @@ export default function TCGeneratorPage() {
                                         </div>
                                         <Slider 
                                             value={[customSettings.fontSize]} 
-                                            min={16} 
+                                            min={10} 
                                             max={28} 
                                             step={1} 
                                             onValueChange={([v]) => setCustomSettings(prev => ({ ...prev, fontSize: v }))} 
@@ -246,19 +247,40 @@ export default function TCGeneratorPage() {
                     </Card>
 
                     <Button onClick={() => window.print()} size="lg" className="w-full font-black h-14 text-xl shadow-xl bg-amber-700 hover:bg-amber-800" disabled={!selectedStudent}>
-                        <Printer className="mr-2 h-5 w-5" /> ছাড়পত্র প্রিন্ট করুন
+                        <Printer className="mr-2 h-6 w-6" /> ছাড়পত্র প্রিন্ট করুন
                     </Button>
                 </div>
 
                 <div className="sticky top-24">
-                    <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
-                        <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4)
-                    </h3>
-                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.65] sm:scale-[0.75] lg:scale-[0.8] xl:scale-100">
+                    <div className="flex justify-between items-center mb-2 px-1">
+                        <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                            <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
+                        </h3>
+                        {selectedStudent && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className={cn("h-8 font-black gap-2", isEditable ? "bg-amber-100 border-amber-500 text-amber-700" : "bg-white")}
+                                onClick={() => setIsEditable(!isEditable)}
+                            >
+                                <FilePen className="h-4 w-4" /> {isEditable ? 'এডিট মোড বন্ধ' : 'ম্যানুয়ালি এডিট'}
+                            </Button>
+                        )}
+                    </div>
+                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top-left scale-[0.45] sm:scale-[0.52] lg:scale-[0.55] xl:scale-[0.7] min-w-[210mm] min-h-[297mm]">
                         {selectedStudent ? (
-                            <TCTemplate student={selectedStudent} schoolInfo={schoolInfo} formData={formData} settings={customSettings} />
+                            <TCTemplate 
+                                student={selectedStudent} 
+                                schoolInfo={schoolInfo} 
+                                formData={formData} 
+                                settings={customSettings} 
+                                isEditable={isEditable}
+                            />
                         ) : (
-                            <div className="w-[210mm] h-[297mm] bg-white flex flex-col items-center justify-center text-muted-foreground italic"><Info className="h-12 w-12 mb-4 opacity-10" /><p>শিক্ষার্থী নির্বাচন করুন</p></div>
+                            <div className="w-[210mm] h-[297mm] bg-white flex flex-col items-center justify-center text-muted-foreground italic">
+                                <Info className="h-12 w-12 mb-4 opacity-10" />
+                                <p>শিক্ষার্থী নির্বাচন করুন</p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -273,22 +295,39 @@ export default function TCGeneratorPage() {
   );
 }
 
-function TCTemplate({ student, schoolInfo, formData, settings }: any) {
+function TCTemplate({ student, schoolInfo, formData, settings, isEditable = false }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
 
     return (
         <div className={cn(
-            "w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-10 box-border border-emerald-800 font-kalpurush",
+            "tc-container bg-white mx-auto relative text-black flex flex-col p-12 box-border border-emerald-800 font-kalpurush overflow-hidden",
             settings?.borderWidth || 'border-8',
             settings?.borderStyle || 'border-double'
         )}>
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4; margin: 0.4in !important; }
+                    .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; width: 100% !important; }
+                    .tc-container { width: 100% !important; min-height: 260mm !important; height: auto !important; padding: 10mm !important; }
+                }
+                @media screen {
+                    .tc-container { width: 210mm; min-height: 297mm; }
+                }
+            `}</style>
+
             <div className="text-center border-b-2 border-emerald-800 pb-3 mb-6 flex justify-between items-center px-4">
                 <div className="w-20 h-20 relative">{schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}</div>
                 <div className="flex-grow">
                     <h1 className="text-3xl font-black text-emerald-900 mb-0.5">{schoolInfo.name}</h1>
                     <p className="text-sm font-bold text-gray-700">{schoolInfo.address} | EIIN: {toBengaliNumber(schoolInfo.eiin)}</p>
                 </div>
-                <div className="w-20 h-20 border border-gray-300 p-0.5">{student.photoUrl && <Image src={student.photoUrl} alt="Student" width={80} height={80} className="object-cover w-full h-full" />}</div>
+                <div className="w-20 h-20 border border-gray-300 p-0.5 rounded overflow-hidden shadow-sm shrink-0">
+                    {student.photoUrl ? (
+                        <Image src={student.photoUrl} alt="Student" width={80} height={80} className="object-cover w-full h-full" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">ছবি নেই</div>
+                    )}
+                </div>
             </div>
 
             <div className="text-center mb-8"><span className="inline-block bg-emerald-800 text-white text-xl font-bold px-10 py-1.5 rounded-full border-2 border-emerald-900 shadow-sm">ছাড়পত্র (TC)</span></div>
@@ -305,8 +344,13 @@ function TCTemplate({ student, schoolInfo, formData, settings }: any) {
             )}
 
             <div 
-                className="flex-grow space-y-6 font-semibold leading-relaxed px-4 text-justify"
+                className={cn(
+                    "relative z-10 flex-grow space-y-6 font-semibold leading-[2.1] px-4 text-justify outline-none pb-4 text-slate-900",
+                    isEditable && "bg-amber-50/50 p-2 rounded-xl ring-2 ring-amber-200"
+                )}
                 style={{ fontSize: `${settings?.fontSize || 20}px` }}
+                contentEditable={isEditable}
+                suppressContentEditableWarning={true}
             >
                 <p className="indent-16">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, 
@@ -321,14 +365,13 @@ function TCTemplate({ student, schoolInfo, formData, settings }: any) {
                     আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="font-black border-b-2 border-black border-dotted px-2">{formData.conduct}</span>। পড়াশোনার অগ্রগতি ও ফলাফল <span className="font-black border-b-2 border-black border-dotted px-2">{formData.status}</span>।
                 </p>
                 <p>বিদ্যালয় ত্যাগের কারণ: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.reason}</span>। বিদ্যালয়ের পাওনা সংক্রান্ত অবস্থা: <span className="font-black border-b-2 border-black border-dotted px-2">{formData.dues}</span>।</p>
+                
+                <p className="italic text-emerald-950 font-black text-center pt-8">
+                    আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
+                </p>
             </div>
 
-            <footer className="absolute bottom-16 left-0 right-0 z-10 px-10">
-                <div className="text-center mb-16">
-                    <p className="italic text-emerald-950 text-2xl font-black">
-                        আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
-                    </p>
-                </div>
+            <footer className="relative z-10 px-10 bg-white pb-6 pt-12 print:pt-6">
                 <div className="flex justify-around items-end">
                     <div className="text-center">
                         <div className="w-48 border-t border-black pt-1 font-bold text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
@@ -343,3 +386,4 @@ function TCTemplate({ student, schoolInfo, formData, settings }: any) {
         </div>
     );
 }
+
