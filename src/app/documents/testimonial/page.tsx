@@ -259,7 +259,7 @@ export default function TestimonialGeneratorPage() {
                         </CardContent>
                     </Card>
 
-                    <Button onClick={() => window.print()} size="lg" className="w-full font-black shadow-lg h-14 text-xl" disabled={!selectedStudent}>
+                    <Button onClick={() => window.print()} size="lg" className="w-full font-black shadow-xl h-14 text-xl" disabled={!selectedStudent}>
                         <Printer className="mr-2 h-6 w-6" /> প্রত্যয়ন পত্র প্রিন্ট করুন
                     </Button>
                 </div>
@@ -280,7 +280,7 @@ export default function TestimonialGeneratorPage() {
                             </Button>
                         )}
                     </div>
-                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top-left scale-[0.45] sm:scale-[0.55] lg:scale-[0.6] xl:scale-[0.75] min-w-[210mm] min-h-[297mm]">
+                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top-left scale-[0.45] sm:scale-[0.52] lg:scale-[0.55] xl:scale-[0.7] min-w-[210mm] min-h-[297mm]">
                         {selectedStudent ? (
                             <TestimonialTemplate 
                                 student={selectedStudent} 
@@ -322,14 +322,18 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, sett
     
     return (
         <div className={cn(
-            "w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-10 box-border border-emerald-900 overflow-hidden font-kalpurush",
+            "testimonial-container bg-white mx-auto relative text-black flex flex-col p-10 box-border border-emerald-900 overflow-hidden font-kalpurush",
             settings?.borderWidth || 'border-8',
             settings?.borderStyle || 'border-double'
         )}>
             <style jsx global>{`
                 @media print {
                     @page { size: A4; margin: 0.4in !important; }
-                    .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
+                    .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; width: 100% !important; }
+                    .testimonial-container { width: 100% !important; min-height: 260mm !important; height: auto !important; padding: 6mm !important; }
+                }
+                @media screen {
+                    .testimonial-container { width: 210mm; min-height: 297mm; }
                 }
             `}</style>
 
@@ -367,13 +371,13 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, sett
                 </div>
             )}
 
-            <div className="relative z-10 text-center mb-8">
+            <div className="relative z-10 text-center mb-6">
                 <h2 className="inline-block text-3xl font-black border-b-4 border-black pb-1.5 px-12 uppercase tracking-widest">প্রত্যয়ন পত্র</h2>
             </div>
 
             <div 
                 className={cn(
-                    "relative z-10 flex-grow text-justify leading-[2.4] font-semibold space-y-6 px-4 text-slate-900 outline-none",
+                    "relative z-10 flex-grow text-justify leading-[2.1] font-semibold space-y-4 px-4 text-slate-900 outline-none pb-4",
                     isEditable && "bg-amber-50/50 p-2 rounded-xl ring-2 ring-amber-200"
                 )}
                 style={{ fontSize: `${settings?.fontSize || 20}px` }}
@@ -386,8 +390,8 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, sett
                     মাতা: <span className="border-b-2 border-black border-dotted px-2">{student.motherNameBn}</span>, 
                     গ্রাম: <span className="border-b-2 border-black border-dotted px-2">{student.permanentVillage || student.presentVillage || 'বিবিধ'}</span>, 
                     ডাকঘর: <span className="border-b-2 border-black border-dotted px-2">{student.presentPostOffice || student.permanentPostOffice || 'বিবিধ'}</span>, 
-                    উপজেলা: <span className="border-b-2 border-black border-dotted px-2">{student.permanentUpazila || student.presentUpazila || 'বীরগঞ্জ'}</span>, 
-                    জেলা: <span className="border-b-2 border-black border-dotted px-2">{student.permanentDistrict || student.presentDistrict || 'দিনাজপুর'}</span>।
+                    উপজেলা: <span className="border-b-2 border-black border-dotted px-2">{student.presentUpazila || 'বীরগঞ্জ'}</span>, 
+                    জেলা: <span className="border-b-2 border-black border-dotted px-2">{student.presentDistrict || 'দিনাজপুর'}</span>।
                 </p>
 
                 <p>
@@ -398,12 +402,12 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, sett
                     আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>।
                 </p>
                 
-                <p className="italic text-emerald-950 text-2xl font-black text-center pt-8">
+                <p className="italic text-emerald-950 text-2xl font-black text-center pt-6">
                     আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
                 </p>
             </div>
 
-            <footer className="absolute bottom-12 left-0 right-0 z-10 px-16 bg-white pb-6">
+            <footer className="relative z-10 px-16 bg-white pb-6 pt-12 print:pt-6 mt-auto">
                 <div className="flex justify-between items-end">
                     <div className="text-center">
                         <div className="w-56 border-t-2 border-black pt-1.5 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
