@@ -8,7 +8,6 @@ import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Printer, ArrowLeft, Settings2, Type, Info, FileText } from 'lucide-react';
@@ -32,7 +31,7 @@ export default function CustomPadPage() {
     // Customization Settings
     const [customSettings, setCustomSettings] = useState({
         watermarkOpacity: 0.05,
-        borderStyle: 'border-b-4',
+        borderStyle: 'border-b-2',
         fontSize: 20,
         headerPadding: 'pb-4'
     });
@@ -42,7 +41,7 @@ export default function CustomPadPage() {
     }, []);
 
     if (!isClient || isSchoolInfoLoading) {
-        return <div className="flex items-center justify-center min-h-screen bg-gray-100 font-kalpurush">লোড হচ্ছে...</div>;
+        return <div className="flex items-center justify-center min-h-screen bg-gray-100 font-kalpurush text-primary font-black animate-pulse">লোড হচ্ছে...</div>;
     }
     
     const issueDate = toBengaliNumber(format(new Date(), "d MMMM, yyyy", { locale: bn }));
@@ -92,17 +91,16 @@ export default function CustomPadPage() {
 
                                             <div className="space-y-2">
                                                 <Label className="font-bold text-xs flex items-center gap-2">
-                                                    হেডার বর্ডার ডিজাইন
+                                                    হেডার স্টাইল
                                                 </Label>
                                                 <select 
                                                     className="w-full h-9 rounded-md border-2 border-slate-200 px-3 text-xs font-bold focus:border-primary outline-none"
                                                     value={customSettings.borderStyle} 
                                                     onChange={(e) => setCustomSettings(prev => ({ ...prev, borderStyle: e.target.value }))}
                                                 >
-                                                    <option value="border-b-4">সলিড (Solid)</option>
-                                                    <option value="border-b-8 border-double">ডাবল (Double)</option>
-                                                    <option value="border-b-2 border-dashed">ড্যাশ (Dashed)</option>
-                                                    <option value="border-none">বর্ডার নেই</option>
+                                                    <option value="border-b-2">সলিড লাইন</option>
+                                                    <option value="border-b-4 border-double">ডাবল লাইন</option>
+                                                    <option value="border-none">লাইন নেই</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -127,7 +125,7 @@ export default function CustomPadPage() {
                                             <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-start gap-2">
                                                 <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
                                                 <p className="text-[10px] font-bold text-blue-800 leading-tight">
-                                                    ডান পাশের প্রিভিউতে সরাসরি টাইপ করুন। আপনি নাম এবং পদবিও নিজের মতো পরিবর্তন করতে পারবেন।
+                                                    ডান পাশের প্রিভিউতে সরাসরি টাইপ করুন। নাম ও পদবিও নিজের মতো পরিবর্তন করতে পারবেন।
                                                 </p>
                                             </div>
                                         </div>
@@ -184,24 +182,35 @@ function LetterheadTemplate({ schoolInfo, settings, issueDate }: any) {
                 .no-print-outline:focus { outline: none !important; background-color: rgba(59, 130, 246, 0.05); }
             `}</style>
 
-            {/* Header Section */}
+            {/* Header Section Redesigned based on Image */}
             <div className={cn(
-                "w-full text-center mb-6 flex justify-between items-center px-4 border-black/20",
+                "w-full mb-6 relative px-4 flex items-center justify-center min-h-[160px] border-slate-300",
                 settings.borderStyle,
                 settings.headerPadding
-            )}>
-                <div className="w-24 h-24 relative shrink-0">
-                    {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}
+            )}
+            style={{
+                backgroundImage: `
+                    linear-gradient(to right, rgba(45, 87, 44, 0.08) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(45, 87, 44, 0.08) 1px, transparent 1px)
+                `,
+                backgroundSize: '12px 12px'
+            }}>
+                <div className="absolute left-6 w-24 h-24 shrink-0">
+                    {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={96} height={96} className="object-contain rounded-full bg-white p-1 shadow-sm" />}
                 </div>
-                <div className="flex-grow text-center px-4">
-                    <p className="text-xl font-bold text-[#2d572c] mb-1">প্রধান শিক্ষকের কার্যালয়</p>
-                    <h1 className="text-4xl font-black text-[#2d572c] mb-1 leading-tight">{schoolInfo.name}</h1>
-                    <p className="text-sm font-bold text-gray-700">{schoolInfo.address} | স্থাপিত: ২০১৯ ইং</p>
-                    <p className="text-[11px] font-bold text-gray-600 mt-1">
-                        EIIN: {toBengaliNumber(schoolInfo.eiin)} | মোবাইলঃ ০১৭১৭৫৭৬০৩০
+                <div className="text-center px-4 max-w-[85%]">
+                    <p className="text-xl font-bold text-[#2d572c] mb-0.5">প্রধান শিক্ষকের কার্যালয়</p>
+                    <h1 className="text-[38px] font-black text-[#2d572c] mb-1 leading-none whitespace-nowrap">
+                        {schoolInfo.name}
+                    </h1>
+                    <p className="text-lg font-bold text-[#2d572c] mb-0.5">স্থাপিতঃ ২০১৯ খ্রিঃ</p>
+                    <p className="text-[12px] font-bold text-[#2d572c] tracking-tight">
+                        Upazila: Birganj, Post: Birganj, Zila: Dinajpur | মোবাইলঃ ০১৭১৭৫৭৬০৩০
+                    </p>
+                    <p className="text-[12px] text-red-600 font-bold mt-1">
+                        ই-মেইল: birganjpourohsch2019@gmail.com
                     </p>
                 </div>
-                <div className="w-24 h-24 shrink-0"></div>
             </div>
 
             <div className="flex justify-between font-bold text-base mb-8 px-4">
