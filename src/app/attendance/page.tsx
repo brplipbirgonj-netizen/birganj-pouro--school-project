@@ -713,7 +713,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                         @page { size: A4 landscape; margin: 0.4in !important; }
                         .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
                         .printable-area table tr { height: 28px !important; }
-                        .printable-area table td, .printable-area table th { padding: 2px 4px !important; font-size: 11px !important; border: 1px solid black !important; }
+                        .printable-area table td, .printable-area table th { padding: 2px 4px !important; font-size: 14px !important; border: 1px solid black !important; }
                         .no-print { display: none !important; }
                     }
                 `}</style>
@@ -1309,8 +1309,8 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
                 @media print {
                     @page { size: A4 portrait; margin: 0.4in !important; }
                     .printable-area { padding: 0 !important; margin: 0 !important; }
-                    .printable-area table tr { height: 28px !important; }
-                    .printable-area table td, .printable-area table th { padding: 2px 4px !important; border: 1px solid black !important; }
+                    .printable-area table tr { height: 32px !important; }
+                    .printable-area table td, .printable-area table th { padding: 4px 8px !important; border: 1px solid black !important; font-size: 14px !important; }
                     .no-print { display: none !important; }
                 }
             `}</style>
