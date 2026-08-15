@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { Header } from '@/components/Header';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -77,36 +78,32 @@ export default function CustomPadPage() {
                                                 <Label className="font-bold text-xs flex items-center gap-2">
                                                     স্কুল লোগো জলছাপ (Opacity)
                                                 </Label>
-                                                <Select 
+                                                <select 
+                                                    className="w-full h-9 rounded-md border-2 border-slate-200 px-3 text-xs font-bold focus:border-primary outline-none"
                                                     value={customSettings.watermarkOpacity.toString()} 
-                                                    onValueChange={(v) => setCustomSettings(prev => ({ ...prev, watermarkOpacity: parseFloat(v) }))}
+                                                    onChange={(e) => setCustomSettings(prev => ({ ...prev, watermarkOpacity: parseFloat(e.target.value) }))}
                                                 >
-                                                    <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="0.05">৫% (হালকা)</SelectItem>
-                                                        <SelectItem value="0.1">১০% (স্পষ্ট)</SelectItem>
-                                                        <SelectItem value="0.15">১৫% (গাঢ়)</SelectItem>
-                                                        <SelectItem value="0">জলছাপ বন্ধ</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                    <option value="0.05">৫% (হালকা)</option>
+                                                    <option value="0.1">১০% (স্পষ্ট)</option>
+                                                    <option value="0.15">১৫% (গাঢ়)</option>
+                                                    <option value="0">জলছাপ বন্ধ</option>
+                                                </select>
                                             </div>
 
                                             <div className="space-y-2">
                                                 <Label className="font-bold text-xs flex items-center gap-2">
                                                     হেডার বর্ডার ডিজাইন
                                                 </Label>
-                                                <Select 
+                                                <select 
+                                                    className="w-full h-9 rounded-md border-2 border-slate-200 px-3 text-xs font-bold focus:border-primary outline-none"
                                                     value={customSettings.borderStyle} 
-                                                    onValueChange={(v) => setCustomSettings(prev => ({ ...prev, borderStyle: v }))}
+                                                    onChange={(e) => setCustomSettings(prev => ({ ...prev, borderStyle: e.target.value }))}
                                                 >
-                                                    <SelectTrigger className="bg-white h-9"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="border-b-4">সলিড (Solid)</SelectItem>
-                                                        <SelectItem value="border-b-8 border-double">ডাবল (Double)</SelectItem>
-                                                        <SelectItem value="border-b-2 border-dashed">ড্যাশ (Dashed)</SelectItem>
-                                                        <SelectItem value="border-none">বর্ডার নেই</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                    <option value="border-b-4">সলিড (Solid)</option>
+                                                    <option value="border-b-8 border-double">ডাবল (Double)</option>
+                                                    <option value="border-b-2 border-dashed">ড্যাশ (Dashed)</option>
+                                                    <option value="border-none">বর্ডার নেই</option>
+                                                </select>
                                             </div>
                                         </div>
 
