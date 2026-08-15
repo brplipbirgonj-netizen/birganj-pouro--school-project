@@ -42,7 +42,7 @@ export const getSpecialResultId = (res: Omit<SpecialClassResult, 'results' | 'id
     return `${res.academicYear}_${sanitizedMonth}_${res.className}_${sanitizedSub}_${sanitizedExam}`;
 };
 
-export const saveSpecialResults = async (db: Firestore, data: SpecialClassResult) => {
+export const saveSpecialResults = (db: Firestore, data: SpecialClassResult) => {
   const docId = getSpecialResultId(data);
   const docRef = doc(db, COLLECTION, docId);
   
@@ -55,12 +55,11 @@ export const saveSpecialResults = async (db: Firestore, data: SpecialClassResult
   return setDoc(docRef, dataToSave, { merge: true })
     .catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
-        path: COLLECTION,
+        path: docRef.path,
         operation: 'write',
         requestResourceData: dataToSave,
       });
       errorEmitter.emit('permission-error', permissionError);
-      throw serverError;
     });
 };
 
@@ -79,7 +78,13 @@ export const getSpecialResultsForClass = async (
   try {
     const snap = await getDocs(q);
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SpecialClassResult));
-  } catch (e) {
+  } catch (e: any) {
+    if (e.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: COLLECTION,
+            operation: 'list',
+        }));
+    }
     console.error(e);
     return [];
   }

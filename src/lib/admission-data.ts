@@ -7,18 +7,14 @@
 import {
   collection,
   doc,
-  addDoc,
   deleteDoc,
   setDoc,
   serverTimestamp,
   Timestamp,
   Firestore,
-  DocumentData,
-  getDoc,
   getDocs,
   query,
   orderBy,
-  where,
   writeBatch
 } from 'firebase/firestore';
 import { NewStudentData } from './student-data';
@@ -42,6 +38,7 @@ const ADMISSIONS_COLLECTION = 'admissionApplications';
  */
 export const saveAdmissionApplication = (db: Firestore, data: NewAdmissionData) => {
     const applicationId = 'APP-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const docRef = doc(collection(db, ADMISSIONS_COLLECTION));
     const dataToSave = {
         ...data,
         status: 'pending',
@@ -51,7 +48,7 @@ export const saveAdmissionApplication = (db: Firestore, data: NewAdmissionData) 
         academicYear: String(data.academicYear),
     };
 
-    return addDoc(collection(db, ADMISSIONS_COLLECTION), dataToSave)
+    return setDoc(docRef, dataToSave)
         .catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: ADMISSIONS_COLLECTION,
@@ -106,7 +103,6 @@ export const updateApplicationStatus = (db: Firestore, id: string, status: 'appr
                 requestResourceData: data,
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-            throw serverError;
         });
 };
 
@@ -166,6 +162,5 @@ export const deleteApplication = (db: Firestore, id: string) => {
                 operation: 'delete',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-            throw serverError;
         });
 };

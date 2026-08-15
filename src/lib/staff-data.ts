@@ -1,7 +1,7 @@
 import {
   collection,
   doc,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   serverTimestamp,
@@ -16,7 +16,7 @@ import {
   where
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export type Staff = {
   id: string; // Firestore IDs are strings
@@ -63,7 +63,13 @@ export const getStaff = async (db: Firestore): Promise<Staff[]> => {
     try {
         const querySnapshot = await getDocs(staffQuery);
         return querySnapshot.docs.map(doc => staffFromDoc(doc));
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: 'staff',
+                operation: 'list',
+            }));
+        }
         console.error("Error getting staff:", e);
         return [];
     }
@@ -77,21 +83,34 @@ export const getStaffById = async (db: Firestore, id: string): Promise<Staff | u
             return staffFromDoc(docSnap);
         }
         return undefined;
-    } catch(e) {
+    } catch(e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            }));
+        }
         console.error("Error getting staff by ID:", e);
         return undefined;
     }
 };
 
 export const addStaff = async (db: Firestore, staffData: NewStaffData) => {
+  const staffRef = doc(collection(db, 'staff'));
   const year = staffData.joinDate.getFullYear();
-  const startOfYear = new Date(year, 0, 1);
-  const endOfYear = new Date(year + 1, 0, 1);
+  
+  // For offline stability, try to get count but don't block
+  let serial = 'XX';
+  try {
+      const startOfYear = new Date(year, 0, 1);
+      const endOfYear = new Date(year + 1, 0, 1);
+      const q = query(collection(db, 'staff'), where('joinDate', '>=', startOfYear), where('joinDate', '<', endOfYear));
+      const querySnapshot = await getDocs(q);
+      serial = (querySnapshot.size + 1).toString().padStart(2, '0');
+  } catch (e) {
+      serial = Math.floor(Math.random() * 90 + 10).toString(); // Fallback random serial if offline
+  }
 
-  const q = query(collection(db, 'staff'), where('joinDate', '>=', startOfYear), where('joinDate', '<', endOfYear));
-  const querySnapshot = await getDocs(q);
-  const count = querySnapshot.size;
-  const serial = (count + 1).toString().padStart(2, '0');
   const employeeId = `${year}${serial}`;
   
   const dataToSave: WithFieldValue<DocumentData> = {
@@ -114,20 +133,19 @@ export const addStaff = async (db: Firestore, staffData: NewStaffData) => {
     }
   });
 
-  return addDoc(collection(db, 'staff'), dataToSave)
+  return setDoc(staffRef, dataToSave)
     .catch(async (serverError) => {
       console.error("Error adding staff:", serverError);
       const permissionError = new FirestorePermissionError({
         path: 'staff',
         operation: 'create',
-        requestResourceData: staffData,
-      });
+        requestResourceData: dataToSave,
+      } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
-      throw permissionError; // re-throw to be caught in the UI
     });
 };
 
-export const updateStaff = async (db: Firestore, id: string, staffData: UpdateStaffData) => {
+export const updateStaff = (db: Firestore, id: string, staffData: UpdateStaffData) => {
   const docRef = doc(db, 'staff', id);
 
   const dataToUpdate: WithFieldValue<DocumentData> = {
@@ -137,30 +155,6 @@ export const updateStaff = async (db: Firestore, id: string, staffData: UpdateSt
 
   if (staffData.email) {
       dataToUpdate.email = staffData.email.toLowerCase().trim();
-  }
-
-  const existingDoc = await getDoc(docRef);
-  if (existingDoc.exists()) {
-      const joinDate = staffData.joinDate || existingDoc.data().joinDate?.toDate();
-      if (joinDate) {
-        const year = new Date(joinDate).getFullYear();
-        const existingId = existingDoc.data().employeeId;
-        const idFormatRegex = /^\d{6}$/; // YYYYSS should be 6 digits
-        
-        const oldJoinYear = existingDoc.data().joinDate?.toDate()?.getFullYear();
-        
-        // Regenerate ID if it's missing, badly formatted, or if the join year has changed.
-        if (!existingId || !idFormatRegex.test(existingId) || (oldJoinYear && oldJoinYear !== year)) {
-            const startOfYear = new Date(year, 0, 1);
-            const endOfYear = new Date(year + 1, 0, 1);
-            const q = query(collection(db, 'staff'), where('joinDate', '>=', startOfYear), where('joinDate', '<', endOfYear));
-            const querySnapshot = await getDocs(q);
-            
-            const count = querySnapshot.size;
-            const serial = (count + 1).toString().padStart(2, '0');
-            dataToUpdate.employeeId = `${year}${serial}`;
-        }
-      }
   }
 
   if (staffData.joinDate) {
@@ -188,13 +182,12 @@ export const updateStaff = async (db: Firestore, id: string, staffData: UpdateSt
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
     });
 };
 
-export const deleteStaff = async (db: Firestore, id: string) => {
+export const deleteStaff = (db: Firestore, id: string) => {
   const docRef = doc(db, 'staff', id);
   return deleteDoc(docRef)
     .catch(async (serverError) => {
@@ -202,8 +195,7 @@ export const deleteStaff = async (db: Firestore, id: string) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
     });
 };

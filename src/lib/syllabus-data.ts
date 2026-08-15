@@ -1,4 +1,3 @@
-
 'use client';
 /**
  * @fileOverview Syllabus data services for defining subject chapters for exams.
@@ -40,7 +39,7 @@ export const getSyllabusId = (academicYear: string, examName: string, className:
 /**
  * Saves or updates a syllabus configuration.
  */
-export const saveSyllabus = async (db: Firestore, data: NewSyllabus) => {
+export const saveSyllabus = (db: Firestore, data: NewSyllabus) => {
     const docId = getSyllabusId(data.academicYear, data.examName, data.className, data.subjectName);
     const docRef = doc(db, COLLECTION_NAME, docId);
     
@@ -57,7 +56,6 @@ export const saveSyllabus = async (db: Firestore, data: NewSyllabus) => {
                 requestResourceData: dataToSave,
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-            throw serverError;
         });
 };
 
@@ -75,7 +73,7 @@ export const getSyllabus = async (db: Firestore, academicYear: string, examName:
             return {
                 id: docSnap.id,
                 ...data,
-                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
+                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : new Date()),
             } as Syllabus;
         }
         return null;

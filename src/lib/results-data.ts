@@ -11,7 +11,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { subjectNameNormalization } from './subjects';
 
 export interface StudentResult {
@@ -41,7 +41,7 @@ export const getDocumentId = (result: Omit<ClassResult, 'results' | 'fullMarks' 
     return `${result.academicYear}_${sanitizedExam}_${result.className}_${result.group || 'none'}_${sanitizedSubject}`;
 }
 
-export const saveClassResults = async (db: Firestore, newResult: ClassResult) => {
+export const saveClassResults = (db: Firestore, newResult: ClassResult) => {
   const normalizedSubject = subjectNameNormalization[newResult.subject] || newResult.subject;
   const resultWithNormalizedSubject = { ...newResult, subject: normalizedSubject };
 
@@ -51,7 +51,6 @@ export const saveClassResults = async (db: Firestore, newResult: ClassResult) =>
   const dataToSave: { [key: string]: any } = { ...resultWithNormalizedSubject };
   delete dataToSave.id;
 
-  // Clean up top-level undefined properties and nested ones in the results array
   Object.keys(dataToSave).forEach(key => {
     if (dataToSave[key] === undefined) {
       delete dataToSave[key];
@@ -79,9 +78,8 @@ export const saveClassResults = async (db: Firestore, newResult: ClassResult) =>
         path: docRef.path,
         operation: 'write',
         requestResourceData: dataToSave,
-      });
+      } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
-      throw permissionError;
     });
 };
 
@@ -102,7 +100,13 @@ export const getResultsForClass = async (
             return { id: docSnap.id, ...docSnap.data() } as ClassResult;
         }
         return undefined;
-    } catch(e) {
+    } catch(e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            }));
+        }
         console.error("Error getting results by ID:", e);
         return undefined;
     }
@@ -116,13 +120,19 @@ export const getAllResults = async (db: Firestore, academicYear: string, examNam
     try {
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClassResult));
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: resultsCollection,
+                operation: 'list',
+            }));
+        }
         console.error("Error getting all results:", e);
         return [];
     }
 };
 
-export const deleteClassResult = async (db: Firestore, id: string): Promise<void> => {
+export const deleteClassResult = (db: Firestore, id: string) => {
     const docRef = doc(db, resultsCollection, id);
     return deleteDoc(docRef)
     .catch(async (serverError) => {
@@ -130,8 +140,7 @@ export const deleteClassResult = async (db: Firestore, id: string): Promise<void
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
     });
 }

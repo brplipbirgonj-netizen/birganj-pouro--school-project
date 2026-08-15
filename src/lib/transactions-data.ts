@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   addDoc,
+  setDoc,
   deleteDoc,
   getDocs,
   query,
@@ -14,7 +15,7 @@ import {
   WithFieldValue
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export type TransactionType = 'income' | 'expense';
 export type PaymentMethod = 'cash' | 'bank';
@@ -56,13 +57,20 @@ export const getTransactions = async (db: Firestore, academicYear: string): Prom
     try {
         const querySnapshot = await getDocs(transactionsQuery);
         return querySnapshot.docs.map(transactionFromDoc);
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: TRANSACTIONS_COLLECTION,
+                operation: 'list',
+            }));
+        }
         console.error("Error getting transactions:", e);
         return [];
     }
 };
 
-export const addTransaction = async (db: Firestore, transactionData: NewTransactionData) => {
+export const addTransaction = (db: Firestore, transactionData: NewTransactionData) => {
+  const docRef = doc(collection(db, TRANSACTIONS_COLLECTION));
   const dataToSave: WithFieldValue<DocumentData> = {
     ...transactionData,
     date: Timestamp.fromDate(transactionData.date),
@@ -75,20 +83,19 @@ export const addTransaction = async (db: Firestore, transactionData: NewTransact
     }
   });
 
-  return addDoc(collection(db, TRANSACTIONS_COLLECTION), dataToSave)
+  return setDoc(docRef, dataToSave)
     .catch(async (serverError) => {
       console.error("Error adding transaction:", serverError);
       const permissionError = new FirestorePermissionError({
         path: TRANSACTIONS_COLLECTION,
         operation: 'create',
         requestResourceData: dataToSave,
-      });
+      } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
-      throw permissionError;
     });
 };
 
-export const deleteTransaction = async (db: Firestore, id: string): Promise<void> => {
+export const deleteTransaction = (db: Firestore, id: string) => {
   const docRef = doc(db, TRANSACTIONS_COLLECTION, id);
   return deleteDoc(docRef)
     .catch(async (serverError) => {
@@ -96,8 +103,7 @@ export const deleteTransaction = async (db: Firestore, id: string): Promise<void
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
     });
 };

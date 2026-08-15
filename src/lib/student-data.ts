@@ -1,10 +1,10 @@
-
 import {
   collection,
   doc,
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   serverTimestamp,
   Timestamp,
   Firestore,
@@ -17,7 +17,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export type Student = {
   id: string; // Firestore IDs are strings
@@ -171,7 +171,13 @@ export const getStudents = async (db: Firestore): Promise<Student[]> => {
     try {
         const querySnapshot = await getDocs(studentsQuery);
         return querySnapshot.docs.map(doc => studentFromDoc(doc));
-    } catch (e) {
+    } catch (e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: 'students',
+                operation: 'list',
+            }));
+        }
         console.error("Error getting students:", e);
         return [];
     }
@@ -185,16 +191,21 @@ export const getStudentById = async (db: Firestore, id: string): Promise<Student
             return studentFromDoc(docSnap);
         }
         return undefined;
-    } catch(e) {
+    } catch(e: any) {
+        if (e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            }));
+        }
         console.error("Error getting student by ID:", e);
         return undefined;
     }
 };
 
-export const addStudent = async (db: Firestore, studentData: NewStudentData) => {
+export const addStudent = (db: Firestore, studentData: NewStudentData) => {
   let generatedId = studentData.generatedId;
   
-  // Only generate a new ID if it doesn't already exist (Permanent ID logic)
   if (!generatedId && studentData.academicYear && studentData.className && studentData.roll) {
     const year = String(studentData.academicYear).slice(-2);
     const classNum = String(studentData.className).padStart(2, '0');
@@ -202,6 +213,7 @@ export const addStudent = async (db: Firestore, studentData: NewStudentData) => 
     generatedId = `${year}${classNum}${studentSerial}`;
   }
   
+  const studentRef = doc(collection(db, 'students'));
   const dataToSave: WithFieldValue<DocumentData> = {
     ...studentData,
     generatedId,
@@ -218,28 +230,24 @@ export const addStudent = async (db: Firestore, studentData: NewStudentData) => 
     }
   });
 
-  return addDoc(collection(db, 'students'), dataToSave)
+  return setDoc(studentRef, dataToSave)
     .catch(async (serverError) => {
       console.error("Error adding student:", serverError);
       const permissionError = new FirestorePermissionError({
         path: 'students',
         operation: 'create',
-        requestResourceData: studentData,
-      });
+        requestResourceData: dataToSave,
+      } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
-      throw permissionError; // re-throw to be caught in the UI
     });
 };
 
-export const updateStudent = async (db: Firestore, id: string, studentData: UpdateStudentData) => {
+export const updateStudent = (db: Firestore, id: string, studentData: UpdateStudentData) => {
   const docRef = doc(db, 'students', id);
   const dataToUpdate: WithFieldValue<DocumentData> = {
     ...studentData,
     updatedAt: serverTimestamp(),
   };
-
-  // REMOVED: Auto-regeneration of generatedId. 
-  // ID is assigned once and remains unchanged even if Year/Class/Roll changes.
 
   if (studentData.dob) {
     dataToUpdate.dob = Timestamp.fromDate(studentData.dob);
@@ -260,13 +268,12 @@ export const updateStudent = async (db: Firestore, id: string, studentData: Upda
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
     });
 };
 
-export const deleteStudent = async (db: Firestore, id: string) => {
+export const deleteStudent = (db: Firestore, id: string) => {
   const docRef = doc(db, 'students', id);
   return deleteDoc(docRef)
     .catch(async (serverError) => {
@@ -274,8 +281,7 @@ export const deleteStudent = async (db: Firestore, id: string) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
     });
 };

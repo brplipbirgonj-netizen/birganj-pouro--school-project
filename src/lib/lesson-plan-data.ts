@@ -38,7 +38,7 @@ const COLLECTION_NAME = 'lessonPlans';
 /**
  * Saves or updates a lesson plan.
  */
-export const saveLessonPlan = async (db: Firestore, plan: NewLessonPlan) => {
+export const saveLessonPlan = (db: Firestore, plan: NewLessonPlan) => {
     // Unique ID based on Year, Class, Subject, Week, and Teacher
     const docId = `${plan.academicYear}_${plan.className}_${plan.subject.replace(/\s+/g, '-')}_${plan.week}_${plan.teacherUid}`;
     const docRef = doc(db, COLLECTION_NAME, docId);
@@ -56,7 +56,6 @@ export const saveLessonPlan = async (db: Firestore, plan: NewLessonPlan) => {
                 requestResourceData: dataToSave,
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
-            throw serverError;
         });
 };
 

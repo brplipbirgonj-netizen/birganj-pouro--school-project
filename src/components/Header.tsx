@@ -25,7 +25,9 @@ import {
   ChevronRight,
   Loader2,
   ListTodo,
-  Bell
+  Bell,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -73,8 +75,6 @@ import { StudentFeeDialog } from './StudentFeeDialog';
 import { cn } from '@/lib/utils';
 import { getExams, Exam } from '@/lib/exam-data';
 import { ScrollArea } from './ui/scroll-area';
-import { format } from 'date-fns';
-import { bn } from 'date-fns/locale';
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
@@ -106,6 +106,7 @@ const mainMenuItems = [
 
 export function Header() {
   const [isClient, setIsClient] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const { selectedYear, setSelectedYear, availableYears } = useAcademicYear();
@@ -132,6 +133,15 @@ export function Header() {
 
   useEffect(() => {
     setIsClient(true);
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -343,8 +353,15 @@ export function Header() {
                 <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
               </div>
             )}
-            <div className="text-xl sm:text-2xl md:text-[45px] font-black whitespace-nowrap tracking-tight md:[text-shadow:1px_1px_0px_#000,-1px_-1px_0px_#000,1px_-1px_0px_#000,-1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-normal">
-              {isSchoolInfoLoading ? <Skeleton className="h-8 w-40 md:h-12 md:w-80" /> : schoolInfo.name}
+            <div className="flex flex-col items-center md:items-start">
+              <div className="text-xl sm:text-2xl md:text-[40px] font-black whitespace-nowrap tracking-tight md:[text-shadow:1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-tight">
+                {isSchoolInfoLoading ? <Skeleton className="h-8 w-40 md:h-12 md:w-80" /> : schoolInfo.name}
+              </div>
+              {!isOnline && (
+                <Badge className="bg-rose-500 text-white font-black text-[8px] md:text-[10px] h-4 mt-0.5 animate-pulse gap-1">
+                  <WifiOff className="h-2 w-2" /> অফলাইন মোড (লোকাল সেভ)
+                </Badge>
+              )}
             </div>
         </Link>
         

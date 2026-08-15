@@ -31,7 +31,7 @@ export type NewMessageLog = Omit<MessageLog, 'id' | 'sentAt'>;
 
 const MESSAGES_COLLECTION = 'messageLogs';
 
-export const logMessage = async (db: Firestore, logData: NewMessageLog) => {
+export const logMessage = (db: Firestore, logData: NewMessageLog) => {
   // Use doc(collection) without ID to let Firestore generate a unique ID
   const docRef = doc(collection(db, MESSAGES_COLLECTION));
   const dataToSave: any = {
@@ -46,31 +46,33 @@ export const logMessage = async (db: Firestore, logData: NewMessageLog) => {
     }
   });
 
-  try {
-    return await setDoc(docRef, dataToSave);
-  } catch (serverError: any) {
-    console.error("Error logging message:", serverError);
-    if (serverError.code === 'permission-denied') {
-        const permissionError = new FirestorePermissionError({
-            path: MESSAGES_COLLECTION,
-            operation: 'create',
-            requestResourceData: dataToSave,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
-    }
-    throw serverError;
-  }
+  return setDoc(docRef, dataToSave)
+    .catch(async (serverError: any) => {
+      console.error("Error logging message:", serverError);
+      if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+              path: MESSAGES_COLLECTION,
+              operation: 'create',
+              requestResourceData: dataToSave,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+      }
+    });
 };
 
-export const updateMessageNote = async (db: Firestore, id: string, notes: string) => {
+export const updateMessageNote = (db: Firestore, id: string, notes: string) => {
   const docRef = doc(db, MESSAGES_COLLECTION, id);
-  try {
-    return await updateDoc(docRef, { notes });
-  } catch (serverError: any) {
-    console.error("Error updating message note:", serverError);
-    throw serverError;
-  }
+  return updateDoc(docRef, { notes })
+    .catch(async (serverError: any) => {
+      if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'update',
+              requestResourceData: { notes },
+          });
+          errorEmitter.emit('permission-error', permissionError);
+      }
+    });
 };
 
 export const getMessageLogs = async (db: Firestore): Promise<MessageLog[]> => {
@@ -82,29 +84,32 @@ export const getMessageLogs = async (db: Firestore): Promise<MessageLog[]> => {
         return {
             id: doc.id,
             ...data,
-            sentAt: data.sentAt instanceof Timestamp ? data.sentAt.toDate() : new Date(data.sentAt),
+            sentAt: data.sentAt instanceof Timestamp ? data.sentAt.toDate() : (data.sentAt ? new Date(data.sentAt) : new Date()),
         } as MessageLog;
     });
-  } catch (e) {
+  } catch (e: any) {
+    if (e.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: MESSAGES_COLLECTION,
+            operation: 'list',
+        }));
+    }
     console.error("Error getting message logs:", e);
     return [];
   }
 };
 
-export const deleteMessageLog = async (db: Firestore, id: string) => {
+export const deleteMessageLog = (db: Firestore, id: string) => {
   const docRef = doc(db, MESSAGES_COLLECTION, id);
-  try {
-    await deleteDoc(docRef);
-  } catch (serverError: any) {
-    console.error("Error deleting message log:", serverError);
-    if (serverError.code === 'permission-denied') {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
-    }
-    throw serverError;
-  }
+  return deleteDoc(docRef)
+    .catch(async (serverError: any) => {
+      console.error("Error deleting message log:", serverError);
+      if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'delete',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+      }
+    });
 };
