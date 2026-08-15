@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -989,26 +990,36 @@ const CombinedRoutineTable = ({ routineData, conflicts, isEditMode, onCellChange
 };
 
 const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflicts, teacherColorMap, isMounted }: { content: string, isEditMode: boolean, onCellChange: (value: string) => void, conflictKey: string, conflicts: any, teacherColorMap: Map<string, string>, isMounted: boolean }) => {
+    // Check all types of conflicts
     const isTeacherClash = conflicts.teacherClashes.has(conflictKey);
     const isConsecutiveClash = conflicts.consecutiveClassClashes.has(conflictKey);
     const isTeacherSubjectMismatch = conflicts.teacherSubjectMismatchClashes.has(conflictKey);
-    const isConflict = isTeacherClash || isConsecutiveClash || isTeacherSubjectMismatch;
+    const isBreakClash = conflicts.breakClashes.has(conflictKey);
+    const isRepetitionClash = conflicts.subjectRepetitionClashes.has(conflictKey);
+    
+    const isConflict = isTeacherClash || isConsecutiveClash || isTeacherSubjectMismatch || isBreakClash || isRepetitionClash;
 
     let tooltipContent = '';
-    if (isTeacherClash) tooltipContent += 'একই সময়ে এই শিক্ষকের অন্য ক্লাসে ক্লাস রয়েছে। ';
-    if (isConsecutiveClash) tooltipContent += 'একই শিক্ষকের এই ক্লাসে পরপর ক্লাস পড়েছে। ';
-    if (isTeacherSubjectMismatch) tooltipContent += 'এই বিষয়ের জন্য নির্ধারিত শিক্ষক নন। ';
+    if (isTeacherClash) tooltipContent += 'শিক্ষক সংঘর্ষ: একই সময়ে এই শিক্ষকের অন্য ক্লাসে ক্লাস রয়েছে। ';
+    if (isConsecutiveClash) tooltipContent += 'টানা ক্লাস: একই শিক্ষকের এই ক্লাসে পরপর ক্লাস পড়েছে। ';
+    if (isTeacherSubjectMismatch) tooltipContent += 'বিষয় অমিল: এই বিষয়ের জন্য নির্ধারিত শিক্ষক নন। ';
+    if (isBreakClash) tooltipContent += 'বিরতি সংঘর্ষ: টিফিনের আগে ও পরে একই শিক্ষকের ক্লাস। ';
+    if (isRepetitionClash) tooltipContent += 'বিষয় পুনরাবৃত্তি: একই দিনে একই বিষয় একাধিকবার। ';
 
     const { teacher } = parseSubjectTeacher(content);
-    const teachersInCell = teacher ? teacher.split('/').map(t => t.trim()) : [];
+    const teachersInCell = teacher ? teacher.split('/').map(t => t.trim()).filter(Boolean) : [];
     const firstTeacher = teachersInCell.length > 0 ? teachersInCell[0] : null;
     const color = firstTeacher ? teacherColorMap.get(firstTeacher) : undefined;
 
-    const cellContent = isEditMode ? (
+    const cellInner = isEditMode ? (
         <Input
             value={content}
             onChange={(e) => onCellChange(e.target.value)}
-            className={cn("w-full h-full p-1 text-[11px] border-transparent rounded-none focus:bg-amber-100 text-center min-h-[40px]", { "bg-red-100": isConflict })}
+            className={cn(
+                "w-full h-full p-1 text-[11px] border-transparent rounded-none focus:ring-0 focus:bg-amber-100 text-center min-h-[40px] bg-transparent", 
+                isConflict && "text-red-700 font-black placeholder:text-red-300"
+            )}
+            placeholder="বিষয় - শিক্ষক"
         />
     ) : (
         <div className="p-2 print:p-0.5 text-[11px] print:text-[8px] text-center leading-tight break-words font-medium">
@@ -1019,10 +1030,10 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
     if (!isMounted || !isConflict) {
         return (
             <TableCell 
-                className={cn("border-r p-0 h-auto align-middle border-green-600", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
+                className={cn("border-r p-0 h-auto align-middle border-green-600 transition-colors", { "bg-red-50": isConflict && !isEditMode })}
                 style={!isEditMode && !isConflict && color ? { backgroundColor: color } : {}}
             >
-                {cellContent}
+                {cellInner}
             </TableCell>
         );
     }
@@ -1033,14 +1044,14 @@ const EditableCell = ({ content, isEditMode, onCellChange, conflictKey, conflict
                 <Tooltip>
                     <TooltipTrigger asChild>
                          <div
-                            className={cn("w-full h-full", { "bg-red-100 text-red-700": isConflict && !isEditMode })}
+                            className={cn("w-full h-full transition-all", isConflict ? "bg-red-200/80" : "bg-transparent")}
                             style={!isEditMode && !isConflict && color ? { backgroundColor: color } : {}}
                         >
-                            {cellContent}
+                            {cellInner}
                         </div>
                     </TooltipTrigger>
-                    <TooltipContent>
-                        <p className="font-bold text-xs">{tooltipContent}</p>
+                    <TooltipContent className="bg-red-600 text-white border-none shadow-xl">
+                        <p className="font-black text-xs">{tooltipContent}</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
@@ -1103,7 +1114,8 @@ export default function RoutinesPage() {
 
     const { conflicts, stats, teacherColorMap } = useRoutineAnalysis(routineData);
     
-    const displayConflicts = isAdmin ? conflicts : {
+    // Allow managers and admins to see conflicts
+    const displayConflicts = (isAdmin || canManageRoutines) ? conflicts : {
         teacherClashes: new Set<string>(),
         consecutiveClassClashes: new Set<string>(),
         breakClashes: new Set<string>(),
