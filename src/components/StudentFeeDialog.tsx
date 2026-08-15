@@ -111,8 +111,8 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         const fetchCollectorName = async () => {
             if (user.role === 'teacher' && user.email) {
                 const staffQuery = query(collection(db, 'staff'), where('email', '==', user.email.toLowerCase().trim()), limit(1));
-                const staffSnap = await getDocs(staffQuery);
-                if (!staffSnap.empty) setCollectorName(staffSnap.docs[0].data().nameBn);
+                const staffSnap = await getDocs(staffQuery).catch(() => ({ empty: true }));
+                if (!staffSnap.empty) setCollectorName((staffSnap as any).docs[0].data().nameBn);
                 else setCollectorName(user.displayName || user.email || 'Admin');
             } else setCollectorName(user.displayName || 'Admin');
         };
@@ -133,7 +133,6 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                 const today = new Date();
                 setCollectionDate(today);
                 
-                // Identify already paid categories
                 const paidCats = new Set<string>();
                 feeHistory.forEach(c => {
                     if (c.breakdown) {
@@ -143,13 +142,11 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                     }
                 });
 
-                // Auto-fill logic
                 const currentMonthIdx = today.getMonth();
                 const unpaidUpToNow = BENGALI_MONTHS.filter((m, idx) => idx <= currentMonthIdx && !paidMonths.has(m));
                 
                 const initialBreakdown: FeeBreakdown = {};
                 
-                // 1. Tuition Auto-fill
                 if (unpaidUpToNow.length > 0) {
                     initialBreakdown.tuitionCurrent = effectiveMonthlyFee * unpaidUpToNow.length;
                     setSelectedMonths(new Set(unpaidUpToNow));
@@ -159,7 +156,6 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
                     setDescription('');
                 }
 
-                // 2. Auto-fill other pending fees from student record
                 const otherFeeKeys: (keyof FeeBreakdown)[] = [
                     'examFeeHalfYearly', 'examFeeAnnual', 'examFeePreNirbachoni', 'examFeeNirbachoni',
                     'sessionFee', 'admissionFee', 'scoutFee', 'developmentFee', 'libraryFee', 'tiffinFee', 'otherFee'
@@ -167,7 +163,6 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
 
                 otherFeeKeys.forEach(key => {
                     const studentVal = student[key as keyof Student] as number;
-                    // If student has a value for this fee and hasn't paid it yet
                     if (studentVal > 0 && !paidCats.has(key)) {
                         initialBreakdown[key] = studentVal;
                     }
@@ -229,15 +224,8 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
         if (existingCollection) batch.update(doc(db, 'feeCollections', feeCollectionId), feeCollectionData);
         else { feeCollectionData.createdAt = serverTimestamp(); batch.set(doc(db, 'feeCollections', feeCollectionId), feeCollectionData); }
 
-        batch.commit().then(() => {
-            toast({ title: "ফি আদায় সফল হয়েছে" });
-            if (shouldSendSMS && (student.guardianMobile || student.studentMobile)) {
-                const msg = `সম্মানিত অভিভাবক, ${student.studentNameBn} এর ${description} বাবদ মোট ${totalAmount.toLocaleString('bn-BD')} টাকা আদায় করা হয়েছে। বীপৌউবি`;
-                const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-                window.location.href = `sms:${(student.guardianMobile || student.studentMobile)!.replace(/[^\d+]/g, '')}${isIOS ? '&' : '?'}body=${encodeURIComponent(msg)}`;
-            }
-            onSave(); onOpenChange(false);
-        }).catch(async (serverError: any) => {
+        // Non-blocking batch commit for offline stability
+        batch.commit().catch(async (serverError: any) => {
             console.error("Batch save error:", serverError);
             const permissionError = new FirestorePermissionError({
                 path: 'fee-collection-batch',
@@ -246,6 +234,16 @@ function FeeCollectionForm({ student, onSave, existingCollection, open, onOpenCh
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
+
+        // Immediate UI feedback
+        toast({ title: "ফি আদায় সফল হয়েছে" });
+        if (shouldSendSMS && (student.guardianMobile || student.studentMobile)) {
+            const msg = `সম্মানিত অভিভাবক, ${student.studentNameBn} এর ${description} বাবদ মোট ${totalAmount.toLocaleString('bn-BD')} টাকা আদায় করা হয়েছে। বীপৌউবি`;
+            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+            window.location.href = `sms:${(student.guardianMobile || student.studentMobile)!.replace(/[^\d+]/g, '')}${isIOS ? '&' : '?'}body=${encodeURIComponent(msg)}`;
+        }
+        onSave(); 
+        onOpenChange(false);
     };
     
     return (
@@ -378,13 +376,20 @@ export function StudentFeeDialog({ student, open, onOpenChange, onFeeCollected }
         const batch = writeBatch(db);
         batch.delete(doc(db, 'feeCollections', collection.id));
         if (collection.transactionIds) collection.transactionIds.forEach(id => batch.delete(doc(db, 'transactions', id)));
-        batch.commit().then(() => { toast({title: "মুছে ফেলা হয়েছে"}); fetchFeeData(); onFeeCollected(); }).catch((serverError: any) => {
+        
+        // Non-blocking delete for offline stability
+        batch.commit().catch((serverError: any) => {
              const permissionError = new FirestorePermissionError({
                 path: 'fee-collection-batch-delete',
                 operation: 'delete',
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
+        
+        // Immediate UI feedback
+        toast({title: "মুছে ফেলা হয়েছে"}); 
+        fetchFeeData(); 
+        onFeeCollected();
     };
     
     return (

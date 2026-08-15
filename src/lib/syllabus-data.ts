@@ -48,7 +48,8 @@ export const saveSyllabus = (db: Firestore, data: NewSyllabus) => {
         updatedAt: serverTimestamp(),
     };
 
-    return setDoc(docRef, dataToSave, { merge: true })
+    // Non-blocking setDoc for offline stability
+    setDoc(docRef, dataToSave, { merge: true })
         .catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: COLLECTION_NAME,
@@ -57,6 +58,8 @@ export const saveSyllabus = (db: Firestore, data: NewSyllabus) => {
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
+        
+    return Promise.resolve();
 };
 
 /**

@@ -35,7 +35,6 @@ export interface ClassResult {
 const resultsCollection = 'results';
 
 export const getDocumentId = (result: Omit<ClassResult, 'results' | 'fullMarks' | 'id'>): string => {
-    // Sanitize subject and exam names for Firestore document ID.
     const sanitizedSubject = result.subject.replace(/[^\p{L}\p{N}]+/gu, '-');
     const sanitizedExam = result.examName.replace(/[^\p{L}\p{N}]+/gu, '-');
     return `${result.academicYear}_${sanitizedExam}_${result.className}_${result.group || 'none'}_${sanitizedSubject}`;
@@ -71,7 +70,8 @@ export const saveClassResults = (db: Firestore, newResult: ClassResult) => {
     });
   }
 
-  return setDoc(docRef, dataToSave, { merge: true })
+  // Non-blocking setDoc for offline stability
+  setDoc(docRef, dataToSave, { merge: true })
     .catch(async (serverError) => {
       console.error("Error saving results:", serverError);
       const permissionError = new FirestorePermissionError({
@@ -81,6 +81,8 @@ export const saveClassResults = (db: Firestore, newResult: ClassResult) => {
       } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
     });
+    
+  return Promise.resolve();
 };
 
 export const getResultsForClass = async (
@@ -134,7 +136,8 @@ export const getAllResults = async (db: Firestore, academicYear: string, examNam
 
 export const deleteClassResult = (db: Firestore, id: string) => {
     const docRef = doc(db, resultsCollection, id);
-    return deleteDoc(docRef)
+    // Non-blocking deleteDoc
+    deleteDoc(docRef)
     .catch(async (serverError) => {
         console.error("Error deleting result:", serverError);
         const permissionError = new FirestorePermissionError({
@@ -143,4 +146,5 @@ export const deleteClassResult = (db: Firestore, id: string) => {
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });
+    return Promise.resolve();
 }

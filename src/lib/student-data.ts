@@ -124,7 +124,6 @@ export const sanitizePhotoUrl = (url: string | undefined | null, gender?: string
         if (urlObj.hostname.includes('picsum.photos')) {
             const genericSeeds = ['1', '2', '3', 'student', 'school', '123', 'abc'];
             const pathParts = urlObj.pathname.split('/');
-            // /seed/{seed}/width/height -> ["", "seed", "{seed}", "200", "200"]
             const seed = pathParts[2]; 
 
             if (genericSeeds.includes(seed)) {
@@ -133,8 +132,6 @@ export const sanitizePhotoUrl = (url: string | undefined | null, gender?: string
         }
         return url;
     } catch (e) {
-        // If URL parsing fails, return empty to use gender-based fallback
-        // This prevents the 'Invalid URL' crash
         return '';
     }
 };
@@ -144,7 +141,6 @@ export const studentFromDoc = (doc: DocumentData): Student => {
     const data = doc.data();
     let generatedId = data.generatedId;
 
-    // Generate ID on the fly if it's missing (for older records)
     if (!generatedId && data.academicYear && data.className && data.roll) {
       const year = String(data.academicYear).slice(-2);
       const classNum = String(data.className).padStart(2, '0');
@@ -152,7 +148,6 @@ export const studentFromDoc = (doc: DocumentData): Student => {
       generatedId = `${year}${classNum}${studentSerial}`;
     }
 
-    // Sanitize the photo URL from existing database records
     const photoUrl = sanitizePhotoUrl(data.photoUrl, data.gender);
 
     return {
@@ -230,7 +225,8 @@ export const addStudent = (db: Firestore, studentData: NewStudentData) => {
     }
   });
 
-  return setDoc(studentRef, dataToSave)
+  // Non-blocking setDoc for offline stability
+  setDoc(studentRef, dataToSave)
     .catch(async (serverError) => {
       console.error("Error adding student:", serverError);
       const permissionError = new FirestorePermissionError({
@@ -240,6 +236,8 @@ export const addStudent = (db: Firestore, studentData: NewStudentData) => {
       } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
     });
+    
+  return Promise.resolve(studentRef.id);
 };
 
 export const updateStudent = (db: Firestore, id: string, studentData: UpdateStudentData) => {
@@ -261,7 +259,8 @@ export const updateStudent = (db: Firestore, id: string, studentData: UpdateStud
     }
   });
 
-  return updateDoc(docRef, dataToUpdate)
+  // Non-blocking updateDoc
+  updateDoc(docRef, dataToUpdate)
     .catch(async (serverError) => {
         console.error("Error updating student:", serverError);
         const permissionError = new FirestorePermissionError({
@@ -271,11 +270,14 @@ export const updateStudent = (db: Firestore, id: string, studentData: UpdateStud
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });
+    
+  return Promise.resolve();
 };
 
 export const deleteStudent = (db: Firestore, id: string) => {
   const docRef = doc(db, 'students', id);
-  return deleteDoc(docRef)
+  // Non-blocking deleteDoc
+  deleteDoc(docRef)
     .catch(async (serverError) => {
         console.error("Error deleting student:", serverError);
         const permissionError = new FirestorePermissionError({
@@ -284,4 +286,6 @@ export const deleteStudent = (db: Firestore, id: string) => {
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });
+    
+  return Promise.resolve();
 };

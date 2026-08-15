@@ -83,7 +83,8 @@ export const addTransaction = (db: Firestore, transactionData: NewTransactionDat
     }
   });
 
-  return setDoc(docRef, dataToSave)
+  // Non-blocking setDoc for offline stability
+  setDoc(docRef, dataToSave)
     .catch(async (serverError) => {
       console.error("Error adding transaction:", serverError);
       const permissionError = new FirestorePermissionError({
@@ -93,11 +94,14 @@ export const addTransaction = (db: Firestore, transactionData: NewTransactionDat
       } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
     });
+    
+  return Promise.resolve(docRef.id);
 };
 
 export const deleteTransaction = (db: Firestore, id: string) => {
   const docRef = doc(db, TRANSACTIONS_COLLECTION, id);
-  return deleteDoc(docRef)
+  // Non-blocking deleteDoc
+  deleteDoc(docRef)
     .catch(async (serverError) => {
         console.error("Error deleting transaction:", serverError);
         const permissionError = new FirestorePermissionError({
@@ -106,4 +110,5 @@ export const deleteTransaction = (db: Firestore, id: string) => {
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });
+  return Promise.resolve();
 };

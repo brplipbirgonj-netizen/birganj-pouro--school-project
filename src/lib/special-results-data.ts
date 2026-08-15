@@ -52,7 +52,8 @@ export const saveSpecialResults = (db: Firestore, data: SpecialClassResult) => {
   };
   delete (dataToSave as any).id;
 
-  return setDoc(docRef, dataToSave, { merge: true })
+  // Non-blocking setDoc for offline stability
+  setDoc(docRef, dataToSave, { merge: true })
     .catch(async (serverError) => {
       const permissionError = new FirestorePermissionError({
         path: docRef.path,
@@ -61,6 +62,8 @@ export const saveSpecialResults = (db: Firestore, data: SpecialClassResult) => {
       });
       errorEmitter.emit('permission-error', permissionError);
     });
+    
+  return Promise.resolve();
 };
 
 export const getSpecialResultsForClass = async (

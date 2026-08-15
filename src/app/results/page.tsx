@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -136,7 +135,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         const filteredStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (!showGroupSelector || !group || s.group === group)).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
         setStudentsForClass(filteredStudents);
         
-        const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, group);
+        const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, group).catch(() => undefined);
         const initialMarks = new Map<string, Marks>();
         if (existingResults) {
             setFullMarks(existingResults.fullMarks);
@@ -182,6 +181,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (studentsForClass.length === 0) { toast({ variant: 'destructive', title: 'কোনো শিক্ষার্থী নেই' }); return; }
         
         const resultsData: StudentResult[] = Array.from(marks.entries()).map(([studentId, marks]) => ({ studentId, ...marks }));
+        
+        // Non-blocking call for offline stability
         saveClassResults(db, { 
             academicYear: selectedYear, 
             examName, 
@@ -190,9 +191,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             subject, 
             fullMarks: fullMarks, 
             results: resultsData 
-        }).then(() => {
-            toast({ title: 'ফলাফল সেভ হয়েছে' });
-        }).catch(() => {});
+        });
+        
+        toast({ title: 'ফলাফল সেভ হয়েছে' });
     };
 
     const handleDownloadSample = () => {
@@ -358,7 +359,7 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
         }
         setIsLoading(true);
         try {
-            const data = await getResultsForClass(db, selectedYear, examName, className, subject, group);
+            const data = await getResultsForClass(db, selectedYear, examName, className, subject, group).catch(() => undefined);
             if (!data) {
                 toast({ title: 'কোনো ফলাফল পাওয়া যায়নি' });
                 setResults(null);
@@ -534,7 +535,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         setIsLoading(true);
         const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter)).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
         if (students.length === 0) { toast({ title: 'কোনো শিক্ষার্থী নেই' }); setProcessedResults([]); setIsLoading(false); return; }
-        const allResults = await getAllResults(db, selectedYear, examName);
+        const allResults = await getAllResults(db, selectedYear, examName).catch(() => []);
         const classRes = allResults.filter(r => r.className === className);
         setClassResults(classRes);
         const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
@@ -694,7 +695,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                 const isEng = s.name.includes('ইংরেজি');
                                                 const bgColor = subBgColors[idx % subBgColors.length];
                                                 return (
-                                                    <React.Fragment key={s.name}>
+                                                    <React.Fragment key={`${res.student.id}-${s.name}`}>
                                                         {!isEng && (
                                                             <>
                                                                 <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{toBengaliNumber(sr?.written ?? '-') }</td>
@@ -749,7 +750,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const updateSavedResults = useCallback(async () => {
         if (!db || !user) return;
-        const allResults = await getAllResults(db, selectedYear, examName || undefined);
+        const allResults = await getAllResults(db, selectedYear, examName || undefined).catch(() => []);
         setSavedResults(allResults);
     }, [db, selectedYear, user, examName]);
     
@@ -763,7 +764,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
         return (user as any)?.marksPermissions?.[cls]?.includes(sub) ?? false;
     }, [user, hasPermission]);
 
-    const handleUpdateFullMarks = async (cls: string, sub: string, exam: string, currentRecord: ClassResult | null, newVal: string) => {
+    const handleUpdateFullMarks = (cls: string, sub: string, exam: string, currentRecord: ClassResult | null, newVal: string) => {
         const val = parseInt(newVal, 10);
         if (isNaN(val) || !db || !user) return;
         if (!isSubjectPermitted(cls, sub)) {
@@ -774,31 +775,23 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
         const inputKey = `${cls}-${sub}-${exam}`;
         setIsSaving(inputKey);
 
-        try {
-            if (currentRecord) {
-                await saveClassResults(db, { ...currentRecord, fullMarks: val });
-            } else {
-                await saveClassResults(db, {
-                    academicYear: selectedYear,
-                    examName: exam,
-                    className: cls,
-                    subject: sub,
-                    fullMarks: val,
-                    results: []
-                });
-            }
-            toast({ title: 'পূর্ণমান সংরক্ষিত হয়েছে' });
-            updateSavedResults();
-        } catch (e) {
-            console.error(e);
-        } finally {
+        const mutationPromise = currentRecord 
+            ? saveClassResults(db, { ...currentRecord, fullMarks: val })
+            : saveClassResults(db, { academicYear: selectedYear, examName: exam, className: cls, subject: sub, fullMarks: val, results: [] });
+
+        mutationPromise.finally(() => {
             setIsSaving(null);
-        }
+            updateSavedResults();
+        });
+        
+        toast({ title: 'পূর্ণমান সংরক্ষিত হয়েছে' });
     };
 
     const handleDeleteResult = (id: string) => {
         if (!db || !id || !user) return;
-        deleteClassResult(db, id).then(() => { updateSavedResults(); toast({ title: 'ফলাফল মোছা হয়েছে' }); }).catch(() => {});
+        deleteClassResult(db, id);
+        toast({ title: 'ফলাফল মোছা হয়েছে' });
+        setTimeout(updateSavedResults, 500);
     }
 
     const classes = ['6', '7', '8', '9', '10'];
@@ -998,7 +991,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (!examName || !className || !db || !user) return;
         setIsLoading(true);
         const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim()));
-        const allRes = await getAllResults(db, selectedYear, examName);
+        const allRes = await getAllResults(db, selectedYear, examName).catch(() => []);
         const classRes = allRes.filter(r => r.className === className);
         const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
         const results = processStudentResults(students, classRes, subs);
@@ -1083,7 +1076,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsLoading(true);
         try {
             const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === sourceClass);
-            const allRes = await getAllResults(db, selectedYear, 'বার্ষিক পরীক্ষা');
+            const allRes = await getAllResults(db, selectedYear, 'বার্ষিক পরীক্ষা').catch(() => []);
             const classRes = allRes.filter(r => r.className === sourceClass);
             const subs = getSubjects(sourceClass).filter(s => s.isExamSubject !== false);
             const processed = processStudentResults(classStudents, classRes, subs);
@@ -1109,8 +1102,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         setIsPromoting(true);
         try {
-            // Fetch existing students in target class to estimate rolls
-            const targetSnap = await getDocs(query(collection(db!, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass)));
+            const targetSnap = await getDocs(query(collection(db!, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass))).catch(() => ({ docs: [] } as any));
             const currentTargetStudents = targetSnap.docs.map(studentFromDoc);
             
             const projected = studentsToPromote.map((res, index) => {
@@ -1121,7 +1113,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     id: s.id,
                     generatedId: s.generatedId,
                     currentRoll: s.roll,
-                    projectedRoll: currentTargetStudents.length + index + 1, // Rough estimate
+                    projectedRoll: currentTargetStudents.length + index + 1,
                     isReplace: !!existing,
                     resData: res
                 };
@@ -1133,40 +1125,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsPromoting(false);
     };
 
-    const reIndexClassRolls = async (batch: any, targetStudents: Student[]) => {
-        const sorted = targetStudents.sort((a, b) => {
-            const getStatusWeight = (s: any) => {
-                if (s._promoStatus === 'pass') return 1;
-                if (s._promoStatus === 'fail') return 2;
-                return 3; // New admissions
-            };
-            
-            const weightA = getStatusWeight(a);
-            const weightB = getStatusWeight(b);
-            
-            if (weightA !== weightB) return weightA - weightB;
-            
-            if (weightA === 1) { // Passed
-                if (a._promoRank !== b._promoRank) return (a._promoRank || 999) - (b._promoRank || 999);
-                return (b._promoTotalMarks || 0) - (a._promoTotalMarks || 0);
-            } else if (weightA === 2) { // Special Pass
-                if (a._promoFailCount !== b._promoFailCount) return (a._promoFailCount || 0) - (b._promoFailCount || 0);
-                return (b._promoTotalMarks || 0) - (a._promoTotalMarks || 0);
-            }
-            return (a.roll || 0) - (b.roll || 0);
-        });
-
-        sorted.forEach((s, idx) => {
-            const docRef = doc(db!, 'students', s.id);
-            const nextRoll = idx + 1;
-            const update: any = { 
-              roll: nextRoll,
-              updatedAt: serverTimestamp()
-            };
-            batch.update(docRef, update);
-        });
-    };
-
     const handleConfirmPromotion = async () => {
         if (!db || isPromoting) return;
         setIsPromoting(true);
@@ -1174,13 +1132,12 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const batch = writeBatch(db);
             const studentsToPromote = projectedPromotions;
             
-            const targetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass)));
+            const targetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass))).catch(() => ({ docs: [] } as any));
             const currentTargetStudents = targetSnap.docs.map(studentFromDoc);
 
             for (const item of studentsToPromote) {
                 const res = item.resData;
                 const s = res.student;
-                // Search by Permanent Generated ID to avoid duplicates and enable replace
                 const existing = currentTargetStudents.find(ts => ts.generatedId === s.generatedId);
                 
                 const studentData = {
@@ -1196,7 +1153,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 delete (studentData as any).id;
                 delete (studentData as any).createdAt;
 
-                // Sanitize: Firebase doesn't allow undefined values in batch operations
                 Object.keys(studentData).forEach(key => {
                     if ((studentData as any)[key] === undefined) {
                         delete (studentData as any)[key];
@@ -1204,30 +1160,24 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 });
 
                 if (existing) {
-                    const docRef = doc(db, 'students', existing.id);
-                    batch.update(docRef, studentData);
+                    batch.update(doc(db, 'students', existing.id), studentData);
                 } else {
-                    const newDocRef = doc(collection(db, 'students'));
-                    batch.set(newDocRef, studentData);
+                    batch.set(doc(collection(db, 'students')), studentData);
                 }
             }
 
-            await batch.commit();
-            
-            // Re-fetch all and Re-index rolls properly
-            const finalTargetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass)));
-            const finalTargetList = finalTargetSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as any));
-            
-            const reIndexBatch = writeBatch(db);
-            await reIndexClassRolls(reIndexBatch, finalTargetList);
-            await reIndexBatch.commit();
+            // Non-blocking batch commit
+            batch.commit().catch(async (err) => {
+                console.error("Promotion batch failed:", err);
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students-batch', operation: 'write' }));
+            });
 
-            toast({ title: 'প্রমোশন সম্পন্ন হয়েছে', description: `${studentsToPromote.length} জন শিক্ষার্থীকে উন্নীত করা হয়েছে।` });
+            toast({ title: 'প্রমোশন প্রসেস শুরু হয়েছে', description: `${studentsToPromote.length} জন শিক্ষার্থীকে উন্নীত করা হচ্ছে।` });
             setIsPreviewOpen(false);
             handleLoadSource();
         } catch (e) { 
             console.error(e);
-            toast({ variant: 'destructive', title: 'প্রমোশন ব্যর্থ হয়েছে' });
+            toast({ variant: 'destructive', title: 'প্রমোশন করা যায়নি' });
         }
         setIsPromoting(false);
     };
@@ -1306,7 +1256,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </Card>
             )}
 
-            {/* Promotion Preview Dialog */}
             <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
                 <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col font-kalpurush p-0 border-none shadow-2xl rounded-2xl overflow-hidden">
                     <DialogHeader className="p-6 bg-primary text-white shrink-0">
@@ -1366,26 +1315,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
-            <Dialog open={promotionStatus.open} onOpenChange={(o) => setPromotionStatus(prev => ({ ...prev, open: o }))}>
-                <DialogContent className="max-w-md font-kalpurush p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
-                    <DialogTitle className="sr-only">প্রমোশন ফলাফল</DialogTitle>
-                    <div className={cn("p-6 text-white flex items-center gap-4", promotionStatus.isReplace ? "bg-amber-500" : "bg-emerald-600")}>
-                        {promotionStatus.isReplace ? <RefreshCw className="h-10 w-10 animate-spin" /> : <CheckCircle2 className="h-10 w-10" />}
-                        <div><h3 className="text-xl font-black">{promotionStatus.isReplace ? 'তথ্য রিপ্লেস করা হয়েছে' : 'প্রমোশন সফল হয়েছে'}</h3><p className="font-bold opacity-90">শিক্ষার্থী নতুন সেশনে যুক্ত হয়েছে</p></div>
-                    </div>
-                    <div className="p-8 space-y-6 bg-white">
-                        <div className="flex flex-col items-center gap-4 py-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                            <div className="text-center"><p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">শিক্ষার্থীর নাম</p><p className="text-2xl font-black text-slate-800">{promotionStatus.studentName}</p></div>
-                            <div className="grid grid-cols-2 gap-8 w-full px-10">
-                                <div className="text-center"><p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">নতুন রোল</p><p className="text-3xl font-black text-primary">{toBengaliNumber(promotionStatus.newRoll)}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">আইডি নম্বর</p><p className="text-lg font-black text-slate-700">{toBengaliNumber(promotionStatus.id)}</p></div>
-                            </div>
-                        </div>
-                        <Button onClick={() => setPromotionStatus(prev => ({ ...prev, open: false }))} className="w-full h-12 font-black text-lg shadow-lg">ঠিক আছে</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 };
@@ -1414,7 +1343,7 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
             const rollNum = parseInt(bnToEn(searchRoll), 10);
             const student = allStudents.find(s => s.roll === rollNum && s.className === searchClass && s.academicYear === selectedYear);
             if (!student) { toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি' }); setIsSearching(false); return; }
-            const allRes = await getAllResults(db!, selectedYear, searchExam);
+            const allRes = await getAllResults(db!, selectedYear, searchExam).catch(() => []);
             const classRes = allRes.filter(r => r.className === searchClass);
             const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === searchClass);
             const subs = getSubjects(searchClass, student.group).filter(s => s.isExamSubject !== false);
@@ -1535,7 +1464,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
         if (!db || !selectedMonth || !selectedClass || !selectedSubject || !selectedExam) return;
         setIsLoading(true);
         try {
-            const results = await getSpecialResultsForClass(db, selectedYear, selectedClass, selectedMonth);
+            const results = await getSpecialResultsForClass(db, selectedYear, selectedClass, selectedMonth).catch(() => []);
             const matching = results.find(r => normalize(r.subject) === normalize(selectedSubject) && r.examType === selectedExam);
             
             const initialMap = new Map();
@@ -1548,22 +1477,23 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
         setIsLoading(false);
     };
 
-    const handleSaveSpecialMarks = async () => {
+    const handleSaveSpecialMarks = () => {
         if (!db || !selectedClass || !selectedSubject || !selectedExam || !selectedMonth) return;
         setIsLoading(true);
-        try {
-            const resultsData = Array.from(specialMarks.entries()).map(([id, m]) => ({ studentId: id, marks: m }));
-            await saveSpecialResults(db, {
-                academicYear: selectedYear,
-                className: selectedClass,
-                subject: selectedSubject,
-                examType: selectedExam,
-                month: selectedMonth,
-                fullMarks: parseInt(specialFullMarks, 10) || 20,
-                results: resultsData
-            });
-            toast({ title: 'বিশেষ পরীক্ষার নম্বর সংরক্ষিত হয়েছে' });
-        } catch (e) { console.error(e); }
+        const resultsData = Array.from(specialMarks.entries()).map(([id, m]) => ({ studentId: id, marks: m }));
+        
+        // Non-blocking call for offline stability
+        saveSpecialResults(db, {
+            academicYear: selectedYear,
+            className: selectedClass,
+            subject: selectedSubject,
+            examType: selectedExam,
+            month: selectedMonth,
+            fullMarks: parseInt(specialFullMarks, 10) || 20,
+            results: resultsData
+        });
+        
+        toast({ title: 'বিশেষ পরীক্ষার নম্বর সংরক্ষিত হয়েছে' });
         setIsLoading(false);
     };
 
@@ -1571,7 +1501,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
         if (!db || !selectedMonth || !selectedClass) return;
         setIsLoading(true);
         try {
-            const results = await getSpecialResultsForClass(db, selectedYear, selectedClass, selectedMonth);
+            const results = await getSpecialResultsForClass(db, selectedYear, selectedClass, selectedMonth).catch(() => []);
             setAllSpecialResults(results);
         } catch (e) { console.error(e); }
         setIsLoading(false);
@@ -2051,4 +1981,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
