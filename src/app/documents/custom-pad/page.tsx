@@ -190,10 +190,12 @@ function LetterheadTemplate({ schoolInfo, settings, issueDate }: any) {
             )}
             style={{
                 backgroundImage: `
-                    linear-gradient(to right, rgba(45, 87, 44, 0.08) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(45, 87, 44, 0.08) 1px, transparent 1px)
+                    linear-gradient(to right, rgba(45, 87, 44, 0.15) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(45, 87, 44, 0.15) 1px, transparent 1px)
                 `,
-                backgroundSize: '12px 12px'
+                backgroundSize: '12px 12px',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact'
             }}>
                 <div className="absolute left-6 w-24 h-24 shrink-0">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={96} height={96} className="object-contain rounded-full bg-white p-1 shadow-sm" />}
