@@ -12,7 +12,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
-import { Printer, ArrowLeft, GraduationCap, Info, FileBadge, Settings2, Type } from 'lucide-react';
+import { Printer, ArrowLeft, GraduationCap, Info, FileBadge, Settings2, Type, FilePen } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -42,6 +42,7 @@ export default function TestimonialGeneratorPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
 
   // Customization Settings
   const [customSettings, setCustomSettings] = useState({
@@ -264,10 +265,22 @@ export default function TestimonialGeneratorPage() {
                 </div>
 
                 <div className="sticky top-24">
-                    <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
-                        <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
-                    </h3>
-                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top scale-[0.65] sm:scale-[0.75] lg:scale-[0.8] xl:scale-100">
+                    <div className="flex justify-between items-center mb-2 px-1">
+                        <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                            <Info className="h-4 w-4" /> লাইভ প্রিভিউ (A4 সাইজ)
+                        </h3>
+                        {selectedStudent && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className={cn("h-8 font-black gap-2", isEditable ? "bg-amber-100 border-amber-500 text-amber-700" : "bg-white")}
+                                onClick={() => setIsEditable(!isEditable)}
+                            >
+                                <FilePen className="h-4 w-4" /> {isEditable ? 'এডিট মোড বন্ধ' : 'ম্যানুয়ালি এডিট'}
+                            </Button>
+                        )}
+                    </div>
+                    <div className="bg-white border-4 border-black/10 rounded-xl overflow-hidden shadow-2xl origin-top-left scale-[0.45] sm:scale-[0.55] lg:scale-[0.6] xl:scale-[0.75] min-w-[210mm] min-h-[297mm]">
                         {selectedStudent ? (
                             <TestimonialTemplate 
                                 student={selectedStudent} 
@@ -275,6 +288,7 @@ export default function TestimonialGeneratorPage() {
                                 formData={formData} 
                                 selectedYear={selectedYear}
                                 settings={customSettings}
+                                isEditable={isEditable}
                             />
                         ) : (
                             <div className="w-[210mm] h-[297mm] flex flex-col items-center justify-center bg-white text-muted-foreground gap-4">
@@ -303,23 +317,30 @@ export default function TestimonialGeneratorPage() {
   );
 }
 
-function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, settings }: any) {
+function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, settings, isEditable = false }: any) {
     const studentDob = student?.dob ? toBengaliNumber(format(new Date(student.dob), "d MMMM, yyyy", { locale: bn })) : 'প্রযোজ্য নয়';
     
     return (
         <div className={cn(
-            "w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-12 box-border border-emerald-900 overflow-hidden font-kalpurush",
+            "w-[210mm] h-[297mm] bg-white mx-auto relative text-black flex flex-col p-10 box-border border-emerald-900 overflow-hidden font-kalpurush",
             settings?.borderWidth || 'border-8',
             settings?.borderStyle || 'border-double'
         )}>
-            <div className="text-center border-b-4 border-emerald-900 pb-4 mb-6 relative z-10 flex justify-between items-center px-4">
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4; margin: 0.4in !important; }
+                    .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
+                }
+            `}</style>
+
+            <div className="text-center border-b-4 border-emerald-900 pb-3 mb-6 relative z-10 flex justify-between items-center px-4">
                 <div className="w-24 h-24 relative">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />}
                 </div>
                 <div className="flex-grow text-center">
-                    <h1 className="text-4xl font-black text-emerald-900 mb-1">{schoolInfo.name}</h1>
+                    <h1 className="text-4xl font-black text-emerald-900 mb-0.5 leading-tight">{schoolInfo.name}</h1>
                     <p className="text-lg font-bold text-gray-700">{schoolInfo.address}</p>
-                    <p className="text-sm font-bold text-gray-600 mt-1">
+                    <p className="text-sm font-bold text-gray-600 mt-0.5">
                         EIIN: {toBengaliNumber(schoolInfo.eiin)} | স্থাপিত: ২০১৯ ইং
                     </p>
                 </div>
@@ -332,7 +353,7 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, sett
                 </div>
             </div>
 
-            <div className="flex justify-between font-bold text-sm mb-10 relative z-10 px-4">
+            <div className="flex justify-between font-bold text-sm mb-6 relative z-10 px-4">
                 <span>স্মারক নং: {formData.smarak}</span>
                 <span>তারিখ: {toBengaliNumber(formData.issueDate)} ইং</span>
             </div>
@@ -346,13 +367,18 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, sett
                 </div>
             )}
 
-            <div className="relative z-10 text-center mb-12">
-                <h2 className="inline-block text-3xl font-black border-b-4 border-black pb-2 px-12 uppercase tracking-widest">প্রত্যয়ন পত্র</h2>
+            <div className="relative z-10 text-center mb-8">
+                <h2 className="inline-block text-3xl font-black border-b-4 border-black pb-1.5 px-12 uppercase tracking-widest">প্রত্যয়ন পত্র</h2>
             </div>
 
             <div 
-                className="relative z-10 flex-grow text-justify leading-[2.5] font-semibold space-y-8 px-4 text-slate-900"
+                className={cn(
+                    "relative z-10 flex-grow text-justify leading-[2.4] font-semibold space-y-6 px-4 text-slate-900 outline-none",
+                    isEditable && "bg-amber-50/50 p-2 rounded-xl ring-2 ring-amber-200"
+                )}
                 style={{ fontSize: `${settings?.fontSize || 20}px` }}
+                contentEditable={isEditable}
+                suppressContentEditableWarning={true}
             >
                 <p className="indent-16">
                     এতদ্বারা প্রত্যয়ন করা যাচ্ছে যে, <span className="text-2xl font-black border-b-2 border-black border-dotted px-2">{student.studentNameBn}</span>, 
@@ -371,20 +397,19 @@ function TestimonialTemplate({ student, schoolInfo, formData, selectedYear, sett
                 <p>
                     আমার জানামতে সে কোনো প্রকার রাষ্ট্রবিরোধী বা প্রতিষ্ঠানিক শৃঙ্খলা-পরিপন্থী কাজের সাথে জড়িত ছিল না। তার চরিত্র <span className="text-2xl font-black px-2 border-b-2 border-black border-dotted">{formData.conduct}</span>।
                 </p>
+                
+                <p className="italic text-emerald-950 text-2xl font-black text-center pt-8">
+                    আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
+                </p>
             </div>
 
-            <footer className="absolute bottom-16 left-0 right-0 z-10 px-12 bg-white">
-                <div className="text-center mb-16">
-                    <p className="italic text-emerald-950 text-2xl font-black leading-relaxed">
-                        আমি তার উজ্জ্বল ভবিষ্যৎ ও জীবনের সর্বাঙ্গীণ সাফল্য কামনা করি।
-                    </p>
-                </div>
-                <div className="flex justify-around items-end">
+            <footer className="absolute bottom-12 left-0 right-0 z-10 px-16 bg-white pb-6">
+                <div className="flex justify-between items-end">
                     <div className="text-center">
-                        <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                        <div className="w-56 border-t-2 border-black pt-1.5 font-black text-lg text-gray-800">শ্রেণি শিক্ষকের স্বাক্ষর</div>
                     </div>
                     <div className="text-center">
-                        <div className="w-56 border-t-2 border-black pt-2 font-black text-lg text-gray-800">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
+                        <div className="w-56 border-t-2 border-black pt-1.5 font-black text-lg text-gray-800">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
                     </div>
                 </div>
             </footer>
