@@ -75,6 +75,7 @@ import { StudentFeeDialog } from './StudentFeeDialog';
 import { cn } from '@/lib/utils';
 import { getExams, Exam } from '@/lib/exam-data';
 import { ScrollArea } from './ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
