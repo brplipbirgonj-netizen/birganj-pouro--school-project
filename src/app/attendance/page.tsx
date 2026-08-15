@@ -446,8 +446,9 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
 
-            // Check for holiday
-            const activeHoliday = await isHoliday(db, dateStr);
+            // Check for holiday (Non-blocking for offline)
+            let activeHoliday = undefined;
+            try { activeHoliday = await isHoliday(db, dateStr); } catch (e) { console.log("Holiday check bypassed (offline)"); }
 
             if (isWeekend || activeHoliday) {
                 toast({ 
@@ -459,9 +460,11 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                 return;
             }
 
-            // Check if attendance already exists for this class and date
+            // Check if attendance already exists for this class and date (Non-blocking for offline)
             if (!isConfirming) {
-                const existing = await getAttendanceForClassAndDate(db, dateStr, selectedClass, selectedYear);
+                let existing = undefined;
+                try { existing = await getAttendanceForClassAndDate(db, dateStr, selectedClass, selectedYear); } catch (e) { console.log("Duplicate check bypassed (offline)"); }
+                
                 if (existing) {
                     setIsConfirming(true);
                     toast({ 

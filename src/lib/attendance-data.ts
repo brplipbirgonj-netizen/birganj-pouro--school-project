@@ -123,13 +123,8 @@ export const getAttendanceForClassAndDate = async (db: Firestore, date: string, 
         }
         return undefined;
     } catch(e: any) {
-        if (e.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: ATTENDANCE_COLLECTION,
-                operation: 'list',
-            } satisfies SecurityRuleContext));
-        }
-        console.error("Error getting attendance for class and date:", e);
+        // Log but don't throw blocking error for offline
+        console.log("Offline or error during fetch:", e.message);
         return undefined;
     }
 };
