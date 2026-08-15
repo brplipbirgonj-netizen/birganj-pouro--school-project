@@ -21,7 +21,7 @@ import { bn } from 'date-fns/locale';
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, FirestoreError, orderBy, limit, doc, Timestamp, getDocs, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -184,7 +184,7 @@ const GalleryCard = () => {
         <Card className="relative overflow-hidden bg-white border-2 border-black shadow-sm group hover:shadow-lg transition-all duration-500">
             <CardHeader className="p-3 bg-primary/5 border-b border-black/10 relative z-20">
                 <CardTitle className="text-xs font-black text-primary flex items-center gap-1.5 uppercase">
-                    <ImageIcon className="h-3.5 w-3.5" /> বিদ্যালয় গ্যালারি
+                    <ImageIcon className="h-3.5 w-3.5" /> বিদ্যালয় গ্যালারি
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0 relative h-28 sm:h-32 overflow-hidden">
@@ -746,6 +746,7 @@ export default function Home() {
         setClassAttendance(classMap);
       },
       (error: FirestoreError) => {
+        // Only emit if it's a real permission denial, ignore network errors when offline
         if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: 'students',
@@ -759,6 +760,7 @@ export default function Home() {
         setTotalTeachers(querySnapshot.size);
       },
       (error: FirestoreError) => {
+        // Only emit if it's a real permission denial, ignore network errors when offline
         if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: 'staff',

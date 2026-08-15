@@ -79,6 +79,7 @@ export default function NoticeManagementPage() {
             setNotices(data);
             setIsLoading(false);
         }, (error) => {
+            // Only emit if it's a permission issue, ignore network 'unavailable' errors for UI
             if (error.code === 'permission-denied') {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'notices', operation: 'list' }));
             }

@@ -15,7 +15,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles, Gift, Clock, Table as TableIcon } from 'lucide-react';
+import { Trash2, Smartphone, Search, AlertCircle, TrendingUp, Banknote, CreditCard, Wallet, PieChart as PieChartIcon, LayoutDashboard, Loader2, PlusCircle, MinusCircle, Landmark, Coins, FileText, Hash, ChevronRight, BookOpen, LayoutGrid, ListChecks, Printer, Phone, MessageCircle, MessageSquareDashed, Calendar, FileSpreadsheet, FileBarChart, FilePen, BarChart3, Receipt, Settings2, ShieldCheck, UserCheck, Save, Sparkles, Gift, Clock, Table as TableIcon } from 'lucide-center';
 import { format, isToday, isSameMonth, startOfMonth, endOfMonth, isBefore } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -322,7 +322,7 @@ function StudentFreeConfigDialog({ student, open, onOpenChange, onApply }: { stu
                             </div>
                             <div className="flex items-center space-x-3 bg-muted/20 p-2 rounded-lg">
                                 <Checkbox id="w-session" checked={waivers.session} onCheckedChange={(v) => setWaivers({...waivers, session: !!v})} />
-                                <Label htmlFor="w-session" className="font-bold cursor-pointer">সেশন চার্জ</Label>
+                                <Label htmlFor="w-session" className="font-bold cursor-pointer">সেশন Charge</Label>
                             </div>
                             <div className="flex items-center space-x-3 bg-muted/20 p-2 rounded-lg">
                                 <Checkbox id="w-admission" checked={waivers.admission} onCheckedChange={(v) => setWaivers({...waivers, admission: !!v})} />
@@ -464,7 +464,7 @@ function FeeSetupTab({ allStudents, selectedYear, onPrint }: { allStudents: Stud
                             <Input type="number" value={bulkValues.annual} onChange={e => setBulkValues({...bulkValues, annual: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
                         </div>
                         <div className="space-y-1">
-                            <Label className="text-[9px] font-black uppercase text-muted-foreground">সেশন চার্জ</Label>
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">সেশন Charge</Label>
                             <Input type="number" value={bulkValues.session} onChange={e => setBulkValues({...bulkValues, session: e.target.value})} className="h-9 font-black bg-white" placeholder="৳" />
                         </div>
                         <div className="space-y-1">
@@ -584,7 +584,12 @@ function DefaultersTab({ allStudents, selectedYear }: { allStudents: Student[], 
         if (!db) return;
         setIsLoading(true);
         const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
-        const unsubscribe = onSnapshot(q, (snapshot) => { setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null)); setIsLoading(false); }, (error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); setIsLoading(false); });
+        const unsubscribe = onSnapshot(q, (snapshot) => { setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null)); setIsLoading(false); }, (error) => { 
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); 
+            }
+            setIsLoading(false); 
+        });
         return () => unsubscribe();
     }, [db, selectedYear]);
 
@@ -764,7 +769,12 @@ function CollectionReportTab({ allStudents, onDeleteSuccess }: { allStudents: St
         if (!db || !user) return;
         setIsLoading(true);
         const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
-        const unsubscribe = onSnapshot(q, (snapshot) => { const data = snapshot.docs.map(doc => feeCollectionFromDoc(doc)).filter((c): c is FeeCollection => c !== null).sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime()); setCollections(data); setIsLoading(false); }, (error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); setIsLoading(false); });
+        const unsubscribe = onSnapshot(q, (snapshot) => { const data = snapshot.docs.map(doc => feeCollectionFromDoc(doc)).filter((c): c is FeeCollection => c !== null).sort((a, b) => b.collectionDate.getTime() - a.collectionDate.getTime()); setCollections(data); setIsLoading(false); }, (error) => { 
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); 
+            }
+            setIsLoading(false); 
+        });
         return () => unsubscribe();
     }, [db, user, selectedYear]);
 
@@ -816,7 +826,7 @@ function ExpenseReportTab({ transactions, isLoading, onDeleteSuccess }: { transa
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg"><div className="space-y-2 flex-1"><Label className="text-xs font-bold">তারিখ দিয়ে ফিল্টার</Label><DatePicker value={dateFilter} onChange={setDateFilter} placeholder="তারিখ নির্বাচন করুন" /></div><div className="space-y-2 flex-1"><Label className="text-xs font-bold">ব্যয়ের খাত</Label><Select value={headFilter} onValueChange={setHeadFilter}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সকল খাত" /></SelectTrigger><SelectContent><SelectItem value="all">সকল খাত</SelectItem>{expenseHeads.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent></Select></div></div>
+            <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg"><div className="space-y-2 flex-1"><Label className="text-xs font-bold">তারিখ দিয়ে ফিল্টার</Label><DatePicker value={dateFilter} onChange={setDateFilter} placeholder="তারিখ নির্বাচন করুন" /></div><div className="space-y-2 flex-1"><Label className="font-bold text-xs">ব্যয়ের খাত</Label><Select value={headFilter} onValueChange={setHeadFilter}><SelectTrigger className="bg-white h-9 text-xs"><SelectValue placeholder="সকল খাত" /></SelectTrigger><SelectContent><SelectItem value="all">সকল খাত</SelectItem>{expenseHeads.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent></Select></div></div>
             <Card className="border-none shadow-none"><CardHeader className="px-0 pt-0"><CardTitle className="text-xl">ব্যয় রিপোর্ট</CardTitle></CardHeader><CardContent className="px-0 pt-2"><div className="table-container"><Table><TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm"><TableRow><TableHead>তারিখ</TableHead><TableHead>ব্যয়ের খাত</TableHead><TableHead>বিবরণ</TableHead><TableHead className="text-center">পদ্ধতি</TableHead><TableHead className="text-center">ভাউচার/চেক</TableHead><TableHead className="text-right">পরিমাণ</TableHead><TableHead className="text-right no-print">একশন</TableHead></TableRow></TableHeader><TableBody>{isLoading ? (<TableRow><TableCell colSpan={7} className="text-center py-20 italic"><span>লোড হচ্ছে...</span></TableCell></TableRow>) : filteredExpenses.length === 0 ? (<TableRow><TableCell colSpan={7} className="text-center py-20 italic">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>) : (filteredExpenses.map(e => (<TableRow key={e.id} className="hover:bg-accent/5"><TableCell className="whitespace-nowrap">{format(e.date, 'PP', { locale: bn })}</TableCell><TableCell className="font-bold text-rose-700">{e.accountHead}</TableCell><TableCell className="max-w-[200px] truncate text-xs">{e.description}</TableCell><TableCell className="text-center"><Badge variant="outline" className={cn("text-[9px] font-black", e.method === 'bank' ? "text-blue-700 bg-blue-50" : "text-amber-700 bg-amber-50")}>{e.method === 'bank' ? 'Bank' : 'Cash'}</Badge></TableCell><TableCell className="text-center"><div className="flex flex-col gap-1 items-center">{e.voucherNo && <Badge className="text-[8px] bg-rose-50 text-rose-600">V: {e.voucherNo}</Badge>}{e.checkNo && <Badge className="text-[8px] bg-blue-50 text-blue-600">C: {e.checkNo}</Badge>}</div></TableCell><TableCell className="text-right font-black text-rose-600">{toBengaliNumber(e.amount ?? 0)} ৳</TableCell><TableCell className="text-right no-print">{canDelete && (<AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle>ব্যয়ের রেকর্ডটি মুছতে চান?</AlertDialogTitle><AlertDialogDescription>আপনি কি নিশ্চিতভাবে এই ব্যয়ের রেকর্ডটি মুছে ফেলতে চান?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>না</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(e.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">হ্যাঁ, মুছুন</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}</TableCell></TableRow>)))}</TableBody></Table></div></CardContent></Card>
         </div>
     );
@@ -832,7 +842,12 @@ function IncomeComparisonTab({ allStudents, selectedYear, onPrintPotentialReport
         if (!db) return;
         setIsLoading(true);
         const q = query(collection(db, 'feeCollections'), where('academicYear', '==', selectedYear));
-        const unsubscribe = onSnapshot(q, (snapshot) => { setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null)); setIsLoading(false); }, (error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); setIsLoading(false); });
+        const unsubscribe = onSnapshot(q, (snapshot) => { setCollections(snapshot.docs.map(feeCollectionFromDoc).filter((f): f is FeeCollection => f !== null)); setIsLoading(false); }, (error) => { 
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'feeCollections', operation: 'list' })); 
+            }
+            setIsLoading(false); 
+        });
         return () => unsubscribe();
     }, [db, selectedYear]);
 
@@ -937,7 +952,7 @@ function IncomeComparisonTab({ allStudents, selectedYear, onPrintPotentialReport
                                     <TableHead className="border-r border-b border-black font-black text-[13px] text-center w-14 text-black sticky left-0 z-40 bg-slate-100">রোল</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[100px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">ভর্তি ফি</TableHead>
-                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">সেশন চার্জ</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">সেশন Charge</TableHead>
                                     {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-r border-b border-black font-black text-[11px] text-center text-black px-1">{m}</TableHead>)}
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">পরীক্ষা ফি</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">অন্যান্য</TableHead>
@@ -1092,7 +1107,7 @@ function ClasswiseAnnualReportTab({ allStudents, selectedYear, onPrint }: { allS
                                     <TableHead className="border-r border-b border-black font-black text-[13px] text-center w-14 text-black sticky left-0 z-40 bg-slate-100">রোল</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[13px] min-w-[100px] text-black sticky left-14 z-40 bg-slate-100">শিক্ষার্থীর নাম</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">ভর্তি ফি</TableHead>
-                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">সেশন চার্জ</TableHead>
+                                    <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">সেশন ফি</TableHead>
                                     {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-r border-b border-black font-black text-[11px] text-center text-black px-1">{m}</TableHead>)}
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">পরীক্ষা ফি</TableHead>
                                     <TableHead className="border-r border-b border-black font-black text-[12px] text-center text-black">অন্যান্য</TableHead>
@@ -1342,7 +1357,12 @@ export default function AccountsPage() {
   const [annualReportPrintData, setAnnualReportPrintData] = useState<any[]>([]);
   
   const fetchTransactions = useCallback(async () => { if (!db || !user) return; setIsLoading(true); const fetched = await getTransactions(db, selectedYear); setTransactions(fetched); setIsLoading(false); }, [db, user, selectedYear]);
-  const fetchStudents = useCallback(() => { if (!db || !user) return; setIsLoadingStudents(true); const q = query(collection(db, 'students'), where('academicYear', '==', selectedYear)); const unsubscribe = onSnapshot(q, (snap) => { setAllStudents(snap.docs.map(studentFromDoc)); setIsLoadingStudents(false); }, (error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' })); setIsLoadingStudents(false); }); return unsubscribe; }, [db, user, selectedYear]);
+  const fetchStudents = useCallback(() => { if (!db || !user) return; setIsLoadingStudents(true); const q = query(collection(db, 'students'), where('academicYear', '==', selectedYear)); const unsubscribe = onSnapshot(q, (snap) => { setAllStudents(snap.docs.map(studentFromDoc)); setIsLoadingStudents(false); }, (error) => { 
+    if (error.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' })); 
+    }
+    setIsLoadingStudents(false); 
+  }); return unsubscribe; }, [db, user, selectedYear]);
   useEffect(() => { setIsClient(true); fetchTransactions(); const unsub = fetchStudents(); return () => unsub?.(); }, [fetchTransactions, fetchStudents]);
   
   const sidebarItems = useMemo(() => { 
@@ -1502,7 +1522,7 @@ function PrintablePotentialAnnualReport({ allStudents, selectedYear, schoolInfo,
                             <TableHead className="border-r border-b border-black font-black text-center w-8 text-black">রোল</TableHead>
                             <TableHead className="border-r border-b border-black font-black w-28 text-black text-left pl-2">শিক্ষার্থীর নাম</TableHead>
                             <TableHead className="border-r border-b border-black font-black text-center text-black w-12">ভর্তি ফি</TableHead>
-                            <TableHead className="border-r border-b border-black font-black text-center text-black w-12">সেশন চার্জ</TableHead>
+                            <TableHead className="border-r border-b border-black font-black text-center text-black w-12">সেশন Charge</TableHead>
                             {BENGALI_MONTHS.map(m => <TableHead key={m} className="border-r border-b border-black font-black text-center text-black px-0.5 w-7 text-[9px]">{m.slice(0,3)}</TableHead>)}
                             <TableHead className="border-r border-b border-black font-black text-center text-black w-12">পরীক্ষা</TableHead>
                             <TableHead className="border-r border-b border-black font-black text-center text-black w-12">অন্যান্য</TableHead>

@@ -707,7 +707,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                     </Select>
                 </div>
                 <Button onClick={() => window.print()} className="font-black h-11 px-10 shadow-md text-lg">
-                    <Printer className="mr-2 h-5 w-5" /> বোর্ড প্রিন্ট করুন
+                    <Printer className="mr-2 h-4 w-4" /> বোর্ড প্রিন্ট করুন
                 </Button>
             </div>
 
@@ -1457,8 +1457,9 @@ export default function AttendancePage() {
             setAllStudents(studentsData);
             setIsLoading(false);
         }, (error: FirestoreError) => {
-            if (error.code === 'permission-denied') return;
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students', operation: 'list' }));
+            }
             setIsLoading(false);
         });
 

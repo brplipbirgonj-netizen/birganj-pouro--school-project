@@ -1,7 +1,7 @@
 'use client';
 import { ReactNode, useMemo, useEffect, useState } from 'react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { initializeFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, Firestore, enableIndexedDbPersistence, setLogLevel } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
@@ -26,6 +26,9 @@ if (typeof window !== 'undefined') {
   firestore = initializeFirestore(app, {
     experimentalForceLongPolling: true,
   });
+
+  // Suppress connectivity warnings in console to avoid confusion when working offline
+  setLogLevel('error');
 
   auth = getAuth(app);
 }

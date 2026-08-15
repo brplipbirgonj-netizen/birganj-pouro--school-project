@@ -36,11 +36,14 @@ export function useDoc<T>(path: string) {
         setLoading(false);
       },
       async (error: FirestoreError) => {
-        const permissionError = new FirestorePermissionError({
-          path,
-          operation: 'get',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        // Only emit error if it's a real permission denial, not just offline status
+        if (error.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path,
+            operation: 'get',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        }
         setError(error);
         setLoading(false);
       }
