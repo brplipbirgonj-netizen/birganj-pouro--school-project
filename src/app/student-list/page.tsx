@@ -70,6 +70,12 @@ const religionMapBn: Record<string, string> = {
     'islam': 'ইসলাম', 'hinduism': 'হিন্দু', 'buddhism': 'বৌদ্ধ', 'christianity': 'খ্রিস্টান', 'other': 'অন্যান্য'
 };
 
+const sidebarItems = [
+    { id: 'list', label: 'শিক্ষার্থী তালিকা', icon: List, color: 'text-primary bg-primary/10' },
+    { id: 'print', label: 'প্রিন্ট তালিকা', icon: Printer, color: 'text-emerald-600 bg-emerald-50' },
+    { id: 'esif', label: 'ESIF ফরম', icon: FileText, color: 'text-blue-600 bg-blue-50' },
+];
+
 const ESIFRow = ({ student, index }: { student: Student, index: number }) => {
     const dobStr = student.dob ? format(new Date(student.dob), 'dd-MM-yyyy') : '';
     const religion = (student.religion || '').toLowerCase();
@@ -139,12 +145,6 @@ const ESIFRow = ({ student, index }: { student: Student, index: number }) => {
         </TableRow>
     );
 };
-
-const sidebarItems = [
-    { id: 'list', label: 'শিক্ষার্থী তালিকা', icon: List, color: 'text-primary bg-primary/10' },
-    { id: 'print', label: 'প্রিন্ট তালিকা', icon: Printer, color: 'text-emerald-600 bg-emerald-50' },
-    { id: 'esif', label: 'ESIF ফরম', icon: FileText, color: 'text-blue-600 bg-blue-50' },
-];
 
 function StudentListContent() {
   const searchParams = useSearchParams();
@@ -327,7 +327,6 @@ function StudentListContent() {
     }
   };
 
-  // Dynamic Excel Sample Generation with Existing Data
   const handleDownloadSample = () => {
     const studentsInClass = allStudents
       .filter(s => s.academicYear === selectedYear && s.className === activeTab)
@@ -362,7 +361,6 @@ function StudentListContent() {
       s.presentPostOffice || ''
     ]);
 
-    // If class is empty, add a placeholder row
     if (data.length === 0) {
         data.push(['', '1', 'আব্দুর রহিম', 'Abdur Rahim', 'করিম মিয়া', 'Karim Mia', 'রহিমা বেগম', 'Rahima Begum', '', '', '', '01700000000', '01-01-2010', 'male', 'islam', 'general', '', 'চরপাড়া', 'বীরগঞ্জ', 'বীরগঞ্জ']);
     }
@@ -382,7 +380,8 @@ function StudentListContent() {
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
+        // Adding cellDates: true to let XLSX handle Excel's internal date formats
+        const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
@@ -424,25 +423,37 @@ function StudentListContent() {
             const dobVal = row['Date of Birth (DD-MM-YYYY)'] || row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
             if (dobVal) {
                 let dobDate: Date | null = null;
-                const dobStr = String(dobVal).trim();
-                const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
-                const match = dobStr.match(dmyRegex);
                 
-                if (match) {
-                    const d = parseInt(match[1], 10);
-                    const m = parseInt(match[2], 10) - 1;
-                    const y = parseInt(match[3], 10);
-                    dobDate = new Date(y, m, d);
+                if (dobVal instanceof Date) {
+                    dobDate = dobVal;
                 } else {
-                    dobDate = new Date(dobVal);
+                    const dobStr = String(dobVal).trim();
+                    // Robust regex to handle both '-' and '/' as delimiters for DD-MM-YYYY
+                    const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/;
+                    const match = dobStr.match(dmyRegex);
+                    
+                    if (match) {
+                        const d = parseInt(match[1], 10);
+                        const m = parseInt(match[2], 10) - 1;
+                        let y = parseInt(match[3], 10);
+                        // Handle 2-digit years if present
+                        if (y < 100) y += (y > 30 ? 1900 : 2000);
+                        dobDate = new Date(y, m, d);
+                    } else {
+                        // Fallback to standard parser
+                        dobDate = new Date(dobVal);
+                    }
                 }
                 
-                if (dobDate && !isNaN(dobDate.getTime())) studentData.dob = dobDate;
+                if (dobDate && !isNaN(dobDate.getTime())) {
+                    // Set to noon to avoid timezone shift errors (prev day issue)
+                    dobDate.setHours(12, 0, 0, 0);
+                    studentData.dob = dobDate;
+                }
             }
 
             if (!studentData.studentNameBn) continue;
 
-            // Update if Generated ID exists, else Add new
             const existingStudent = rowId ? allStudents.find(s => s.generatedId === rowId) : null;
 
             if (existingStudent) {
@@ -477,7 +488,7 @@ function StudentListContent() {
       <Header />
       <main className="flex-1 p-4 md:p-10 pb-40">
         <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
-            <aside className="w-full md:w-64 shrink-0 space-y-1 bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+            <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
                 <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">শিক্ষার্থী মডিউল</h2>
                 <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
                     {sidebarItems.map(item => (
@@ -923,7 +934,6 @@ function StudentListContent() {
                     </DialogHeader>
                     <div className="p-8 space-y-10 bg-white">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* Personal Info */}
                             <section className="space-y-4">
                                 <h3 className="font-black text-xl text-primary flex items-center gap-2 border-b-2 border-primary/10 pb-2"><UserRound className="h-6 w-6" /> ব্যক্তিগত তথ্য</h3>
                                 <div className="grid grid-cols-1 gap-y-3 text-sm font-bold text-slate-700">
@@ -937,7 +947,6 @@ function StudentListContent() {
                                 </div>
                             </section>
 
-                            {/* Guardian Info */}
                             <section className="space-y-4">
                                 <h3 className="font-black text-xl text-primary flex items-center gap-2 border-b-2 border-primary/10 pb-2"><Users className="h-6 w-6" /> অভিভাবকের তথ্য</h3>
                                 <div className="grid grid-cols-1 gap-y-3 text-sm font-bold text-slate-700">
@@ -949,7 +958,6 @@ function StudentListContent() {
                                 </div>
                             </section>
 
-                            {/* Academic History */}
                             <section className="space-y-4">
                                 <h3 className="font-black text-xl text-blue-600 flex items-center gap-2 border-b-2 border-blue-100 pb-2"><GraduationCap className="h-6 w-6" /> অ্যাকাডেমিক রেকর্ড</h3>
                                 <div className="grid grid-cols-1 gap-y-3 text-sm font-bold text-slate-700">
@@ -960,7 +968,6 @@ function StudentListContent() {
                                 </div>
                             </section>
 
-                            {/* Address Info */}
                             <section className="space-y-4">
                                 <h3 className="font-black text-xl text-emerald-600 flex items-center gap-2 border-b-2 border-emerald-100 pb-2"><MapPin className="h-6 w-6" /> বর্তমান ও স্থায়ী ঠিকানা</h3>
                                 <div className="space-y-4">
