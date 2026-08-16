@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl, addStudent } from '@/lib/student-data';
+import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl, addStudent, updateStudent } from '@/lib/student-data';
 import { 
     Eye, FilePen, Trash2, LayoutGrid, List, UserRound, Search, 
     GraduationCap, MapPin, Users, Phone, Info, ChevronRight, 
@@ -328,20 +328,50 @@ function StudentListContent() {
     }
   };
 
-  // Excel Upload Handlers
+  // Dynamic Excel Sample Generation with Existing Data
   const handleDownloadSample = () => {
+    const studentsInClass = allStudents
+      .filter(s => s.academicYear === selectedYear && s.className === activeTab)
+      .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+
     const headers = [
-      'Roll', 'Name (Bengali)', 'Name (English)', 'Father Name (Bengali)', 'Father Name (English)', 
-      'Mother Name (Bengali)', 'Mother Name (English)', 'Guardian Mobile', 'Date of Birth (YYYY-MM-DD)', 
-      'Gender', 'Religion', 'Group', 'Village', 'Union', 'Post Office'
+      'Generated ID (DO NOT CHANGE)', 'Roll', 'Name (Bengali)', 'Name (English)', 'Father Name (Bengali)', 'Father Name (English)', 
+      'Mother Name (Bengali)', 'Mother Name (English)', 'Father NID', 'Mother NID', 'Birth Reg No', 'Guardian Mobile', 'Date of Birth (YYYY-MM-DD)', 
+      'Gender', 'Religion', 'Group', 'Optional Subject', 'Village', 'Union', 'Post Office'
     ];
-    const data = [
-      ['1', 'আব্দুর রহিম', 'Abdur Rahim', 'করিম মিয়া', 'Karim Mia', 'রহিমা বেগম', 'Rahima Begum', '01700000000', '2010-01-01', 'male', 'islam', 'general', 'চরপাড়া', 'বীরগঞ্জ', 'বীরগঞ্জ'],
-    ];
+
+    const data = studentsInClass.map(s => [
+      s.generatedId || '',
+      s.roll,
+      s.studentNameBn || '',
+      s.studentNameEn || '',
+      s.fatherNameBn || '',
+      s.fatherNameEn || '',
+      s.motherNameBn || '',
+      s.motherNameEn || '',
+      s.fatherNid || '',
+      s.motherNid || '',
+      s.birthRegNo || '',
+      s.guardianMobile || '',
+      s.dob ? format(new Date(s.dob), 'yyyy-MM-dd') : '',
+      s.gender || 'male',
+      s.religion || 'islam',
+      s.group || 'general',
+      s.optionalSubject || '',
+      s.presentVillage || '',
+      s.presentUnion || '',
+      s.presentPostOffice || ''
+    ]);
+
+    // If class is empty, add a placeholder row
+    if (data.length === 0) {
+        data.push(['', '1', 'আব্দুর রহিম', 'Abdur Rahim', 'করিম মিয়া', 'Karim Mia', 'রহিমা বেগম', 'Rahima Begum', '', '', '', '01700000000', '2010-01-01', 'male', 'islam', 'general', '', 'চরপাড়া', 'বীরগঞ্জ', 'বীরগঞ্জ']);
+    }
+
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, `Student_Sample_Class_${activeTab}.xlsx`);
+    XLSX.writeFile(wb, `Student_List_Class_${activeTab}_${selectedYear}.xlsx`);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,8 +394,11 @@ function StudentListContent() {
             return;
         }
 
-        let successCount = 0;
+        let updatedCount = 0;
+        let addedCount = 0;
+
         for (const row of data as any[]) {
+            const rowId = String(row['Generated ID (DO NOT CHANGE)'] || '').trim();
             const studentData: any = {
                 academicYear: selectedYear,
                 className: activeTab,
@@ -376,33 +409,43 @@ function StudentListContent() {
                 fatherNameEn: String(row['Father Name (English)'] || row['পিতার নাম (ইংরেজি)'] || ''),
                 motherNameBn: String(row['Mother Name (Bengali)'] || row['মাতার নাম (বাংলা)'] || ''),
                 motherNameEn: String(row['Mother Name (English)'] || row['মাতার নাম (ইংরেজি)'] || ''),
+                fatherNid: String(row['Father NID'] || row['পিতার এনআইডি'] || ''),
+                motherNid: String(row['Mother NID'] || row['মাতার এনআইডি'] || ''),
+                birthRegNo: String(row['Birth Reg No'] || row['জন্ম নিবন্ধন'] || ''),
                 guardianMobile: String(row['Guardian Mobile'] || row['মোবাইল'] || ''),
                 gender: String(row['Gender'] || row['লিঙ্গ'] || 'male').toLowerCase(),
                 religion: String(row['Religion'] || row['ধর্ম'] || 'islam').toLowerCase(),
                 group: String(row['Group'] || row['গ্রুপ'] || 'general').toLowerCase(),
+                optionalSubject: String(row['Optional Subject'] || row['ঐচ্ছিক বিষয়'] || ''),
                 presentVillage: String(row['Village'] || row['গ্রাম'] || ''),
                 presentUnion: String(row['Union'] || row['ইউনিয়ন'] || ''),
                 presentPostOffice: String(row['Post Office'] || row['ডাকঘর'] || ''),
-                presentUpazila: 'বীরগঞ্জ',
-                presentDistrict: 'দিনাজপুর',
-                photoUrl: '', // Will use default placeholder
             };
 
-            if (row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ']) {
-                const dobStr = row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
-                const dobDate = new Date(dobStr);
-                if (!isNaN(dobDate.getTime())) {
-                    studentData.dob = dobDate;
-                }
+            const dobVal = row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
+            if (dobVal) {
+                const dobDate = new Date(dobVal);
+                if (!isNaN(dobDate.getTime())) studentData.dob = dobDate;
             }
 
-            if (studentData.studentNameBn) {
+            if (!studentData.studentNameBn) continue;
+
+            // Update if Generated ID exists, else Add new
+            const existingStudent = rowId ? allStudents.find(s => s.generatedId === rowId) : null;
+
+            if (existingStudent) {
+                await updateStudent(db, existingStudent.id, studentData);
+                updatedCount++;
+            } else {
                 await addStudent(db, studentData);
-                successCount++;
+                addedCount++;
             }
         }
 
-        toast({ title: 'সফল', description: `${successCount} জন শিক্ষার্থীর তথ্য আপলোড করা হয়েছে।` });
+        toast({ 
+            title: 'আপলোড সম্পন্ন', 
+            description: `${updatedCount} জন আপডেট এবং ${addedCount} জন নতুন শিক্ষার্থী যোগ করা হয়েছে।` 
+        });
         setIsUploadOpen(false);
       } catch (error) {
         console.error("Upload Error:", error);
@@ -531,8 +574,7 @@ function StudentListContent() {
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
+                                                <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel><AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
@@ -805,9 +847,9 @@ function StudentListContent() {
           </DialogHeader>
           <div className="py-6 space-y-6">
             <div className="p-4 bg-muted/20 border-2 border-dashed border-primary/20 rounded-2xl text-center space-y-3">
-              <p className="text-xs font-bold text-muted-foreground">প্রথমে সঠিক ফরম্যাট নিশ্চিত করতে নমুনা ফাইলটি ডাউনলোড করুন।</p>
+              <p className="text-xs font-bold text-muted-foreground">নমুনা ফাইলে বর্তমানে থাকা সকল শিক্ষার্থীর তথ্য দেওয়া আছে। কোনো তথ্য সংশোধন বা নতুন ঘর পূরণ করে আপলোড করুন।</p>
               <Button variant="outline" size="sm" onClick={handleDownloadSample} className="font-black border-primary text-primary">
-                <Download className="mr-2 h-4 w-4" /> নমুনা ফাইল ডাউনলোড
+                <Download className="mr-2 h-4 w-4" /> নমুনা ফাইল ডাউনলোড (বর্তমান তালিকাসহ)
               </Button>
             </div>
 
@@ -840,7 +882,7 @@ function StudentListContent() {
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2">
                 <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-[10px] font-bold text-amber-800 leading-tight">
-                    * নমুনা ফাইলে যে ঘরগুলো খালি রাখবেন, সিস্টেমেও সেগুলো ফাঁকা হিসেবেই থাকবে। নতুন শিক্ষার্থীদের রোল অটোমেটিক পরবর্তী নম্বর থেকে শুরু হবে।
+                    * 'Generated ID' কলামটি কোনোভাবেই পরিবর্তন করবেন না। এটি বিদ্যমান শিক্ষার্থীদের চিহ্নিত করতে ব্যবহার করা হয়। নতুন শিক্ষার্থীদের জন্য ওই ঘরটি ফাঁকা রাখুন।
                 </p>
             </div>
           </div>
