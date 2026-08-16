@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -48,7 +49,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
@@ -654,6 +655,10 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 
                 // Key needs to be subjectName-group to ensure data goes to the correct individual file
                 const subjectsToSave: Record<string, ClassResult> = {};
+                
+                // First, fetch existing data to ensure we merge correctly and don't lose pre-existing entries
+                const allExisting = await getAllResults(db, selectedYear, examName);
+                const classExisting = allExisting.filter(r => r.className === className);
 
                 for (const row of json) {
                     const roll = parseInt(String(row['রোল'] || row['roll'] || '0').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
@@ -667,34 +672,52 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                         let marks: StudentResult | null = null;
 
                         if (!isEng) {
-                            const w = parseInt(String(row[`${sub.name} - লিখিত`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
-                            const m = parseInt(String(row[`${sub.name} - MCQ`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
-                            const p = parseInt(String(row[`${sub.name} - ব্যবহারিক`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            const wVal = row[`${sub.name} - লিখিত`];
+                            const mVal = row[`${sub.name} - MCQ`];
+                            const pVal = row[`${sub.name} - ব্যবহারিক`];
+                            
+                            const w = parseInt(String(wVal || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            const m = parseInt(String(mVal || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            const p = parseInt(String(pVal || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
                             
                             if (!isNaN(w) || !isNaN(m) || !isNaN(p)) {
                                 marks = { studentId: student.id, written: isNaN(w) ? undefined : w, mcq: isNaN(m) ? undefined : m, practical: isNaN(p) ? undefined : p };
                             }
                         } else {
-                            const total = parseInt(String(row[`${sub.name} - প্রাপ্ত`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            const totalVal = row[`${sub.name} - প্রাপ্ত`];
+                            const total = parseInt(String(totalVal || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
                             if (!isNaN(total)) {
                                 marks = { studentId: student.id, written: total, mcq: 0, practical: 0 };
                             }
                         }
 
                         if (marks) {
-                            const uniqueKey = `${sub.name}-${studentGroup}`;
+                            const normalizedName = subjectNameNormalization[sub.name] || sub.name;
+                            const uniqueKey = `${normalizedName}-${studentGroup}`;
+                            
                             if (!subjectsToSave[uniqueKey]) {
-                                subjectsToSave[uniqueKey] = { 
+                                // Find existing record to start with
+                                const existing = classExisting.find(r => 
+                                    (normalize(r.subject) === normalize(normalizedName)) && 
+                                    ((r.group || 'none').toLowerCase().trim() === studentGroup)
+                                );
+                                
+                                subjectsToSave[uniqueKey] = existing ? { ...existing } : { 
                                     academicYear: selectedYear, 
                                     examName, 
                                     className, 
                                     group: studentGroup === 'none' ? undefined : studentGroup, 
-                                    subject: sub.name, 
+                                    subject: normalizedName, 
                                     fullMarks: sub.fullMarks, 
                                     results: [] 
                                 };
                             }
-                            subjectsToSave[uniqueKey].results.push(marks);
+                            
+                            // Upsert the specific student's result in the array
+                            const resultArr = subjectsToSave[uniqueKey].results;
+                            const existingIdx = resultArr.findIndex(r => r.studentId === student.id);
+                            if (existingIdx > -1) resultArr[existingIdx] = marks;
+                            else resultArr.push(marks);
                         }
                     });
                 }
@@ -702,11 +725,11 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 const promises = Object.values(subjectsToSave).map(cr => saveClassResults(db, cr));
                 await Promise.all(promises);
 
-                toast({ title: 'ফলাফল আপলোড সম্পন্ন', description: `${Object.keys(subjectsToSave).length} টি বিষয়ের তথ্য আপডেট করা হয়েছে।` });
+                toast({ title: 'ফলাফল আপলোড সম্পন্ন', description: `${Object.keys(subjectsToSave).length} টি বিষয়ের তথ্য সিঙ্ক করা হয়েছে।` });
                 handleViewResults();
             } catch (error) {
                 console.error(error);
-                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি। কলামের নামগুলো নমুনা ফাইল অনুযায়ী কি না যাচাই করুন।' });
+                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি।' });
             } finally {
                 setIsBulkUploading(false);
                 if (bulkUploadRef.current) bulkUploadRef.current.value = '';
@@ -2121,3 +2144,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
