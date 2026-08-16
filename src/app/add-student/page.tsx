@@ -318,14 +318,14 @@ export default function AddStudentPage() {
                           </Select>
                       </div>
                       <div className="space-y-2 relative">
-                          <Label className="font-bold">রোল নম্বর *</Label>
+                          <Label className="font-bold">রোল নম্বর (স্বয়ংক্রিয়) *</Label>
                           <div className="relative">
                             <Input 
                                 type="number" 
+                                disabled
                                 required 
                                 value={student.roll || ''} 
-                                onChange={e => handleInputChange('roll', e.target.value === '' ? undefined : parseInt(e.target.value, 10))} 
-                                className={cn(inputFocusClasses, "font-black text-lg", !student.roll && "border-red-300 bg-red-50/30")} 
+                                className={cn(inputFocusClasses, "font-black text-lg bg-slate-50 cursor-not-allowed opacity-80")} 
                             />
                             {isFetchingRoll && <Loader2 className="h-4 w-4 animate-spin absolute right-3 bottom-3 text-primary" />}
                           </div>
@@ -456,9 +456,31 @@ export default function AddStudentPage() {
                           <Input required value={student.fatherNameBn || ''} onChange={e => handleInputChange('fatherNameBn', e.target.value)} className={cn(inputFocusClasses, !student.fatherNameBn && "border-red-300 bg-red-50/30")} />
                         </div>
                         <div className="space-y-2">
+                          <Label className="font-bold">পিতার নাম (ইংরেজি)</Label>
+                          <Input value={student.fatherNameEn || ''} onChange={e => handleInputChange('fatherNameEn', e.target.value)} className={cn(inputFocusClasses, "uppercase")} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-bold">পিতার NID নম্বর</Label>
+                            <Input value={student.fatherNid || ''} onChange={e => handleInputChange('fatherNid', e.target.value)} className={inputFocusClasses} />
+                        </div>
+                        
+                        <Separator className="md:col-span-2 my-2" />
+
+                        <div className="space-y-2">
                           <Label className="font-bold">মাতার নাম (বাংলা) *</Label>
                           <Input required value={student.motherNameBn || ''} onChange={e => handleInputChange('motherNameBn', e.target.value)} className={cn(inputFocusClasses, !student.motherNameBn && "border-red-300 bg-red-50/30")} />
                         </div>
+                        <div className="space-y-2">
+                          <Label className="font-bold">মাতার নাম (ইংরেজি)</Label>
+                          <Input value={student.motherNameEn || ''} onChange={e => handleInputChange('motherNameEn', e.target.value)} className={cn(inputFocusClasses, "uppercase")} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-bold">মাতার NID নম্বর</Label>
+                            <Input value={student.motherNid || ''} onChange={e => handleInputChange('motherNid', e.target.value)} className={inputFocusClasses} />
+                        </div>
+
+                        <Separator className="md:col-span-2 my-2" />
+
                         <div className="space-y-2">
                             <Label className="font-bold text-primary">মোবাইল নম্বর (SMS যাবে) *</Label>
                             <Input required value={student.guardianMobile || ''} onChange={e => handleInputChange('guardianMobile', e.target.value)} className={cn(inputFocusClasses, "font-black text-lg", !student.guardianMobile && "border-red-300 bg-red-50/30")} placeholder="উদা: ০১৭..." />
