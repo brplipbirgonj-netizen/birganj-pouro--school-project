@@ -4,19 +4,21 @@
 import Image from 'next/image';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
+import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPlaceholderImage, sanitizePhotoUrl, addStudent } from '@/lib/student-data';
 import { 
     Eye, FilePen, Trash2, LayoutGrid, List, UserRound, Search, 
     GraduationCap, MapPin, Users, Phone, Info, ChevronRight, 
-    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase
+    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase, FileUp, Download
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { Suspense, useEffect, useState, useMemo, useCallback } from 'react';
+import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import * as XLSX from 'xlsx';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -172,6 +174,11 @@ function StudentListContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDeletingAll, setIsDeletingAll] = useState(false);
 
+  // Upload States
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
 
   const classStats = useMemo(() => {
@@ -321,6 +328,93 @@ function StudentListContent() {
     }
   };
 
+  // Excel Upload Handlers
+  const handleDownloadSample = () => {
+    const headers = [
+      'Roll', 'Name (Bengali)', 'Name (English)', 'Father Name (Bengali)', 'Father Name (English)', 
+      'Mother Name (Bengali)', 'Mother Name (English)', 'Guardian Mobile', 'Date of Birth (YYYY-MM-DD)', 
+      'Gender', 'Religion', 'Group', 'Village', 'Union', 'Post Office'
+    ];
+    const data = [
+      ['1', 'আব্দুর রহিম', 'Abdur Rahim', 'করিম মিয়া', 'Karim Mia', 'রহিমা বেগম', 'Rahima Begum', '01700000000', '2010-01-01', 'male', 'islam', 'general', 'চরপাড়া', 'বীরগঞ্জ', 'বীরগঞ্জ'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.writeFile(wb, `Student_Sample_Class_${activeTab}.xlsx`);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !db) return;
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        if (data.length === 0) {
+            toast({ variant: 'destructive', title: 'ফাইলটি খালি', description: 'এক্সেল ফাইলে কোনো তথ্য পাওয়া যায়নি।' });
+            setIsUploading(false);
+            return;
+        }
+
+        let successCount = 0;
+        for (const row of data as any[]) {
+            const studentData: any = {
+                academicYear: selectedYear,
+                className: activeTab,
+                roll: parseInt(bnToEn(String(row['Roll'] || row['রোল'] || '0'))),
+                studentNameBn: String(row['Name (Bengali)'] || row['নাম (বাংলা)'] || ''),
+                studentNameEn: String(row['Name (English)'] || row['নাম (ইংরেজি)'] || ''),
+                fatherNameBn: String(row['Father Name (Bengali)'] || row['পিতার নাম (বাংলা)'] || ''),
+                fatherNameEn: String(row['Father Name (English)'] || row['পিতার নাম (ইংরেজি)'] || ''),
+                motherNameBn: String(row['Mother Name (Bengali)'] || row['মাতার নাম (বাংলা)'] || ''),
+                motherNameEn: String(row['Mother Name (English)'] || row['মাতার নাম (ইংরেজি)'] || ''),
+                guardianMobile: String(row['Guardian Mobile'] || row['মোবাইল'] || ''),
+                gender: String(row['Gender'] || row['লিঙ্গ'] || 'male').toLowerCase(),
+                religion: String(row['Religion'] || row['ধর্ম'] || 'islam').toLowerCase(),
+                group: String(row['Group'] || row['গ্রুপ'] || 'general').toLowerCase(),
+                presentVillage: String(row['Village'] || row['গ্রাম'] || ''),
+                presentUnion: String(row['Union'] || row['ইউনিয়ন'] || ''),
+                presentPostOffice: String(row['Post Office'] || row['ডাকঘর'] || ''),
+                presentUpazila: 'বীরগঞ্জ',
+                presentDistrict: 'দিনাজপুর',
+                photoUrl: '', // Will use default placeholder
+            };
+
+            if (row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ']) {
+                const dobStr = row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
+                const dobDate = new Date(dobStr);
+                if (!isNaN(dobDate.getTime())) {
+                    studentData.dob = dobDate;
+                }
+            }
+
+            if (studentData.studentNameBn) {
+                await addStudent(db, studentData);
+                successCount++;
+            }
+        }
+
+        toast({ title: 'সফল', description: `${successCount} জন শিক্ষার্থীর তথ্য আপলোড করা হয়েছে।` });
+        setIsUploadOpen(false);
+      } catch (error) {
+        console.error("Upload Error:", error);
+        toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি।' });
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   if (!isMounted) return null;
 
   return (
@@ -380,6 +474,11 @@ function StudentListContent() {
                                         <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 shadow-none" onClick={() => setViewMode('table')}><List className="h-4 w-4" /></Button>
                                         <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 shadow-none" onClick={() => setViewMode('grid')}><LayoutGrid className="h-4 w-4" /></Button>
                                     </div>
+                                    {hasPermission('upload:students') && (
+                                        <Button variant="outline" className="font-black border-2 border-primary text-primary" onClick={() => setIsUploadOpen(true)}>
+                                            <FileUp className="mr-2 h-4 w-4" /> Excel আপলোড
+                                        </Button>
+                                    )}
                                 </>
                             )}
                             {activeSection === 'print' && (
@@ -693,6 +792,65 @@ function StudentListContent() {
         </div>
       </main>
 
+      {/* Batch Upload Dialog */}
+      <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+        <DialogContent className="sm:max-w-md font-kalpurush">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black flex items-center gap-2">
+              <FileUp className="h-5 w-5 text-primary" /> শিক্ষার্থী তালিকা আপলোড
+            </DialogTitle>
+            <DialogDescription className="font-bold">
+              {classNamesMap[activeTab]} শ্রেণির শিক্ষার্থীদের তথ্য এক্সেল ফাইলে আপলোড করুন।
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-6">
+            <div className="p-4 bg-muted/20 border-2 border-dashed border-primary/20 rounded-2xl text-center space-y-3">
+              <p className="text-xs font-bold text-muted-foreground">প্রথমে সঠিক ফরম্যাট নিশ্চিত করতে নমুনা ফাইলটি ডাউনলোড করুন।</p>
+              <Button variant="outline" size="sm" onClick={handleDownloadSample} className="font-black border-primary text-primary">
+                <Download className="mr-2 h-4 w-4" /> নমুনা ফাইল ডাউনলোড
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-bold">এক্সেল ফাইল নির্বাচন করুন</Label>
+              <div 
+                className="h-32 border-4 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isUploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="font-black text-sm text-primary">আপলোড হচ্ছে...</span>
+                  </div>
+                ) : (
+                  <>
+                    <FileUp className="h-10 w-10 text-slate-300 group-hover:text-primary transition-colors" />
+                    <span className="font-bold text-slate-400 mt-2">ফাইল এখানে ড্রপ করুন অথবা ক্লিক করুন</span>
+                  </>
+                )}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileUpload} 
+                  className="hidden" 
+                  accept=".xlsx, .xls"
+                />
+              </div>
+            </div>
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2">
+                <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[10px] font-bold text-amber-800 leading-tight">
+                    * নমুনা ফাইলে যে ঘরগুলো খালি রাখবেন, সিস্টেমেও সেগুলো ফাঁকা হিসেবেই থাকবে। নতুন শিক্ষার্থীদের রোল অটোমেটিক পরবর্তী নম্বর থেকে শুরু হবে।
+                </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsUploadOpen(false)} className="font-bold">বন্ধ করুন</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Student View Dialog */}
       <Dialog open={!!studentToView} onOpenChange={(isOpen) => !isOpen && setStudentToView(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto font-kalpurush p-0 border-none shadow-2xl rounded-2xl">
              {studentToView && (
@@ -741,7 +899,7 @@ function StudentListContent() {
                             <section className="space-y-4">
                                 <h3 className="font-black text-xl text-blue-600 flex items-center gap-2 border-b-2 border-blue-100 pb-2"><GraduationCap className="h-6 w-6" /> অ্যাকাডেমিক রেকর্ড</h3>
                                 <div className="grid grid-cols-1 gap-y-3 text-sm font-bold text-slate-700">
-                                    <div className="flex flex-col gap-1 border-b border-dashed pb-1.5"><span className="text-muted-foreground font-medium text-xs">পূর্ববর্তী বিদ্যালয়:</span> <span>{studentToView.previousSchool || '-'}</span></div>
+                                    <div className="flex flex-col gap-1 border-b border-dashed pb-2"><span className="text-muted-foreground font-medium text-xs">পূর্ববর্তী বিদ্যালয়:</span> <span>{studentToView.previousSchool || '-'}</span></div>
                                     <div className="flex justify-between border-b border-dashed pb-1.5"><span className="text-muted-foreground font-medium">রেজিষ্ট্রেশন নম্বর:</span> <span className="font-black text-blue-700">{toBengaliNumber(studentToView.prevRegNo || '-')}</span></div>
                                     <div className="flex justify-between border-b border-dashed pb-1.5"><span className="text-muted-foreground font-medium">পাসের সন:</span> <span>{toBengaliNumber(studentToView.prevPassingYear || '-')}</span></div>
                                     <div className="flex justify-between border-b border-dashed pb-1.5"><span className="text-muted-foreground font-medium">বোর্ড:</span> <span>{studentToView.prevBoard || '-'}</span></div>
