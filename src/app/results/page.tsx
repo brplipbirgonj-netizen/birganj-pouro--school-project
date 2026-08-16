@@ -653,12 +653,15 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === className);
                 const subjects = getSubjects(className).filter(s => s.isExamSubject !== false);
                 
+                // Key needs to be subjectName-group to ensure data goes to the correct individual file
                 const subjectsToSave: Record<string, ClassResult> = {};
 
                 for (const row of json) {
                     const roll = parseInt(String(row['রোল'] || row['roll'] || '0').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
                     const student = studentsInClass.find(s => s.roll === roll);
                     if (!student) continue;
+
+                    const studentGroup = (student.group || 'none').toLowerCase().trim();
 
                     subjects.forEach(sub => {
                         const isEng = sub.name.includes('ইংরেজি');
@@ -680,10 +683,19 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                         }
 
                         if (marks) {
-                            if (!subjectsToSave[sub.name]) {
-                                subjectsToSave[sub.name] = { academicYear: selectedYear, examName, className, group: student.group || 'none', subject: sub.name, fullMarks: sub.fullMarks, results: [] };
+                            const uniqueKey = `${sub.name}-${studentGroup}`;
+                            if (!subjectsToSave[uniqueKey]) {
+                                subjectsToSave[uniqueKey] = { 
+                                    academicYear: selectedYear, 
+                                    examName, 
+                                    className, 
+                                    group: studentGroup === 'none' ? undefined : studentGroup, 
+                                    subject: sub.name, 
+                                    fullMarks: sub.fullMarks, 
+                                    results: [] 
+                                };
                             }
-                            subjectsToSave[sub.name].results.push(marks);
+                            subjectsToSave[uniqueKey].results.push(marks);
                         }
                     });
                 }
@@ -695,7 +707,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 handleViewResults();
             } catch (error) {
                 console.error(error);
-                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি।' });
+                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি। কলামের নামগুলো নমুনা ফাইল অনুযায়ী কি না যাচাই করুন।' });
             } finally {
                 setIsBulkUploading(false);
                 if (bulkUploadRef.current) bulkUploadRef.current.value = '';
@@ -1361,7 +1373,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </CardHeader>
                     <CardContent className="p-0 max-h-[400px] overflow-auto">
                         <Table>
-                            <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                            <TableHeader className="bg-muted/50 sticky top-0 z-10">
                                 <TableRow>
                                     <TableHead className="w-12 text-center"><Checkbox onCheckedChange={c => setSelectedStudentIds(c ? new Set(failedStudents.map(f => f.student.id)) : new Set())} /></TableHead>
                                     <TableHead className="w-20 text-center font-black">বর্তমান রোল</TableHead>
@@ -1917,7 +1929,7 @@ export default function ResultsPage() {
                     <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-6">{schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}<div className="text-center flex-grow"><h1 className="text-3xl font-black text-emerald-950 leading-none mb-1">{schoolInfo.name}</h1><p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p><div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800"><h2 className="text-lg font-black uppercase">{printingReport.isBlank ? 'ফাঁকা নম্বর ফর্দ (Blank Mark Sheet)' : 'নম্বর ফর্দ (Mark Sheet)'} - {toBengaliNumber(selectedYear)}</h2></div></div></header>
                     <Table className="border-2 border-black">
                         <TableHeader className="bg-slate-100"><TableRow className="border-b-2 border-black"><TableHead className="w-16 text-center font-black border-r-2 border-black text-black">রোল</TableHead><TableHead className="font-black border-r-2 border-black text-black">শিক্ষার্থীর নাম</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">নৈবেত্তিক</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead><TableHead className={cn("w-20 text-center font-black text-black", !printingReport.isBlank && "border-r-2 border-black")}>{printingReport.isBlank ? 'মোট' : 'প্রাপ্ত'}</TableHead>{!printingReport.isBlank && <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">গ্রেড</TableHead>}{!printingReport.isBlank && <TableHead className="w-20 text-center font-black text-black">পয়েন্ট</TableHead>}</TableRow></TableHeader>
-                        <TableBody>{printingReport.studentData.map((item: any) => (<TableRow key={item.student.id} className={cn("border-b border-slate-400", printingReport.isBlank ? "h-12" : "h-7", !item.isPass && "bg-rose-50/50")}><TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell><TableCell className="font-bold border-r-2 border-black">{item.student.roll}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell><TableCell className="text-center font-black border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.obtainedMarks)}</TableCell>{!printingReport.isBlank && <TableCell className="text-center font-black border-r-2 border-black">{item.grade}</TableCell>}{!printingReport.isBlank && <TableCell className="text-center font-black">{toBengaliNumber(item.point.toFixed(2))}</TableCell>}</TableRow>))}</TableBody>
+                        <TableBody>{printingReport.studentData.map((item: any) => (<TableRow key={item.student.id} className={cn("border-b border-slate-400", printingReport.isBlank ? "h-12" : "h-7", !item.isPass && "bg-rose-50/50")}><TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell><TableCell className="font-bold border-r-2 border-black">{item.student.roll}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell><TableCell className="text-center font-black border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.obtainedMarks)}</TableCell>{!printingReport.isBlank && <TableCell className="text-center font-black border-r-2 border-black">{item.grade}</TableCell>{!printingReport.isBlank && <TableCell className="text-center font-black">{toBengaliNumber(item.point.toFixed(2))}</TableCell>}</TableRow>))}</TableBody>
                     </Table>
                     <footer className="mt-20 flex justify-between px-10 no-screen"><div className="text-center w-48 border-t-2 border-black pt-1 font-black">শ্রেণি শিক্ষকের স্বাক্ষর</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div></footer>
                 </div>
@@ -2005,7 +2017,7 @@ export default function ResultsPage() {
                                                         <React.Fragment key={`${res.student.id}-${s.name}`}>
                                                             {!isEng && (
                                                                 <>
-                                                                    <td className="border border-black text-center">{toBengaliNumber(sr?.written ?? '-')}</td>
+                                                                    <td className="border-black text-center">{toBengaliNumber(sr?.written ?? '-')}</td>
                                                                     <td className="border border-black text-center">{toBengaliNumber(sr?.mcq ?? '-')}</td>
                                                                     {s.practical && <td className="border border-black text-center">{toBengaliNumber(sr?.practical ?? '-')}</td>}
                                                                 </>
