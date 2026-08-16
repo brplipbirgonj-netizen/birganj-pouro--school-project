@@ -380,7 +380,6 @@ function StudentListContent() {
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
-        // Adding cellDates: true to let XLSX handle Excel's internal date formats
         const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
@@ -426,28 +425,33 @@ function StudentListContent() {
                 
                 if (dobVal instanceof Date) {
                     dobDate = dobVal;
-                } else {
-                    const dobStr = String(dobVal).trim();
-                    // Robust regex to handle both '-' and '/' as delimiters for DD-MM-YYYY
-                    const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/;
-                    const match = dobStr.match(dmyRegex);
-                    
-                    if (match) {
-                        const d = parseInt(match[1], 10);
-                        const m = parseInt(match[2], 10) - 1;
-                        let y = parseInt(match[3], 10);
-                        // Handle 2-digit years if present
-                        if (y < 100) y += (y > 30 ? 1900 : 2000);
-                        dobDate = new Date(y, m, d);
+                } else if (typeof dobVal === 'string') {
+                    const dobStr = dobVal.trim();
+                    // Custom parsing for DD-MM-YYYY or DD/MM/YYYY to avoid month/day flip
+                    const parts = dobStr.split(/[-/]/);
+                    if (parts.length === 3) {
+                        let d, m, y;
+                        if (parts[0].length === 4) { // YYYY-MM-DD
+                            y = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10) - 1;
+                            d = parseInt(parts[2], 10);
+                        } else { // DD-MM-YYYY
+                            d = parseInt(parts[0], 10);
+                            m = parseInt(parts[1], 10) - 1;
+                            y = parseInt(parts[2], 10);
+                            if (y < 100) y += (y > 30 ? 1900 : 2000);
+                        }
+                        const testDate = new Date(y, m, d);
+                        if (!isNaN(testDate.getTime())) dobDate = testDate;
                     } else {
-                        // Fallback to standard parser
-                        dobDate = new Date(dobVal);
+                        // Fallback to standard parser if not split correctly
+                        const fallback = new Date(dobVal);
+                        if (!isNaN(fallback.getTime())) dobDate = fallback;
                     }
                 }
                 
                 if (dobDate && !isNaN(dobDate.getTime())) {
-                    // Set to noon to avoid timezone shift errors (prev day issue)
-                    dobDate.setHours(12, 0, 0, 0);
+                    dobDate.setHours(12, 0, 0, 0); // Avoid timezone shift
                     studentData.dob = dobDate;
                 }
             }
