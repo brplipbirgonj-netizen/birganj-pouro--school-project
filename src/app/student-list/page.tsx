@@ -40,7 +40,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, FirestoreError, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, FirestoreError, where, getDocs, writeBatch, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -425,27 +425,34 @@ function StudentListContent() {
                 
                 if (dobVal instanceof Date) {
                     dobDate = dobVal;
-                } else if (typeof dobVal === 'string') {
-                    const dobStr = dobVal.trim();
-                    // Custom parsing for DD-MM-YYYY or DD/MM/YYYY to avoid month/day flip
-                    const parts = dobStr.split(/[-/]/);
+                } else if (typeof dobVal === 'string' || typeof dobVal === 'number') {
+                    const dobStr = String(dobVal).trim();
+                    // Split using separators to ensure Day-Month-Year order
+                    const parts = dobStr.split(/[-/.]/);
                     if (parts.length === 3) {
                         let d, m, y;
-                        if (parts[0].length === 4) { // YYYY-MM-DD
+                        if (parts[0].length === 4) { // YYYY-MM-DD format detection
                             y = parseInt(parts[0], 10);
                             m = parseInt(parts[1], 10) - 1;
                             d = parseInt(parts[2], 10);
-                        } else { // DD-MM-YYYY
+                        } else { // Assume DD-MM-YYYY or DD/MM/YYYY
                             d = parseInt(parts[0], 10);
                             m = parseInt(parts[1], 10) - 1;
                             y = parseInt(parts[2], 10);
                             if (y < 100) y += (y > 30 ? 1900 : 2000);
                         }
-                        const testDate = new Date(y, m, d);
-                        if (!isNaN(testDate.getTime())) dobDate = testDate;
-                    } else {
-                        // Fallback to standard parser if not split correctly
-                        const fallback = new Date(dobVal);
+                        
+                        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+                            // Check for reasonable ranges to confirm correct swap prevention
+                            if (m >= 0 && m <= 11 && d >= 1 && d <= 31) {
+                                dobDate = new Date(y, m, d);
+                            }
+                        }
+                    }
+                    
+                    // Fallback to standard parser if split failed
+                    if (!dobDate || isNaN(dobDate.getTime())) {
+                        const fallback = new Date(dobStr);
                         if (!isNaN(fallback.getTime())) dobDate = fallback;
                     }
                 }
@@ -880,7 +887,7 @@ function StudentListContent() {
               </Button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label className="font-bold">এক্সেল ফাইল নির্বাচন করুন</Label>
               <div 
                 className="h-32 border-4 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-primary/30 transition-all group"
