@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -336,7 +335,7 @@ function StudentListContent() {
 
     const headers = [
       'Generated ID (DO NOT CHANGE)', 'Roll', 'Name (Bengali)', 'Name (English)', 'Father Name (Bengali)', 'Father Name (English)', 
-      'Mother Name (Bengali)', 'Mother Name (English)', 'Father NID', 'Mother NID', 'Birth Reg No', 'Guardian Mobile', 'Date of Birth (YYYY-MM-DD)', 
+      'Mother Name (Bengali)', 'Mother Name (English)', 'Father NID', 'Mother NID', 'Birth Reg No', 'Guardian Mobile', 'Date of Birth (DD-MM-YYYY)', 
       'Gender', 'Religion', 'Group', 'Optional Subject', 'Village', 'Union', 'Post Office'
     ];
 
@@ -353,7 +352,7 @@ function StudentListContent() {
       s.motherNid || '',
       s.birthRegNo || '',
       s.guardianMobile || '',
-      s.dob ? format(new Date(s.dob), 'yyyy-MM-dd') : '',
+      s.dob ? format(new Date(s.dob), 'dd-MM-yyyy') : '',
       s.gender || 'male',
       s.religion || 'islam',
       s.group || 'general',
@@ -365,7 +364,7 @@ function StudentListContent() {
 
     // If class is empty, add a placeholder row
     if (data.length === 0) {
-        data.push(['', '1', 'আব্দুর রহিম', 'Abdur Rahim', 'করিম মিয়া', 'Karim Mia', 'রহিমা বেগম', 'Rahima Begum', '', '', '', '01700000000', '2010-01-01', 'male', 'islam', 'general', '', 'চরপাড়া', 'বীরগঞ্জ', 'বীরগঞ্জ']);
+        data.push(['', '1', 'আব্দুর রহিম', 'Abdur Rahim', 'করিম মিয়া', 'Karim Mia', 'রহিমা বেগম', 'Rahima Begum', '', '', '', '01700000000', '01-01-2010', 'male', 'islam', 'general', '', 'চরপাড়া', 'বীরগঞ্জ', 'বীরগঞ্জ']);
     }
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
@@ -422,10 +421,23 @@ function StudentListContent() {
                 presentPostOffice: String(row['Post Office'] || row['ডাকঘর'] || ''),
             };
 
-            const dobVal = row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
+            const dobVal = row['Date of Birth (DD-MM-YYYY)'] || row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
             if (dobVal) {
-                const dobDate = new Date(dobVal);
-                if (!isNaN(dobDate.getTime())) studentData.dob = dobDate;
+                let dobDate: Date | null = null;
+                const dobStr = String(dobVal).trim();
+                const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
+                const match = dobStr.match(dmyRegex);
+                
+                if (match) {
+                    const d = parseInt(match[1], 10);
+                    const m = parseInt(match[2], 10) - 1;
+                    const y = parseInt(match[3], 10);
+                    dobDate = new Date(y, m, d);
+                } else {
+                    dobDate = new Date(dobVal);
+                }
+                
+                if (dobDate && !isNaN(dobDate.getTime())) studentData.dob = dobDate;
             }
 
             if (!studentData.studentNameBn) continue;
