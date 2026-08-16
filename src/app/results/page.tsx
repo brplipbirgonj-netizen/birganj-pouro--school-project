@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -21,7 +22,7 @@ import {
     Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCw, Plus, AlertTriangle 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, limit, doc, writeBatch, serverTimestamp, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -526,6 +527,9 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
     const [isLoading, setIsLoading] = useState(false);
     const [classResults, setClassResults] = useState<ClassResult[]>([]);
 
+    const bulkUploadRef = useRef<HTMLInputElement>(null);
+    const [isBulkUploading, setIsBulkUploading] = useState(false);
+
     useEffect(() => { 
         if (db && user) getExams(db, selectedYear).then(setExams); 
     }, [db, selectedYear, user]);
@@ -580,6 +584,130 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         toast({ title: 'Excel ডাউনলোড সম্পন্ন হয়েছে' });
     };
 
+    const handleDownloadBulkSample = () => {
+        if (!className || !examName) {
+            toast({ variant: 'destructive', title: 'শ্রেণি ও পরীক্ষা নির্বাচন করুন' });
+            return;
+        }
+        
+        const students = allStudents
+            .filter(s => s.academicYear === selectedYear && s.className === className)
+            .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+        
+        const subjects = getSubjects(className).filter(s => s.isExamSubject !== false);
+        
+        const headers = ['রোল', 'নাম', 'বিভাগ'];
+        subjects.forEach(s => {
+            const isEng = s.name.includes('ইংরেজি');
+            if (!isEng) {
+                headers.push(`${s.name} - লিখিত`);
+                headers.push(`${s.name} - MCQ`);
+                if (s.practical) headers.push(`${s.name} - ব্যবহারিক`);
+            } else {
+                headers.push(`${s.name} - প্রাপ্ত`);
+            }
+        });
+
+        // Fetch existing results to pre-populate
+        getAllResults(db!, selectedYear, examName).then(allRes => {
+            const classRes = allRes.filter(r => r.className === className);
+            const sheetData = students.map(s => {
+                const row: any = { 'রোল': s.roll, 'নাম': s.studentNameBn, 'বিভাগ': s.group || 'সাধারণ' };
+                subjects.forEach(sub => {
+                    const subRes = classRes.find(r => normalize(r.subject) === normalize(sub.name));
+                    const marks = subRes?.results.find(mr => mr.studentId === s.id);
+                    const isEng = sub.name.includes('ইংরেজি');
+                    if (!isEng) {
+                        row[`${sub.name} - লিখিত`] = marks?.written ?? '';
+                        row[`${sub.name} - MCQ`] = marks?.mcq ?? '';
+                        if (sub.practical) row[`${sub.name} - ব্যবহারিক`] = marks?.practical ?? '';
+                    } else {
+                        row[`${sub.name} - প্রাপ্ত`] = (marks?.written || 0) + (marks?.mcq || 0) + (marks?.practical || 0) || '';
+                    }
+                });
+                return row;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(sheetData, { header: headers });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Result Entry");
+            XLSX.writeFile(wb, `Bulk_Result_Entry_Class_${className}_${examName}.xlsx`);
+        });
+    };
+
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !db || !className || !examName) return;
+
+        setIsBulkUploading(true);
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const workbook = XLSX.read(evt.target?.result, { type: 'binary' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) as any[];
+                
+                if (json.length === 0) {
+                    toast({ variant: 'destructive', title: 'ফাইলটি খালি' });
+                    setIsBulkUploading(false);
+                    return;
+                }
+
+                const studentsInClass = allStudents.filter(s => s.academicYear === selectedYear && s.className === className);
+                const subjects = getSubjects(className);
+                
+                // Map to store subject results
+                const subjectsToSave: Record<string, ClassResult> = {};
+
+                for (const row of json) {
+                    const roll = parseInt(String(row['রোল'] || row['roll'] || '0').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                    const student = studentsInClass.find(s => s.roll === roll);
+                    if (!student) continue;
+
+                    subjects.forEach(sub => {
+                        const isEng = sub.name.includes('ইংরেজি');
+                        let marks: StudentResult | null = null;
+
+                        if (!isEng) {
+                            const w = parseInt(String(row[`${sub.name} - লিখিত`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            const m = parseInt(String(row[`${sub.name} - MCQ`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            const p = parseInt(String(row[`${sub.name} - ব্যবহারিক`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            
+                            if (!isNaN(w) || !isNaN(m) || !isNaN(p)) {
+                                marks = { studentId: student.id, written: isNaN(w) ? undefined : w, mcq: isNaN(m) ? undefined : m, practical: isNaN(p) ? undefined : p };
+                            }
+                        } else {
+                            const total = parseInt(String(row[`${sub.name} - প্রাপ্ত`] || '').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
+                            if (!isNaN(total)) {
+                                marks = { studentId: student.id, written: total, mcq: 0, practical: 0 };
+                            }
+                        }
+
+                        if (marks) {
+                            if (!subjectsToSave[sub.name]) {
+                                subjectsToSave[sub.name] = { academicYear: selectedYear, examName, className, group: student.group || 'none', subject: sub.name, fullMarks: sub.fullMarks, results: [] };
+                            }
+                            subjectsToSave[sub.name].results.push(marks);
+                        }
+                    });
+                }
+
+                // Batch save subjects
+                const promises = Object.values(subjectsToSave).map(cr => saveClassResults(db, cr));
+                await Promise.all(promises);
+
+                toast({ title: 'ফলাফল আপলোড সম্পন্ন', description: `${Object.keys(subjectsToSave).length} টি বিষয়ের তথ্য আপডেট করা হয়েছে।` });
+                handleViewResults();
+            } catch (error) {
+                console.error(error);
+                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি।' });
+            } finally {
+                setIsBulkUploading(false);
+                if (bulkUploadRef.current) bulkUploadRef.current.value = '';
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
     const groupedData = useMemo(() => {
         const groups: Record<string, StudentProcessedResult[]> = {};
         processedResults.forEach(res => {
@@ -619,9 +747,19 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                     </div>
                 )}
                 <Button onClick={handleViewResults} disabled={isLoading || !examName || !className} className="lg:col-span-1 shadow-md h-9 font-black text-xs">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'ফলাফল দেখুন'}</Button>
-                <div className="flex gap-2 lg:col-span-2">
-                    <Button onClick={handleDownloadExcel} disabled={processedResults.length === 0} variant="outline" className="flex-1 border-emerald-600 text-emerald-700 hover:bg-emerald-50 h-9 font-black text-xs"><FileSpreadsheet className="h-3 w-3 mr-1" /> Excel</Button>
-                    <Button onClick={() => onPrint({ results: groupedData, classResults, className, groupFilter, examName })} disabled={processedResults.length === 0} variant="outline" className="flex-1 border-primary text-primary hover:bg-primary/5 h-9 font-black text-xs"><Printer className="h-3 w-3 mr-1" /> প্রিন্ট</Button>
+                <div className="flex flex-col gap-1.5 lg:col-span-2">
+                    <div className="flex gap-2">
+                        <Button onClick={handleDownloadExcel} disabled={processedResults.length === 0} variant="outline" className="flex-1 border-emerald-600 text-emerald-700 hover:bg-emerald-50 h-9 font-black text-xs"><FileSpreadsheet className="h-3 w-3 mr-1" /> Excel</Button>
+                        <Button onClick={() => onPrint({ results: groupedData, classResults, className, groupFilter, examName })} disabled={processedResults.length === 0} variant="outline" className="flex-1 border-primary text-primary hover:bg-primary/5 h-9 font-black text-xs"><Printer className="h-3 w-3 mr-1" /> প্রিন্ট</Button>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={handleDownloadBulkSample} disabled={!className || !examName} variant="outline" className="flex-1 text-[9px] h-7 font-bold border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50"><Download className="h-3 w-3 mr-1" /> নমুনা ডাউনলোড</Button>
+                        <Button onClick={() => bulkUploadRef.current?.click()} disabled={isBulkUploading || !className || !examName} className="flex-1 text-[9px] h-7 font-black bg-indigo-600 hover:bg-indigo-700 shadow-md">
+                            {isBulkUploading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <FileUp className="h-3 w-3 mr-1" />}
+                            Excel আপলোড (সব বিষয়)
+                        </Button>
+                        <input type="file" ref={bulkUploadRef} className="hidden" accept=".xlsx, .xls" onChange={handleBulkUpload} />
+                    </div>
                 </div>
             </div>
 
