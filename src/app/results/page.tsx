@@ -1777,7 +1777,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-6 border-2 border-black/5 bg-white shadow-sm rounded-2xl">
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">মাস</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="মাস" /></SelectTrigger><SelectContent>{BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label className="font-bold text-xs text-primary">পরীক্ষা</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger><SelectContent>{specialExams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label className="font-bold text-xs text-primary">পরীক্ষা</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger><SelectContent>{specialExams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">শ্রেণি</Label><Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">বিষয়</Label><Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={!selectedClass}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{getSubjects(selectedClass).filter(s => s.isExamSubject !== false).map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent></Select></div>
                         <Button onClick={handleLoadForInput} disabled={isLoading || !selectedMonth || !selectedExam || !selectedSubject} className="font-black h-11 shadow-md">লোড করুন</Button>
@@ -2052,10 +2052,10 @@ export default function ResultsPage() {
                 <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full">
                     <style jsx global>{`
                         @media print {
-                            @page { size: A4 landscape; margin: 0.4in !important; }
+                            @page { size: A4 landscape; margin: 5mm !important; }
                             .printable-area { width: 100% !important; padding: 0 !important; }
-                            table { border-collapse: collapse !important; border: 2px solid black !important; width: 100% !important; }
-                            th, td { border: 1.5px solid black !important; padding: 2px !important; font-size: 11px !important; }
+                            table { border-collapse: collapse !important; border: 1px solid black !important; width: 100% !important; table-layout: auto !important; }
+                            th, td { border: 1px solid black !important; padding: 1px !important; font-size: 8px !important; line-height: 1.1 !important; }
                             .no-print { display: none !important; }
                         }
                     `}</style>
@@ -2089,9 +2089,9 @@ export default function ResultsPage() {
                                     <thead>
                                         <tr className="bg-slate-100">
                                             <th rowSpan={2} className="border border-black font-black p-1 w-8">রোল</th>
-                                            <th rowSpan={2} className="border border-black font-black p-1 min-w-[120px]">শিক্ষার্থীর নাম</th>
+                                            <th rowSpan={2} className="border border-black font-black p-1 min-w-[100px]">শিক্ষার্থীর নাম</th>
                                             {subjects.map(s => (
-                                                <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="border border-black font-black p-1 text-[11px]">{s.name}</th>
+                                                <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className="border border-black font-black p-1 text-[9px]">{s.name}</th>
                                             ))}
                                             <th rowSpan={2} className="border border-black font-black p-1 w-10">মোট</th>
                                             <th rowSpan={2} className="border border-black font-black p-1 w-10">GPA</th>
@@ -2105,14 +2105,14 @@ export default function ResultsPage() {
                                                     <React.Fragment key={`${s.name}-headers`}>
                                                         {!isEng && (
                                                             <>
-                                                                <th className="border border-black font-bold p-0.5 text-[10px]">লি:</th>
-                                                                <th className="border border-black font-bold p-0.5 text-[10px]">M</th>
-                                                                {s.practical && <th className="border border-black font-bold p-0.5 text-[10px]">ব্যাব:</th>}
+                                                                <th className="border border-black font-bold p-0.5 text-[8px]">লি:</th>
+                                                                <th className="border border-black font-bold p-0.5 text-[8px]">M</th>
+                                                                {s.practical && <th className="border border-black font-bold p-0.5 text-[8px]">ব্যাব:</th>}
                                                             </>
                                                         )}
-                                                        <th className="border border-black font-black bg-blue-100 p-0.5 text-[10px]">মোট</th>
-                                                        <th className="border border-black font-bold p-0.5 text-[10px]">গ্রেড</th>
-                                                        <th className="border border-black font-bold p-0.5 text-[10px]">পয়েন্ট</th>
+                                                        <th className="border border-black font-black bg-blue-100 p-0.5 text-[8px]">মোট</th>
+                                                        <th className="border border-black font-bold p-0.5 text-[8px]">গ্রেড</th>
+                                                        <th className="border border-black font-bold p-0.5 text-[8px]">পয়েন্ট</th>
                                                     </React.Fragment>
                                                 )
                                             })}
@@ -2122,7 +2122,7 @@ export default function ResultsPage() {
                                         {results.map((res: StudentProcessedResult) => (
                                             <tr key={res.student.id} className="h-8 border border-black hover:bg-slate-50">
                                                 <td className="border border-black text-center font-black">{toBengaliNumber(res.student.roll)}</td>
-                                                <td className="border border-black font-bold px-2 whitespace-nowrap overflow-hidden text-ellipsis">{res.student.studentNameBn}</td>
+                                                <td className="border border-black font-bold px-2">{res.student.studentNameBn}</td>
                                                 {subjects.map(s => {
                                                     const sr = res.subjectResults.get(s.name);
                                                     const isEng = s.name.includes('ইংরেজি');
@@ -2164,10 +2164,10 @@ export default function ResultsPage() {
                 <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border border-[6px] border-double border-black/30">
                     <style jsx global>{`
                         @media print {
-                            @page { size: A4 landscape; margin: 0.4in !important; }
+                            @page { size: A4 landscape; margin: 5mm !important; }
                             .printable-area { width: 100% !important; padding: 0 !important; }
-                            table { border-collapse: collapse !important; border: 2.5px solid black !important; width: 100% !important; }
-                            th, td { border: 1.5px solid black !important; padding: 4px !important; }
+                            table { border-collapse: collapse !important; border: 1px solid black !important; width: 100% !important; }
+                            th, td { border: 1px solid black !important; padding: 1px !important; font-size: 8px !important; }
                         }
                     `}</style>
                     <header className="text-center border-b-2 border-black pb-3 mb-6">
@@ -2177,7 +2177,7 @@ export default function ResultsPage() {
                         <div className="mt-2 inline-block border-2 border-black px-6 py-0.5 rounded-full font-black text-sm uppercase">{specialPrintData.month} মাসের বিশেষ পরীক্ষার ফলাফল শিট - {toBengaliNumber(specialPrintData.year)}</div>
                     </header>
 
-                    <table className="w-full text-[10px] border-collapse border-2 border-black">
+                    <table className="w-full border-collapse border-2 border-black">
                         <thead>
                             <tr className="bg-slate-100">
                                 <th rowSpan={2} className="border-2 border-black font-black p-1 w-10 text-center">রোল</th>
@@ -2203,7 +2203,7 @@ export default function ResultsPage() {
                                 return (
                                     <tr key={student.id} className="h-8 border-b border-black">
                                         <td className="border-2 border-black text-center font-black">{toBengaliNumber(student.roll)}</td>
-                                        <td className="border-2 border-black font-bold px-2 whitespace-nowrap">{student.studentNameBn}</td>
+                                        <td className="border-2 border-black font-bold px-2">{student.studentNameBn}</td>
                                         {specialPrintData.availableSubjects.map((sub: any) => (
                                             <React.Fragment key={`${student.id}-${sub.name}`}>
                                                 {['বিশেষ পরীক্ষা-১', 'বিশেষ পরীক্ষা-২', 'বিশেষ পরীক্ষা-৩'].map((type) => {
