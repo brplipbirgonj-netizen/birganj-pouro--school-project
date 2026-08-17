@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
+import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl, addStudent, updateStudent } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult, getGradePoint } from '@/lib/results-calculation';
@@ -1309,6 +1309,14 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsPromoting(false);
     };
 
+    const updateProjectedRoll = (studentId: string, newRoll: string) => {
+        const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
+        const rollNum = parseInt(bnToEn(newRoll).trim(), 10);
+        setProjectedPromotions(prev => prev.map(p => 
+            p.id === studentId ? { ...p, projectedRoll: isNaN(rollNum) ? 0 : rollNum } : p
+        ));
+    };
+
     const handleConfirmPromotion = async () => {
         if (!db || isPromoting) return;
         setIsPromoting(true);
@@ -1326,6 +1334,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 
                 const studentData = {
                     ...s,
+                    roll: item.projectedRoll,
                     academicYear: targetYear,
                     className: targetClass,
                     updatedAt: serverTimestamp(),
@@ -1475,7 +1484,14 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     {item.resData.isPass ? 'কৃতকার্য' : 'বিশেষ পাশ'}
                                                 </Badge>
                                             </span>
-                                            <span className="font-black text-xl text-primary">{toBengaliNumber(i + 1)}</span>
+                                            <div className="flex justify-center">
+                                                <Input 
+                                                    type="number" 
+                                                    value={item.projectedRoll} 
+                                                    onChange={(e) => updateProjectedRoll(item.id, e.target.value)}
+                                                    className="w-20 h-9 text-center font-black border-2 border-primary/20 text-primary bg-white shadow-sm"
+                                                />
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -2108,7 +2124,7 @@ export default function ResultsPage() {
             )}
 
             {specialPrintData && (
-                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border">
+                <div className="hidden print:block printable-area bg-white text-black p-4 font-kalpurush w-full box-border border-[6px] border-double border-black/30">
                     <style jsx global>{`
                         @media print {
                             @page { size: A4 landscape; margin: 0.4in !important; }
@@ -2182,3 +2198,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
