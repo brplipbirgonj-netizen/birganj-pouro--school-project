@@ -181,7 +181,7 @@ function StudentListContent() {
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
 
   const classStats = useMemo(() => {
-    const relCounts: Record<string, number> = { all: 0, islam: 0, hinduism: 0, other: 0 };
+    const relCounts: Record<string, number> = { all: 0, islam: 0, hinduism: 0, christianity: 0, other: 0 };
     const genCounts: Record<string, number> = { all: 0, male: 0, female: 0 };
     const grpCounts: Record<string, number> = { all: 0, science: 0, arts: 0, commerce: 0 };
     
@@ -192,9 +192,10 @@ function StudentListContent() {
     grpCounts.all = studentsInClass.length;
 
     studentsInClass.forEach(s => {
-      const r = (s.religion || '').toLowerCase();
-      if (r === 'islam' || r === 'ইসলাম') relCounts.islam++;
-      else if (r === 'hinduism' || r === 'হিন্দু') relCounts.hinduism++;
+      const r = (s.religion || '').toLowerCase().trim();
+      if (r.includes('islam') || r.includes('ইসলাম')) relCounts.islam++;
+      else if (r.includes('hindu') || r.includes('হিন্দু')) relCounts.hinduism++;
+      else if (r.includes('christ') || r.includes('খ্রিস্টান') || r.includes('খ্রিষ্টান') || r.includes('খিষ্টান')) relCounts.christianity++;
       else relCounts.other++;
 
       if (isMale(s.gender)) genCounts.male++;
@@ -226,9 +227,17 @@ function StudentListContent() {
     if (filterGender !== 'all') {
       filtered = filtered.filter(s => filterGender === 'male' ? isMale(s.gender) : isFemale(s.gender));
     }
+    
     if (filterReligion !== 'all') {
-      filtered = filtered.filter(s => (s.religion || '').toLowerCase().includes(filterReligion));
+      filtered = filtered.filter(s => {
+        const r = (s.religion || '').toLowerCase().trim();
+        if (filterReligion === 'islam') return r.includes('islam') || r.includes('ইসলাম');
+        if (filterReligion === 'hindu') return r.includes('hindu') || r.includes('হিন্দু');
+        if (filterReligion === 'christian') return r.includes('christ') || r.includes('খ্রিস্টান') || r.includes('খ্রিষ্টান') || r.includes('খিষ্টান');
+        return !r.includes('islam') && !r.includes('ইসলাম') && !r.includes('hindu') && !r.includes('হিন্দু') && !r.includes('christ') && !r.includes('খ্রিস্টান') && !r.includes('খ্রিষ্টান') && !r.includes('খিষ্টান');
+      });
     }
+
     if (filterGroup !== 'all') {
         filtered = filtered.filter(s => (s.group || '').toLowerCase().includes(filterGroup));
     }
@@ -410,13 +419,13 @@ function StudentListContent() {
                 motherNid: String(row['Mother NID'] || row['মাতার এনআইডি'] || ''),
                 birthRegNo: String(row['Birth Reg No'] || row['জন্ম নিবন্ধন'] || ''),
                 guardianMobile: String(row['Guardian Mobile'] || row['মোবাইল'] || ''),
-                gender: String(row['Gender'] || row['লিঙ্গ'] || 'male').toLowerCase(),
-                religion: String(row['Religion'] || row['ধর্ম'] || 'islam').toLowerCase(),
-                group: String(row['Group'] || row['গ্রুপ'] || 'general').toLowerCase(),
-                optionalSubject: String(row['Optional Subject'] || row['ঐচ্ছিক বিষয়'] || ''),
-                presentVillage: String(row['Village'] || row['গ্রাম'] || ''),
-                presentUnion: String(row['Union'] || row['ইউনিয়ন'] || ''),
-                presentPostOffice: String(row['Post Office'] || row['ডাকঘর'] || ''),
+                gender: String(row['Gender'] || row['লিঙ্গ'] || 'male').trim().toLowerCase(),
+                religion: String(row['Religion'] || row['ধর্ম'] || 'islam').trim().toLowerCase(),
+                group: String(row['Group'] || row['গ্রুপ'] || 'general').trim().toLowerCase(),
+                optionalSubject: String(row['Optional Subject'] || row['ঐচ্ছিক বিষয়'] || '').trim(),
+                presentVillage: String(row['Village'] || row['গ্রাম'] || '').trim(),
+                presentUnion: String(row['Union'] || row['ইউনিয়ন'] || '').trim(),
+                presentPostOffice: String(row['Post Office'] || row['ডাকঘর'] || '').trim(),
             };
 
             const dobVal = row['Date of Birth (DD-MM-YYYY)'] || row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
@@ -427,15 +436,14 @@ function StudentListContent() {
                     dobDate = dobVal;
                 } else if (typeof dobVal === 'string' || typeof dobVal === 'number') {
                     const dobStr = String(dobVal).trim();
-                    // Split using separators to ensure Day-Month-Year order
                     const parts = dobStr.split(/[-/.]/);
                     if (parts.length === 3) {
                         let d, m, y;
-                        if (parts[0].length === 4) { // YYYY-MM-DD format detection
+                        if (parts[0].length === 4) { 
                             y = parseInt(parts[0], 10);
                             m = parseInt(parts[1], 10) - 1;
                             d = parseInt(parts[2], 10);
-                        } else { // Assume DD-MM-YYYY or DD/MM/YYYY
+                        } else { 
                             d = parseInt(parts[0], 10);
                             m = parseInt(parts[1], 10) - 1;
                             y = parseInt(parts[2], 10);
@@ -443,14 +451,12 @@ function StudentListContent() {
                         }
                         
                         if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
-                            // Check for reasonable ranges to confirm correct swap prevention
                             if (m >= 0 && m <= 11 && d >= 1 && d <= 31) {
                                 dobDate = new Date(y, m, d);
                             }
                         }
                     }
                     
-                    // Fallback to standard parser if split failed
                     if (!dobDate || isNaN(dobDate.getTime())) {
                         const fallback = new Date(dobStr);
                         if (!isNaN(fallback.getTime())) dobDate = fallback;
@@ -458,7 +464,7 @@ function StudentListContent() {
                 }
                 
                 if (dobDate && !isNaN(dobDate.getTime())) {
-                    dobDate.setHours(12, 0, 0, 0); // Avoid timezone shift
+                    dobDate.setHours(12, 0, 0, 0); 
                     studentData.dob = dobDate;
                 }
             }
@@ -582,6 +588,7 @@ function StudentListContent() {
                                 <option value="all">সকল ধর্ম ({toBengaliNumber(classStats.religion.all)})</option>
                                 <option value="islam">ইসলাম ({toBengaliNumber(classStats.religion.islam)})</option>
                                 <option value="hindu">হিন্দু ({toBengaliNumber(classStats.religion.hinduism)})</option>
+                                <option value="christian">খ্রিস্টান ({toBengaliNumber(classStats.religion.christianity)})</option>
                                 <option value="other">অন্যান্য ({toBengaliNumber(classStats.religion.other)})</option>
                             </select>
                             <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="h-9 px-3 rounded-lg border-2 bg-white text-xs font-bold text-emerald-700 outline-none">
