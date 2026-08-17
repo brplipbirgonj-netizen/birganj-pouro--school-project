@@ -367,11 +367,18 @@ export function Header() {
               <div className="text-xl sm:text-2xl md:text-[40px] font-black whitespace-nowrap tracking-tight md:[text-shadow:1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-tight">
                 {isSchoolInfoLoading ? <Skeleton className="h-8 w-40 md:h-12 md:w-80" /> : schoolInfo.name}
               </div>
-              {!isOnline && (
-                <Badge className="bg-rose-500 text-white font-black text-[8px] md:text-[10px] h-4 mt-0.5 animate-pulse gap-1">
-                  <WifiOff className="h-2 w-2" /> অফলাইন মোড (লোকাল সেভ)
-                </Badge>
-              )}
+              <div className="flex items-center gap-2 mt-0.5">
+                {isClient && (
+                  <Badge variant="outline" className="bg-white/20 text-white border-white/40 font-black text-[10px] md:text-xs h-5 px-3 backdrop-blur-sm shadow-sm">
+                    শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}
+                  </Badge>
+                )}
+                {!isOnline && (
+                  <Badge className="bg-rose-500 text-white font-black text-[8px] md:text-[10px] h-4 animate-pulse gap-1">
+                    <WifiOff className="h-2 w-2" /> অফলাইন মোড (লোকাল সেভ)
+                  </Badge>
+                )}
+              </div>
             </div>
         </Link>
         
@@ -449,7 +456,7 @@ export function Header() {
                                       key={s.id} 
                                       className="group flex items-center justify-between p-3 border-2 border-slate-100 rounded-2xl hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all active:scale-[0.98]" 
                                       onClick={() => handleStudentClick(s)}
-                                  >
+                                  ) : (
                                       <div className="flex items-center gap-3">
                                           <Avatar className="h-11 w-11 border-2 border-white shadow-sm">
                                               <AvatarImage src={sanitizePhotoUrl(s.photoUrl, s.gender) || getStudentPlaceholderImage(s.gender)} />
