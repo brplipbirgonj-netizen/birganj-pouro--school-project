@@ -141,7 +141,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         const filteredStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (!showGroupSelector || !group || s.group === group)).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
         setStudentsForClass(filteredStudents);
         
-        const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, group).catch(() => undefined);
+        const effectiveGroup = parseInt(className) < 9 ? undefined : group;
+        const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, effectiveGroup).catch(() => undefined);
         const initialMarks = new Map<string, Marks>();
         if (existingResults) {
             setFullMarks(existingResults.fullMarks);
@@ -181,18 +182,19 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         }
     };
 
-    const handleSaveResults = () => {
+    const handleSaveResults = async () => {
         if (!db || !user) return;
         if (!isSubjectPermitted(className, subject)) { toast({ variant: 'destructive', title: 'পারমিশন নেই' }); return; }
         if (studentsForClass.length === 0) { toast({ variant: 'destructive', title: 'কোনো শিক্ষার্থী নেই' }); return; }
         
         const resultsData: StudentResult[] = Array.from(marks.entries()).map(([studentId, marks]) => ({ studentId, ...marks }));
+        const effectiveGroup = parseInt(className) < 9 ? undefined : group;
         
-        saveClassResults(db, { 
+        await saveClassResults(db, { 
             academicYear: selectedYear, 
             examName, 
             className, 
-            group: group || undefined, 
+            group: effectiveGroup || undefined, 
             subject, 
             fullMarks: fullMarks, 
             results: resultsData 
@@ -364,7 +366,8 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
         }
         setIsLoading(true);
         try {
-            const data = await getResultsForClass(db, selectedYear, examName, className, subject, group).catch(() => undefined);
+            const effectiveGroup = parseInt(className) < 9 ? undefined : group;
+            const data = await getResultsForClass(db, selectedYear, examName, className, subject, effectiveGroup).catch(() => undefined);
             if (!data) {
                 toast({ title: 'কোনো ফলাফল পাওয়া যায়নি' });
                 setResults(null);
@@ -405,7 +408,7 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
     const reportStudents = useMemo(() => {
         if (!results) return [];
         return allStudents
-            .filter(s => s.academicYear === selectedYear && s.className === className && (!group || s.group === group))
+            .filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || !group || s.group === group))
             .sort((a, b) => a.roll - b.roll)
             .map(student => {
                 const marks = results.results.find(r => r.studentId === student.id);
@@ -541,13 +544,18 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
     const handleViewResults = async () => {
         if (!examName || !className || !db || !user) { toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' }); return; }
         setIsLoading(true);
-        const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim())).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
-        if (students.length === 0) { toast({ title: 'কোনো শিক্ষার্থী নেই' }); setProcessedResults([]); setIsLoading(false); return; }
-        const allResults = await getAllResults(db, selectedYear, examName).catch(() => []);
-        const classRes = allResults.filter(r => r.className === className);
-        setClassResults(classRes);
-        const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
-        setProcessedResults(processStudentResults(students, classRes, subs));
+        try {
+            const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim())).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+            if (students.length === 0) { toast({ title: 'কোনো শিক্ষার্থী নেই' }); setProcessedResults([]); setIsLoading(false); return; }
+            
+            const allResults = await getAllResults(db, selectedYear, examName).catch(() => []);
+            const classRes = allResults.filter(r => r.className === className);
+            setClassResults(classRes);
+            const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
+            setProcessedResults(processStudentResults(students, classRes, subs));
+        } catch (e) {
+            console.error(e);
+        }
         setIsLoading(false);
     };
 
@@ -659,7 +667,6 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 const subjects = getSubjects(className).filter(s => s.isExamSubject !== false);
                 
                 const subjectsToSave: Record<string, ClassResult> = {};
-                
                 const allExisting = await getAllResults(db, selectedYear, examName);
                 const classExisting = allExisting.filter(r => r.className === className);
 
@@ -670,8 +677,6 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
 
                     const rawGroup = (student.group || 'none').toLowerCase().trim();
                     let studentGroup = groupMap[rawGroup] || rawGroup;
-                    
-                    // Fix: For classes below 9, group must be forced to 'none' to match Mark Input logic
                     if (parseInt(className) < 9) studentGroup = 'none';
 
                     subjects.forEach(sub => {
@@ -708,7 +713,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                     ((groupMap[(r.group || 'none').toLowerCase()] || (r.group || 'none').toLowerCase()) === studentGroup)
                                 );
                                 
-                                subjectsToSave[uniqueKey] = existing ? { ...existing } : { 
+                                subjectsToSave[uniqueKey] = existing ? JSON.parse(JSON.stringify(existing)) : { 
                                     academicYear: selectedYear, 
                                     examName, 
                                     className, 
@@ -1163,16 +1168,20 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
     const handleViewMerit = async () => {
         if (!examName || !className || !db || !user) return;
         setIsLoading(true);
-        const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim()));
-        const allRes = await getAllResults(db, selectedYear, examName).catch(() => []);
-        const classRes = allRes.filter(r => r.className === className);
-        const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
-        const results = processStudentResults(students, classRes, subs);
-        setProcessedResults(results.sort((a,b) => {
-            if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
-            if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
-            return a.student.roll - b.student.roll;
-        }));
+        try {
+            const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim()));
+            const allRes = await getAllResults(db, selectedYear, examName).catch(() => []);
+            const classRes = allRes.filter(r => r.className === className);
+            const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
+            const results = processStudentResults(students, classRes, subs);
+            setProcessedResults(results.sort((a,b) => {
+                if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
+                if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+                return a.student.roll - b.student.roll;
+            }));
+        } catch (e) {
+            console.error(e);
+        }
         setIsLoading(false);
     };
 
@@ -1646,22 +1655,24 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
         setIsLoading(false);
     };
 
-    const handleSaveSpecialMarks = () => {
+    const handleSaveSpecialMarks = async () => {
         if (!db || !selectedClass || !selectedSubject || !selectedExam || !selectedMonth) return;
         setIsLoading(true);
-        const resultsData = Array.from(specialMarks.entries()).map(([id, m]) => ({ studentId: id, marks: m }));
-        
-        saveSpecialResults(db, {
-            academicYear: selectedYear,
-            className: selectedClass,
-            subject: selectedSubject,
-            examType: selectedExam,
-            month: selectedMonth,
-            fullMarks: parseInt(specialFullMarks, 10) || 20,
-            results: resultsData
-        });
-        
-        toast({ title: 'বিশেষ পরীক্ষার নম্বর সংরক্ষিত হয়েছে' });
+        try {
+            const resultsData = Array.from(specialMarks.entries()).map(([id, m]) => ({ studentId: id, marks: m }));
+            await saveSpecialResults(db, {
+                academicYear: selectedYear,
+                className: selectedClass,
+                subject: selectedSubject,
+                examType: selectedExam,
+                month: selectedMonth,
+                fullMarks: parseInt(specialFullMarks, 10) || 20,
+                results: resultsData
+            });
+            toast({ title: 'বিশেষ পরীক্ষার নম্বর সংরক্ষিত হয়েছে' });
+        } catch (e) {
+            console.error(e);
+        }
         setIsLoading(false);
     };
 
@@ -1708,7 +1719,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-6 border-2 border-black/5 bg-white shadow-sm rounded-2xl">
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">মাস</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="মাস" /></SelectTrigger><SelectContent>{BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label className="font-bold text-xs text-primary">পরীক্ষা</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger><SelectContent>{specialExams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label className="font-bold text-xs text-primary">পরীক্ষা</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger><SelectContent>{specialExams.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">শ্রেণি</Label><Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger><SelectContent>{classes.map(c => <SelectItem key={c} value={c}>{classNamesMap[c]} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label className="font-bold text-xs text-primary">বিষয়</Label><Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={!selectedClass}><SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{getSubjects(selectedClass).filter(s => s.isExamSubject !== false).map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent></Select></div>
                         <Button onClick={handleLoadForInput} disabled={isLoading || !selectedMonth || !selectedExam || !selectedSubject} className="font-black h-11 shadow-md">লোড করুন</Button>
@@ -1956,7 +1967,24 @@ export default function ResultsPage() {
                     <header className="flex items-center gap-6 border-b-4 border-emerald-800 pb-4 mb-6">{schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}<div className="text-center flex-grow"><h1 className="text-3xl font-black text-emerald-950 leading-none mb-1">{schoolInfo.name}</h1><p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p><div className="mt-2 inline-block bg-emerald-50 px-6 py-0.5 rounded-full border-2 border-emerald-800"><h2 className="text-lg font-black uppercase">{printingReport.isBlank ? 'ফাঁকা নম্বর ফর্দ (Blank Mark Sheet)' : 'নম্বর ফর্দ (Mark Sheet)'} - {toBengaliNumber(selectedYear)}</h2></div></div></header>
                     <Table className="border-2 border-black">
                         <TableHeader className="bg-slate-100"><TableRow className="border-b-2 border-black"><TableHead className="w-16 text-center font-black border-r-2 border-black text-black">রোল</TableHead><TableHead className="font-black border-r-2 border-black text-black">শিক্ষার্থীর নাম</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">নৈবেত্তিক</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead><TableHead className={cn("w-20 text-center font-black text-black", !printingReport.isBlank && "border-r-2 border-black")}>{printingReport.isBlank ? 'মোট' : 'প্রাপ্ত'}</TableHead>{!printingReport.isBlank && <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">গ্রেড</TableHead>}{!printingReport.isBlank && <TableHead className="w-20 text-center font-black text-black">পয়েন্ট</TableHead>}</TableRow></TableHeader>
-                        <TableBody>{printingReport.studentData.map((item: any) => (<TableRow key={item.student.id} className={cn("border-b border-slate-400", printingReport.isBlank ? "h-12" : "h-7", !item.isPass && "bg-rose-50/50")}><TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell><TableCell className="font-bold border-r-2 border-black">{item.student.studentNameBn}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell><TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell><TableCell className="text-center font-black border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.obtainedMarks)}</TableCell>{!printingReport.isBlank && <TableCell className="text-center font-black border-r-2 border-black">{item.grade}</TableCell>} {!printingReport.isBlank && <TableCell className="text-center font-black">{toBengaliNumber(item.point.toFixed(2))}</TableCell>}</TableRow>))}</TableBody>
+                        <TableBody>
+                          {printingReport.studentData.map((item: any) => (
+                            <TableRow key={item.student.id} className={cn("border-b border-slate-400", printingReport.isBlank ? "h-12" : "h-7", !item.isPass && "bg-rose-50/50")}>
+                                <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell>
+                                <TableCell className="font-bold border-r-2 border-black">{item.student.studentNameBn}</TableCell>
+                                <TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell>
+                                <TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
+                                <TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
+                                <TableCell className="text-center font-black border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.obtainedMarks)}</TableCell>
+                                {!printingReport.isBlank && (
+                                    <>
+                                        <TableCell className="text-center font-black border-r-2 border-black">{item.grade}</TableCell>
+                                        <TableCell className="text-center font-black">{toBengaliNumber(item.point.toFixed(2))}</TableCell>
+                                    </>
+                                )}
+                            </TableRow>
+                          ))}
+                        </TableBody>
                     </Table>
                     <footer className="mt-20 flex justify-between px-10 no-screen"><div className="text-center w-48 border-t-2 border-black pt-1 font-black">শ্রেণি শিক্ষকের স্বাক্ষর</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div></footer>
                 </div>
@@ -2149,3 +2177,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
