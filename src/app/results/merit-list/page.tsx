@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
@@ -90,6 +91,11 @@ function MeritListPrintContent() {
                 
                 const sortedResults = finalResults.sort((a, b) => {
                     if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
+                    // Priority logic for failed students: fewer failed subjects come first
+                    if (!a.isPass && !b.isPass) {
+                        if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
+                    }
+                    // Secondary sorting by total marks
                     if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
                     return a.student.roll - b.student.roll;
                 });
@@ -299,7 +305,7 @@ function MeritListPrintContent() {
                                                             {toBengaliNumber(res.gpa.toFixed(2))}
                                                         </td>
                                                         <td className={cn("text-center font-black border-r border-black", !res.isPass && "text-rose-600")}>
-                                                            {res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}
+                                                            {res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}
                                                         </td>
                                                         <td className={cn(
                                                             "text-center font-black text-[11px]",
