@@ -27,7 +27,8 @@ import {
   ListTodo,
   Bell,
   Wifi,
-  WifiOff
+  WifiOff,
+  ArrowLeft
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -258,6 +259,14 @@ export function Header() {
         <div className="flex items-center gap-2">
           {user && (
             <>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100"
+                onClick={() => router.back()}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -95,7 +94,15 @@ export default function PublicResultPortalPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-white font-kalpurush flex flex-col items-center p-4">
-      <header className="w-full max-w-4xl flex flex-col items-center gap-4 py-8 text-center">
+      <header className="w-full max-w-4xl flex flex-col items-center gap-4 py-8 text-center relative">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="absolute left-4 top-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
         {schoolInfo.logoUrl && (
           <Image src={schoolInfo.logoUrl} alt="Logo" width={100} height={100} className="rounded-full bg-white p-1 shadow-xl" />
         )}

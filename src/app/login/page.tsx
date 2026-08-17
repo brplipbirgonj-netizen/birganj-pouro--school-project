@@ -14,7 +14,7 @@ import { signIn, signUp } from '@/lib/auth';
 import type { UserRole } from '@/lib/user';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import { Loader2, Search, BookOpen, Printer, Star, User, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Search, BookOpen, Printer, Star, User, Info, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
@@ -227,7 +227,18 @@ export default function LoginPage() {
     );
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-2 sm:p-4 font-kalpurush text-black overflow-hidden">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-indigo-50 p-2 sm:p-4 font-kalpurush text-black overflow-hidden relative">
+            <div className="absolute top-4 left-4 z-50">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full bg-white/20 text-primary hover:bg-white/40 shadow-sm border border-primary/10"
+                    onClick={() => router.back()}
+                >
+                    <ArrowLeft className="h-5 w-5" />
+                </Button>
+            </div>
+
             <div className="mb-2 flex flex-col items-center gap-0 text-center scale-90 sm:scale-100">
                 {isSchoolInfoLoading ? (
                     <>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -225,7 +224,15 @@ export default function AdmissionPortalPage() {
 
   return (
     <div className="min-h-screen bg-indigo-50 font-kalpurush pb-20 no-print">
-      <header className="bg-primary p-6 text-white text-center shadow-lg border-b-4 border-black/10">
+      <header className="bg-primary p-6 text-white text-center shadow-lg border-b-4 border-black/10 relative">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute left-4 top-4 rounded-full bg-white/20 text-white hover:bg-white/30"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <div className="max-w-4xl mx-auto flex flex-col items-center gap-4">
               {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="rounded-full bg-white p-1" />}
               <h1 className="text-2xl sm:text-3xl font-black">{schoolInfo.name}</h1>
