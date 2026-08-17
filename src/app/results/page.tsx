@@ -1337,10 +1337,10 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const newAdmissions = existingTargetStudents.filter(s => !s._promoStatus);
             const alreadyPromoted = existingTargetStudents.filter(s => !!s._promoStatus);
             
-            // 3. New rolls start after already promoted ones
-            const startingRoll = alreadyPromoted.length + 1;
             const studentsToPromote = projectedPromotions;
             
+            const normalizeStr = (s: any) => String(s || '').trim().toLowerCase();
+
             for (let i = 0; i < studentsToPromote.length; i++) {
                 const item = studentsToPromote[i];
                 const res = item.resData;
@@ -1374,9 +1374,9 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
                 // Check if this student (by invariant identity) already exists in target
                 const existingRec = existingTargetStudents.find(ts => 
-                    ts.studentNameBn === s.studentNameBn && 
-                    ts.fatherNameBn === s.fatherNameBn && 
-                    ts.motherNameBn === s.motherNameBn
+                    normalizeStr(ts.studentNameBn) === normalizeStr(s.studentNameBn) && 
+                    normalizeStr(ts.fatherNameBn) === normalizeStr(s.fatherNameBn) && 
+                    normalizeStr(ts.motherNameBn) === normalizeStr(s.motherNameBn)
                 );
 
                 if (existingRec) {
@@ -2237,4 +2237,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
