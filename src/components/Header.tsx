@@ -295,7 +295,7 @@ export function Header() {
                           </SelectTrigger>
                           <SelectContent>
                               {availableYears.map(year => (
-                                  <SelectItem key={year} value={year} className="font-bold">{Number(year).toLocaleString('bn-BD')}</SelectItem>
+                                  <SelectItem key={year} value={year} className="font-bold">{toBengaliNumber(year)}</SelectItem>
                               ))}
                           </SelectContent>
                       </Select>

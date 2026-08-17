@@ -19,6 +19,12 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
+const toBengaliNumber = (str: string | number | undefined | null) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
+
 const classNamesMap: Record<string, string> = {
   '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
 };
@@ -133,7 +139,7 @@ export default function PublicResultPortalPage() {
                   <Select value={academicYear} onValueChange={setAcademicYear}>
                     <SelectTrigger className="h-12 bg-slate-50"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {availableYears.map(y => <SelectItem key={y} value={y}>{Number(y).toLocaleString('bn-BD')}</SelectItem>)}
+                      {availableYears.map(y => <SelectItem key={y} value={y}>{toBengaliNumber(y)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

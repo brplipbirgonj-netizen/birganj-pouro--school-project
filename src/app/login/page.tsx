@@ -38,7 +38,7 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
 };
 
 const classNamesMap: Record<string, string> = {
-    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম'
 };
 
 function AuthFormFields({ email, password, setEmail, setPassword }: {
@@ -342,7 +342,7 @@ export default function LoginPage() {
                                         <Label className="font-bold text-xs">শিক্ষাবর্ষ</Label>
                                         <Select value={searchYear} onValueChange={setSearchYear}>
                                             <SelectTrigger className="bg-slate-50"><SelectValue /></SelectTrigger>
-                                            <SelectContent>{availableYears.map(y => <SelectItem key={y} value={y}>{Number(y).toLocaleString('bn-BD')}</SelectItem>)}</SelectContent>
+                                            <SelectContent>{availableYears.map(y => <SelectItem key={y} value={y}>{toBengaliNumber(y)}</SelectItem>)}</SelectContent>
                                         </Select>
                                     </div>
                                     <div className="space-y-2">

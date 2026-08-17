@@ -33,6 +33,12 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
+const toBengaliNumber = (str: string | number | undefined | null) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
+
 const inputFocusClasses = "transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50";
 const boards = ['Dhaka', 'Rajshahi', 'Cumilla', 'Jessore', 'Chattogram', 'Barishal', 'Sylhet', 'Dinajpur', 'Mymensingh', 'Madrasah'];
 
@@ -278,6 +284,7 @@ export default function EditStudentPage() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
+                      <AlertDialogHeader>
                       <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
                       <AlertDialogDescription>
                         এই কাজটি ফিরিয়ে আনা যাবে না। এটি তালিকা থেকে স্থায়ীভাবে শিক্ষার্থীকে মুছে ফেলবে।
@@ -335,7 +342,7 @@ export default function EditStudentPage() {
                               </SelectTrigger>
                               <SelectContent>
                                   {availableYears.map(year => (
-                                      <SelectItem key={year} value={String(year)}>{Number().toLocaleString('bn-BD')}</SelectItem>
+                                      <SelectItem key={year} value={String(year)}>{toBengaliNumber(year)}</SelectItem>
                                   ))}
                               </SelectContent>
                           </Select>
@@ -546,7 +553,7 @@ export default function EditStudentPage() {
 
               {/* Step 4: Contact & Address */}
               {currentStep === 4 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="space-y-8 animate-in fade-in duration-500">
                   <div className="space-y-6">
                     <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2 text-primary">
                         <Home className="h-5 w-5" /> ৪. যোগাযোগ ও ঠিকানা
