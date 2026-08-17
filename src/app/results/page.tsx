@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -287,7 +288,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                              <div className="flex gap-2">
                                 <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 text-[10px] bg-white"><Download className="mr-2 h-3.5 w-3.5" /> নমুনা</Button>
                                 <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 text-[10px] bg-white"><FileUp className="mr-2 h-3.5 w-3.5" /> আপলোড</Button>
-                                <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx, .xls" onChange={handleFileChange} />
+                                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />
                             </div>
                          )}
                     </CardHeader>
@@ -1283,15 +1284,9 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         setIsPromoting(true);
         try {
-            // Fetch only real promoted students to avoid counting new admissions as "prev rolls"
-            const targetSnap = await getDocs(query(
-                collection(db!, 'students'), 
-                where('academicYear', '==', String(targetYear)), 
-                where('className', '==', String(targetClass)),
-                where('_promoStatus', 'in', ['pass', 'fail'])
-            )).catch(() => ({ docs: [] } as any));
-            
-            const currentPromotedCount = targetSnap.docs.length;
+            // Calculate start roll based on source session merit hierarchy
+            // This ensures re-promotion always suggests the same roll
+            const startRoll = mode === 'pass' ? 1 : passedStudents.length + 1;
             
             const projected = studentsToPromote.map((res, index) => {
                 const s = res.student;
@@ -1300,7 +1295,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     id: s.id,
                     generatedId: s.generatedId,
                     currentRoll: s.roll,
-                    projectedRoll: currentPromotedCount + index + 1,
+                    projectedRoll: startRoll + index,
                     resData: res
                 };
             });
@@ -1338,7 +1333,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const alreadyPromoted = existingTargetStudents.filter(s => !!s._promoStatus);
             
             const studentsToPromote = projectedPromotions;
-            
             const normalizeStr = (s: any) => String(s || '').trim().toLowerCase();
 
             for (let i = 0; i < studentsToPromote.length; i++) {
@@ -1372,7 +1366,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     if ((studentData as any)[key] === undefined) delete (studentData as any)[key];
                 });
 
-                // Check if this student (by invariant identity) already exists in target
+                // Dedup check
                 const existingRec = existingTargetStudents.find(ts => 
                     normalizeStr(ts.studentNameBn) === normalizeStr(s.studentNameBn) && 
                     normalizeStr(ts.fatherNameBn) === normalizeStr(s.fatherNameBn) && 
@@ -1386,8 +1380,12 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 }
             }
 
-            // 4. PUSH BACK Logic: Shift rolls of New Admissions to be after promoted ones
-            const totalPromotedNowCount = alreadyPromoted.length + studentsToPromote.length;
+            // 4. PUSH BACK Logic: Shift rolls of New Admissions to follow promoted students
+            const newlyPromotedSourceIds = new Set(studentsToPromote.map(p => p.id));
+            // Calculate final promoted count by union of previously promoted and newly moving
+            const distinctPromotedCount = alreadyPromoted.filter(ap => !newlyPromotedSourceIds.has(ap.id)).length + studentsToPromote.length;
+            const totalPromotedNowCount = distinctPromotedCount;
+
             newAdmissions.sort((a,b) => a.roll - b.roll).forEach((nas, idx) => {
                 const newRoll = totalPromotedNowCount + idx + 1;
                 const yearSuffix = String(targetYear).slice(-2);
@@ -1458,7 +1456,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <Card className="border-2 shadow-xl rounded-3xl overflow-hidden">
                     <CardHeader className="bg-rose-50 border-b-2 border-rose-100 flex flex-row justify-between items-center p-6">
                         <div><CardTitle className="text-xl font-black text-rose-800">অকৃতকার্য শিক্ষার্থীদের তালিকা (বিশেষ পাশ)</CardTitle><CardDescription className="font-bold text-rose-600">কম ফেল এবং বেশি নম্বর অনুযায়ী এরা পাস করাদের পরে সিরিয়াল পাবে</CardDescription></div>
-                        <Button onClick={() => handleShowPreview('special')} disabled={selectedIds.size === 0} className="bg-rose-600 hover:bg-rose-700 font-black h-12 px-8 shadow-xl"><Plus className="mr-2 h-5 w-5" /> নির্বাচিতদের প্রমোশন দিন</Button>
+                        <Button onClick={() => handleShowPreview('special')} disabled={selectedIds.size === 0} className="bg-rose-600 hover:bg-rose-700 font-black h-12 px-8 shadow-xl"><Plus className="mr-2 h-5 v-5" /> নির্বাচিতদের প্রমোশন দিন</Button>
                     </CardHeader>
                     <CardContent className="p-0 max-h-[400px] overflow-auto">
                         <Table>
@@ -2237,3 +2235,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
