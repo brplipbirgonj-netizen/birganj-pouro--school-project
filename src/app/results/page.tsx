@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -654,7 +653,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
-                const workbook = XLSX.read(evt.target?.result, { type: 'binary' });
+                const workbook = XLSX.read(evt.target?.result, { type: 'binary', cellDates: true });
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) as any[];
                 
                 if (json.length === 0) {
@@ -1176,11 +1175,9 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
             const results = processStudentResults(students, classRes, subs);
             setProcessedResults(results.sort((a,b) => {
                 if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
-                // Priority logic for failed students: fewer failed subjects come first
                 if (!a.isPass && !b.isPass) {
                     if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
                 }
-                // Secondary sorting by total marks
                 if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
                 return a.student.roll - b.student.roll;
             }));
@@ -1286,19 +1283,24 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         setIsPromoting(true);
         try {
-            const targetSnap = await getDocs(query(collection(db!, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass))).catch(() => ({ docs: [] } as any));
-            const currentTargetStudents = targetSnap.docs.map(studentFromDoc);
+            // Fetch only real promoted students to avoid counting new admissions as "prev rolls"
+            const targetSnap = await getDocs(query(
+                collection(db!, 'students'), 
+                where('academicYear', '==', String(targetYear)), 
+                where('className', '==', String(targetClass)),
+                where('_promoStatus', 'in', ['pass', 'fail'])
+            )).catch(() => ({ docs: [] } as any));
+            
+            const currentPromotedCount = targetSnap.docs.length;
             
             const projected = studentsToPromote.map((res, index) => {
                 const s = res.student;
-                const existing = currentTargetStudents.find(ts => ts.generatedId === s.generatedId);
                 return {
                     name: s.studentNameBn,
                     id: s.id,
                     generatedId: s.generatedId,
                     currentRoll: s.roll,
-                    projectedRoll: currentTargetStudents.length + index + 1,
-                    isReplace: !!existing,
+                    projectedRoll: currentPromotedCount + index + 1,
                     resData: res
                 };
             });
@@ -1322,21 +1324,40 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsPromoting(true);
         try {
             const batch = writeBatch(db);
+            
+            // 1. Fetch all existing students in target class (Promoted + New Admissions)
+            const targetSnap = await getDocs(query(
+                collection(db, 'students'), 
+                where('academicYear', '==', String(targetYear)), 
+                where('className', '==', String(targetClass))
+            ));
+            const existingTargetStudents = targetSnap.docs.map(studentFromDoc);
+            
+            // 2. Identify New Admissions (those who don't have _promoStatus)
+            const newAdmissions = existingTargetStudents.filter(s => !s._promoStatus);
+            const alreadyPromoted = existingTargetStudents.filter(s => !!s._promoStatus);
+            
+            // 3. New rolls start after already promoted ones
+            const startingRoll = alreadyPromoted.length + 1;
             const studentsToPromote = projectedPromotions;
             
-            const targetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', targetYear), where('className', '==', targetClass))).catch(() => ({ docs: [] } as any));
-            const currentTargetStudents = targetSnap.docs.map(studentFromDoc);
-
-            for (const item of studentsToPromote) {
+            for (let i = 0; i < studentsToPromote.length; i++) {
+                const item = studentsToPromote[i];
                 const res = item.resData;
                 const s = res.student;
-                const existing = currentTargetStudents.find(ts => ts.generatedId === s.generatedId);
                 
+                // Regenerate Generated ID based on Target Year, Class, and Roll
+                const yearSuffix = String(targetYear).slice(-2);
+                const classCode = String(targetClass).padStart(2, '0');
+                const rollSerial = String(item.projectedRoll).padStart(4, '0');
+                const newGeneratedId = `${yearSuffix}${classCode}${rollSerial}`;
+
                 const studentData = {
                     ...s,
                     roll: item.projectedRoll,
-                    academicYear: targetYear,
-                    className: targetClass,
+                    generatedId: newGeneratedId,
+                    academicYear: String(targetYear),
+                    className: String(targetClass),
                     updatedAt: serverTimestamp(),
                     _promoStatus: res.isPass ? 'pass' : 'fail',
                     _promoRank: res.meritPosition || 999,
@@ -1346,25 +1367,43 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 delete (studentData as any).id;
                 delete (studentData as any).createdAt;
 
+                // Clean data
                 Object.keys(studentData).forEach(key => {
-                    if ((studentData as any)[key] === undefined) {
-                        delete (studentData as any)[key];
-                    }
+                    if ((studentData as any)[key] === undefined) delete (studentData as any)[key];
                 });
 
-                if (existing) {
-                    batch.update(doc(db, 'students', existing.id), studentData);
+                // Check if this student (by invariant identity) already exists in target
+                const existingRec = existingTargetStudents.find(ts => 
+                    ts.studentNameBn === s.studentNameBn && 
+                    ts.fatherNameBn === s.fatherNameBn && 
+                    ts.motherNameBn === s.motherNameBn
+                );
+
+                if (existingRec) {
+                    batch.update(doc(db, 'students', existingRec.id), studentData);
                 } else {
                     batch.set(doc(collection(db, 'students')), studentData);
                 }
             }
 
-            batch.commit().catch(async (err) => {
-                console.error("Promotion batch failed:", err);
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'students-batch', operation: 'write' }));
+            // 4. PUSH BACK Logic: Shift rolls of New Admissions to be after promoted ones
+            const totalPromotedNowCount = alreadyPromoted.length + studentsToPromote.length;
+            newAdmissions.sort((a,b) => a.roll - b.roll).forEach((nas, idx) => {
+                const newRoll = totalPromotedNowCount + idx + 1;
+                const yearSuffix = String(targetYear).slice(-2);
+                const classCode = String(targetClass).padStart(2, '0');
+                const rollSerial = String(newRoll).padStart(4, '0');
+                const newId = `${yearSuffix}${classCode}${rollSerial}`;
+
+                batch.update(doc(db, 'students', nas.id), {
+                    roll: newRoll,
+                    generatedId: newId,
+                    updatedAt: serverTimestamp()
+                });
             });
 
-            toast({ title: 'প্রমোশন প্রসেস শুরু হয়েছে', description: `${studentsToPromote.length} জন শিক্ষার্থীকে উন্নীত করা হচ্ছে।` });
+            await batch.commit();
+            toast({ title: 'প্রমোশন সফল', description: `${studentsToPromote.length} জন শিক্ষার্থীকে উন্নীত করা হয়েছে।` });
             setIsPreviewOpen(false);
             handleLoadSource();
         } catch (e) { 
@@ -1404,7 +1443,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <Card className="border-2 shadow-xl rounded-3xl overflow-hidden">
                     <CardHeader className="bg-emerald-50 border-b-2 border-emerald-100 flex flex-row justify-between items-center p-6">
                         <div><CardTitle className="text-xl font-black text-emerald-800">পাস করা শিক্ষার্থীদের তালিকা</CardTitle><CardDescription className="font-bold">মেধাক্রম অনুযায়ী অটোমেটিক রোল ১ থেকে এসাইন হবে</CardDescription></div>
-                        <Button onClick={() => handleShowPreview('pass')} className="bg-emerald-600 hover:bg-emerald-700 font-black h-12 px-10 shadow-xl"><CheckCircle2 className="mr-2 h-5 w-5" /> সকল পাসকৃতদের প্রমোশন দিন</Button>
+                        <Button onClick={() => handleShowPreview('pass')} className="bg-emerald-600 hover:bg-emerald-700 font-black h-12 px-10 shadow-xl"><CheckCircle2 className="mr-2 h-5 v-5" /> সকল পাসকৃতদের প্রমোশন দিন</Button>
                     </CardHeader>
                     <CardContent className="p-0 max-h-[400px] overflow-auto">
                         <Table>
@@ -1502,7 +1541,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <DialogFooter className="p-6 bg-white border-t flex flex-col sm:flex-row gap-4 items-center justify-between shrink-0">
                         <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
                             <AlertCircle className="h-4 w-4 text-amber-600" />
-                            {projectedPromotions.some(p => p.isReplace) ? "কিছু শিক্ষার্থীর তথ্য রিপ্লেস (Replace) হবে।" : "\"নিশ্চিত করুন\" বাটনে ক্লিক করলে ডাটাবেসে তথ্য আপডেট হবে।"}
+                            "নিশ্চিত করুন" বাটনে ক্লিক করলে ডাটাবেসে তথ্য আপডেট হবে।
                         </p>
                         <div className="flex gap-3 w-full sm:w-auto">
                             <Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="flex-1 font-bold h-12">বাতিল</Button>

@@ -95,7 +95,7 @@ export default function AddStudentPage() {
         }
     }, [selectedYear]);
 
-    // Auto-fill Roll Logic
+    // Auto-fill Roll Logic - Fixed to fetch Max Roll correctly for selected Year/Class
     useEffect(() => {
         if (db && student.className && student.academicYear && isClient) {
             const fetchNextRoll = async () => {
@@ -103,24 +103,24 @@ export default function AddStudentPage() {
                 try {
                     const q = query(
                         collection(db, "students"),
-                        where("academicYear", "==", student.academicYear),
-                        where("className", "==", student.className),
+                        where("academicYear", "==", String(student.academicYear)),
+                        where("className", "==", String(student.className)),
                         orderBy("roll", "desc"),
                         limit(1)
                     );
                     const snap = await getDocs(q);
                     if (!snap.empty) {
-                        const lastRoll = snap.docs[0].data().roll || 0;
+                        const lastRoll = Number(snap.docs[0].data().roll) || 0;
                         handleInputChange('roll', lastRoll + 1);
                     } else {
                         handleInputChange('roll', 1);
                     }
                 } catch (e: any) {
-                    // Fallback if index is not ready
+                    // Fallback to manual max calculation if index is not ready
                     const manualQuery = query(
                         collection(db, "students"),
-                        where("academicYear", "==", student.academicYear),
-                        where("className", "==", student.className)
+                        where("academicYear", "==", String(student.academicYear)),
+                        where("className", "==", String(student.className))
                     );
                     const manualSnap = await getDocs(manualQuery);
                     if (!manualSnap.empty) {
@@ -180,7 +180,6 @@ export default function AddStudentPage() {
     const isStepValid = () => {
         if (currentStep === 1) {
             const baseValid = !!(student.academicYear && student.className && student.roll);
-            // Validation for Class 7, 8, 9 Registration Numbers
             if (['7', '8', '9'].includes(student.className)) {
                 return baseValid && !!student.prevRegNo;
             }
@@ -322,16 +321,15 @@ export default function AddStudentPage() {
                           <div className="relative">
                             <Input 
                                 type="number" 
-                                disabled
                                 required 
                                 value={student.roll || ''} 
-                                className={cn(inputFocusClasses, "font-black text-lg bg-slate-50 cursor-not-allowed opacity-80")} 
+                                onChange={e => handleInputChange('roll', parseInt(e.target.value) || undefined)}
+                                className={cn(inputFocusClasses, "font-black text-lg bg-slate-50")} 
                             />
                             {isFetchingRoll && <Loader2 className="h-4 w-4 animate-spin absolute right-3 bottom-3 text-primary" />}
                           </div>
                       </div>
 
-                      {/* Conditional Registration Numbers for Class 7, 8, 9 */}
                       {['7', '8', '9'].includes(student.className) && (
                           <div className="space-y-2">
                               <Label className={cn("font-bold", !student.prevRegNo && "text-red-600")}>
