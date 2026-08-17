@@ -456,7 +456,7 @@ export function Header() {
                                       key={s.id} 
                                       className="group flex items-center justify-between p-3 border-2 border-slate-100 rounded-2xl hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all active:scale-[0.98]" 
                                       onClick={() => handleStudentClick(s)}
-                                  ) : (
+                                  >
                                       <div className="flex items-center gap-3">
                                           <Avatar className="h-11 w-11 border-2 border-white shadow-sm">
                                               <AvatarImage src={sanitizePhotoUrl(s.photoUrl, s.gender) || getStudentPlaceholderImage(s.gender)} />
