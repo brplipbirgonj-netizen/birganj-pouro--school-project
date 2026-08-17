@@ -10,7 +10,7 @@ import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPla
 import { 
     Eye, FilePen, Trash2, LayoutGrid, List, UserRound, Search, 
     GraduationCap, MapPin, Users, Phone, Info, ChevronRight, 
-    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase, FileUp, Download
+    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase, FileUp, Download, RefreshCw, XCircle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -180,6 +180,14 @@ function StudentListContent() {
 
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
 
+  const normalizeReligion = useCallback((r: string | undefined | null) => {
+    const str = (r || '').toLowerCase().trim();
+    if (str === 'islam' || str === 'ইসলাম') return 'islam';
+    if (str === 'hindu' || str === 'হিন্দু' || str === 'hinduism') return 'hindu';
+    if (str.includes('christ') || str.includes('খ্রিস্টান') || str.includes('খ্রিষ্টান') || str.includes('খিষ্টান')) return 'christian';
+    return 'other';
+  }, []);
+
   const classStats = useMemo(() => {
     const relCounts: Record<string, number> = { all: 0, islam: 0, hinduism: 0, christianity: 0, other: 0 };
     const genCounts: Record<string, number> = { all: 0, male: 0, female: 0 };
@@ -192,10 +200,10 @@ function StudentListContent() {
     grpCounts.all = studentsInClass.length;
 
     studentsInClass.forEach(s => {
-      const r = (s.religion || '').toLowerCase().trim();
-      if (r.includes('islam') || r.includes('ইসলাম')) relCounts.islam++;
-      else if (r.includes('hindu') || r.includes('হিন্দু')) relCounts.hinduism++;
-      else if (r.includes('christ') || r.includes('খ্রিস্টান') || r.includes('খ্রিষ্টান') || r.includes('খিষ্টান')) relCounts.christianity++;
+      const normRel = normalizeReligion(s.religion);
+      if (normRel === 'islam') relCounts.islam++;
+      else if (normRel === 'hindu') relCounts.hinduism++;
+      else if (normRel === 'christian') relCounts.christianity++;
       else relCounts.other++;
 
       if (isMale(s.gender)) genCounts.male++;
@@ -208,7 +216,7 @@ function StudentListContent() {
     });
 
     return { religion: relCounts, gender: genCounts, group: grpCounts };
-  }, [allStudents, selectedYear, activeTab]);
+  }, [allStudents, selectedYear, activeTab, normalizeReligion]);
 
   const filteredStudents = useMemo(() => {
     let filtered = allStudents.filter(s => s.academicYear === selectedYear);
@@ -229,13 +237,7 @@ function StudentListContent() {
     }
     
     if (filterReligion !== 'all') {
-      filtered = filtered.filter(s => {
-        const r = (s.religion || '').toLowerCase().trim();
-        if (filterReligion === 'islam') return r.includes('islam') || r.includes('ইসলাম');
-        if (filterReligion === 'hindu') return r.includes('hindu') || r.includes('হিন্দু');
-        if (filterReligion === 'christian') return r.includes('christ') || r.includes('খ্রিস্টান') || r.includes('খ্রিষ্টান') || r.includes('খিষ্টান');
-        return !r.includes('islam') && !r.includes('ইসলাম') && !r.includes('hindu') && !r.includes('হিন্দু') && !r.includes('christ') && !r.includes('খ্রিস্টান') && !r.includes('খ্রিষ্টান') && !r.includes('খিষ্টান');
-      });
+      filtered = filtered.filter(s => normalizeReligion(s.religion) === filterReligion);
     }
 
     if (filterGroup !== 'all') {
@@ -243,7 +245,7 @@ function StudentListContent() {
     }
 
     return filtered;
-  }, [allStudents, selectedYear, searchQuery, filterGender, filterReligion, filterGroup]);
+  }, [allStudents, selectedYear, searchQuery, filterGender, filterReligion, filterGroup, normalizeReligion]);
 
   const getStudentsByClass = useCallback((className: string) => {
     return filteredStudents.filter(student => student.className === className);
@@ -260,6 +262,14 @@ function StudentListContent() {
         setActiveTab(targetClass);
     }
   }, [targetClass]);
+
+  // Reset filters when switching classes or year
+  useEffect(() => {
+    setFilterGender('all');
+    setFilterReligion('all');
+    setFilterGroup('all');
+    setSearchQuery('');
+  }, [activeTab, selectedYear]);
 
   useEffect(() => {
     if (!db || !user) return;
@@ -648,9 +658,23 @@ function StudentListContent() {
                             {activeSection === 'list' && (
                                 <div className="animate-in fade-in duration-500">
                                     {getStudentsByClass(activeTab).length === 0 ? (
-                                        <div className="py-20 text-center text-muted-foreground border-4 border-dashed rounded-3xl opacity-40">
-                                            <Users className="h-16 w-16 mx-auto mb-3" />
+                                        <div className="py-20 text-center text-muted-foreground border-4 border-dashed rounded-3xl opacity-40 flex flex-col items-center">
+                                            <XCircle className="h-16 w-16 mx-auto mb-3 text-rose-300" />
                                             <p className="text-xl font-black">কোনো শিক্ষার্থী পাওয়া যায়নি</p>
+                                            {(filterGender !== 'all' || filterReligion !== 'all' || filterGroup !== 'all' || searchQuery) && (
+                                                <Button 
+                                                    variant="link" 
+                                                    className="mt-2 font-bold text-primary"
+                                                    onClick={() => {
+                                                        setFilterGender('all');
+                                                        setFilterReligion('all');
+                                                        setFilterGroup('all');
+                                                        setSearchQuery('');
+                                                    }}
+                                                >
+                                                    <RefreshCw className="h-4 w-4 mr-1.5" /> সকল ফিল্টার পরিষ্কার করুন
+                                                </Button>
+                                            )}
                                         </div>
                                     ) : viewMode === 'grid' ? (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-2">
