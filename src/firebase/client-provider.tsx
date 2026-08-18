@@ -27,8 +27,9 @@ if (typeof window !== 'undefined') {
     experimentalForceLongPolling: true,
   });
 
-  // Suppress connectivity warnings in console to avoid confusion when working offline
-  setLogLevel('error');
+  // Set log level to 'silent' to suppress SDK connectivity warnings and errors in console
+  // when working in offline mode or flaky network environments.
+  setLogLevel('silent');
 
   auth = getAuth(app);
 }
