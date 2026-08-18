@@ -69,6 +69,11 @@ service cloud.firestore {
       allow write: if isAuthed() && (hasPermission('manage:routines') || isAdmin());
     }
 
+    match /teacherAllocations/{id} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && (hasPermission('manage:routines') || isAdmin());
+    }
+
     match /proxyClasses/{id} {
       allow read: if true;
       allow write: if isAuthed() && (hasPermission('manage:proxy-classes') || isAdmin());
@@ -128,7 +133,7 @@ service cloud.firestore {
 
     match /messageLogs/{id} {
       allow read: if isAuthed();
-      allow create: if isAuthed() && (hasPermission('send:messaging') || isAdmin());
+      allow create: if isAuthed() && hasPermission('send:messaging') || isAdmin());
       allow update, delete: if isAuthed() && (hasPermission('manage:messaging') || isAdmin());
     }
 

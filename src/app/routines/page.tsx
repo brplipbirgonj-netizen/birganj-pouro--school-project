@@ -35,6 +35,7 @@ import { getStaff, Staff } from '@/lib/staff-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { collection, query, where, onSnapshot, writeBatch, doc, getDocs } from 'firebase/firestore';
 import { TeacherAllocationRecord, SubjectAllocation, saveTeacherAllocation, getTeacherAllocations } from '@/lib/teacher-allocation-data';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 
@@ -333,18 +334,9 @@ const useRoutineAnalysis = (routine: Record<string, Record<string, string[]>>) =
                         }
                     });
 
-                    subjectCountInDay.forEach((indices, subjectName) => {
-                        const normalizedSub = subjectNameNormalization[subjectName] || subjectName;
-                        if (indices.length > 1) {
-                           const isLanguage = normalizedSub.includes('বাংলা') || normalizedSub.includes('ইংরেজি');
-                           if (!isLanguage) {
-                                indices.forEach(idx => subjectRepetitionClashes.add(`${cls}-${day}-${idx}`));
-                           }
-                        }
-                    });
-
-                    const consecutivePairs = [[0, 1], [1, 2], [3, 4], [4, 5]];
-                    consecutivePairs.forEach(([p1, p2]) => {
+                    const pairStrings = ["0,1", "1,2", "3,4", "4,5"];
+                    pairStrings.forEach(pair => {
+                        const [p1, p2] = pair.split(',').map(Number);
                         const cell1 = dayRoutine[p1];
                         const cell2 = dayRoutine[p2];
                         if (!cell1 || !cell2) return;
@@ -684,7 +676,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                     </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 scrollbar-thin">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 scrollbar-none">
                     {boardData.map((col) => (
                         <div key={col.idx} className="flex flex-col gap-3 min-w-[200px]">
                             <div className="p-3 bg-slate-800 text-white rounded-lg font-black text-sm text-center shadow-md">
@@ -1448,107 +1440,105 @@ export default function RoutinesPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
-            <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
-                
-                {/* Sidebar Navigation - Sticky */}
-                <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
-                    <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">রুটিন শাখা</h2>
-                    <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
-                        {sidebarItems.map(item => (
-                            <button
-                                key={item.id}
-                                onClick={() => setActiveSection(item.id)}
-                                className={cn(
-                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
-                                    activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
-                                )}
-                            >
-                                <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
-                                    <item.icon className="h-3.5 w-3.5" />
-                                </div>
-                                <span className="text-sm font-black">{item.label}</span>
-                                {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
-                            </button>
-                        ))}
-                    </div>
-                </aside>
-
-                {/* Content Area */}
-                <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
-                    <div className="p-4 sm:p-6 lg:p-8 flex-1">
-                        <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
-                            <div>
-                                <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
-                                <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {Number(selectedYear).toLocaleString('bn-BD')}</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2 no-print">
-                                {isEditMode ? (
-                                    <>
-                                        <Button variant="outline" size="sm" onClick={() => setIsEditMode(false)} className="font-bold">বাতিল</Button>
-                                        <Button size="sm" onClick={handleSaveChanges} className="font-black shadow-md"><Save className="mr-2 h-4 w-4" /> সেভ করুন</Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Button variant="outline" size="sm" onClick={() => window.print()} className="font-bold bg-white"><Printer className="mr-2 h-4 w-4" /> প্রিন্ট</Button>
-                                        {canManageRoutines && activeSection === 'class-routine' && (
-                                            <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)} className="font-bold bg-white"><FilePen className="mr-2 h-4 w-4" /> এডিট</Button>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        {isLoading ? (
-                            <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>
-                        ) : (
-                            <div className="animate-in fade-in duration-500">
-                                {activeSection === 'class-routine' && (
-                                    <div className="space-y-6">
-                                        <CombinedRoutineTable 
-                                            routineData={routineData} 
-                                            conflicts={displayConflicts} 
-                                            isEditMode={isEditMode} 
-                                            onCellChange={handleCellChange} 
-                                            teacherColorMap={teacherColorMap} 
-                                            isMounted={isMounted} 
-                                        />
+            <main className="flex-1 p-4 md:p-10 pb-40">
+                <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
+                    <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+                        <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">রুটিন শাখা</h2>
+                        <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                            {sidebarItems.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveSection(item.id)}
+                                    className={cn(
+                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                        activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                                    )}
+                                >
+                                    <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                                        <item.icon className="h-3.5 w-3.5" />
                                     </div>
-                                )}
-                                {activeSection === 'proxy-management' && (
-                                    <ProxyManagementTab routineData={routineData} academicYear={selectedYear} />
-                                )}
-                                {activeSection === 'allocation' && (
-                                    <TeacherAllocationTab staffList={allStaff} routineData={routineData} academicYear={selectedYear} />
-                                )}
-                                {activeSection === 'exam-routine' && (
-                                    <ExamRoutineTab />
-                                )}
-                                {activeSection === 'copy-routine' && (
-                                    <CopyRoutineTab 
-                                        onCopy={handleCopyRoutine} 
-                                        targetYear={targetYear} 
-                                        setTargetYear={setTargetYear} 
-                                        availableYears={availableYears} 
-                                        selectedYear={selectedYear}
-                                        isProcessing={isLoading}
-                                    />
-                                )}
-                                {activeSection === 'blank-routine' && (
-                                    <BlankRoutineTab onReset={handleMakeBlank} selectedYear={selectedYear} isProcessing={isLoading} />
-                                )}
-                                {activeSection === 'statistics' && (
-                                    <RoutineStatistics stats={stats} />
-                                )}
-                                {activeSection === 'upload' && (
-                                    <BulkRoutineUploadTab onRoutineParsed={(d) => { setRoutineData(d); setIsEditMode(true); }} />
-                                )}
+                                    <span className="text-sm font-black">{item.label}</span>
+                                    {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
+                                </button>
+                            ))}
+                        </div>
+                    </aside>
+
+                    <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+                        <div className="p-4 sm:p-6 lg:p-8 flex-1">
+                            <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
+                                    <p className="text-xs font-bold text-muted-foreground mt-1">শিক্ষাবর্ষ: {Number(selectedYear).toLocaleString('bn-BD')}</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 no-print">
+                                    {isEditMode ? (
+                                        <>
+                                            <Button variant="outline" size="sm" onClick={() => setIsEditMode(false)} className="font-bold">বাতিল</Button>
+                                            <Button size="sm" onClick={handleSaveChanges} className="font-black shadow-md"><Save className="mr-2 h-4 w-4" /> সেভ করুন</Button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Button variant="outline" size="sm" onClick={() => window.print()} className="font-bold bg-white"><Printer className="mr-2 h-4 w-4" /> প্রিন্ট</Button>
+                                            {canManageRoutines && activeSection === 'class-routine' && (
+                                                <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)} className="font-bold bg-white"><FilePen className="mr-2 h-4 w-4" /> এডিট</Button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        )}
+
+                            {isLoading ? (
+                                <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>
+                            ) : (
+                                <div className="animate-in fade-in duration-500">
+                                    {activeSection === 'class-routine' && (
+                                        <div className="space-y-6">
+                                            <CombinedRoutineTable 
+                                                routineData={routineData} 
+                                                conflicts={displayConflicts} 
+                                                isEditMode={isEditMode} 
+                                                onCellChange={handleCellChange} 
+                                                teacherColorMap={teacherColorMap} 
+                                                isMounted={isMounted} 
+                                            />
+                                        </div>
+                                    )}
+                                    {activeSection === 'proxy-management' && (
+                                        <ProxyManagementTab routineData={routineData} academicYear={selectedYear} />
+                                    )}
+                                    {activeSection === 'allocation' && (
+                                        <TeacherAllocationTab staffList={allStaff} routineData={routineData} academicYear={selectedYear} />
+                                    )}
+                                    {activeSection === 'exam-routine' && (
+                                        <ExamRoutineTab />
+                                    )}
+                                    {activeSection === 'copy-routine' && (
+                                        <CopyRoutineTab 
+                                            onCopy={handleCopyRoutine} 
+                                            targetYear={targetYear} 
+                                            setTargetYear={setTargetYear} 
+                                            availableYears={availableYears} 
+                                            selectedYear={selectedYear}
+                                            isProcessing={isLoading}
+                                        />
+                                    )}
+                                    {activeSection === 'blank-routine' && (
+                                        <BlankRoutineTab onReset={handleMakeBlank} selectedYear={selectedYear} isProcessing={isLoading} />
+                                    )}
+                                    {activeSection === 'statistics' && (
+                                        <RoutineStatistics stats={stats} />
+                                    )}
+                                    {activeSection === 'upload' && (
+                                        <BulkRoutineUploadTab onRoutineParsed={(d) => { setRoutineData(d); setIsEditMode(true); }} />
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </main>
 
-            {/* Printable View */}
             <div className="printable-area routine-print-container text-black bg-white hidden print:flex p-10 flex-col font-kalpurush">
                 <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
@@ -1654,7 +1644,7 @@ function BlankRoutineTab({ onReset, selectedYear, isProcessing }: any) {
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button disabled={isProcessing} variant="destructive" className="w-full h-14 text-lg font-black shadow-xl">
-                            {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Trash2 className="mr-2" />}
+                            {isProcessing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Trash2 className="mr-2" />}
                             রুটিন পুরোপুরি মুছুন
                         </Button>
                     </AlertDialogTrigger>
