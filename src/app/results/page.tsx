@@ -19,10 +19,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { 
     Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, 
     FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText, 
-    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCw, Plus, AlertTriangle, Info
+    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCw, Plus, AlertTriangle, Info, History
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/accordion";
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, limit, doc, writeBatch, serverTimestamp, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -1253,6 +1253,12 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [promotionMode, setPromotionType] = useState<'pass' | 'special'>('pass');
     const [projectedPromotions, setProjectedPromotions] = useState<any[]>([]);
 
+    // History Logic States
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [historyLoading, setHistoryHistoryLoading] = useState(false);
+    const [promotedHistory, setPromotedHistory] = useState<any[]>([]);
+    const [unpromotedHistory, setUnpromotedHistory] = useState<any[]>([]);
+
     const handleLoadSource = async () => {
         if (!sourceClass || !db) return;
         setIsLoading(true);
@@ -1284,8 +1290,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         setIsPromoting(true);
         try {
-            // Calculate start roll based on source session merit hierarchy
-            // This ensures re-promotion always suggests the same roll
             const startRoll = mode === 'pass' ? 1 : passedStudents.length + 1;
             
             const projected = studentsToPromote.map((res, index) => {
@@ -1319,19 +1323,10 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsPromoting(true);
         try {
             const batch = writeBatch(db);
-            
-            // 1. Fetch all existing students in target class (Promoted + New Admissions)
-            const targetSnap = await getDocs(query(
-                collection(db, 'students'), 
-                where('academicYear', '==', String(targetYear)), 
-                where('className', '==', String(targetClass))
-            ));
+            const targetSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', String(targetYear)), where('className', '==', String(targetClass))));
             const existingTargetStudents = targetSnap.docs.map(studentFromDoc);
-            
-            // 2. Identify New Admissions (those who don't have _promoStatus)
             const newAdmissions = existingTargetStudents.filter(s => !s._promoStatus);
             const alreadyPromoted = existingTargetStudents.filter(s => !!s._promoStatus);
-            
             const studentsToPromote = projectedPromotions;
             const normalizeStr = (s: any) => String(s || '').trim().toLowerCase();
 
@@ -1339,50 +1334,20 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 const item = studentsToPromote[i];
                 const res = item.resData;
                 const s = res.student;
-                
-                // Regenerate Generated ID based on Target Year, Class, and Roll
                 const yearSuffix = String(targetYear).slice(-2);
                 const classCode = String(targetClass).padStart(2, '0');
                 const rollSerial = String(item.projectedRoll).padStart(4, '0');
                 const newGeneratedId = `${yearSuffix}${classCode}${rollSerial}`;
-
-                const studentData = {
-                    ...s,
-                    roll: item.projectedRoll,
-                    generatedId: newGeneratedId,
-                    academicYear: String(targetYear),
-                    className: String(targetClass),
-                    updatedAt: serverTimestamp(),
-                    _promoStatus: res.isPass ? 'pass' : 'fail',
-                    _promoRank: res.meritPosition || 999,
-                    _promoFailCount: res.failedSubjectsCount,
-                    _promoTotalMarks: res.totalMarks
-                };
+                const studentData = { ...s, roll: item.projectedRoll, generatedId: newGeneratedId, academicYear: String(targetYear), className: String(targetClass), updatedAt: serverTimestamp(), _promoStatus: res.isPass ? 'pass' : 'fail', _promoRank: res.meritPosition || 999, _promoFailCount: res.failedSubjectsCount, _promoTotalMarks: res.totalMarks };
                 delete (studentData as any).id;
                 delete (studentData as any).createdAt;
-
-                // Clean data
-                Object.keys(studentData).forEach(key => {
-                    if ((studentData as any)[key] === undefined) delete (studentData as any)[key];
-                });
-
-                // Dedup check
-                const existingRec = existingTargetStudents.find(ts => 
-                    normalizeStr(ts.studentNameBn) === normalizeStr(s.studentNameBn) && 
-                    normalizeStr(ts.fatherNameBn) === normalizeStr(s.fatherNameBn) && 
-                    normalizeStr(ts.motherNameBn) === normalizeStr(s.motherNameBn)
-                );
-
-                if (existingRec) {
-                    batch.update(doc(db, 'students', existingRec.id), studentData);
-                } else {
-                    batch.set(doc(collection(db, 'students')), studentData);
-                }
+                Object.keys(studentData).forEach(key => { if ((studentData as any)[key] === undefined) delete (studentData as any)[key]; });
+                const existingRec = existingTargetStudents.find(ts => normalizeStr(ts.studentNameBn) === normalizeStr(s.studentNameBn) && normalizeStr(ts.fatherNameBn) === normalizeStr(s.fatherNameBn) && normalizeStr(ts.motherNameBn) === normalizeStr(s.motherNameBn));
+                if (existingRec) batch.update(doc(db, 'students', existingRec.id), studentData);
+                else batch.set(doc(collection(db, 'students')), studentData);
             }
 
-            // 4. PUSH BACK Logic: Shift rolls of New Admissions to follow promoted students
             const newlyPromotedSourceIds = new Set(studentsToPromote.map(p => p.id));
-            // Calculate final promoted count by union of previously promoted and newly moving
             const distinctPromotedCount = alreadyPromoted.filter(ap => !newlyPromotedSourceIds.has(ap.id)).length + studentsToPromote.length;
             const totalPromotedNowCount = distinctPromotedCount;
 
@@ -1392,12 +1357,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 const classCode = String(targetClass).padStart(2, '0');
                 const rollSerial = String(newRoll).padStart(4, '0');
                 const newId = `${yearSuffix}${classCode}${rollSerial}`;
-
-                batch.update(doc(db, 'students', nas.id), {
-                    roll: newRoll,
-                    generatedId: newId,
-                    updatedAt: serverTimestamp()
-                });
+                batch.update(doc(db, 'students', nas.id), { roll: newRoll, generatedId: newId, updatedAt: serverTimestamp() });
             });
 
             await batch.commit();
@@ -1411,6 +1371,42 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsPromoting(false);
     };
 
+    const handleLoadHistory = async () => {
+        if (!db || !sourceClass) return;
+        setHistoryHistoryLoading(true);
+        setIsHistoryOpen(true);
+        try {
+            const tYear = (parseInt(selectedYear) + 1).toString();
+            const tClass = (parseInt(sourceClass) + 1).toString();
+
+            const [sourceSnap, targetSnap] = await Promise.all([
+                getDocs(query(collection(db, 'students'), where('academicYear', '==', selectedYear), where('className', '==', sourceClass))),
+                getDocs(query(collection(db, 'students'), where('academicYear', '==', tYear), where('className', '==', tClass)))
+            ]);
+
+            const sourceList = sourceSnap.docs.map(studentFromDoc);
+            const targetList = targetSnap.docs.map(studentFromDoc);
+
+            const promoted: any[] = [];
+            const unpromoted: any[] = [];
+            const normalizeStr = (s: any) => String(s || '').trim().toLowerCase();
+
+            sourceList.forEach(s => {
+                const match = targetList.find(t => 
+                    normalizeStr(t.studentNameBn) === normalizeStr(s.studentNameBn) && 
+                    normalizeStr(t.fatherNameBn) === normalizeStr(s.fatherNameBn) && 
+                    normalizeStr(t.motherNameBn) === normalizeStr(s.motherNameBn)
+                );
+                if (match) promoted.push({ ...s, targetRoll: match.roll, targetId: match.generatedId });
+                else unpromoted.push(s);
+            });
+
+            setPromotedHistory(promoted.sort((a,b) => a.targetRoll - b.targetRoll));
+            setUnpromotedHistory(unpromoted.sort((a,b) => a.roll - b.roll));
+        } catch (e) { console.error(e); }
+        setHistoryHistoryLoading(false);
+    };
+
     const toggleSelection = (id: string) => {
         const n = new Set(selectedIds);
         if (n.has(id)) n.delete(id); else n.add(id);
@@ -1419,22 +1415,18 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
                 <div className="space-y-2">
                     <Label className="font-bold text-xs">সোর্স শ্রেণি (বর্তমান)</Label>
-                    <Select value={sourceClass} onValueChange={v => { 
-                        setSourceClass(v); 
-                        const next = (parseInt(v)+1);
-                        setTargetClass(String(next)); 
-                        setTargetYear((parseInt(selectedYear) + 1).toString());
-                    }}>
+                    <Select value={sourceClass} onValueChange={v => { setSourceClass(v); const next = (parseInt(v)+1); setTargetClass(String(next)); setTargetYear((parseInt(selectedYear) + 1).toString()); }}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>{['6', '7', '8', '9'].map(v => <SelectItem key={v} value={v}>{classNamesMap[v]} শ্রেণি</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2"><Label className="font-bold text-xs">টার্গেট বছর</Label><Input value={toBengaliNumber(targetYear)} disabled className="bg-slate-50 font-black" /></div>
                 <div className="space-y-2"><Label className="font-bold text-xs">টার্গেট শ্রেণি</Label><Input value={classNamesMap[targetClass] + ' শ্রেণি'} disabled className="bg-slate-50 font-black" /></div>
-                <Button onClick={handleLoadSource} disabled={isLoading} className="h-10 font-black"><Search className="h-4 w-4 mr-2" /> তালিকা লোড করুন</Button>
+                <Button onClick={handleLoadSource} disabled={isLoading} className="h-10 font-black"><Search className="h-4 w-4 mr-2" /> তালিকা লোড</Button>
+                <Button onClick={handleLoadHistory} variant="outline" className="h-10 font-black border-primary text-primary"><History className="h-4 w-4 mr-2" /> হিস্টোরি ও সংশোধন</Button>
             </div>
 
             {passedStudents.length > 0 && (
@@ -1488,67 +1480,54 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
                 <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col font-kalpurush p-0 border-none shadow-2xl rounded-2xl overflow-hidden">
                     <DialogHeader className="p-6 bg-primary text-white shrink-0">
-                        <DialogTitle className="text-2xl font-black flex items-center gap-2">
-                            <Sparkles className="h-6 w-6" /> প্রমোশন কনফার্মেশন ও প্রিভিউ
-                        </DialogTitle>
-                        <DialogDescription className="text-white/80 font-bold">
-                            {classNamesMap[sourceClass]} থেকে {classNamesMap[targetClass]} শ্রেণিতে উন্নীতকরণের তালিকা
-                        </DialogDescription>
+                        <DialogTitle className="text-2xl font-black flex items-center gap-2"><Sparkles className="h-6 w-6" /> প্রমোশন কনফার্মেশন ও প্রিভিউ</DialogTitle>
+                        <DialogDescription className="text-white/80 font-bold">{classNamesMap[sourceClass]} থেকে {classNamesMap[targetClass]} শ্রেণিতে উন্নীতকরণের তালিকা</DialogDescription>
                     </DialogHeader>
-                    
-                    <div className="flex-1 overflow-hidden p-6 bg-slate-50 flex flex-col min-h-0">
-                        <Card className="border-2 border-black/5 bg-white shadow-inner flex-1 flex flex-col overflow-hidden rounded-xl">
-                            <div className="bg-muted/80 border-b shrink-0 z-10">
-                                <div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center">
-                                    <span>শিক্ষার্থীর নাম (আইডি)</span>
-                                    <span>বর্তমান রোল</span>
-                                    <span>প্রমোশন স্ট্যাটাস</span>
-                                    <span className="text-primary">নতুন রোল</span>
-                                </div>
-                            </div>
-                            
-                            <div className="flex-1 overflow-y-auto">
-                                <div className="divide-y-2 divide-slate-50">
-                                    {projectedPromotions.map((item, i) => (
-                                        <div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors">
-                                            <div className="flex flex-col items-center">
-                                              <span className="font-black text-slate-800 text-sm truncate px-1">{item.name}</span>
-                                              <span className="text-[10px] font-bold text-muted-foreground">ID: {toBengaliNumber(item.generatedId)}</span>
-                                            </div>
-                                            <span className="font-bold text-slate-500">{toBengaliNumber(item.currentRoll)}</span>
-                                            <span>
-                                                <Badge className={item.resData.isPass ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-rose-100 text-rose-800 border-rose-200"}>
-                                                    {item.resData.isPass ? 'কৃতকার্য' : 'বিশেষ পাশ'}
-                                                </Badge>
-                                            </span>
-                                            <div className="flex justify-center">
-                                                <Input 
-                                                    type="number" 
-                                                    value={item.projectedRoll} 
-                                                    onChange={(e) => updateProjectedRoll(item.id, e.target.value)}
-                                                    className="w-20 h-9 text-center font-black border-2 border-primary/20 text-primary bg-white shadow-sm"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50"><Card className="border-2 border-black/5 bg-white shadow-inner rounded-xl"><div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center"><span>শিক্ষার্থীর নাম (আইডি)</span><span>বর্তমান রোল</span><span>স্ট্যাটাস</span><span className="text-primary">নতুন রোল</span></div><div className="divide-y-2 divide-slate-50">{projectedPromotions.map((item) => (<div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors"><div className="flex flex-col items-center"><span className="font-black text-slate-800 text-sm truncate px-1">{item.name}</span><span className="text-[10px] font-bold text-muted-foreground">ID: {toBengaliNumber(item.generatedId || '')}</span></div><span className="font-bold text-slate-500">{toBengaliNumber(item.currentRoll)}</span><span><Badge className={item.resData.isPass ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>{item.resData.isPass ? 'কৃতকার্য' : 'বিশেষ পাশ'}</Badge></span><div className="flex justify-center"><Input type="number" value={item.projectedRoll} onChange={(e) => updateProjectedRoll(item.id, e.target.value)} className="w-20 h-9 text-center font-black border-2 border-primary/20 bg-white" /></div></div>))}</div></Card></div>
+                    <DialogFooter className="p-6 bg-white border-t flex gap-3"><Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="flex-1 font-bold h-12">বাতিল</Button><Button onClick={handleConfirmPromotion} disabled={isPromoting} className="flex-1 min-w-[200px] h-12 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-xl">{isPromoting ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}প্রমোশন নিশ্চিত করুন</Button></DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-                    <DialogFooter className="p-6 bg-white border-t flex flex-col sm:flex-row gap-4 items-center justify-between shrink-0">
-                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 text-amber-600" />
-                            "নিশ্চিত করুন" বাটনে ক্লিক করলে ডাটাবেসে তথ্য আপডেট হবে।
-                        </p>
-                        <div className="flex gap-3 w-full sm:w-auto">
-                            <Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="flex-1 font-bold h-12">বাতিল</Button>
-                            <Button onClick={handleConfirmPromotion} disabled={isPromoting} className="flex-1 min-w-[200px] h-12 text-lg font-black shadow-xl bg-emerald-600 hover:bg-emerald-700">
-                                {isPromoting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                                প্রমোশন নিশ্চিত করুন
-                            </Button>
-                        </div>
-                    </DialogFooter>
+            {/* Promotion History Dialog */}
+            <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                <DialogContent className="max-w-4xl h-[90vh] flex flex-col font-kalpurush p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
+                    <DialogHeader className="p-6 bg-slate-800 text-white shrink-0">
+                        <DialogTitle className="text-2xl font-black flex items-center gap-2"><History className="h-7 w-7" /> প্রমোশন হিস্টোরি ও তালিকা</DialogTitle>
+                        <DialogDescription className="text-slate-300 font-bold">{classNamesMap[sourceClass]} শ্রেণি থেকে পরবর্তী শ্রেণিতে প্রমোশন স্ট্যাটাস</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-hidden bg-slate-100 p-0 flex flex-col">
+                        <Tabs defaultValue="promoted" className="w-full h-full flex flex-col">
+                            <TabsList className="grid w-full grid-cols-2 h-14 bg-white/50 p-1 border-b rounded-none">
+                                <TabsTrigger value="promoted" className="font-black text-base data-[state=active]:bg-white data-[state=active]:text-emerald-700">প্রমোশনপ্রাপ্ত ({toBengaliNumber(promotedHistory.length)})</TabsTrigger>
+                                <TabsTrigger value="unpromoted" className="font-black text-base data-[state=active]:bg-white data-[state=active]:text-rose-700">প্রমোশনহীন ({toBengaliNumber(unpromotedHistory.length)})</TabsTrigger>
+                            </TabsList>
+                            <div className="flex-1 overflow-hidden">
+                                <TabsContent value="promoted" className="h-full m-0 outline-none">
+                                    <ScrollArea className="h-full p-4">
+                                        {historyLoading ? <div className="flex justify-center py-20"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div> : promotedHistory.length === 0 ? <p className="text-center py-20 italic">কেউ প্রমোশন পায়নি</p> : (
+                                            <Card className="border-none shadow-sm"><Table><TableHeader className="bg-muted/50">
+                                                <TableRow><TableHead className="font-black">আইডি</TableHead><TableHead className="font-black">নাম</TableHead><TableHead className="text-center font-black">বর্তমান রোল</TableHead><TableHead className="text-right pr-6 font-black">টার্গেট আইডি</TableHead></TableRow>
+                                            </TableHeader><TableBody>{promotedHistory.map(s => (
+                                                <TableRow key={s.id} className="h-14"><TableCell className="font-black text-xs">{toBengaliNumber(s.generatedId)}</TableCell><TableCell className="font-bold text-slate-800">{s.studentNameBn}</TableCell><TableCell className="text-center font-black text-emerald-700 text-lg">{toBengaliNumber(s.targetRoll)}</TableCell><TableCell className="text-right pr-6 font-bold text-xs text-primary">{toBengaliNumber(s.targetId)}</TableCell></TableRow>
+                                            ))}</TableBody></Table></Card>
+                                        )}
+                                    </ScrollArea>
+                                </TabsContent>
+                                <TabsContent value="unpromoted" className="h-full m-0 outline-none">
+                                    <ScrollArea className="h-full p-4">
+                                        {historyLoading ? <div className="flex justify-center py-20"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div> : unpromotedHistory.length === 0 ? <p className="text-center py-20 text-emerald-600 font-black">সবাই প্রমোশন পেয়েছে!</p> : (
+                                            <Card className="border-none shadow-sm"><Table><TableHeader className="bg-muted/50">
+                                                <TableRow><TableHead className="font-black">আইডি</TableHead><TableHead className="font-black">নাম</TableHead><TableHead className="text-center font-black">রোল</TableHead><TableHead className="text-right pr-6 font-black">অবস্থা</TableHead></TableRow>
+                                            </TableHeader><TableBody>{unpromotedHistory.map(s => (
+                                                <TableRow key={s.id} className="h-14"><TableCell className="font-black text-xs">{toBengaliNumber(s.generatedId)}</TableCell><TableCell className="font-bold text-slate-800">{s.studentNameBn}</TableCell><TableCell className="text-center font-bold">{toBengaliNumber(s.roll)}</TableCell><TableCell className="text-right pr-6"><Badge variant="destructive" className="bg-rose-100 text-rose-700 border-rose-200">বকেয়া</Badge></TableCell></TableRow>
+                                            ))}</TableBody></Table></Card>
+                                        )}
+                                    </ScrollArea>
+                                </TabsContent>
+                            </div>
+                        </Tabs>
+                    </div>
+                    <DialogFooter className="p-4 bg-white border-t shrink-0"><Button variant="outline" className="font-black w-full" onClick={() => setIsHistoryOpen(false)}>বন্ধ করুন</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
