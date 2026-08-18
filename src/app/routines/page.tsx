@@ -728,7 +728,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
 const TeacherAllocationTab = ({ staffList, routineData, academicYear }: { staffList: Staff[], routineData: Record<string, Record<string, string[]>>, academicYear: string }) => {
     const db = useFirestore();
     const { toast } = useToast();
-    const { user, hasPermission } = useAuth();
+    const { hasPermission } = useAuth();
     
     const [selectedTeacher, setSelectedTeacher] = useState<string>('');
     const [selectedClass, setSelectedClass] = useState<string>('6');
