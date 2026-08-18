@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,7 +17,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, FilePen, FilePlus, Users, Info, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX, Briefcase, BookOpen, GraduationCap
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -34,9 +33,10 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { getProxyClasses, saveProxyClass, deleteProxyClass, ProxyClass, NewProxyData } from '@/lib/proxy-data';
 import { getStaff, Staff } from '@/lib/staff-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
-import { collection, query, where, onSnapshot, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, writeBatch, doc, getDocs } from 'firebase/firestore';
+import { TeacherAllocationRecord, SubjectAllocation, saveTeacherAllocation, getTeacherAllocations } from '@/lib/teacher-allocation-data';
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ"];
@@ -732,6 +732,206 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
     );
 };
 
+const TeacherAllocationTab = ({ staffList, routineData, academicYear }: { staffList: Staff[], routineData: Record<string, Record<string, string[]>>, academicYear: string }) => {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const { user, hasPermission } = useAuth();
+    
+    const [selectedTeacher, setSelectedTeacher] = useState<string>('');
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [selectedSubject, setSelectedSubject] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    const [allocations, setAllocations] = useState<TeacherAllocationRecord[]>([]);
+
+    const fetchAllocations = useCallback(async () => {
+        if (!db) return;
+        setIsLoading(true);
+        const data = await getTeacherAllocations(db, academicYear);
+        
+        // Scan current routine to find implicit allocations
+        const scanned: Record<string, Set<string>> = {};
+        Object.keys(routineData).forEach(cls => {
+            Object.values(routineData[cls]).forEach(dayPeriods => {
+                dayPeriods.forEach(cell => {
+                    const { subject, teacher } = parseSubjectTeacher(cell);
+                    if (teacher && subject) {
+                        teacher.split('/').forEach(t => {
+                            const name = t.trim();
+                            if (!name) return;
+                            if (!scanned[name]) scanned[name] = new Set();
+                            scanned[name].add(`${cls}|${subject}`);
+                        });
+                    }
+                });
+            });
+        });
+
+        // Merge DB allocations with scanned allocations
+        const merged: TeacherAllocationRecord[] = [];
+        
+        // First, add all teachers from staff list
+        staffList.filter(s => s.staffType === 'teacher').forEach(staff => {
+            const dbRecord = data.find(r => r.teacherName === staff.nameBn);
+            const routineItems = scanned[staff.nameBn] || new Set();
+            
+            const allocationMap = new Map<string, string>();
+            // Add from DB
+            dbRecord?.allocations.forEach(a => allocationMap.set(`${a.className}|${a.subjectName}`, a.subjectName));
+            // Add from Routine (Sync)
+            routineItems.forEach(item => {
+                const [cls, sub] = item.split('|');
+                allocationMap.set(`${cls}|${sub}`, sub);
+            });
+
+            const finalAllocations: SubjectAllocation[] = Array.from(allocationMap.entries()).map(([key, sub]) => ({
+                className: key.split('|')[0],
+                subjectName: sub
+            }));
+
+            merged.push({
+                teacherName: staff.nameBn,
+                academicYear,
+                allocations: finalAllocations
+            });
+        });
+
+        setAllocations(merged);
+        setIsLoading(false);
+    }, [db, academicYear, routineData, staffList]);
+
+    useEffect(() => { fetchAllocations(); }, [fetchAllocations]);
+
+    const handleAddAllocation = async () => {
+        if (!db || !selectedTeacher || !selectedClass || !selectedSubject) return;
+        
+        const record = allocations.find(r => r.teacherName === selectedTeacher);
+        const nextAllocations = [...(record?.allocations || [])];
+        
+        if (nextAllocations.some(a => a.className === selectedClass && a.subjectName === selectedSubject)) {
+            toast({ variant: 'destructive', title: 'ইতিমধ্যে যুক্ত আছে' });
+            return;
+        }
+
+        nextAllocations.push({ className: selectedClass, subjectName: selectedSubject });
+        
+        setIsSaving(true);
+        try {
+            await saveTeacherAllocation(db, {
+                teacherName: selectedTeacher,
+                academicYear,
+                allocations: nextAllocations
+            });
+            toast({ title: 'বণ্টন আপডেট হয়েছে' });
+            fetchAllocations();
+        } catch (e) {}
+        setIsSaving(false);
+    };
+
+    const handleRemoveAllocation = async (teacherName: string, className: string, subjectName: string) => {
+        if (!db || !hasPermission('manage:routines')) return;
+        
+        const record = allocations.find(r => r.teacherName === teacherName);
+        if (!record) return;
+
+        const nextAllocations = record.allocations.filter(a => !(a.className === className && a.subjectName === subjectName));
+        
+        setIsSaving(true);
+        try {
+            await saveTeacherAllocation(db, {
+                teacherName,
+                academicYear,
+                allocations: nextAllocations
+            });
+            toast({ title: 'বণ্টন মুছে ফেলা হয়েছে' });
+            fetchAllocations();
+        } catch (e) {}
+        setIsSaving(false);
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <Card className="border-2 shadow-lg rounded-3xl overflow-hidden">
+                <CardHeader className="bg-primary/5 border-b-2 border-primary/10">
+                    <CardTitle className="text-xl font-black flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary" /> নতুন বিষয় বণ্টন</CardTitle>
+                    <CardDescription className="font-bold">শিক্ষকদের জন্য শ্রেণি ও বিষয় নির্বাচন করুন</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label className="font-bold">শিক্ষক নির্বাচন</Label>
+                            <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+                                <SelectTrigger className="bg-white"><SelectValue placeholder="শিক্ষক" /></SelectTrigger>
+                                <SelectContent>
+                                    {staffList.filter(s => s.staffType === 'teacher').map(s => <SelectItem key={s.id} value={s.nameBn}>{s.nameBn}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-bold">শ্রেণি</Label>
+                            <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                                <SelectContent>{Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-bold">বিষয়</Label>
+                            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                                <SelectTrigger className="bg-white"><SelectValue placeholder="বিষয়" /></SelectTrigger>
+                                <SelectContent>{getSubjects(selectedClass).map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <Button onClick={handleAddAllocation} disabled={isSaving || !selectedTeacher || !selectedSubject} className="font-black h-10 shadow-md">
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />} যুক্ত করুন
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {isLoading ? <div className="col-span-full text-center py-20 italic">তথ্য লোড হচ্ছে...</div> : 
+                 allocations.map(record => (
+                    <Card key={record.teacherName} className="border-2 border-black/5 hover:border-primary/20 transition-all shadow-sm rounded-2xl overflow-hidden bg-white">
+                        <CardHeader className="bg-muted/30 p-4 border-b">
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                                    <AvatarFallback className="bg-primary text-white font-black">{record.teacherName.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <CardTitle className="text-base font-black text-slate-800">{record.teacherName}</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <div className="space-y-2">
+                                {record.allocations.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground italic text-center py-4">কোনো বিষয় বণ্টন করা হয়নি</p>
+                                ) : (
+                                    record.allocations.map((a, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border group">
+                                            <div className="flex flex-col">
+                                                <span className="text-[11px] font-black text-blue-900 leading-none">{a.subjectName}</span>
+                                                <span className="text-[9px] font-bold text-muted-foreground mt-1">{classNamesMap[a.className]} শ্রেণি</span>
+                                            </div>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-6 w-6 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => handleRemoveAllocation(record.teacherName, a.className, a.subjectName)}
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 const RoutineStatistics = ({ stats }: { stats: any }) => {
     const { teacherStats, classStats } = stats;
     const teachers = Object.keys(teacherStats).sort();
@@ -1076,6 +1276,8 @@ export default function RoutinesPage() {
     const { schoolInfo } = useSchoolInfo();
     const { user, hasPermission } = useAuth();
     
+    const [allStaff, setAllStaff] = useState<Staff[]>([]);
+
     const canManageRoutines = hasPermission('manage:routines');
     const canViewProxy = hasPermission('view:proxy-classes');
     const canManageProxy = hasPermission('manage:proxy-classes');
@@ -1084,7 +1286,12 @@ export default function RoutinesPage() {
     const fetchData = useCallback(async () => {
         if (!db || !user) return;
         setIsLoading(true);
-        const routinesFromDb = await getFullRoutine(db, selectedYear);
+        const [routinesFromDb, staffData] = await Promise.all([
+            getFullRoutine(db, selectedYear),
+            getStaff(db)
+        ]);
+        setAllStaff(staffData);
+        
         const transformedData: Record<string, Record<string, string[]>> = {};
         routinesFromDb.forEach(r => {
             if (!transformedData[r.className]) {
@@ -1222,6 +1429,9 @@ export default function RoutinesPage() {
         if (canViewProxy || canManageProxy) {
             items.push({ id: 'proxy-management', label: 'বদলি ক্লাস (Proxy)', icon: Users, color: 'text-emerald-600 bg-emerald-50' });
         }
+        if (isAdmin || canManageRoutines) {
+            items.push({ id: 'allocation', label: 'শিক্ষক-বিষয় বণ্টন', icon: Briefcase, color: 'text-emerald-600 bg-emerald-50' });
+        }
         items.push({ id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' });
         
         if (isAdmin) {
@@ -1231,7 +1441,7 @@ export default function RoutinesPage() {
             items.push({ id: 'upload', label: 'এক্সেল আপলোড', icon: FileUp, color: 'text-rose-600 bg-rose-50' });
         }
         return items;
-    }, [isAdmin, canViewProxy, canManageProxy]);
+    }, [isAdmin, canViewProxy, canManageProxy, canManageRoutines]);
 
     if (!isClient) return null;
 
@@ -1306,6 +1516,9 @@ export default function RoutinesPage() {
                                 )}
                                 {activeSection === 'proxy-management' && (
                                     <ProxyManagementTab routineData={routineData} academicYear={selectedYear} />
+                                )}
+                                {activeSection === 'allocation' && (
+                                    <TeacherAllocationTab staffList={allStaff} routineData={routineData} academicYear={selectedYear} />
                                 )}
                                 {activeSection === 'exam-routine' && (
                                     <ExamRoutineTab />
