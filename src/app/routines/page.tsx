@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -763,18 +764,23 @@ const TeacherAllocationTab = ({ staffList, routineData, academicYear }: { staffL
         // Merge DB allocations with scanned allocations
         const merged: TeacherAllocationRecord[] = [];
         
-        // First, add all teachers from staff list
+        // Iterate through all staff who are teachers
         staffList.filter(s => s.staffType === 'teacher').forEach(staff => {
             const dbRecord = data.find(r => r.teacherName === staff.nameBn);
-            const routineItems = scanned[staff.nameBn] || new Set();
-            
             const allocationMap = new Map<string, string>();
+            
             // Add from DB
             dbRecord?.allocations.forEach(a => allocationMap.set(`${a.className}|${a.subjectName}`, a.subjectName));
-            // Add from Routine (Sync)
-            routineItems.forEach(item => {
-                const [cls, sub] = item.split('|');
-                allocationMap.set(`${cls}|${sub}`, sub);
+            
+            // Add from Routine (Sync) by matching short name from routine with full name in profile
+            Object.keys(scanned).forEach(shortName => {
+                // If short name is part of full name or vice versa
+                if (staff.nameBn.includes(shortName) || shortName.includes(staff.nameBn)) {
+                    scanned[shortName].forEach(item => {
+                        const [cls, sub] = item.split('|');
+                        allocationMap.set(`${cls}|${sub}`, sub);
+                    });
+                }
             });
 
             const finalAllocations: SubjectAllocation[] = Array.from(allocationMap.entries()).map(([key, sub]) => ({
