@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from '@/components/Header';
@@ -18,7 +17,7 @@ import {
 } from '@/lib/attendance-data';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, writeBatch } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +36,7 @@ import {
     BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, 
     MessageSquareDashed, UserX, Printer, Wifi, WifiOff, Trash2,
     Info, MousePointer2
-} from 'lucide-react';
+} from 'lucide-center';
 import { 
     AlertDialog, 
     AlertDialogAction, 
@@ -324,6 +323,48 @@ const MonthlyAttendanceGrid = ({
         }
     };
 
+    // Presence calculations
+    const getStudentTotalPresent = useCallback((studentId: string) => {
+        let count = 0;
+        daysInMonth.forEach(day => {
+            const d = getDate(day);
+            const isSelected = d === activeDay;
+            if (isSelected) {
+                if (currentStatusMap.get(studentId) === 'present') count++;
+            } else {
+                const ds = format(day, 'yyyy-MM-dd');
+                const record = monthRecords.find(r => r.date === ds);
+                const att = record?.attendance.find(a => a.studentId === studentId);
+                if (att?.status === 'present') count++;
+            }
+        });
+        return count;
+    }, [daysInMonth, activeDay, currentStatusMap, monthRecords]);
+
+    const getDayTotalPresent = useCallback((day: Date) => {
+        const d = getDate(day);
+        const isSelected = d === activeDay;
+        if (isSelected) {
+            let count = 0;
+            currentStatusMap.forEach(status => {
+                if (status === 'present') count++;
+            });
+            return count;
+        } else {
+            const ds = format(day, 'yyyy-MM-dd');
+            const record = monthRecords.find(r => r.date === ds);
+            return record?.attendance.filter(a => a.status === 'present').length || 0;
+        }
+    }, [activeDay, currentStatusMap, monthRecords]);
+
+    const monthTotalPresent = useMemo(() => {
+        let total = 0;
+        students.forEach(s => {
+            total += getStudentTotalPresent(s.id);
+        });
+        return total;
+    }, [students, getStudentTotalPresent]);
+
     if (isLoading && isFirstLoad.current) return <div className="p-20 text-center italic"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" /> ডাটা লোড হচ্ছে...</div>;
 
     return (
@@ -402,7 +443,7 @@ const MonthlyAttendanceGrid = ({
                     className="overflow-x-auto permanent-scroll no-print mb-1 h-3"
                     style={{ width: '100%' }}
                 >
-                    <div style={{ width: `${(daysInMonth.length * 48) + 300}px`, height: '1px' }} />
+                    <div style={{ width: `${(daysInMonth.length * 48) + 310}px`, height: '1px' }} />
                 </div>
 
                 <div 
@@ -469,6 +510,7 @@ const MonthlyAttendanceGrid = ({
                                         </TableHead>
                                     );
                                 })}
+                                <TableHead className="w-16 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-black shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">মোট উপস্থিত</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -530,9 +572,27 @@ const MonthlyAttendanceGrid = ({
                                             </TableCell>
                                         );
                                     })}
+                                    <TableCell className="text-center font-black border-l-2 border-black bg-white sticky right-0 z-30 text-emerald-700 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
+                                        {toBengaliNumber(getStudentTotalPresent(student.id))}
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
+                        <TableFooter className="sticky bottom-0 z-40 bg-slate-200 border-t-2 border-black">
+                            <TableRow className="h-10">
+                                <TableCell colSpan={2} className="text-right pr-4 font-black bg-slate-200 sticky left-0 z-50 border-r-2 border-black text-blue-900">
+                                    মোট উপস্থিত:
+                                </TableCell>
+                                {daysInMonth.map(day => (
+                                    <TableCell key={getDate(day)} className="text-center font-black border-r border-black text-blue-700 bg-slate-50">
+                                        {toBengaliNumber(getDayTotalPresent(day))}
+                                    </TableCell>
+                                ))}
+                                <TableCell className="text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-emerald-950 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
+                                    {toBengaliNumber(monthTotalPresent)}
+                                </TableCell>
+                            </TableRow>
+                        </TableFooter>
                     </Table>
                 </div>
             </div>
