@@ -16,14 +16,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { 
     Award, Plus, Search, Trash2, Printer, Loader2, Save, X, 
-    FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight
+    FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight, Calendar
 } from 'lucide-react';
 import { PublicExamRecord, PublicExamType, getPublicExamRecords, savePublicExamRecord, deletePublicExamRecord, NewPublicExamData } from '@/lib/public-exam-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Student, studentFromDoc } from '@/lib/student-data';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
 
 const examTypes: { id: PublicExamType; label: string }[] = [
     { id: 'SSC', label: 'এসএসসি পরীক্ষা' },
@@ -56,6 +56,9 @@ export default function PublicExamRecordsPage() {
     const [activeTab, setActiveTab] = useState<PublicExamType>('SSC');
     const [records, setRecords] = useState<PublicExamRecord[]>([]);
     
+    // Exam Year State (Local state for viewing specific year's results)
+    const [viewYear, setViewYear] = useState<string>(selectedYear);
+    
     // Student Link States
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isFetchingStudents, setIsFetchingStudents] = useState(false);
@@ -82,37 +85,52 @@ export default function PublicExamRecordsPage() {
         if (!db || !user) return;
         setIsLoading(true);
         try {
-            const data = await getPublicExamRecords(db, selectedYear, activeTab);
+            // Fetch records for the selected 'viewYear'
+            const data = await getPublicExamRecords(db, viewYear, activeTab);
             setRecords(data.sort((a, b) => (parseFloat(b.gpa.toString()) || 0) - (parseFloat(a.gpa.toString()) || 0)));
         } catch (e) {
             console.error(e);
         }
         setIsLoading(false);
-    }, [db, user, selectedYear, activeTab]);
+    }, [db, user, viewYear, activeTab]);
 
     useEffect(() => {
         setIsClient(true);
         fetchRecords();
     }, [fetchRecords]);
 
-    // Reactive listener for students to link
+    // Corrected Student Linking Logic: 
+    // In 2026 (viewYear), SSC candidates are those who were in Class 10 in 2025 (viewYear - 1).
     useEffect(() => {
         if (!db || !user || !isClient) return;
+        
+        const previousYear = (parseInt(viewYear) - 1).toString();
         setIsFetchingStudents(true);
-        const q = query(collection(db, 'students'), where('academicYear', '==', selectedYear));
+        
+        // Fetch students from the previous academic year relative to the exam year
+        const q = query(
+            collection(db, 'students'), 
+            where('academicYear', '==', previousYear)
+        );
+        
         const unsubscribe = onSnapshot(q, (snapshot) => {
             setAllStudents(snapshot.docs.map(studentFromDoc));
             setIsFetchingStudents(false);
+        }, (error) => {
+            console.error("Student fetch error:", error);
+            setIsFetchingStudents(false);
         });
+        
         return () => unsubscribe();
-    }, [db, user, isClient, selectedYear]);
+    }, [db, user, isClient, viewYear]);
 
     useEffect(() => {
-        setFormData(prev => ({ ...prev, examType: activeTab, academicYear: selectedYear }));
-    }, [activeTab, selectedYear]);
+        setFormData(prev => ({ ...prev, examType: activeTab, academicYear: viewYear }));
+    }, [activeTab, viewYear]);
 
     const candidateStudents = useMemo(() => {
-        // SSC usually for Class 10, JSC/Scholarship for Class 8
+        // SSC candidates are from Class 10 of the previous year
+        // JSC/Scholarship candidates are from Class 8 of the previous year
         const targetClass = activeTab === 'SSC' ? '10' : '8';
         return allStudents
             .filter(s => s.className === targetClass)
@@ -148,7 +166,7 @@ export default function PublicExamRecordsPage() {
             setFormData({
                 registrationNo: '', rollNo: '', studentName: '', group: 'general',
                 centerName: '', totalMarks: 0, grade: '', gpa: 0,
-                examType: activeTab, academicYear: selectedYear
+                examType: activeTab, academicYear: viewYear
             });
             fetchRecords();
         } catch (e) {
@@ -176,11 +194,25 @@ export default function PublicExamRecordsPage() {
                 <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 no-print">
                     <div className="space-y-1">
                         <h2 className="text-3xl font-black text-slate-800 flex items-center gap-3">
-                            <Award className="h-10 w-10 text-primary" /> পাবলিক পরীক্ষার অংশগ্রহণকারী শিক্ষার্থীর তথ্য
+                            <Award className="h-10 w-10 text-primary" /> পাবলিক পরীক্ষার রেকর্ড
                         </h2>
-                        <p className="text-muted-foreground font-bold">এসএসসি, জেএসসি এবং বৃত্তি পরীক্ষার রেকর্ড সংরক্ষণাগার</p>
+                        <p className="text-muted-foreground font-bold">অংশগ্রহণকারী শিক্ষার্থীর তথ্য সংরক্ষণাগার</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border-2 border-primary/10 shadow-sm">
+                            <Label className="font-black text-primary text-xs uppercase whitespace-nowrap">পরীক্ষার সাল:</Label>
+                            <Select value={viewYear} onValueChange={setViewYear}>
+                                <SelectTrigger className="w-32 h-8 border-none font-black text-primary focus:ring-0">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableYears.map(y => (
+                                        <SelectItem key={y} value={y} className="font-bold">{toBengaliNumber(y)}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
                         {canManage && (
                             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                                 <DialogTrigger asChild>
@@ -190,15 +222,19 @@ export default function PublicExamRecordsPage() {
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-3xl font-kalpurush p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
                                     <DialogHeader className="p-6 bg-primary text-white">
-                                        <DialogTitle className="text-2xl font-black">শিক্ষার্থীর তথ্য এন্ট্রি করুন</DialogTitle>
-                                        <DialogDescription className="text-white/80 font-bold">নিচে থেকে শিক্ষার্থী নির্বাচন করুন অথবা ম্যানুয়ালি লিখুন</DialogDescription>
+                                        <DialogTitle className="text-2xl font-black">শিক্ষার্থীর তথ্য এন্ট্রি করুন (সাল: {toBengaliNumber(viewYear)})</DialogTitle>
+                                        <DialogDescription className="text-white/80 font-bold">
+                                            {toBengaliNumber(parseInt(viewYear) - 1)} সালের শিক্ষার্থীদের মধ্য থেকে নির্বাচন করুন
+                                        </DialogDescription>
                                     </DialogHeader>
                                     <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto bg-white">
                                         
                                         {/* Student Selection Link */}
                                         <div className="p-4 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl space-y-3">
                                             <div className="flex items-center justify-between">
-                                                <Label className="font-black text-primary uppercase text-[10px] tracking-widest">ডাটাবেস থেকে শিক্ষার্থী খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'})</Label>
+                                                <Label className="font-black text-primary uppercase text-[10px] tracking-widest">
+                                                    পূর্ববর্তী বছরের ডাটাবেস থেকে খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'}, {toBengaliNumber(parseInt(viewYear) - 1)})
+                                                </Label>
                                                 {isFetchingStudents && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                                             </div>
                                             <Select onValueChange={handleStudentLink}>
@@ -207,7 +243,9 @@ export default function PublicExamRecordsPage() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {candidateStudents.length === 0 ? (
-                                                        <div className="p-4 text-center text-xs font-bold text-muted-foreground italic">এই শ্রেণির কোনো শিক্ষার্থী পাওয়া যায়নি।</div>
+                                                        <div className="p-4 text-center text-xs font-bold text-muted-foreground italic">
+                                                            {toBengaliNumber(parseInt(viewYear) - 1)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।
+                                                        </div>
                                                     ) : (
                                                         candidateStudents.map(s => (
                                                             <SelectItem key={s.id} value={s.id} className="font-bold">
@@ -218,7 +256,7 @@ export default function PublicExamRecordsPage() {
                                                 </SelectContent>
                                             </Select>
                                             <p className="text-[10px] font-bold text-muted-foreground italic">
-                                                * শিক্ষার্থী নির্বাচন করলে তার নাম, রোল ও রেজিস্ট্রেশন স্বয়ংক্রিয়ভাবে ফরমে চলে আসবে।
+                                                * {toBengaliNumber(viewYear)} সালের পরীক্ষার্থীরা মূলত {toBengaliNumber(parseInt(viewYear) - 1)} সালের দশম/অষ্টম শ্রেণির শিক্ষার্থী।
                                             </p>
                                         </div>
 
@@ -305,7 +343,7 @@ export default function PublicExamRecordsPage() {
                                     <div className="flex flex-col items-center gap-3">
                                         <h3 className="text-2xl font-black text-primary underline underline-offset-8">অংশগ্রহণকারী শিক্ষার্থীর তথ্য</h3>
                                         <p className="font-black text-slate-600 bg-white px-6 py-1 rounded-full border-2 border-primary/20 shadow-sm mt-2">
-                                            {type.label} - {toBengaliNumber(selectedYear)}
+                                            {type.label} - {toBengaliNumber(viewYear)} সাল
                                         </p>
                                     </div>
                                 </CardHeader>
@@ -316,7 +354,7 @@ export default function PublicExamRecordsPage() {
                                             <h1 className="text-3xl font-black uppercase mb-1">{schoolInfo?.name}</h1>
                                             <p className="text-lg font-bold text-slate-700 mb-4">{schoolInfo?.address}</p>
                                             <div className="inline-block border-2 border-black px-10 py-1.5 rounded-full font-black text-xl uppercase bg-slate-50">
-                                                {type.label} - অংশগ্রহণকারী শিক্ষার্থীর তথ্য ({toBengaliNumber(selectedYear)})
+                                                {type.label} - অংশগ্রহণকারী শিক্ষার্থীর তথ্য ({toBengaliNumber(viewYear)})
                                             </div>
                                         </div>
 
