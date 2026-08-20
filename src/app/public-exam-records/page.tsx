@@ -47,6 +47,21 @@ const examTypes: { id: PublicExamType; label: string }[] = [
     { id: 'Scholarship', label: 'অষ্টম শ্রেণির বৃত্তি' },
 ];
 
+const educationBoards = [
+    'Dinajpur', 'Dhaka', 'Rajshahi', 'Cumilla', 'Jashore', 'Chattogram', 'Barishal', 'Sylhet', 'Mymensingh', 'Madrasah', 'Technical'
+];
+
+const birganjCenters = [
+    'Birganj Govt. High School',
+    'Birganj Govt. Girls\' High School',
+    'Birganj Pilot Model High School',
+    'Gopalganj High School',
+    'Jharbari High School',
+    'Paltapur Adarsha High School',
+    'Birganj Mohila College',
+    'Birganj Degree College'
+];
+
 const groups = [
     { id: 'general', label: 'সাধারণ' },
     { id: 'science', label: 'বিজ্ঞান' },
@@ -98,6 +113,7 @@ export default function PublicExamRecordsPage() {
         studentName: '',
         photoUrl: '',
         group: 'general',
+        boardName: 'Dinajpur',
         centerName: '',
         totalMarks: 0,
         grade: '',
@@ -199,10 +215,11 @@ export default function PublicExamRecordsPage() {
                         const data: NewPublicExamData = {
                             registrationNo: student.prevRegNo || '',
                             rollNo: String(student.roll || ''), // Class Roll
-                            examRoll: '', // To be filled later
+                            examRoll: '',
                             studentName: student.studentNameBn,
                             photoUrl: student.photoUrl || '',
                             group: (student.group || 'general').toLowerCase(),
+                            boardName: 'Dinajpur',
                             centerName: '',
                             totalMarks: 0,
                             grade: '',
@@ -220,7 +237,7 @@ export default function PublicExamRecordsPage() {
                 fetchRecords();
             } catch (e) {
                 console.error(e);
-                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'রেকর্ড সংরক্ষণ করা যায়নি। ' + e });
+                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'রেকর্ড সংরক্ষণ করা যায়নি।' });
             } finally {
                 setIsSaving(false);
             }
@@ -240,7 +257,7 @@ export default function PublicExamRecordsPage() {
             setIsAddOpen(false);
             setEditingId(null);
             setFormData({
-                registrationNo: '', rollNo: '', examRoll: '', studentName: '', photoUrl: '', group: 'general',
+                registrationNo: '', rollNo: '', examRoll: '', studentName: '', photoUrl: '', group: 'general', boardName: 'Dinajpur',
                 centerName: '', totalMarks: 0, grade: '', gpa: 0,
                 examType: activeTab, academicYear: viewYear
             });
@@ -260,6 +277,7 @@ export default function PublicExamRecordsPage() {
             studentName: record.studentName,
             photoUrl: record.photoUrl || '',
             group: record.group,
+            boardName: record.boardName || 'Dinajpur',
             centerName: record.centerName || '',
             totalMarks: record.totalMarks || 0,
             grade: record.grade || '',
@@ -316,7 +334,7 @@ export default function PublicExamRecordsPage() {
                                     setSelectedStudentIdsInDialog(new Set());
                                     setDialogSearchQuery('');
                                     setFormData({
-                                        registrationNo: '', rollNo: '', examRoll: '', studentName: '', photoUrl: '', group: 'general',
+                                        registrationNo: '', rollNo: '', examRoll: '', studentName: '', photoUrl: '', group: 'general', boardName: 'Dinajpur',
                                         centerName: '', totalMarks: 0, grade: '', gpa: 0,
                                         examType: activeTab, academicYear: viewYear
                                     });
@@ -421,6 +439,24 @@ export default function PublicExamRecordsPage() {
                                                     <Input value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} placeholder="নাম লিখুন" className="border-2 font-black" />
                                                 </div>
                                                 <div className="space-y-2">
+                                                    <Label className="font-bold">বোর্ডের নাম</Label>
+                                                    <Select value={formData.boardName} onValueChange={(v) => setFormData({...formData, boardName: v})}>
+                                                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="বোর্ড নির্বাচন" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {educationBoards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">পরীক্ষা কেন্দ্রের নাম</Label>
+                                                    <Select value={formData.centerName} onValueChange={(v) => setFormData({...formData, centerName: v})}>
+                                                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="কেন্দ্র নির্বাচন করুন" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {birganjCenters.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
                                                     <Label className="font-bold">রেজিস্ট্রেশন নং (ESIF অনুযায়ী)</Label>
                                                     <Input value={formData.registrationNo} onChange={e => setFormData({...formData, registrationNo: e.target.value})} placeholder="রেজিস্ট্রেশন নম্বর" className="border-2 font-black text-blue-900" />
                                                 </div>
@@ -440,10 +476,6 @@ export default function PublicExamRecordsPage() {
                                                             {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="font-bold">পরীক্ষা কেন্দ্রের নাম</Label>
-                                                    <Input value={formData.centerName} onChange={e => setFormData({...formData, centerName: e.target.value})} placeholder="কেন্দ্রের নাম" className="border-2" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label className="font-bold">প্রাপ্ত মোট নম্বর</Label>
@@ -514,27 +546,28 @@ export default function PublicExamRecordsPage() {
                                         </div>
 
                                         <div className="overflow-x-auto">
-                                            <Table className="border-collapse border-spacing-0 w-full min-w-[1100px] border-black">
+                                            <Table className="border-collapse border-spacing-0 w-full min-w-[1200px] border-black">
                                                 <TableHeader className="bg-slate-100">
                                                     <TableRow className="h-14 border-b-[3px] border-black">
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-16">ছবি</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-32">রেজিস্ট্রেশন নং</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-28">পরীক্ষার রোল</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-28">শ্রেণির রোল</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-left pl-6 font-black text-black text-base">নাম</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-32">বিভাগ</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base">কেন্দ্র নাম</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-32">প্রাপ্ত মোট নম্বর</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-24">প্রাপ্ত গ্রেড</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-24">প্রাপ্ত জিপিএ</TableHead>
-                                                        <TableHead className="text-right pr-6 font-black text-black text-base no-print">কার্যক্রম</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-14">ছবি</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-28">বোর্ড</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-32">রেজিস্ট্রেশন নং</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">পরীক্ষার রোল</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">শ্রেণির রোল</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-left pl-4 font-black text-black text-sm">নাম</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">বিভাগ</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm">কেন্দ্র নাম</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">প্রাপ্ত মোট নম্বর</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-20">প্রাপ্ত গ্রেড</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-20">প্রাপ্ত জিপিএ</TableHead>
+                                                        <TableHead className="text-right pr-6 font-black text-black text-sm no-print">কার্যক্রম</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {isLoading ? (
-                                                        <TableRow><TableCell colSpan={11} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
+                                                        <TableRow><TableCell colSpan={12} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
                                                     ) : records.length === 0 ? (
-                                                        <TableRow><TableCell colSpan={11} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                                        <TableRow><TableCell colSpan={12} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                                                     ) : (
                                                         records.map((record) => (
                                                             <TableRow key={record.id} className="h-12 border-b-2 border-black hover:bg-slate-50 transition-colors">
@@ -544,17 +577,18 @@ export default function PublicExamRecordsPage() {
                                                                         <AvatarFallback className="font-black text-xs">S</AvatarFallback>
                                                                     </Avatar>
                                                                 </TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
-                                                                <TableCell className="border-r-2 border-black font-black text-base pl-6 text-slate-900">{record.studentName}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-bold text-sm uppercase">
+                                                                <TableCell className="border-r-2 border-black text-center font-bold text-xs text-slate-700">{record.boardName || '-'}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
+                                                                <TableCell className="border-r-2 border-black font-black text-sm pl-4 text-slate-900">{record.studentName}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-bold text-xs uppercase">
                                                                     {groups.find(g => g.id === record.group)?.label || record.group}
                                                                 </TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-medium text-sm text-slate-600">{record.centerName || '-'}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-lg text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
-                                                                <TableCell className={cn("border-r-2 border-black text-center font-black text-lg", record.grade === 'F' ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-lg text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-medium text-xs text-slate-600">{record.centerName || '-'}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
+                                                                <TableCell className={cn("border-r-2 border-black text-center font-black text-base", record.grade === 'F' ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
                                                                 <TableCell className="text-right pr-6 no-print">
                                                                     <div className="flex justify-end gap-2">
                                                                         <Button 
@@ -574,7 +608,7 @@ export default function PublicExamRecordsPage() {
                                                                                 </AlertDialogTrigger>
                                                                                 <AlertDialogContent className="font-kalpurush">
                                                                                     <AlertDialogHeader>
-                                                                                        <AlertDialogTitle className="text-rose-700 font-black flex items-center gap-2"><Info /> আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                                        <AlertDialogTitle className="text-rose-700 font-black flex items-center gap-2">আপনি কি নিশ্চিত?</AlertDialogTitle>
                                                                                         <AlertDialogDescription className="font-bold text-base">এই রেকর্ডটি স্থায়ীভাবে মুছে ফেলা হবে।</AlertDialogDescription>
                                                                                     </AlertDialogHeader>
                                                                                     <AlertDialogFooter>

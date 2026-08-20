@@ -26,10 +26,11 @@ export interface PublicExamRecord {
     id: string;
     registrationNo: string;
     rollNo: string; // This is Class Roll
-    examRoll: string; // This is New
+    examRoll: string;
     studentName: string;
     photoUrl?: string;
     group: string; // 'science', 'arts', 'commerce', 'general'
+    boardName: string;
     centerName: string;
     totalMarks: number;
     grade: string;

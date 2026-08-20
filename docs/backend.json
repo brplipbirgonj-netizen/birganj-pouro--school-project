@@ -131,6 +131,7 @@
         "studentName": { "type": "string" },
         "photoUrl": { "type": "string" },
         "group": { "type": "string" },
+        "boardName": { "type": "string" },
         "centerName": { "type": "string" },
         "totalMarks": { "type": "number" },
         "grade": { "type": "string" },
