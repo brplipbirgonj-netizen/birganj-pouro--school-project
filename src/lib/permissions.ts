@@ -1,9 +1,8 @@
-
 'use client';
 
 // This is a list of available permissions in the system.
 export const availablePermissions = [
-  { id: 'view:dashboard', label: 'ড্যাসবোর্ড দেখুন' },
+  { id: 'view:dashboard', label: 'ড্যাশবোর্ড দেখুন' },
   
   { id: 'view:students', label: 'শিক্ষার্থী তালিকা দেখুন' },
   { id: 'manage:students', label: 'শিক্ষার্থী যোগ করার অনুমতি' },
@@ -41,6 +40,9 @@ export const availablePermissions = [
   { id: 'view:merit-list', label: 'মেধা তালিকা দেখুন' },
   { id: 'promote:students', label: 'প্রমোশন ম্যানেজ করুন' },
   { id: 'manage:special-results', label: 'বিশেষ পরীক্ষা ম্যানেজ করুন' },
+  
+  { id: 'view:public-records', label: 'রেকর্ড শাখা দেখুন' },
+  { id: 'manage:public-records', label: 'রেকর্ড শাখা ম্যানেজ করুন' },
   
   { id: 'view:accounts', label: 'হিসাব শাখা দেখুন' },
   { id: 'collect:fees', label: 'বেতন আদায় করুন' },
@@ -87,6 +89,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:merit-list',
     'promote:students',
     'manage:special-results',
+    'view:public-records',
     'view:accounts',
     'collect:fees',
     'manage:fee-setup',

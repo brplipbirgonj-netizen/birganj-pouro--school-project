@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -118,10 +117,11 @@ export default function PublicExamRecordsPage() {
         academicYear: selectedYear
     });
 
-    const canManage = hasPermission('manage:results') || user?.role === 'admin';
+    const canView = hasPermission('view:public-records') || user?.role === 'admin';
+    const canManage = hasPermission('manage:public-records') || user?.role === 'admin';
 
     const fetchRecords = useCallback(async () => {
-        if (!db || !user) return;
+        if (!db || !user || !canView) return;
         setIsLoading(true);
         try {
             const data = await getPublicExamRecords(db, viewYear, activeTab);
@@ -135,15 +135,15 @@ export default function PublicExamRecordsPage() {
             console.error(e);
         }
         setIsLoading(false);
-    }, [db, user, viewYear, activeTab]);
+    }, [db, user, viewYear, activeTab, canView]);
 
     useEffect(() => {
         setIsClient(true);
-        fetchRecords();
-    }, [fetchRecords]);
+        if (canView) fetchRecords();
+    }, [fetchRecords, canView]);
 
     useEffect(() => {
-        if (!db || !user || !isClient) return;
+        if (!db || !user || !isClient || !canView) return;
         
         // Year Logic: SSC 2026 participants are 2025 Class 10 students
         const targetYear = activeTab === 'SSC' 
@@ -166,7 +166,7 @@ export default function PublicExamRecordsPage() {
         });
         
         return () => unsubscribe();
-    }, [db, user, isClient, viewYear, activeTab]);
+    }, [db, user, isClient, viewYear, activeTab, canView]);
 
     useEffect(() => {
         if (!editingId) {
@@ -198,7 +198,7 @@ export default function PublicExamRecordsPage() {
     };
 
     const handleSave = async () => {
-        if (!db) return;
+        if (!db || !canManage) return;
         
         if (!editingId && selectedStudentIdsInDialog.size > 0) {
             setIsSaving(true);
@@ -264,6 +264,7 @@ export default function PublicExamRecordsPage() {
     };
 
     const handleEdit = (record: PublicExamRecord) => {
+        if (!canManage) return;
         setFormData({
             registrationNo: record.registrationNo,
             rollNo: record.rollNo,
@@ -284,7 +285,7 @@ export default function PublicExamRecordsPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!db) return;
+        if (!db || !canManage) return;
         try {
             await deletePublicExamRecord(db, id);
             toast({ title: 'রেকর্ড মুছে ফেলা হয়েছে' });
@@ -292,10 +293,32 @@ export default function PublicExamRecordsPage() {
         } catch (e) {}
     };
 
-    if (!isClient) return null;
+    if (!isClient || authLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-indigo-50">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (!user || !canView) {
+        return (
+            <div className="flex min-h-screen flex-col bg-indigo-50 font-kalpurush text-black">
+                <Header />
+                <main className="flex-1 flex items-center justify-center p-4">
+                    <Card className="max-w-md w-full border-2 border-rose-200 text-center p-10 bg-white">
+                        <AlertCircle className="h-16 w-16 text-rose-500 mx-auto mb-4" />
+                        <CardTitle className="text-2xl font-black text-rose-950 mb-2">প্রবেশাধিকার নেই</CardTitle>
+                        <CardDescription className="text-base font-bold">আপনার রেকর্ড শাখা দেখার অনুমতি নেই।</CardDescription>
+                        <Button className="mt-6" onClick={() => window.history.back()}>ফিরে যান</Button>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
+        <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush text-black">
             <Header />
             <style jsx global>{`
                 @media print {
@@ -594,32 +617,34 @@ export default function PublicExamRecordsPage() {
                                                         <TableCell className="border-r-2 border-black text-center font-black text-sm text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
                                                         <TableCell className="text-right pr-6 no-print">
                                                             <div className="flex justify-end gap-2">
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="icon" 
-                                                                    className="h-8 w-8 text-blue-600 border-blue-100 hover:bg-blue-50"
-                                                                    onClick={() => handleEdit(record)}
-                                                                >
-                                                                    <FilePen className="h-4 w-4" />
-                                                                </Button>
                                                                 {canManage && (
-                                                                    <AlertDialog>
-                                                                        <AlertDialogTrigger asChild>
-                                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50">
-                                                                                <Trash2 className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </AlertDialogTrigger>
-                                                                        <AlertDialogContent className="font-kalpurush">
-                                                                            <AlertDialogHeader>
-                                                                                <AlertDialogTitle className="text-rose-700 font-black flex items-center gap-2">আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                                <AlertDialogDescription className="font-bold text-base">এই রেকর্ডটি স্থায়ীভাবে মুছে ফেলা হবে।</AlertDialogDescription>
-                                                                            </AlertDialogHeader>
-                                                                            <AlertDialogFooter>
-                                                                                <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
-                                                                                <AlertDialogAction onClick={() => handleDelete(record.id)} className="bg-destructive text-white font-black">হ্যাঁ, মুছুন</AlertDialogAction>
-                                                                            </AlertDialogFooter>
-                                                                        </AlertDialogContent>
-                                                                    </AlertDialog>
+                                                                    <>
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="icon" 
+                                                                            className="h-8 w-8 text-blue-600 border-blue-100 hover:bg-blue-50"
+                                                                            onClick={() => handleEdit(record)}
+                                                                        >
+                                                                            <FilePen className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <AlertDialog>
+                                                                            <AlertDialogTrigger asChild>
+                                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50">
+                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </AlertDialogTrigger>
+                                                                            <AlertDialogContent className="font-kalpurush">
+                                                                                <AlertDialogHeader>
+                                                                                    <AlertDialogTitle className="text-rose-700 font-black flex items-center gap-2">আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                                    <AlertDialogDescription className="font-bold text-base">এই রেকর্ডটি স্থায়ীভাবে মুছে ফেলা হবে।</AlertDialogDescription>
+                                                                                </AlertDialogHeader>
+                                                                                <AlertDialogFooter>
+                                                                                    <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                                    <AlertDialogAction onClick={() => handleDelete(record.id)} className="bg-destructive text-white font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                                </AlertDialogFooter>
+                                                                            </AlertDialogContent>
+                                                                        </AlertDialog>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </TableCell>

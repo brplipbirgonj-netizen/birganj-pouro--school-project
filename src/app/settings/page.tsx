@@ -511,7 +511,7 @@ const permissionGroups = [
     { title: 'হাজিরা ও উপস্থিতি', ids: ['manage:attendance', 'input:quick-roll-attendance', 'view:missed-attendance', 'input:missed-attendance', 'view:absent-student-list'] },
     { title: 'লেসন প্ল্যান ও সিলেবাস', ids: ['manage:lesson-plans', 'view:syllabus-mgmt', 'manage:syllabus', 'view:syllabus-tracker'] },
     { title: 'নোটিশ বোর্ড', ids: ['view:notices', 'manage:notices'] },
-    { title: 'ফলাফল ও প্রমোশন', ids: ['input:results', 'manage:results', 'manage:full-marks', 'upload:marks', 'view:merit-list', 'promote:students', 'manage:special-results'] },
+    { title: 'ফলাফল ও প্রমোশন', ids: ['input:results', 'manage:results', 'manage:full-marks', 'upload:marks', 'view:merit-list', 'promote:students', 'manage:special-results', 'view:public-records', 'manage:public-records'] },
     { title: 'হিসাব ও ফি', ids: ['view:accounts', 'collect:fees', 'manage:fee-setup', 'special:edit-transaction', 'special:delete-transaction', 'view:collection-report', 'view:expense-report', 'view:accounts-monthly-report', 'view:cashbook-ledger', 'manage:transactions'] },
     { title: 'রুটিন ও বদলি ক্লাস', ids: ['view:routines', 'manage:routines', 'view:proxy-classes', 'manage:proxy-classes'] },
     { title: 'ডকুমেন্ট', ids: ['manage:documents'] },
