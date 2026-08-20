@@ -453,9 +453,9 @@ const MonthlyAttendanceGrid = ({
                 >
                     <Table className="border-collapse border-spacing-0 min-w-max border-black">
                         <TableHeader className="sticky top-0 z-40 bg-slate-100">
-                            <TableRow className="h-14 border-y-2 border-black">
-                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
-                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
+                            <TableRow className="border-y-2 border-black">
+                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-50 text-black h-20">রোল</TableHead>
+                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-50 text-black h-20">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
@@ -463,54 +463,54 @@ const MonthlyAttendanceGrid = ({
                                     
                                     return (
                                         <TableHead key={d} className={cn(
-                                            "w-24 text-center border-r border-black p-0 group/header relative",
+                                            "w-24 text-center border-r border-black p-0 group/header relative h-20",
                                             isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100 text-black",
                                             isOff && !isSelected && "bg-rose-50 text-rose-400"
                                         )}>
-                                            <div className="flex flex-col items-center py-1">
-                                                <span className="text-lg font-black">{toBengaliNumber(d)}</span>
-                                                <span className="text-[9px] font-black opacity-60 uppercase">{format(day, 'EEEE', { locale: bn })}</span>
-                                            </div>
-
-                                            <div className="absolute inset-x-0 -bottom-1 flex justify-center gap-1 no-print">
-                                                <Button 
-                                                    variant="secondary" 
-                                                    size="icon" 
-                                                    className="h-4 w-4 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
-                                                    onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
-                                                    title="এডিট"
-                                                >
-                                                    <Edit2 className="h-2 w-2" />
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button 
-                                                            variant="destructive" 
-                                                            size="icon" 
-                                                            className="h-4 w-4 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
-                                                            title="ডিলিট"
-                                                        >
-                                                            <Trash2 className="h-2 w-2" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="font-kalpurush">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle className="text-rose-700">হাজিরা মুছতে চান?</AlertDialogTitle>
-                                                            <AlertDialogDescription className="font-bold">
-                                                                আপনি কি {format(day, 'd MMMM', { locale: bn })} এর হাজিরা রেকর্ড মুছে ফেলতে চান?
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel className="font-bold">না</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteDay(day)} className="bg-destructive font-black">হ্যাঁ, মুছুন</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                            <div className="flex flex-col items-center justify-center h-full py-2 gap-1">
+                                                <span className="text-lg font-black leading-none">{toBengaliNumber(d)}</span>
+                                                <span className="text-[10px] font-bold opacity-70 leading-none">{format(day, 'EEEE', { locale: bn })}</span>
+                                                
+                                                <div className="flex justify-center gap-1.5 no-print mt-1">
+                                                    <Button 
+                                                        variant="secondary" 
+                                                        size="icon" 
+                                                        className="h-4 w-4 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
+                                                        onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
+                                                        title="এডিট"
+                                                    >
+                                                        <Edit2 className="h-2 w-2" />
+                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button 
+                                                                variant="destructive" 
+                                                                size="icon" 
+                                                                className="h-4 w-4 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
+                                                                title="ডিলিট"
+                                                            >
+                                                                <Trash2 className="h-2 w-2" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent className="font-kalpurush">
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle className="text-rose-700">হাজিরা মুছতে চান?</AlertDialogTitle>
+                                                                <AlertDialogDescription className="font-bold">
+                                                                    আপনি কি {format(day, 'd MMMM', { locale: bn })} এর হাজিরা রেকর্ড মুছে ফেলতে চান?
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel className="font-bold">না</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteDay(day)} className="bg-destructive font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
                                             </div>
                                         </TableHead>
                                     );
                                 })}
-                                <TableHead className="w-16 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-black shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">মোট উপস্থিত</TableHead>
+                                <TableHead className="w-16 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-black shadow-[-2px_0_4px_rgba(0,0,0,0.1)] h-20">মোট উপস্থিত</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1882,7 +1882,7 @@ export default function AttendancePage() {
             <main className="flex-1 p-4 md:p-10 pb-40">
                 <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
                     {/* Sidebar Navigation */}
-                    <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+                    <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
                         <div className="mb-6 px-4 hidden md:block">
                             <h2 className="text-2xl font-black text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
                             <Badge className={cn(
