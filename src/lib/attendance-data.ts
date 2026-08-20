@@ -9,6 +9,7 @@ import {
   Firestore,
   setDoc,
   orderBy,
+  deleteDoc,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -70,6 +71,25 @@ export const saveDailyAttendance = (db: Firestore, record: DailyAttendance) => {
         path: docRef.path,
         operation: 'write',
         requestResourceData: dataToSave,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    }
+    throw serverError;
+  });
+};
+
+/**
+ * Deletes a daily attendance record.
+ */
+export const deleteDailyAttendance = (db: Firestore, date: string, className: string, academicYear: string) => {
+  const docId = `${date}_${className}_${academicYear}`;
+  const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
+  
+  return deleteDoc(docRef).catch(async (serverError: any) => {
+    if (serverError.code === 'permission-denied') {
+      const permissionError = new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'delete',
       } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
     }

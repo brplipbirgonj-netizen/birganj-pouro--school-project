@@ -4,7 +4,17 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student } from '@/lib/student-data';
-import { getAttendanceFromStorage, DailyAttendance, saveDailyAttendance, getAttendanceForClassAndDate, StudentAttendance, AttendanceStatus, getConsecutiveAbsences, StudentConsecutiveAbsence } from '@/lib/attendance-data';
+import { 
+    getAttendanceFromStorage, 
+    DailyAttendance, 
+    saveDailyAttendance, 
+    getAttendanceForClassAndDate, 
+    StudentAttendance, 
+    AttendanceStatus, 
+    getConsecutiveAbsences, 
+    StudentConsecutiveAbsence,
+    deleteDailyAttendance
+} from '@/lib/attendance-data';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,7 +30,23 @@ import { format, eachDayOfInterval } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
-import { Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, CalendarDays, CalendarCheck, Plus, Save, Loader2, BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, MessageSquareDashed, UserX, Printer, Wifi, WifiOff } from 'lucide-react';
+import { 
+    Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, 
+    CalendarDays, CalendarCheck, Plus, Save, Loader2, 
+    BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, 
+    MessageSquareDashed, UserX, Printer, Wifi, WifiOff, Trash2
+} from 'lucide-react';
+import { 
+    AlertDialog, 
+    AlertDialogAction, 
+    AlertDialogCancel, 
+    AlertDialogContent, 
+    AlertDialogDescription, 
+    AlertDialogFooter, 
+    AlertDialogHeader, 
+    AlertDialogTitle, 
+    AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -121,6 +147,7 @@ const AttendanceSheet = ({
     const [isLoading, setIsLoading] = useState(true);
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
     const [isEditing, setIsEditing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; 
     const isAdmin = user?.role === 'admin';
@@ -191,6 +218,22 @@ const AttendanceSheet = ({
         });
     };
 
+    const handleDeleteRecord = async () => {
+        if (!db || !isAdmin || !savedAttendance) return;
+        setIsDeleting(true);
+        try {
+            await deleteDailyAttendance(db, dateStr, classId, selectedYear);
+            toast({ title: 'হাজিরা রেকর্ড মুছে ফেলা হয়েছে' });
+            setSavedAttendance(undefined);
+            setIsEditing(false);
+            onRefresh();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> <span>লোড হচ্ছে...</span></div>;
 
     if (isWeekend) return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">{format(date, 'PPP', { locale: bn })} সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>;
@@ -213,11 +256,36 @@ const AttendanceSheet = ({
                             <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">অনুপস্থিত: {toBengaliNumber(absentCount)}</Badge>
                         </div>
                     </div>
-                    {isAdmin && (
-                        <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2 border-primary text-primary hover:bg-primary/5 shadow-sm">
-                            <Edit2 className="h-4 w-4" /> হাজিরা সংশোধন করুন
-                        </Button>
-                    )}
+                    <div className="flex gap-2">
+                        {isAdmin && (
+                            <>
+                                <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2 border-primary text-primary hover:bg-primary/5 shadow-sm">
+                                    <Edit2 className="h-4 w-4" /> হাজিরা সংশোধন করুন
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="outline" className="flex items-center gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 shadow-sm">
+                                            <Trash2 className="h-4 w-4" /> মুছে ফেলুন
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="font-kalpurush">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle className="text-rose-700 font-black">নিশ্চিত তো?</AlertDialogTitle>
+                                            <AlertDialogDescription className="font-bold">
+                                                আপনি কি নিশ্চিতভাবে এই তারিখের হাজিরা রেকর্ডটি পুরোপুরি মুছে ফেলতে চান?
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>না</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDeleteRecord} className="bg-destructive text-white" disabled={isDeleting}>
+                                                {isDeleting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : 'হ্যাঁ, মুছুন'}
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        )}
+                    </div>
                 </div>
                  <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
                     <Table>
@@ -626,12 +694,15 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
     const { schoolInfo } = useSchoolInfo();
     const { selectedYear } = useAcademicYear();
+    const { user } = useAuth();
+    const { toast } = useToast();
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
     const [attendanceData, setAttendanceData] = useState<DailyAttendance[]>([]);
     const [holidays, setHolidays] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const classes = ['6', '7', '8', '9', '10'];
+    const isAdmin = user?.role === 'admin';
 
     const fetchSummaryData = useCallback(async () => {
         if (!db) return;
@@ -661,6 +732,17 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
 
     useEffect(() => { fetchSummaryData(); }, [fetchSummaryData]);
 
+    const handleDeleteRecord = async (date: string, className: string) => {
+        if (!db || !isAdmin) return;
+        try {
+            await deleteDailyAttendance(db, date, className, selectedYear);
+            toast({ title: 'হাজিরা রেকর্ড মুছে ফেলা হয়েছে' });
+            fetchSummaryData();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const days = useMemo(() => {
         const year = parseInt(selectedYear);
         const month = parseInt(selectedMonth);
@@ -681,10 +763,12 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                 const attRecord = attendanceData.find(r => r.date === dateStr && r.className === cls);
                 const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === cls);
                 
-                const presentCount = attRecord ? attRecord.attendance.filter(a => a.status === 'present').length : 0;
-                row[cls] = attRecord ? presentCount : null;
-                row.totalPresent += presentCount;
-                row.totalStudents += classStudents.length;
+                const presentCount = attRecord ? attRecord.attendance.filter(a => a.status === 'present').length : null;
+                row[cls] = presentCount;
+                if (presentCount !== null) {
+                    row.totalPresent += presentCount;
+                    row.totalStudents += classStudents.length;
+                }
             });
 
             row.presentPercent = row.totalStudents > 0 ? (row.totalPresent / row.totalStudents) * 100 : 0;
@@ -760,11 +844,37 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                             )}>
                                                 {toBengaliNumber(fullDateStr)} {dayName}
                                             </TableCell>
-                                            {classes.map(cls => (
-                                                <TableCell key={cls} className="text-center font-black border-r border-b print:border-black text-base">
-                                                    {row[cls] !== null ? toBengaliNumber(row[cls]) : '-'}
-                                                </TableCell>
-                                            ))}
+                                            {classes.map(cls => {
+                                                const hasData = row[cls] !== null;
+                                                return (
+                                                    <TableCell key={cls} className="text-center font-black border-r border-b print:border-black text-base group relative">
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <span>{hasData ? toBengaliNumber(row[cls]) : '-'}</span>
+                                                            {hasData && isAdmin && (
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <button className="h-4 w-4 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity no-print" title="রেকর্ড মুছুন">
+                                                                            <Trash2 className="h-3 w-3" />
+                                                                        </button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent className="font-kalpurush">
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle className="text-rose-700 font-black">নিশ্চিত তো?</AlertDialogTitle>
+                                                                            <AlertDialogDescription className="font-bold">
+                                                                                আপনি কি {classNamesMap[cls]} শ্রেণির {toBengaliNumber(fullDateStr)} তারিখের হাজিরা রেকর্ডটি পুরোপুরি মুছে ফেলতে চান?
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>না</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleDeleteRecord(row.dateStr, cls)} className="bg-destructive text-white">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                )
+                                            })}
                                             <TableCell className="text-center font-black border-r border-b bg-indigo-50/30 text-indigo-700 print:bg-white print:text-black print:border-black text-base">
                                                 {row.totalPresent > 0 ? toBengaliNumber(row.totalPresent) : '-'}
                                             </TableCell>
@@ -984,7 +1094,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                     if (att?.status === 'absent') count++;
                 });
                 return { student, count };
-            }).filter(res => res.count > 0).sort((a, b) => (Number(a.student.roll) || 0) - (Number(b.student.roll) || 0));
+            }).filter(res => res.count > 0).sort((a, b) => (Number(a.student.roll) || 0) - (Number(b.roll) || 0));
 
             setAbsentData(results);
         } catch (e) {
