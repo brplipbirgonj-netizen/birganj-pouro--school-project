@@ -453,9 +453,9 @@ const MonthlyAttendanceGrid = ({
                 >
                     <Table className="border-collapse border-spacing-0 min-w-max border-black">
                         <TableHeader className="sticky top-0 z-40 bg-slate-100">
-                            <TableRow className="h-14 border-b-2 border-black">
-                                <TableHead className="w-14 text-center font-black border-r border-black bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
-                                <TableHead className="min-w-[180px] font-black border-r border-black bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
+                            <TableRow className="h-14 border-y-2 border-black">
+                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
+                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
@@ -469,10 +469,10 @@ const MonthlyAttendanceGrid = ({
                                         )}>
                                             <div className="flex flex-col items-center py-1">
                                                 <span className="text-lg font-black">{toBengaliNumber(d)}</span>
-                                                <span className="text-[9px] font-black opacity-60 uppercase">{format(day, 'EEE', { locale: bn }).slice(0, 3)}</span>
+                                                <span className="text-[9px] font-black opacity-60 uppercase">{format(day, 'EEEE', { locale: bn })}</span>
                                             </div>
 
-                                            <div className="absolute inset-x-0 -bottom-1 flex justify-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity no-print">
+                                            <div className="absolute inset-x-0 -bottom-1 flex justify-center gap-1 no-print">
                                                 <Button 
                                                     variant="secondary" 
                                                     size="icon" 
@@ -516,8 +516,8 @@ const MonthlyAttendanceGrid = ({
                         <TableBody>
                             {students.map((student, sIdx) => (
                                 <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors border-b border-black">
-                                    <TableCell className="text-center font-black border-r border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
-                                    <TableCell className="font-bold border-r border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
+                                    <TableCell className="text-center font-black border-r-2 border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
+                                    <TableCell className="font-bold border-r-2 border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
                                     {daysInMonth.map(day => {
                                         const d = getDate(day);
                                         const isSelected = d === activeDay;
