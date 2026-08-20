@@ -402,7 +402,7 @@ const MonthlyAttendanceGrid = ({
             <div className="flex flex-col sm:flex-row justify-between items-center bg-primary/5 p-4 rounded-xl border-2 border-primary/10 gap-4 no-print">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg"><CalendarCheck className="h-5 w-5 text-primary" /></div>
-                    <div>
+                    <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                             <h3 className="font-black text-lg text-slate-800">মাসিক হাজিরা রেজিস্টার</h3>
                             {isAdmin && (
@@ -423,7 +423,7 @@ const MonthlyAttendanceGrid = ({
                                             <AlertDialogCancel className="font-bold">না, ফিরে যাই</AlertDialogCancel>
                                             <AlertDialogAction onClick={handleDeleteMonth} className="bg-destructive text-white font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
                                         </AlertDialogFooter>
-                                    </AlertDialog>
+                                    </AlertDialogContent>
                                 </AlertDialog>
                             )}
                         </div>
