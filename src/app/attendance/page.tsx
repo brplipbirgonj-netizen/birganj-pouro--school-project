@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Header } from '@/components/Header';
@@ -143,6 +144,7 @@ const MonthlyAttendanceGrid = ({
     // Scroll Sync Refs
     const topScrollRef = useRef<HTMLDivElement>(null);
     const tableContainerRef = useRef<HTMLDivElement>(null);
+    const isFirstLoad = useRef(true);
 
     // Memoize date calculations
     const dateStr = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
@@ -155,14 +157,17 @@ const MonthlyAttendanceGrid = ({
     const [currentStatusMap, setCurrentStatusMap] = useState<Map<string, AttendanceStatus>>(new Map());
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
     const [holidays, setHolidays] = useState<string[]>([]);
 
     const inputRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (isBackground = false) => {
         if (!db || !user) return;
-        setIsLoading(true);
+        if (!isBackground) setIsLoading(true);
+        else setIsRefreshing(true);
+
         try {
             const startStr = format(monthStart, 'yyyy-MM-dd');
             const endStr = format(monthEnd, 'yyyy-MM-dd');
@@ -193,10 +198,12 @@ const MonthlyAttendanceGrid = ({
 
             const holidayToday = await isHoliday(db, dateStr);
             setActiveHoliday(holidayToday);
+            isFirstLoad.current = false;
         } catch (e) {
             console.error("Fetch Data Error:", e);
         }
         setIsLoading(false);
+        setIsRefreshing(false);
     }, [db, user, classId, selectedYear, dateStr, monthStart, monthEnd]);
 
     useEffect(() => { 
@@ -239,7 +246,7 @@ const MonthlyAttendanceGrid = ({
 
             await saveDailyAttendance(db, dailyAttendance);
             toast({ title: "হাজিরা সংরক্ষিত হয়েছে", description: `${format(selectedDate, 'PPP', { locale: bn })} এর তথ্য সেভ হয়েছে।` });
-            fetchData();
+            fetchData(true); // Background refresh to preserve scroll
         } catch (e) {
             console.error(e);
         } finally {
@@ -247,12 +254,17 @@ const MonthlyAttendanceGrid = ({
         }
     };
 
-    const handleDeleteDay = async (targetDateStr: string) => {
+    const handleDeleteDay = async (targetDate: Date) => {
         if (!db) return;
+        const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+        
+        // Fix: Update focus to the date being deleted so the view stays there
+        onDateChange(targetDate);
+
         try {
             await deleteDailyAttendance(db, targetDateStr, classId, selectedYear);
             toast({ title: "সফল", description: "হাজিরা রেকর্ডটি মুছে ফেলা হয়েছে।" });
-            fetchData();
+            fetchData(true); // Background refresh to preserve scroll
         } catch (e) {}
     };
 
@@ -288,10 +300,10 @@ const MonthlyAttendanceGrid = ({
         }
     };
 
-    if (isLoading) return <div className="p-20 text-center italic"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" /> ডাটা লোড হচ্ছে...</div>;
+    if (isLoading && isFirstLoad.current) return <div className="p-20 text-center italic"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" /> ডাটা লোড হচ্ছে...</div>;
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500 relative">
             <style jsx global>{`
                 .attendance-table th, .attendance-table td {
                     border: 1px solid black !important;
@@ -309,6 +321,14 @@ const MonthlyAttendanceGrid = ({
                     border-radius: 10px;
                 }
             `}</style>
+
+            {isRefreshing && (
+                <div className="absolute top-0 right-0 z-[100] p-2 no-print">
+                    <div className="bg-primary/90 text-white px-3 py-1 rounded-full text-[10px] font-black flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-right-4">
+                        <Loader2 className="h-3 w-3 animate-spin" /> রিফ্রেশ হচ্ছে...
+                    </div>
+                </div>
+            )}
             
             <div className="flex flex-col sm:flex-row justify-between items-center bg-primary/5 p-4 rounded-xl border-2 border-primary/10 gap-4 no-print">
                 <div className="flex items-center gap-3">
@@ -396,8 +416,8 @@ const MonthlyAttendanceGrid = ({
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
-                                                            <AlertDialogCancel>না</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteDay(recordDateStr)} className="bg-destructive">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                            <AlertDialogCancel className="font-bold">না</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteDay(day)} className="bg-destructive font-black">হ্যাঁ, মুছুন</AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
@@ -952,7 +972,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                                                             </AlertDialogDescription>
                                                                         </AlertDialogHeader>
                                                                         <AlertDialogFooter>
-                                                                            <AlertDialogCancel>না</AlertDialogCancel>
+                                                                            <AlertDialogCancel className="font-bold">না</AlertDialogCancel>
                                                                             <AlertDialogAction onClick={() => handleDeleteRecord(row.dateStr, cls)} className="bg-destructive text-white">হ্যাঁ, মুছুন</AlertDialogAction>
                                                                         </AlertDialogFooter>
                                                                     </AlertDialogContent>
