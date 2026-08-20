@@ -418,7 +418,7 @@ const MonthlyAttendanceGrid = ({
                                             <AlertDialogCancel className="font-bold">না, ফিরে যাই</AlertDialogCancel>
                                             <AlertDialogAction onClick={handleDeleteMonth} className="bg-destructive text-white font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
                                         </AlertDialogFooter>
-                                    </AlertDialog>
+                                    </AlertDialogContent>
                                 </AlertDialog>
                             )}
                         </div>
