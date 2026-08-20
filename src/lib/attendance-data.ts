@@ -10,6 +10,7 @@ import {
   setDoc,
   orderBy,
   deleteDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -80,12 +81,36 @@ export const saveDailyAttendance = (db: Firestore, record: DailyAttendance) => {
 
 /**
  * Deletes a daily attendance record.
+ * Handles both deterministic IDs and legacy random IDs.
  */
-export const deleteDailyAttendance = (db: Firestore, date: string, className: string, academicYear: string) => {
+export const deleteDailyAttendance = async (db: Firestore, date: string, className: string, academicYear: string) => {
   const docId = `${date}_${className}_${academicYear}`;
   const docRef = doc(db, ATTENDANCE_COLLECTION, docId);
   
-  return deleteDoc(docRef).catch(async (serverError: any) => {
+  try {
+    // 1. Try deleting the primary deterministic ID record
+    await deleteDoc(docRef);
+    
+    // 2. Query and delete any potential duplicate or legacy random-ID records for the same day/class
+    const q = query(
+      collection(db, ATTENDANCE_COLLECTION),
+      where("date", "==", date),
+      where("className", "==", className),
+      where("academicYear", "==", academicYear)
+    );
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      const batch = writeBatch(db);
+      snapshot.docs.forEach(d => {
+        // Only add to batch if it wasn't already deleted by the first deleteDoc call
+        if (d.id !== docId) {
+          batch.delete(d.ref);
+        }
+      });
+      await batch.commit();
+    }
+  } catch (serverError: any) {
     if (serverError.code === 'permission-denied') {
       const permissionError = new FirestorePermissionError({
         path: docRef.path,
@@ -94,7 +119,7 @@ export const deleteDailyAttendance = (db: Firestore, date: string, className: st
       errorEmitter.emit('permission-error', permissionError);
     }
     throw serverError;
-  });
+  }
 };
 
 export const getAttendanceForDate = async (db: Firestore, date: string, academicYear: string): Promise<DailyAttendance[]> => {

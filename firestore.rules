@@ -116,7 +116,7 @@ service cloud.firestore {
     match /attendance/{id} {
       allow read: if isAuthed();
       allow write: if isAuthed() && (hasPermission('manage:attendance') || hasPermission('input:quick-roll-attendance') || hasPermission('input:missed-attendance') || isAdmin());
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || hasPermission('manage:attendance');
     }
     
     match /results/{id} {
@@ -133,7 +133,7 @@ service cloud.firestore {
 
     match /messageLogs/{id} {
       allow read: if isAuthed();
-      allow create: if isAuthed() && hasPermission('send:messaging') || isAdmin());
+      allow create: if isAuthed() && (hasPermission('send:messaging') || isAdmin());
       allow update, delete: if isAuthed() && (hasPermission('manage:messaging') || isAdmin());
     }
 
