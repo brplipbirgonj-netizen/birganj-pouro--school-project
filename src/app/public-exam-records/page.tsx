@@ -16,12 +16,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { 
     Award, Plus, Search, Trash2, Printer, Loader2, Save, X, 
-    FileText, GraduationCap, School, Info, CheckCircle2, History
+    FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight
 } from 'lucide-react';
 import { PublicExamRecord, PublicExamType, getPublicExamRecords, savePublicExamRecord, deletePublicExamRecord, NewPublicExamData } from '@/lib/public-exam-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Student, studentFromDoc } from '@/lib/student-data';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 const examTypes: { id: PublicExamType; label: string }[] = [
     { id: 'SSC', label: 'এসএসসি পরীক্ষা' },
@@ -53,6 +55,10 @@ export default function PublicExamRecordsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<PublicExamType>('SSC');
     const [records, setRecords] = useState<PublicExamRecord[]>([]);
+    
+    // Student Link States
+    const [allStudents, setAllStudents] = useState<Student[]>([]);
+    const [isFetchingStudents, setIsFetchingStudents] = useState(false);
     
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -89,9 +95,43 @@ export default function PublicExamRecordsPage() {
         fetchRecords();
     }, [fetchRecords]);
 
+    // Reactive listener for students to link
+    useEffect(() => {
+        if (!db || !user || !isClient) return;
+        setIsFetchingStudents(true);
+        const q = query(collection(db, 'students'), where('academicYear', '==', selectedYear));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setAllStudents(snapshot.docs.map(studentFromDoc));
+            setIsFetchingStudents(false);
+        });
+        return () => unsubscribe();
+    }, [db, user, isClient, selectedYear]);
+
     useEffect(() => {
         setFormData(prev => ({ ...prev, examType: activeTab, academicYear: selectedYear }));
     }, [activeTab, selectedYear]);
+
+    const candidateStudents = useMemo(() => {
+        // SSC usually for Class 10, JSC/Scholarship for Class 8
+        const targetClass = activeTab === 'SSC' ? '10' : '8';
+        return allStudents
+            .filter(s => s.className === targetClass)
+            .sort((a, b) => (a.roll || 0) - (b.roll || 0));
+    }, [allStudents, activeTab]);
+
+    const handleStudentLink = (studentId: string) => {
+        const student = allStudents.find(s => s.id === studentId);
+        if (student) {
+            setFormData(prev => ({
+                ...prev,
+                studentName: student.studentNameBn,
+                rollNo: String(student.roll || ''),
+                registrationNo: student.prevRegNo || '',
+                group: (student.group || 'general').toLowerCase()
+            }));
+            toast({ title: 'শিক্ষার্থীর তথ্য লোড হয়েছে', description: `${student.studentNameBn} এর তথ্য ফরমে যুক্ত হয়েছে।` });
+        }
+    };
 
     const handleSave = async () => {
         if (!db) return;
@@ -148,13 +188,41 @@ export default function PublicExamRecordsPage() {
                                         <Plus className="h-6 w-6" /> নতুন রেকর্ড যোগ
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-2xl font-kalpurush p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
+                                <DialogContent className="sm:max-w-3xl font-kalpurush p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
                                     <DialogHeader className="p-6 bg-primary text-white">
                                         <DialogTitle className="text-2xl font-black">শিক্ষার্থীর তথ্য এন্ট্রি করুন</DialogTitle>
-                                        <DialogDescription className="text-white/80 font-bold">সঠিক তথ্য দিয়ে ফরমটি পূরণ করুন</DialogDescription>
+                                        <DialogDescription className="text-white/80 font-bold">নিচে থেকে শিক্ষার্থী নির্বাচন করুন অথবা ম্যানুয়ালি লিখুন</DialogDescription>
                                     </DialogHeader>
-                                    <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto bg-white">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto bg-white">
+                                        
+                                        {/* Student Selection Link */}
+                                        <div className="p-4 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="font-black text-primary uppercase text-[10px] tracking-widest">ডাটাবেস থেকে শিক্ষার্থী খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'})</Label>
+                                                {isFetchingStudents && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                                            </div>
+                                            <Select onValueChange={handleStudentLink}>
+                                                <SelectTrigger className="h-11 bg-white border-2">
+                                                    <SelectValue placeholder="শিক্ষার্থী নির্বাচন করুন..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {candidateStudents.length === 0 ? (
+                                                        <div className="p-4 text-center text-xs font-bold text-muted-foreground italic">এই শ্রেণির কোনো শিক্ষার্থী পাওয়া যায়নি।</div>
+                                                    ) : (
+                                                        candidateStudents.map(s => (
+                                                            <SelectItem key={s.id} value={s.id} className="font-bold">
+                                                                রোল: {toBengaliNumber(s.roll)} - {s.studentNameBn}
+                                                            </SelectItem>
+                                                        ))
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="text-[10px] font-bold text-muted-foreground italic">
+                                                * শিক্ষার্থী নির্বাচন করলে তার নাম, রোল ও রেজিস্ট্রেশন স্বয়ংক্রিয়ভাবে ফরমে চলে আসবে।
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                                             <div className="space-y-2">
                                                 <Label className="font-bold">পরীক্ষার ধরন</Label>
                                                 <Select value={formData.examType} onValueChange={(v: any) => setFormData({...formData, examType: v})}>
@@ -166,15 +234,15 @@ export default function PublicExamRecordsPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="font-bold">শিক্ষার্থীর নাম *</Label>
-                                                <Input value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} placeholder="নাম লিখুন" className="border-2 focus:ring-primary" />
+                                                <Input value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} placeholder="নাম লিখুন" className="border-2 font-black" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="font-bold">রেজিস্ট্রেশন নং *</Label>
-                                                <Input value={formData.registrationNo} onChange={e => setFormData({...formData, registrationNo: e.target.value})} placeholder="১২৩..." className="border-2 font-black" />
+                                                <Label className="font-bold">রেজিস্ট্রেশন নং (ESIF অনুযায়ী)</Label>
+                                                <Input value={formData.registrationNo} onChange={e => setFormData({...formData, registrationNo: e.target.value})} placeholder="রেজিস্ট্রেশন নম্বর লিখুন" className="border-2 font-black text-blue-900" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="font-bold">রোল নং *</Label>
-                                                <Input value={formData.rollNo} onChange={e => setFormData({...formData, rollNo: e.target.value})} placeholder="১০০০..." className="border-2 font-black" />
+                                                <Label className="font-bold">পাবলিক পরীক্ষার রোল নং *</Label>
+                                                <Input value={formData.rollNo} onChange={e => setFormData({...formData, rollNo: e.target.value})} placeholder="বোর্ড রোল লিখুন" className="border-2 font-black text-rose-700" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="font-bold">বিভাগ/গ্রুপ</Label>
@@ -186,7 +254,7 @@ export default function PublicExamRecordsPage() {
                                                 </Select>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="font-bold">কেন্দ্রের নাম</Label>
+                                                <Label className="font-bold">পরীক্ষা কেন্দ্রের নাম</Label>
                                                 <Input value={formData.centerName} onChange={e => setFormData({...formData, centerName: e.target.value})} placeholder="কেন্দ্রের নাম" className="border-2" />
                                             </div>
                                             <div className="space-y-2">
@@ -209,7 +277,7 @@ export default function PublicExamRecordsPage() {
                                         <DialogClose asChild><Button variant="ghost" className="font-bold h-12 px-6">বাতিল</Button></DialogClose>
                                         <Button onClick={handleSave} disabled={isSaving} className="px-12 font-black h-12 shadow-xl min-w-[160px]">
                                             {isSaving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />}
-                                            সেভ করুন
+                                            রেকর্ড সেভ করুন
                                         </Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -245,8 +313,8 @@ export default function PublicExamRecordsPage() {
                                     <div className="printable-area bg-white p-0 sm:p-4">
                                         {/* Print Only Title */}
                                         <div className="hidden print:block text-center mb-10 border-b-4 border-black pb-4">
-                                            <h1 className="text-3xl font-black uppercase mb-1">{schoolInfo.name}</h1>
-                                            <p className="text-lg font-bold text-slate-700 mb-4">{schoolInfo.address}</p>
+                                            <h1 className="text-3xl font-black uppercase mb-1">{schoolInfo?.name}</h1>
+                                            <p className="text-lg font-bold text-slate-700 mb-4">{schoolInfo?.address}</p>
                                             <div className="inline-block border-2 border-black px-10 py-1.5 rounded-full font-black text-xl uppercase bg-slate-50">
                                                 {type.label} - অংশগ্রহণকারী শিক্ষার্থীর তথ্য ({toBengaliNumber(selectedYear)})
                                             </div>
@@ -325,7 +393,7 @@ export default function PublicExamRecordsPage() {
                                         <Info className="h-4 w-4" /> সর্বশেষ তথ্য অনুযায়ী মোট রেকর্ড: {toBengaliNumber(records.length)} টি
                                     </div>
                                     <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                        Digital Management Portal | {schoolInfo.name}
+                                        Digital Management Portal | {schoolInfo?.name}
                                     </div>
                                 </CardFooter>
                             </Card>
