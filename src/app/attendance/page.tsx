@@ -458,11 +458,11 @@ const MonthlyAttendanceGrid = ({
                     onScroll={() => handleScrollSync('table')}
                     className="table-container attendance-table !max-h-[600px] border rounded-lg overflow-auto relative permanent-scroll"
                 >
-                    <Table className="border-collapse border-spacing-0 min-w-max">
+                    <Table className="border-separate border-spacing-0 min-w-max">
                         <TableHeader className="sticky top-0 z-40">
                             <TableRow className="border-t-2 border-b-2 border-black bg-slate-100 h-24">
-                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
-                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
+                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-[60] text-black">রোল</TableHead>
+                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-[60] text-black">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
@@ -505,7 +505,7 @@ const MonthlyAttendanceGrid = ({
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
-                                                                <AlertDialogCancel className="font-bold">না</AlertDialogCancel>
+                                                                <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
                                                                 <AlertDialogAction onClick={() => handleDeleteDay(day)} className="bg-destructive font-black">হ্যাঁ, মুছুন</AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
@@ -515,7 +515,7 @@ const MonthlyAttendanceGrid = ({
                                         </TableHead>
                                     );
                                 })}
-                                <TableHead className="w-20 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-black">মোট উপস্থিত</TableHead>
+                                <TableHead className="w-20 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-[60] text-black">মোট উপস্থিত</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1074,7 +1074,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                 <CardContent className="p-0">
                     <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible">
                         <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full">
-                            <TableHeader className="bg-muted sticky top-0 z-30 print:bg-white print:static">
+                            <TableHeader className="sticky top-0 z-30 print:bg-white print:static">
                                 <TableRow className="h-16 print:h-8">
                                     <TableHead className="text-center font-black border-r border-b w-48 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black text-[14px]">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
