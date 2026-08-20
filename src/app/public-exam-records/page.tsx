@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -296,6 +297,16 @@ export default function PublicExamRecordsPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4 landscape; margin: 10mm !important; }
+                    html, body { height: auto !important; background: white !important; }
+                    .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; padding: 0 !important; margin: 0 !important; display: block !important; }
+                    .printable-area table { border-collapse: collapse !important; width: 100% !important; table-layout: auto !important; }
+                    .printable-area th, .printable-area td { border: 1.5px solid black !important; padding: 4px 2px !important; font-size: 10px !important; line-height: 1.2 !important; color: black !important; }
+                    .no-print { display: none !important; }
+                }
+            `}</style>
             <main className="flex-1 p-4 md:p-8 lg:p-12 max-w-[1600px] mx-auto w-full pb-40">
                 <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 no-print">
                     <div className="space-y-1">
@@ -529,29 +540,29 @@ export default function PublicExamRecordsPage() {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="printable-area bg-white p-0 sm:p-4">
-                                        <div className="hidden print:block text-center mb-10 border-b-4 border-black pb-4">
+                                        <div className="hidden print:block text-center mb-6 border-b-4 border-black pb-4">
                                             <h1 className="text-3xl font-black uppercase mb-1">{schoolInfo?.name}</h1>
                                             <p className="text-lg font-bold text-slate-700">{schoolInfo?.address}</p>
-                                            <div className="inline-block border-2 border-black px-10 py-1.5 rounded-full font-black text-xl uppercase bg-slate-50">
+                                            <div className="inline-block border-2 border-black px-10 py-1.5 rounded-full font-black text-xl uppercase bg-slate-50 mt-2">
                                                 {type.label} - অংশগ্রহণকারী শিক্ষার্থীর তথ্য ({toBengaliNumber(viewYear)})
                                             </div>
                                         </div>
 
                                         <div className="overflow-x-auto">
-                                            <Table className="border-collapse border-spacing-0 w-full min-w-[1200px] border-black">
+                                            <Table className="border-collapse border-spacing-0 w-full min-w-full border-black">
                                                 <TableHeader className="bg-slate-100">
                                                     <TableRow className="h-14 border-b-[3px] border-black">
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-14">ছবি</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-28">বোর্ড</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-32">রেজিস্ট্রেশন নং</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">পরীক্ষার রোল</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">শ্রেণির রোল</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-left pl-4 font-black text-black text-sm">নাম</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">বিভাগ</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-12">ছবি</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">বোর্ড</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-28">রেজিস্ট্রেশন নং</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-20">বোর্ড রোল</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-16">শ্রেণি রোল</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-left pl-3 font-black text-black text-sm">নাম</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-16">বিভাগ</TableHead>
                                                         <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm">কেন্দ্র নাম</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-24">প্রাপ্ত মোট নম্বর</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-20">প্রাপ্ত গ্রেড</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-20">প্রাপ্ত জিপিএ</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-14">নম্বর</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-12">গ্রেড</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-sm w-12">GPA</TableHead>
                                                         <TableHead className="text-right pr-6 font-black text-black text-sm no-print">কার্যক্রম</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
@@ -564,23 +575,23 @@ export default function PublicExamRecordsPage() {
                                                         records.map((record) => (
                                                             <TableRow key={record.id} className="h-12 border-b-2 border-black hover:bg-slate-50 transition-colors">
                                                                 <TableCell className="border-r-2 border-black text-center p-1">
-                                                                    <Avatar className="h-10 w-10 border shadow-sm mx-auto">
+                                                                    <Avatar className="h-9 w-9 border shadow-sm mx-auto">
                                                                         <AvatarImage src={record.photoUrl || getStudentPlaceholderImage()} className="object-cover" />
                                                                         <AvatarFallback className="font-black text-xs">S</AvatarFallback>
                                                                     </Avatar>
                                                                 </TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-bold text-xs text-slate-700">{record.boardName || '-'}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
-                                                                <TableCell className="border-r-2 border-black font-black text-sm pl-4 text-slate-900">{record.studentName}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-bold text-xs uppercase">
+                                                                <TableCell className="border-r-2 border-black text-center font-bold text-[10px] text-slate-700">{record.boardName || '-'}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-[11px] text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-[11px] text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-[11px] text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
+                                                                <TableCell className="border-r-2 border-black font-black text-xs pl-3 text-slate-900">{record.studentName}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-bold text-[10px] uppercase">
                                                                     {groups.find(g => g.id === record.group)?.label || record.group}
                                                                 </TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-medium text-xs text-slate-600">{record.centerName || '-'}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
-                                                                <TableCell className={cn("border-r-2 border-black text-center font-black text-base", record.grade?.startsWith('F') ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-medium text-[10px] text-slate-600 px-1">{record.centerName || '-'}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
+                                                                <TableCell className={cn("border-r-2 border-black text-center font-black text-sm", record.grade?.startsWith('F') ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-sm text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
                                                                 <TableCell className="text-right pr-6 no-print">
                                                                     <div className="flex justify-end gap-2">
                                                                         <Button 
@@ -619,7 +630,7 @@ export default function PublicExamRecordsPage() {
                                             </Table>
                                         </div>
 
-                                        <div className="hidden print:flex justify-between items-end mt-32 px-10">
+                                        <div className="hidden print:flex justify-between items-end mt-16 px-10">
                                             <div className="text-center w-56 border-t-2 border-black pt-2 font-black text-lg">অফিস সহকারী</div>
                                             <div className="text-center w-56 border-t-2 border-black pt-2 font-black text-lg">প্রধান শিক্ষক</div>
                                         </div>
