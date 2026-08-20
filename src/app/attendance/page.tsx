@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from '@/components/Header';
@@ -127,12 +126,14 @@ const MonthlyAttendanceGrid = ({
     classId, 
     students, 
     selectedDate,
-    onRefresh 
+    onRefresh,
+    onDateChange
 }: { 
     classId: string, 
     students: Student[], 
     selectedDate: Date,
-    onRefresh: () => void
+    onRefresh: () => void,
+    onDateChange: (d: Date) => void
 }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -230,6 +231,15 @@ const MonthlyAttendanceGrid = ({
         }
     };
 
+    const handleDeleteDay = async (targetDateStr: string) => {
+        if (!db) return;
+        try {
+            await deleteDailyAttendance(db, targetDateStr, classId, selectedYear);
+            toast({ title: "সফল", description: "হাজিরা রেকর্ডটি মুছে ফেলা হয়েছে।" });
+            fetchData();
+        } catch (e) {}
+    };
+
     const toggleStatus = (studentId: string, status: AttendanceStatus, index: number) => {
         setCurrentStatusMap(prev => {
             const next = new Map(prev);
@@ -289,22 +299,61 @@ const MonthlyAttendanceGrid = ({
             <div className="table-container !max-h-[600px] border-2 border-black rounded-xl shadow-xl overflow-auto relative">
                 <Table className="border-collapse border-spacing-0 min-w-max">
                     <TableHeader className="sticky top-0 z-40 bg-slate-100">
-                        <TableRow className="h-12 border-b-2 border-black">
+                        <TableRow className="h-14 border-b-2 border-black">
                             <TableHead className="w-12 text-center font-black border-r border-black bg-slate-100 sticky left-0 z-50">রোল</TableHead>
                             <TableHead className="min-w-[150px] font-black border-r border-black bg-slate-100 sticky left-12 z-50">শিক্ষার্থীর নাম</TableHead>
                             {daysInMonth.map(day => {
                                 const d = getDate(day);
                                 const isSelected = d === activeDay;
                                 const isOff = isOffDay(day, holidays);
+                                const recordDateStr = format(day, 'yyyy-MM-dd');
+                                
                                 return (
                                     <TableHead key={d} className={cn(
-                                        "w-10 text-center font-black border-r border-black p-0 text-[10px]",
+                                        "w-12 text-center font-black border-r border-black p-0 text-[10px] group/header relative",
                                         isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100",
                                         isOff && !isSelected && "bg-rose-50 text-rose-400"
                                     )}>
-                                        <div className="flex flex-col items-center">
+                                        <div className="flex flex-col items-center py-1">
                                             <span>{toBengaliNumber(d)}</span>
                                             <span className="text-[8px] opacity-60 uppercase">{format(day, 'EEE', { locale: bn }).slice(0, 3)}</span>
+                                        </div>
+
+                                        {/* Edit and Delete Action Overlay */}
+                                        <div className="absolute inset-x-0 -bottom-1 flex justify-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity no-print">
+                                            <Button 
+                                                variant="secondary" 
+                                                size="icon" 
+                                                className="h-5 w-5 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
+                                                onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
+                                                title="এডিট (এই দিনটি নির্বাচন করুন)"
+                                            >
+                                                <Edit2 className="h-2.5 w-2.5" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button 
+                                                        variant="destructive" 
+                                                        size="icon" 
+                                                        className="h-5 w-5 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
+                                                        title="ডিলিট"
+                                                    >
+                                                        <Trash2 className="h-2.5 w-2.5" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent className="font-kalpurush">
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle className="text-rose-700">হাজিরা মুছতে চান?</AlertDialogTitle>
+                                                        <AlertDialogDescription className="font-bold">
+                                                            আপনি কি {format(day, 'd MMMM', { locale: bn })} এর {classNamesMap[classId]} শ্রেণির সকল হাজিরা রেকর্ড মুছে ফেলতে চান?
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>না</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteDay(recordDateStr)} className="bg-destructive">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
                                     </TableHead>
                                 );
@@ -379,7 +428,8 @@ const MonthlyAttendanceGrid = ({
             <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-xl flex items-start gap-3 no-print">
                 <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-xs font-bold text-amber-900 space-y-1">
-                    <p>• নীল কলামটি আজকের তারিখ নির্দেশ করে। এখানে P = উপস্থিত এবং A = অনুপস্থিত।</p>
+                    <p>• প্রতিটি তারিখের কলামে <strong>Edit</strong> বাটনে ক্লিক করে ওই দিনের হাজিরা নিতে পারবেন।</p>
+                    <p>• নীল কলামটি বর্তমান নির্বাচিত তারিখ নির্দেশ করে। এখানে P = উপস্থিত এবং A = অনুপস্থিত।</p>
                     <p>• কিবোর্ড টিপস: <strong>Enter</strong> চাপলে শিক্ষার্থী উপস্থিত হবে এবং ফোকাস নিচের জনের ঘরে চলে যাবে।</p>
                     <p>• যাদের জন্য কিছুই নির্বাচন করবেন না, সেভ দেওয়ার সময় তারা স্বয়ংক্রিয়ভাবে অনুপস্থিত হিসেবে গণ্য হবে।</p>
                 </div>
@@ -400,12 +450,14 @@ const AttendanceSheet = ({
     classId, 
     students, 
     date,
-    onRefresh 
+    onRefresh,
+    onDateChange
 }: { 
     classId: string, 
     students: Student[], 
     date: Date,
-    onRefresh: () => void
+    onRefresh: () => void,
+    onDateChange: (d: Date) => void
 }) => {
     return (
         <MonthlyAttendanceGrid 
@@ -413,6 +465,7 @@ const AttendanceSheet = ({
             students={students} 
             selectedDate={date} 
             onRefresh={onRefresh} 
+            onDateChange={onDateChange}
         />
     );
 };
@@ -466,6 +519,7 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
                                         students={getStudentsByClass(className)} 
                                         date={date}
                                         onRefresh={() => {}}
+                                        onDateChange={onDateChange}
                                     />
                                 )}
                             </CardContent>
