@@ -34,7 +34,8 @@ import {
     Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, 
     CalendarDays, CalendarCheck, Plus, Save, Loader2, 
     BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, 
-    MessageSquareDashed, UserX, Printer, Wifi, WifiOff, Trash2
+    MessageSquareDashed, UserX, Printer, Wifi, WifiOff, Trash2,
+    Info
 } from 'lucide-react';
 import { 
     AlertDialog, 
@@ -1001,7 +1002,7 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
-    }, [fetchMissedAttendance, iIsClient]);
+    }, [fetchMissedAttendance, isClient]);
 
     if (!isClient) return null;
 
