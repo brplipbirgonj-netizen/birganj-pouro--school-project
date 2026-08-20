@@ -119,6 +119,24 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["academicYear", "className", "subject", "examType", "month", "fullMarks"]
+    },
+    "publicExamRecord": {
+      "title": "Public Exam Record",
+      "description": "Records of students in public exams like SSC, JSC or Scholarship.",
+      "type": "object",
+      "properties": {
+        "registrationNo": { "type": "string" },
+        "rollNo": { "type": "string" },
+        "studentName": { "type": "string" },
+        "group": { "type": "string" },
+        "centerName": { "type": "string" },
+        "totalMarks": { "type": "number" },
+        "grade": { "type": "string" },
+        "gpa": { "type": "number" },
+        "examType": { "type": "string", "enum": ["SSC", "JSC", "Scholarship"] },
+        "academicYear": { "type": "string" }
+      },
+      "required": ["registrationNo", "rollNo", "studentName", "examType", "academicYear"]
     }
   },
   "auth": {
@@ -148,6 +166,10 @@
     "/specialResults/{id}": {
       "schema": { "$ref": "#/entities/specialResult" },
       "description": "Stores special exam (monthly/weekly) result records."
+    },
+    "/publicExamRecords/{id}": {
+      "schema": { "$ref": "#/entities/publicExamRecord" },
+      "description": "Stores public exam performance records (SSC, JSC, Scholarship)."
     }
   }
 }

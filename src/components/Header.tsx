@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -28,7 +29,8 @@ import {
   Bell,
   Wifi,
   WifiOff,
-  ArrowLeft
+  ArrowLeft,
+  Award
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -98,6 +100,7 @@ const mainMenuItems = [
   { id: 'attendance', label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance', color: 'bg-amber-50 text-amber-700 border-amber-100' },
   { id: 'lesson-planner', label: 'লেসন প্ল্যান ও সিলেবাস', icon: ListTodo, href: '/lesson-planner', permission: 'manage:lesson-plans', color: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
   { id: 'results', label: 'ফলাফল', icon: BookMarked, href: '/results', permission: ['manage:results', 'input:results'], color: 'bg-violet-50 text-violet-700 border-violet-100' },
+  { id: 'public-exam-records', label: 'পাবলিক পরীক্ষার রেকর্ড', icon: Award, href: '/public-exam-records', permission: ['manage:results', 'input:results'], color: 'bg-amber-50 text-amber-700 border-amber-100' },
   { id: 'messaging', label: 'মেসেজ', icon: MessageSquare, href: '/messaging', permission: ['send:messaging', 'manage:messaging'], color: 'bg-lime-50 text-lime-700 border-lime-100' },
   { id: 'accounts', label: 'হিসাব শাখা', icon: Banknote, href: '/accounts', permission: 'view:accounts', color: 'bg-teal-50 text-teal-700 border-teal-100' },
   { id: 'staff', label: 'শিক্ষক ও কর্মচারী', icon: Users2, href: '/staff', permission: 'view:staff', color: 'bg-orange-50 text-orange-700 border-orange-100' },
