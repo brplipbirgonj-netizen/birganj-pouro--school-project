@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -93,6 +94,7 @@ export default function PublicExamRecordsPage() {
     const [formData, setFormData] = useState<NewPublicExamData>({
         registrationNo: '',
         rollNo: '',
+        examRoll: '',
         studentName: '',
         photoUrl: '',
         group: 'general',
@@ -111,7 +113,7 @@ export default function PublicExamRecordsPage() {
         setIsLoading(true);
         try {
             const data = await getPublicExamRecords(db, viewYear, activeTab);
-            // Updated sort logic to sort by Roll Number numerically (ascending)
+            // Sort by Class Roll Number numerically (ascending)
             setRecords(data.sort((a, b) => {
                 const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
                 const rollA = parseInt(bnToEn(a.rollNo), 10) || 0;
@@ -196,7 +198,8 @@ export default function PublicExamRecordsPage() {
                     if (student) {
                         const data: NewPublicExamData = {
                             registrationNo: student.prevRegNo || '',
-                            rollNo: String(student.roll || ''),
+                            rollNo: String(student.roll || ''), // Class Roll
+                            examRoll: '', // To be filled later
                             studentName: student.studentNameBn,
                             photoUrl: student.photoUrl || '',
                             group: (student.group || 'general').toLowerCase(),
@@ -237,7 +240,7 @@ export default function PublicExamRecordsPage() {
             setIsAddOpen(false);
             setEditingId(null);
             setFormData({
-                registrationNo: '', rollNo: '', studentName: '', photoUrl: '', group: 'general',
+                registrationNo: '', rollNo: '', examRoll: '', studentName: '', photoUrl: '', group: 'general',
                 centerName: '', totalMarks: 0, grade: '', gpa: 0,
                 examType: activeTab, academicYear: viewYear
             });
@@ -253,6 +256,7 @@ export default function PublicExamRecordsPage() {
         setFormData({
             registrationNo: record.registrationNo,
             rollNo: record.rollNo,
+            examRoll: record.examRoll || '',
             studentName: record.studentName,
             photoUrl: record.photoUrl || '',
             group: record.group,
@@ -312,7 +316,7 @@ export default function PublicExamRecordsPage() {
                                     setSelectedStudentIdsInDialog(new Set());
                                     setDialogSearchQuery('');
                                     setFormData({
-                                        registrationNo: '', rollNo: '', studentName: '', photoUrl: '', group: 'general',
+                                        registrationNo: '', rollNo: '', examRoll: '', studentName: '', photoUrl: '', group: 'general',
                                         centerName: '', totalMarks: 0, grade: '', gpa: 0,
                                         examType: activeTab, academicYear: viewYear
                                     });
@@ -386,7 +390,7 @@ export default function PublicExamRecordsPage() {
                                                                     </Avatar>
                                                                     <div className="flex-1 overflow-hidden">
                                                                         <p className="font-black text-slate-800 truncate text-sm">{s.studentNameBn}</p>
-                                                                        <p className="text-[10px] font-bold text-muted-foreground">রোল: {toBengaliNumber(s.roll)} | আইডি: {toBengaliNumber(s.generatedId || '')}</p>
+                                                                        <p className="text-[10px] font-bold text-muted-foreground">শ্রেণির রোল: {toBengaliNumber(s.roll)} | আইডি: {toBengaliNumber(s.generatedId || '')}</p>
                                                                     </div>
                                                                 </div>
                                                             ))
@@ -397,7 +401,7 @@ export default function PublicExamRecordsPage() {
                                                 <div className="p-4 bg-amber-50 rounded-xl border-2 border-dashed border-amber-200 flex items-start gap-3">
                                                     <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                                                     <p className="text-xs font-bold text-amber-900 leading-relaxed">
-                                                        শিক্ষার্থীদের টিক দিয়ে সেভ করুন। পরবর্তীতে মূল টেবিলের **এডিট** বাটন ব্যবহার করে প্রত্যেকের জিপিএ ও নম্বর সংশোধন করা যাবে।
+                                                        শিক্ষার্থীদের টিক দিয়ে সেভ করুন। পরবর্তীতে মূল টেবিলের **এডিট** বাটন ব্যবহার করে প্রত্যেকের পরীক্ষার রোল, জিপিএ ও নম্বর সংশোধন করা যাবে।
                                                     </p>
                                                 </div>
                                             </div>
@@ -418,11 +422,15 @@ export default function PublicExamRecordsPage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label className="font-bold">রেজিস্ট্রেশন নং (ESIF অনুযায়ী)</Label>
-                                                    <Input value={formData.registrationNo} onChange={e => setFormData({...formData, registrationNo: e.target.value})} placeholder="রেজিস্ট্রেশন নম্বর লিখুন" className="border-2 font-black text-blue-900" />
+                                                    <Input value={formData.registrationNo} onChange={e => setFormData({...formData, registrationNo: e.target.value})} placeholder="রেজিস্ট্রেশন নম্বর" className="border-2 font-black text-blue-900" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label className="font-bold">পাবলিক পরীক্ষার রোল নং *</Label>
-                                                    <Input value={formData.rollNo} onChange={e => setFormData({...formData, rollNo: e.target.value})} placeholder="বোর্ড রোল লিখুন" className="border-2 font-black text-rose-700" />
+                                                    <Input value={formData.examRoll} onChange={e => setFormData({...formData, examRoll: e.target.value})} placeholder="বোর্ড রোল লিখুন" className="border-2 font-black text-rose-700" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">শ্রেণির রোল নং * (অটো)</Label>
+                                                    <Input value={formData.rollNo} onChange={e => setFormData({...formData, rollNo: e.target.value})} placeholder="শ্রেণির রোল" className="border-2 font-bold bg-slate-50" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label className="font-bold">বিভাগ/গ্রুপ</Label>
@@ -506,12 +514,13 @@ export default function PublicExamRecordsPage() {
                                         </div>
 
                                         <div className="overflow-x-auto">
-                                            <Table className="border-collapse border-spacing-0 w-full min-w-[1000px] border-black">
+                                            <Table className="border-collapse border-spacing-0 w-full min-w-[1100px] border-black">
                                                 <TableHeader className="bg-slate-100">
                                                     <TableRow className="h-14 border-b-[3px] border-black">
                                                         <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-16">ছবি</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-40">রেজিস্ট্রেশন নং</TableHead>
-                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-32">রোল নং</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-32">রেজিস্ট্রেশন নং</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-28">পরীক্ষার রোল</TableHead>
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-28">শ্রেণির রোল</TableHead>
                                                         <TableHead className="border-r-[2px] border-black text-left pl-6 font-black text-black text-base">নাম</TableHead>
                                                         <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-32">বিভাগ</TableHead>
                                                         <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base">কেন্দ্র নাম</TableHead>
@@ -523,9 +532,9 @@ export default function PublicExamRecordsPage() {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {isLoading ? (
-                                                        <TableRow><TableCell colSpan={10} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
+                                                        <TableRow><TableCell colSpan={11} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
                                                     ) : records.length === 0 ? (
-                                                        <TableRow><TableCell colSpan={10} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                                        <TableRow><TableCell colSpan={11} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                                                     ) : (
                                                         records.map((record) => (
                                                             <TableRow key={record.id} className="h-12 border-b-2 border-black hover:bg-slate-50 transition-colors">
@@ -536,6 +545,7 @@ export default function PublicExamRecordsPage() {
                                                                     </Avatar>
                                                                 </TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
+                                                                <TableCell className="border-r-2 border-black text-center font-black text-base text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
                                                                 <TableCell className="border-r-2 border-black font-black text-base pl-6 text-slate-900">{record.studentName}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-bold text-sm uppercase">

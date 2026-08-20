@@ -127,6 +127,7 @@
       "properties": {
         "registrationNo": { "type": "string" },
         "rollNo": { "type": "string" },
+        "examRoll": { "type": "string" },
         "studentName": { "type": "string" },
         "photoUrl": { "type": "string" },
         "group": { "type": "string" },

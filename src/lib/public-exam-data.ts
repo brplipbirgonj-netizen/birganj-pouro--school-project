@@ -25,7 +25,8 @@ export type PublicExamType = 'SSC' | 'JSC' | 'Scholarship';
 export interface PublicExamRecord {
     id: string;
     registrationNo: string;
-    rollNo: string;
+    rollNo: string; // This is Class Roll
+    examRoll: string; // This is New
     studentName: string;
     photoUrl?: string;
     group: string; // 'science', 'arts', 'commerce', 'general'
