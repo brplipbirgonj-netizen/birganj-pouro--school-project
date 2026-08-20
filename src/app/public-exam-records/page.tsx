@@ -553,7 +553,7 @@ export default function PublicExamRecordsPage() {
                                                                 </TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-medium text-sm text-slate-600">{record.centerName || '-'}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-lg text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
-                                                                <TableCell className="border-r-2 border-black text-center font-black text-lg text-emerald-700">{record.grade}</TableCell>
+                                                                <TableCell className={cn("border-r-2 border-black text-center font-black text-lg", record.grade === 'F' ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-lg text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
                                                                 <TableCell className="text-right pr-6 no-print">
                                                                     <div className="flex justify-end gap-2">
@@ -569,7 +569,7 @@ export default function PublicExamRecordsPage() {
                                                                             <AlertDialog>
                                                                                 <AlertDialogTrigger asChild>
                                                                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:text-rose-700 hover:bg-rose-50">
-                                                                                        <Trash2 className="h-5 w-5" />
+                                                                                        <Trash2 className="h-4 w-4" />
                                                                                     </Button>
                                                                                 </AlertDialogTrigger>
                                                                                 <AlertDialogContent className="font-kalpurush">
