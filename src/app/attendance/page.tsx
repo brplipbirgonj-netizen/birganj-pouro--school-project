@@ -450,7 +450,7 @@ const MonthlyAttendanceGrid = ({
                     className="overflow-x-auto permanent-scroll no-print mb-1 h-3"
                     style={{ width: '100%' }}
                 >
-                    <div style={{ width: `${(daysInMonth.length * 96) + 310}px`, height: '1px' }} />
+                    <div style={{ width: `${(daysInMonth.length * 96) + 390}px`, height: '1px' }} />
                 </div>
 
                 <div 
@@ -459,10 +459,10 @@ const MonthlyAttendanceGrid = ({
                     className="table-container attendance-table !max-h-[600px] border rounded-lg overflow-auto relative permanent-scroll"
                 >
                     <Table className="border-collapse border-spacing-0 min-w-max">
-                        <TableHeader className="sticky top-0 z-40 bg-slate-100">
-                            <TableRow>
-                                <TableHead className="w-14 text-center font-bold border-r bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
-                                <TableHead className="min-w-[180px] font-bold border-r bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
+                        <TableHeader className="sticky top-0 z-40">
+                            <TableRow className="border-t-2 border-b-2 border-black bg-slate-100 h-24">
+                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
+                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
@@ -470,31 +470,31 @@ const MonthlyAttendanceGrid = ({
                                     
                                     return (
                                         <TableHead key={d} className={cn(
-                                            "w-24 text-center border-r p-0 group/header relative h-20",
+                                            "w-24 text-center border-r border-black/20 p-0 group/header relative",
                                             isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100 text-black",
                                             isOff && !isSelected && "bg-rose-50 text-rose-400"
                                         )}>
                                             <div className="flex flex-col items-center justify-center h-full py-2">
                                                 <span className="text-lg font-black leading-none">{toBengaliNumber(d)}</span>
-                                                <span className="text-[10px] font-bold opacity-70 mt-1">{format(day, 'E', { locale: bn })}</span>
+                                                <span className="text-[10px] font-bold opacity-70 mt-1 uppercase">{format(day, 'EEEE', { locale: bn })}</span>
                                                 
-                                                <div className="flex justify-center gap-1 mt-2 opacity-0 group-hover/header:opacity-100 transition-opacity no-print">
+                                                <div className="flex justify-center gap-1 mt-2 transition-opacity no-print">
                                                     <Button 
                                                         variant="secondary" 
                                                         size="icon" 
-                                                        className="h-6 w-6 rounded-full bg-white shadow-md border text-blue-600"
+                                                        className="h-4 w-4 rounded-full bg-white shadow-md border text-blue-600"
                                                         onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
                                                     >
-                                                        <Edit2 className="h-3 w-3" />
+                                                        <Edit2 className="h-2 w-2" />
                                                     </Button>
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <Button 
                                                                 variant="destructive" 
                                                                 size="icon" 
-                                                                className="h-6 w-6 rounded-full shadow-md"
+                                                                className="h-4 w-4 rounded-full shadow-md"
                                                             >
-                                                                <Trash2 className="h-3 w-3" />
+                                                                <Trash2 className="h-2 w-2" />
                                                             </Button>
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent className="font-kalpurush">
@@ -515,13 +515,14 @@ const MonthlyAttendanceGrid = ({
                                         </TableHead>
                                     );
                                 })}
+                                <TableHead className="w-20 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-black">মোট উপস্থিত</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {students.map((student, sIdx) => (
                                 <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors">
-                                    <TableCell className="text-center font-bold border-r bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
-                                    <TableCell className="font-bold border-r bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
+                                    <TableCell className="text-center font-black border-r-2 border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
+                                    <TableCell className="font-black border-r-2 border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
                                     {daysInMonth.map(day => {
                                         const d = getDate(day);
                                         const isSelected = d === activeDay;
@@ -531,7 +532,7 @@ const MonthlyAttendanceGrid = ({
                                         if (isSelected) {
                                             const status = currentStatusMap.get(student.id);
                                             return (
-                                                <TableCell key={d} className="p-0 border-r bg-blue-50/50">
+                                                <TableCell key={d} className="p-0 border-r border-black/20 bg-blue-50/50">
                                                     <div className="flex gap-0 h-10 w-24">
                                                         <button
                                                             id={`present-${student.id}`}
@@ -567,7 +568,7 @@ const MonthlyAttendanceGrid = ({
                                         
                                         return (
                                             <TableCell key={d} className={cn(
-                                                "text-center p-0 border-r text-base font-black",
+                                                "text-center p-0 border-r border-black/20 text-base font-black",
                                                 isOff && "bg-rose-50/30",
                                                 att?.status === 'present' && "text-emerald-700 bg-emerald-50/50",
                                                 att?.status === 'absent' && "text-rose-700 bg-rose-50/50"
@@ -576,19 +577,23 @@ const MonthlyAttendanceGrid = ({
                                             </TableCell>
                                         );
                                     })}
+                                    <TableCell className="text-center font-black border-l-2 border-black bg-white sticky right-0 z-30 text-blue-700">
+                                        {toBengaliNumber(getStudentTotalPresent(student.id))}
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
-                        <TableFooter className="sticky bottom-0 z-40 bg-slate-200">
-                            <TableRow className="h-10">
-                                <TableCell colSpan={2} className="text-right pr-4 font-black bg-slate-200 sticky left-0 z-50 border-r">
+                        <TableFooter className="sticky bottom-0 z-40">
+                            <TableRow className="h-10 border-t-2 border-black bg-slate-200">
+                                <TableCell colSpan={2} className="text-right pr-4 font-black bg-slate-200 sticky left-0 z-50 border-r-2 border-black">
                                     মোট উপস্থিত:
                                 </TableCell>
                                 {daysInMonth.map(day => (
-                                    <TableCell key={getDate(day)} className="text-center font-black border-r text-blue-700">
+                                    <TableCell key={getDate(day)} className="text-center font-black border-r border-black/20 text-blue-700">
                                         {toBengaliNumber(getDayTotalPresent(day))}
                                     </TableCell>
                                 ))}
+                                <TableCell className="sticky right-0 z-50 border-l-2 border-black bg-slate-200"></TableCell>
                             </TableRow>
                         </TableFooter>
                     </Table>
@@ -680,7 +685,6 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
                             const nextDate = new Date(viewDate);
                             nextDate.setMonth(parseInt(val));
                             setViewDate(nextDate);
-                            // We do NOT call onDateChange here to prevent highlighting today's date in every month
                         }}
                     >
                         <SelectTrigger className="w-40 bg-white shadow-sm font-bold text-primary h-9">
