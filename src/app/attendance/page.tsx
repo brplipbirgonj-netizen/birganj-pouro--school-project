@@ -20,7 +20,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, writeBatch } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -140,6 +140,7 @@ const MonthlyAttendanceGrid = ({
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     
     // Scroll Sync Refs
     const topScrollRef = useRef<HTMLDivElement>(null);
@@ -257,15 +258,38 @@ const MonthlyAttendanceGrid = ({
     const handleDeleteDay = async (targetDate: Date) => {
         if (!db) return;
         const targetDateStr = format(targetDate, 'yyyy-MM-dd');
-        
-        // Fix: Update focus to the date being deleted so the view stays there
         onDateChange(targetDate);
 
         try {
             await deleteDailyAttendance(db, targetDateStr, classId, selectedYear);
             toast({ title: "সফল", description: "হাজিরা রেকর্ডটি মুছে ফেলা হয়েছে।" });
-            fetchData(true); // Background refresh to preserve scroll
+            fetchData(true);
         } catch (e) {}
+    };
+
+    const handleDeleteMonth = async () => {
+        if (!db || !isAdmin) return;
+        setIsLoading(true);
+        try {
+            const startStr = format(monthStart, 'yyyy-MM-dd');
+            const endStr = format(monthEnd, 'yyyy-MM-dd');
+            const q = query(
+                collection(db, 'attendance'),
+                where('academicYear', '==', selectedYear),
+                where('className', '==', classId),
+                where('date', '>=', startStr),
+                where('date', '<=', endStr)
+            );
+            const snapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            toast({ title: 'পুরো মাসের হাজিরা তথ্য মুছে ফেলা হয়েছে' });
+            fetchData();
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
     };
 
     const toggleStatus = (studentId: string, status: AttendanceStatus, index: number) => {
@@ -308,7 +332,6 @@ const MonthlyAttendanceGrid = ({
                 .attendance-table th, .attendance-table td {
                     border: 1px solid black !important;
                 }
-                /* Force scrollbar visibility */
                 .permanent-scroll::-webkit-scrollbar {
                     height: 12px;
                     display: block;
@@ -334,7 +357,30 @@ const MonthlyAttendanceGrid = ({
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg"><CalendarCheck className="h-5 w-5 text-primary" /></div>
                     <div>
-                        <h3 className="font-black text-lg text-slate-800">মাসিক হাজিরা রেজিস্টার</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-black text-lg text-slate-800">মাসিক হাজিরা রেজিস্টার</h3>
+                            {isAdmin && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50" title="পুরো মাসের ডাটা মুছুন">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="font-kalpurush">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle className="text-rose-700 font-black">পুরো মাসের হাজিরা মুছতে চান?</AlertDialogTitle>
+                                            <AlertDialogDescription className="font-bold text-base">
+                                                আপনি কি {classNamesMap[classId]} শ্রেণির **{BENGALI_MONTHS[selectedDate.getMonth()]}** মাসের সকল হাজিরা রেকর্ড স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরে পাওয়া যাবে না।
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel className="font-bold">না, ফিরে যাই</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDeleteMonth} className="bg-destructive text-white font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
+                        </div>
                         <p className="text-xs font-bold text-muted-foreground">{BENGALI_MONTHS[selectedDate.getMonth()]} {toBengaliNumber(selectedYear)}</p>
                     </div>
                 </div>
@@ -350,7 +396,6 @@ const MonthlyAttendanceGrid = ({
             </div>
 
             <div className="relative group">
-                {/* Top Scrollbar Synchronizer */}
                 <div 
                     ref={topScrollRef}
                     onScroll={() => handleScrollSync('top')}
@@ -374,7 +419,6 @@ const MonthlyAttendanceGrid = ({
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
                                     const isOff = isOffDay(day, holidays);
-                                    const recordDateStr = format(day, 'yyyy-MM-dd');
                                     
                                     return (
                                         <TableHead key={d} className={cn(
@@ -850,6 +894,26 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
         }
     };
 
+    const handleDeleteFullDay = async (date: string) => {
+        if (!db || !isAdmin) return;
+        try {
+            const batch = writeBatch(db);
+            const q = query(
+                collection(db, 'attendance'),
+                where("date", "==", date),
+                where("academicYear", "==", selectedYear)
+            );
+            const snapshot = await getDocs(q);
+            snapshot.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            
+            toast({ title: 'পুরো দিনের সকল হাজিরা রেকর্ড মুছে ফেলা হয়েছে' });
+            fetchSummaryData();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const days = useMemo(() => {
         const year = parseInt(selectedYear);
         const month = parseInt(selectedMonth);
@@ -946,10 +1010,33 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                             isOff ? "bg-red-100 hover:bg-red-200 print:bg-gray-100" : "hover:bg-slate-50"
                                         )}>
                                             <TableCell className={cn(
-                                                "text-center font-black border-r whitespace-nowrap sticky left-0 z-20 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:shadow-none print:border-black text-[14px]",
+                                                "text-center font-black border-r whitespace-nowrap sticky left-0 z-20 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:shadow-none print:border-black text-[14px] group/row",
                                                 isOff ? "text-red-700 bg-red-200 print:bg-gray-100" : "text-slate-600 bg-white"
                                             )}>
-                                                {toBengaliNumber(fullDateStr)} {dayName}
+                                                <div className="flex items-center justify-between gap-2 px-2">
+                                                    <span>{toBengaliNumber(fullDateStr)} {dayName}</span>
+                                                    {isAdmin && (
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <button className="text-rose-500 opacity-0 group-hover/row:opacity-100 transition-opacity no-print" title="পুরো দিন মুছুন">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent className="font-kalpurush">
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle className="text-rose-700 font-black">পুরো দিনের সব হাজিরা মুছতে চান?</AlertDialogTitle>
+                                                                    <AlertDialogDescription className="font-bold text-base leading-relaxed">
+                                                                        আপনি কি {toBengaliNumber(fullDateStr)} তারিখের **সকল শ্রেণির** হাজিরা রেকর্ড স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরে পাওয়া যাবে না।
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel className="font-bold">না, ফিরে যাই</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteFullDay(row.dateStr)} className="bg-destructive text-white font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                             {classes.map(cls => {
                                                 const hasData = row[cls] !== null;
