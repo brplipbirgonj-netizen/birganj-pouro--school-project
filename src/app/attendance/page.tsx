@@ -126,12 +126,14 @@ const MonthlyAttendanceGrid = ({
     classId, 
     students, 
     selectedDate,
+    viewDate,
     onRefresh,
     onDateChange
 }: { 
     classId: string, 
     students: Student[], 
     selectedDate: Date | undefined,
+    viewDate: Date,
     onRefresh: () => void,
     onDateChange: (d: Date) => void
 }) => {
@@ -146,14 +148,18 @@ const MonthlyAttendanceGrid = ({
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const isFirstLoad = useRef(true);
 
-    // Default reference date for calendar calculation (Today or first of month)
-    const referenceDate = useMemo(() => selectedDate || new Date(), [selectedDate]);
-    const monthStart = useMemo(() => startOfMonth(referenceDate), [referenceDate]);
-    const monthEnd = useMemo(() => endOfMonth(referenceDate), [referenceDate]);
+    // Default reference date for calendar calculation
+    const monthStart = useMemo(() => startOfMonth(viewDate), [viewDate]);
+    const monthEnd = useMemo(() => endOfMonth(viewDate), [viewDate]);
     const daysInMonth = useMemo(() => eachDayOfInterval({ start: monthStart, end: monthEnd }), [monthStart, monthEnd]);
 
-    // Track which day is currently being highlighted/edited
-    const activeDay = useMemo(() => selectedDate ? getDate(selectedDate) : null, [selectedDate]);
+    // Highlight only the specific selected day in the current month view
+    const activeDay = useMemo(() => {
+        if (selectedDate && isSameMonth(selectedDate, viewDate) && isSameYear(selectedDate, viewDate)) {
+            return getDate(selectedDate);
+        }
+        return null;
+    }, [selectedDate, viewDate]);
 
     const [monthRecords, setMonthRecords] = useState<DailyAttendance[]>([]);
     const [currentStatusMap, setCurrentStatusMap] = useState<Map<string, AttendanceStatus>>(new Map());
@@ -253,7 +259,7 @@ const MonthlyAttendanceGrid = ({
 
             await saveDailyAttendance(db, dailyAttendance);
             toast({ title: "হাজিরা সংরক্ষিত হয়েছে", description: `${format(selectedDate, 'PPP', { locale: bn })} এর তথ্য সেভ হয়েছে।` });
-            fetchData(true); // Background refresh to preserve scroll
+            fetchData(true); 
         } catch (e) {
             console.error(e);
         } finally {
@@ -410,18 +416,18 @@ const MonthlyAttendanceGrid = ({
                                         <AlertDialogHeader>
                                             <AlertDialogTitle className="text-rose-700 font-black">পুরো মাসের হাজিরা মুছতে চান?</AlertDialogTitle>
                                             <AlertDialogDescription className="font-bold text-base">
-                                                আপনি কি {classNamesMap[classId]} শ্রেণির **{BENGALI_MONTHS[referenceDate.getMonth()]}** মাসের সকল হাজিরা রেকর্ড স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরে পাওয়া যাবে না।
+                                                আপনি কি {classNamesMap[classId]} শ্রেণির **{BENGALI_MONTHS[viewDate.getMonth()]}** মাসের সকল হাজিরা রেকর্ড স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরে পাওয়া যাবে না।
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel className="font-bold">না, ফিরে যাই</AlertDialogCancel>
                                             <AlertDialogAction onClick={handleDeleteMonth} className="bg-destructive text-white font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
                                         </AlertDialogFooter>
-                                    </AlertDialogContent>
+                                    </AlertDialog>
                                 </AlertDialog>
                             )}
                         </div>
-                        <p className="text-xs font-bold text-muted-foreground">{BENGALI_MONTHS[referenceDate.getMonth()]} {toBengaliNumber(selectedYear)}</p>
+                        <p className="text-xs font-bold text-muted-foreground">{BENGALI_MONTHS[viewDate.getMonth()]} {toBengaliNumber(selectedYear)}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -613,12 +619,14 @@ const AttendanceSheet = ({
     classId, 
     students, 
     date,
+    viewDate,
     onRefresh,
     onDateChange
 }: { 
     classId: string, 
     students: Student[], 
     date: Date | undefined,
+    viewDate: Date,
     onRefresh: () => void,
     onDateChange: (d: Date) => void
 }) => {
@@ -627,6 +635,7 @@ const AttendanceSheet = ({
             classId={classId} 
             students={students} 
             selectedDate={date} 
+            viewDate={viewDate}
             onRefresh={onRefresh} 
             onDateChange={onDateChange}
         />
@@ -635,6 +644,13 @@ const AttendanceSheet = ({
 
 const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date | undefined, onDateChange: (d: Date) => void }) => {
     const { selectedYear } = useAcademicYear();
+    const [viewDate, setViewDate] = useState<Date>(new Date());
+    
+    // Sync view context if an external date selection is made (e.g. from missed attendance list)
+    useEffect(() => {
+        if (date) setViewDate(date);
+    }, [date]);
+
     const studentsForYear = useMemo(() => {
         return allStudents.filter(student => student.academicYear === selectedYear);
     }, [allStudents, selectedYear]);
@@ -646,7 +662,7 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
     };
 
     const formattedDate = date ? format(date, "EEEE, d MMMM yyyy", { locale: bn }) : "তারিখ নির্বাচন করুন";
-    const currentMonthIdx = date ? date.getMonth() : new Date().getMonth();
+    const currentMonthIdx = viewDate.getMonth();
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
@@ -661,9 +677,10 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
                     <Select 
                         value={currentMonthIdx.toString()} 
                         onValueChange={(val) => {
-                            const nextDate = date ? new Date(date) : new Date();
+                            const nextDate = new Date(viewDate);
                             nextDate.setMonth(parseInt(val));
-                            onDateChange(nextDate);
+                            setViewDate(nextDate);
+                            // We do NOT call onDateChange here to prevent highlighting today's date in every month
                         }}
                     >
                         <SelectTrigger className="w-40 bg-white shadow-sm font-bold text-primary h-9">
@@ -698,6 +715,7 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
                                         classId={className} 
                                         students={getStudentsByClass(className)} 
                                         date={date}
+                                        viewDate={viewDate}
                                         onRefresh={() => {}}
                                         onDateChange={onDateChange}
                                     />
