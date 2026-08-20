@@ -138,11 +138,13 @@ const MonthlyAttendanceGrid = ({
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { user } = useAuth();
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const activeDay = getDate(selectedDate);
-    const monthStart = startOfMonth(selectedDate);
-    const monthEnd = endOfMonth(selectedDate);
-    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    
+    // Memoize date calculations to prevent infinite loops
+    const dateStr = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
+    const activeDay = useMemo(() => getDate(selectedDate), [selectedDate]);
+    const monthStart = useMemo(() => startOfMonth(selectedDate), [selectedDate]);
+    const monthEnd = useMemo(() => endOfMonth(selectedDate), [selectedDate]);
+    const daysInMonth = useMemo(() => eachDayOfInterval({ start: monthStart, end: monthEnd }), [monthStart, monthEnd]);
 
     const [monthRecords, setMonthRecords] = useState<DailyAttendance[]>([]);
     const [currentStatusMap, setCurrentStatusMap] = useState<Map<string, AttendanceStatus>>(new Map());
@@ -187,12 +189,14 @@ const MonthlyAttendanceGrid = ({
             const holidayToday = await isHoliday(db, dateStr);
             setActiveHoliday(holidayToday);
         } catch (e) {
-            console.error(e);
+            console.error("Fetch Data Error:", e);
         }
         setIsLoading(false);
     }, [db, user, classId, selectedYear, dateStr, monthStart, monthEnd]);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => { 
+        fetchData(); 
+    }, [fetchData]);
 
     const handleSave = async () => {
         if (!db || !user || isSaving) return;
@@ -233,7 +237,7 @@ const MonthlyAttendanceGrid = ({
             return next;
         });
 
-        // If 'Enter' is used, it should ideally move focus down
+        // If 'Enter' is used or after manual selection, it should ideally move focus down
         if (index < students.length - 1) {
             const nextId = students[index + 1].id;
             inputRefs.current[`present-${nextId}`]?.focus();
@@ -291,7 +295,6 @@ const MonthlyAttendanceGrid = ({
                             {daysInMonth.map(day => {
                                 const d = getDate(day);
                                 const isSelected = d === activeDay;
-                                const dateStr = format(day, 'yyyy-MM-dd');
                                 const isOff = isOffDay(day, holidays);
                                 return (
                                     <TableHead key={d} className={cn(
@@ -316,7 +319,7 @@ const MonthlyAttendanceGrid = ({
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
-                                    const dateStr = format(day, 'yyyy-MM-dd');
+                                    const recordDateStr = format(day, 'yyyy-MM-dd');
                                     const isOff = isOffDay(day, holidays);
                                     
                                     if (isSelected) {
@@ -353,7 +356,7 @@ const MonthlyAttendanceGrid = ({
                                         );
                                     }
 
-                                    const record = monthRecords.find(r => r.date === dateStr);
+                                    const record = monthRecords.find(r => r.date === recordDateStr);
                                     const att = record?.attendance.find(a => a.studentId === student.id);
                                     
                                     return (
@@ -387,8 +390,8 @@ const MonthlyAttendanceGrid = ({
 
 const isOffDay = (date: Date, holidays: string[]) => {
     const d = date.getDay();
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return d === 5 || d === 6 || holidays.includes(dateStr);
+    const ds = format(date, 'yyyy-MM-dd');
+    return d === 5 || d === 6 || holidays.includes(ds);
 };
 
 // --- Sub Tabs Components ---
@@ -549,12 +552,6 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                 .map(r => parseInt(bnToEn(r.trim()), 10))
                 .filter(r => !isNaN(r));
 
-            if (inputRolls.length === 0 && rollsInput.trim() !== '') {
-                 toast({ variant: 'destructive', title: 'রোল নম্বরগুলো সঠিক নয়' });
-                 setIsProcessing(false);
-                 return;
-            }
-
             const attendanceData: StudentAttendance[] = classStudents.map(student => ({
                 studentId: student.id,
                 status: (student.roll !== undefined && inputRolls.includes(student.roll)) ? 'present' : 'absent'
@@ -567,7 +564,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                 attendance: attendanceData,
             };
 
-            saveDailyAttendance(db, dailyAttendance);
+            await saveDailyAttendance(db, dailyAttendance);
             
             toast({ 
                 title: isConfirming ? 'হাজিরা সফলভাবে আপডেট হয়েছে' : 'হাজিরা সফলভাবে সংরক্ষিত হয়েছে', 
@@ -627,7 +624,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
 
                     <div className="space-y-2">
                         <div className="flex justify-between items-center mb-1">
-                            <Label className="font-black text-primary">উপস্থিত রোল নম্বরসমূহ (কমা বা স্পেস দিয়ে লিখুন)</Label>
+                            <Label className="font-bold text-primary">উপস্থিত রোল নম্বরসমূহ (কমা বা স্পেস দিয়ে লিখুন)</Label>
                             {rollCount > 0 && (
                                 <Badge className="bg-emerald-600 font-black animate-in zoom-in duration-300">
                                     মোট: {toBengaliNumber(rollCount)} জন
@@ -740,15 +737,15 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
 
     const boardData = useMemo(() => {
         return days.map(day => {
-            const dateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth), day), 'yyyy-MM-dd');
-            const dateObj = new Date(dateStr);
-            const isWeekend = dateObj.getDay() === 5 || dateObj.getDay() === 6;
-            const isHolidayDay = holidays.includes(dateStr);
+            const dStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth), day), 'yyyy-MM-dd');
+            const dObj = new Date(dStr);
+            const isWeekend = dObj.getDay() === 5 || dObj.getDay() === 6;
+            const isHolidayDay = holidays.includes(dStr);
 
-            const row: any = { day, dateStr, isWeekend, isHolidayDay, totalPresent: 0, totalStudents: 0 };
+            const row: any = { day, dateStr: dStr, isWeekend, isHolidayDay, totalPresent: 0, totalStudents: 0 };
             
             classes.forEach(cls => {
-                const attRecord = attendanceData.find(r => r.date === dateStr && r.className === cls);
+                const attRecord = attendanceData.find(r => r.date === dStr && r.className === cls);
                 const classStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === cls);
                 
                 const presentCount = attRecord ? attRecord.attendance.filter(a => a.status === 'present').length : null;
@@ -764,7 +761,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
 
             return row;
         });
-    }, [days, attendanceData, holidays, selectedYear, selectedMonth, allStudents, classes]);
+    }, [days, attendanceData, holidays, selectedYear, selectedMonth, allStudents]);
 
     return (
         <div className="mt-4 space-y-8 animate-in fade-in duration-500">
@@ -816,9 +813,9 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                 {isLoading ? (
                                     <TableRow><TableCell colSpan={9} className="text-center py-24 italic text-lg font-bold">বিশ্লেষণ করা হচ্ছে...</TableCell></TableRow>
                                 ) : boardData.map((row, i) => {
-                                    const dateObj = new Date(row.dateStr);
-                                    const fullDateStr = format(dateObj, 'dd-MM-yyyy');
-                                    const dayName = format(dateObj, 'EEEE', { locale: bn });
+                                    const dObj = new Date(row.dateStr);
+                                    const fullDateStr = format(dObj, 'dd-MM-yyyy');
+                                    const dayName = format(dObj, 'EEEE', { locale: bn });
                                     const isOff = row.isWeekend || row.isHolidayDay;
                                     
                                     return (
@@ -922,8 +919,8 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
             const endStr = format(realEnd, 'yyyy-MM-dd');
 
             const allDatesInMonth = eachDayOfInterval({ start, end: realEnd });
-            const holidays = await getHolidays(db);
-            const holidayDates = holidays.map(h => h.date);
+            const holidaysData = await getHolidays(db);
+            const holidayDates = holidaysData.map(h => h.date);
 
             const q = query(
                 collection(db, 'attendance'),
@@ -936,10 +933,10 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
                 .filter(d => d >= startStr && d <= endStr);
 
             const missed = allDatesInMonth.filter(date => {
-                const dateStr = format(date, 'yyyy-MM-dd');
+                const ds = format(date, 'yyyy-MM-dd');
                 const isWeekend = date.getDay() === 5 || date.getDay() === 6;
-                const isHoliday = holidayDates.includes(dateStr);
-                return !isWeekend && !isHoliday && !takenDates.includes(dateStr);
+                const isHolidayDay = holidayDates.includes(ds);
+                return !isWeekend && !isHolidayDay && !takenDates.includes(ds);
             });
 
             setMissedDays(missed.sort((a, b) => b.getTime() - a.getTime()));
