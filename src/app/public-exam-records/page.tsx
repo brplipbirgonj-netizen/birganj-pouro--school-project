@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { 
     Award, Plus, Search, Trash2, Printer, Loader2, Save, X, 
-    FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight, Calendar
+    FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight, Calendar, FilePen
 } from 'lucide-react';
 import { PublicExamRecord, PublicExamType, getPublicExamRecords, savePublicExamRecord, deletePublicExamRecord, NewPublicExamData } from '@/lib/public-exam-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -71,7 +71,7 @@ export default function PublicExamRecordsPage() {
     const [activeTab, setActiveTab] = useState<PublicExamType>('SSC');
     const [records, setRecords] = useState<PublicExamRecord[]>([]);
     
-    // Exam Year State (Local state for viewing specific year's results)
+    // Exam Year State
     const [viewYear, setViewYear] = useState<string>(selectedYear);
     
     // Student Link States
@@ -81,6 +81,7 @@ export default function PublicExamRecordsPage() {
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<NewPublicExamData>({
         registrationNo: '',
         rollNo: '',
@@ -100,7 +101,6 @@ export default function PublicExamRecordsPage() {
         if (!db || !user) return;
         setIsLoading(true);
         try {
-            // Fetch records for the selected 'viewYear'
             const data = await getPublicExamRecords(db, viewYear, activeTab);
             setRecords(data.sort((a, b) => (parseFloat(b.gpa.toString()) || 0) - (parseFloat(a.gpa.toString()) || 0)));
         } catch (e) {
@@ -114,9 +114,6 @@ export default function PublicExamRecordsPage() {
         fetchRecords();
     }, [fetchRecords]);
 
-    // Student Linking Logic: 
-    // 1. SSC candidates are those who were in Class 10 in the previous year (viewYear - 1).
-    // 2. JSC/Scholarship candidates are from Class 8 of the current year (viewYear).
     useEffect(() => {
         if (!db || !user || !isClient) return;
         
@@ -143,8 +140,10 @@ export default function PublicExamRecordsPage() {
     }, [db, user, isClient, viewYear, activeTab]);
 
     useEffect(() => {
-        setFormData(prev => ({ ...prev, examType: activeTab, academicYear: viewYear }));
-    }, [activeTab, viewYear]);
+        if (!editingId) {
+            setFormData(prev => ({ ...prev, examType: activeTab, academicYear: viewYear }));
+        }
+    }, [activeTab, viewYear, editingId]);
 
     const candidateStudents = useMemo(() => {
         const targetClass = activeTab === 'SSC' ? '10' : '8';
@@ -176,9 +175,10 @@ export default function PublicExamRecordsPage() {
 
         setIsSaving(true);
         try {
-            await savePublicExamRecord(db, formData);
-            toast({ title: 'রেকর্ড সফলভাবে সংরক্ষিত হয়েছে' });
+            await savePublicExamRecord(db, formData, editingId || undefined);
+            toast({ title: editingId ? 'রেকর্ড আপডেট হয়েছে' : 'রেকর্ড সংরক্ষিত হয়েছে' });
             setIsAddOpen(false);
+            setEditingId(null);
             setFormData({
                 registrationNo: '', rollNo: '', studentName: '', group: 'general',
                 centerName: '', totalMarks: 0, grade: '', gpa: 0,
@@ -190,6 +190,23 @@ export default function PublicExamRecordsPage() {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEdit = (record: PublicExamRecord) => {
+        setFormData({
+            registrationNo: record.registrationNo,
+            rollNo: record.rollNo,
+            studentName: record.studentName,
+            group: record.group,
+            centerName: record.centerName || '',
+            totalMarks: record.totalMarks || 0,
+            grade: record.grade || '',
+            gpa: record.gpa || 0,
+            examType: record.examType,
+            academicYear: record.academicYear
+        });
+        setEditingId(record.id);
+        setIsAddOpen(true);
     };
 
     const handleDelete = async (id: string) => {
@@ -230,7 +247,17 @@ export default function PublicExamRecordsPage() {
                         </div>
 
                         {canManage && (
-                            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                            <Dialog open={isAddOpen} onOpenChange={(open) => {
+                                setIsAddOpen(open);
+                                if (!open) {
+                                    setEditingId(null);
+                                    setFormData({
+                                        registrationNo: '', rollNo: '', studentName: '', group: 'general',
+                                        centerName: '', totalMarks: 0, grade: '', gpa: 0,
+                                        examType: activeTab, academicYear: viewYear
+                                    });
+                                }
+                            }}>
                                 <DialogTrigger asChild>
                                     <Button className="h-12 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl font-black gap-2 transition-all active:scale-95 text-lg">
                                         <Plus className="h-6 w-6" /> নতুন রেকর্ড যোগ
@@ -238,7 +265,7 @@ export default function PublicExamRecordsPage() {
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-3xl font-kalpurush p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
                                     <DialogHeader className="p-6 bg-primary text-white">
-                                        <DialogTitle className="text-2xl font-black">শিক্ষার্থীর তথ্য এন্ট্রি করুন (সাল: {toBengaliNumber(viewYear)})</DialogTitle>
+                                        <DialogTitle className="text-2xl font-black">{editingId ? 'রেকর্ড সংশোধন করুন' : 'নতুন রেকর্ড যোগ'} (সাল: {toBengaliNumber(viewYear)})</DialogTitle>
                                         <DialogDescription className="text-white/80 font-bold">
                                             {activeTab === 'SSC' 
                                                 ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের শিক্ষার্থীদের মধ্য থেকে নির্বাচন করুন`
@@ -247,40 +274,41 @@ export default function PublicExamRecordsPage() {
                                     </DialogHeader>
                                     <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto bg-white">
                                         
-                                        {/* Student Selection Link */}
-                                        <div className="p-4 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <Label className="font-black text-primary uppercase text-[10px] tracking-widest">
-                                                    {activeTab === 'SSC' ? 'পূর্ববর্তী বছরের ডাটাবেস' : 'বর্তমান বছরের ডাটাবেস'} থেকে খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'}, {activeTab === 'SSC' ? toBengaliNumber(parseInt(viewYear) - 1) : toBengaliNumber(viewYear)})
-                                                </Label>
-                                                {isFetchingStudents && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                                        {!editingId && (
+                                            <div className="p-4 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="font-black text-primary uppercase text-[10px] tracking-widest">
+                                                        {activeTab === 'SSC' ? 'পূর্ববর্তী বছরের ডাটাবেস' : 'বর্তমান বছরের ডাটাবেস'} থেকে খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'}, {activeTab === 'SSC' ? toBengaliNumber(parseInt(viewYear) - 1) : toBengaliNumber(viewYear)})
+                                                    </Label>
+                                                    {isFetchingStudents && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                                                </div>
+                                                <Select onValueChange={handleStudentLink}>
+                                                    <SelectTrigger className="h-11 bg-white border-2">
+                                                        <SelectValue placeholder="শিক্ষার্থী নির্বাচন করুন..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {candidateStudents.length === 0 ? (
+                                                            <div className="p-4 text-center text-xs font-bold text-muted-foreground italic">
+                                                                {activeTab === 'SSC' 
+                                                                    ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`
+                                                                    : `${toBengaliNumber(viewYear)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`}
+                                                            </div>
+                                                        ) : (
+                                                            candidateStudents.map(s => (
+                                                                <SelectItem key={s.id} value={s.id} className="font-bold">
+                                                                    রোল: {toBengaliNumber(s.roll)} - {s.studentNameBn}
+                                                                </SelectItem>
+                                                            ))
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-[10px] font-bold text-muted-foreground italic">
+                                                    * {activeTab === 'SSC' 
+                                                        ? `${toBengaliNumber(viewYear)} সালের এসএসসি পরীক্ষার্থীরা মূলত ${toBengaliNumber(parseInt(viewYear) - 1)} সালের দশম শ্রেণির শিক্ষার্থী।`
+                                                        : `${toBengaliNumber(viewYear)} সালের পরীক্ষার্থীরা এই বছরেরই অষ্টম শ্রেণির শিক্ষার্থী।`}
+                                                </p>
                                             </div>
-                                            <Select onValueChange={handleStudentLink}>
-                                                <SelectTrigger className="h-11 bg-white border-2">
-                                                    <SelectValue placeholder="শিক্ষার্থী নির্বাচন করুন..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {candidateStudents.length === 0 ? (
-                                                        <div className="p-4 text-center text-xs font-bold text-muted-foreground italic">
-                                                            {activeTab === 'SSC' 
-                                                                ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`
-                                                                : `${toBengaliNumber(viewYear)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`}
-                                                        </div>
-                                                    ) : (
-                                                        candidateStudents.map(s => (
-                                                            <SelectItem key={s.id} value={s.id} className="font-bold">
-                                                                রোল: {toBengaliNumber(s.roll)} - {s.studentNameBn}
-                                                            </SelectItem>
-                                                        ))
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                            <p className="text-[10px] font-bold text-muted-foreground italic">
-                                                * {activeTab === 'SSC' 
-                                                    ? `${toBengaliNumber(viewYear)} সালের এসএসসি পরীক্ষার্থীরা মূলত ${toBengaliNumber(parseInt(viewYear) - 1)} সালের দশম শ্রেণির শিক্ষার্থী।`
-                                                    : `${toBengaliNumber(viewYear)} সালের পরীক্ষার্থীরা এই বছরেরই অষ্টম শ্রেণির শিক্ষার্থী।`}
-                                            </p>
-                                        </div>
+                                        )}
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                                             <div className="space-y-2">
@@ -337,7 +365,7 @@ export default function PublicExamRecordsPage() {
                                         <DialogClose asChild><Button variant="ghost" className="font-bold h-12 px-6">বাতিল</Button></DialogClose>
                                         <Button onClick={handleSave} disabled={isSaving} className="px-12 font-black h-12 shadow-xl min-w-[160px]">
                                             {isSaving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />}
-                                            রেকর্ড সেভ করুন
+                                            {editingId ? 'আপডেট করুন' : 'রেকর্ড সেভ করুন'}
                                         </Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -414,25 +442,35 @@ export default function PublicExamRecordsPage() {
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-lg text-emerald-700">{record.grade}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-lg text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
                                                                 <TableCell className="text-right pr-6 no-print">
-                                                                    {canManage && (
-                                                                        <AlertDialog>
-                                                                            <AlertDialogTrigger asChild>
-                                                                                <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:text-rose-700 hover:bg-rose-50">
-                                                                                    <Trash2 className="h-5 w-5" />
-                                                                                </Button>
-                                                                            </AlertDialogTrigger>
-                                                                            <AlertDialogContent className="font-kalpurush">
-                                                                                <AlertDialogHeader>
-                                                                                    <AlertDialogTitle className="text-rose-700 font-black flex items-center gap-2"><Info /> আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                                    <AlertDialogDescription className="font-bold text-base">এই রেকর্ডটি স্থায়ীভাবে মুছে ফেলা হবে।</AlertDialogDescription>
-                                                                                </AlertDialogHeader>
-                                                                                <AlertDialogFooter>
-                                                                                    <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
-                                                                                    <AlertDialogAction onClick={() => handleDelete(record.id)} className="bg-destructive text-white font-black">হ্যাঁ, মুছুন</AlertDialogAction>
-                                                                                </AlertDialogFooter>
-                                                                            </AlertDialogContent>
-                                                                        </AlertDialog>
-                                                                    )}
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="icon" 
+                                                                            className="h-9 w-9 text-blue-600 border-blue-100 hover:bg-blue-50"
+                                                                            onClick={() => handleEdit(record)}
+                                                                        >
+                                                                            <FilePen className="h-5 w-5" />
+                                                                        </Button>
+                                                                        {canManage && (
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:text-rose-700 hover:bg-rose-50">
+                                                                                        <Trash2 className="h-5 w-5" />
+                                                                                    </Button>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent className="font-kalpurush">
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle className="text-rose-700 font-black flex items-center gap-2"><Info /> আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription className="font-bold text-base">এই রেকর্ডটি স্থায়ীভাবে মুছে ফেলা হবে।</AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={() => handleDelete(record.id)} className="bg-destructive text-white font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        )}
+                                                                    </div>
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))
