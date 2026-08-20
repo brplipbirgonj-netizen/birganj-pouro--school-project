@@ -111,7 +111,13 @@ export default function PublicExamRecordsPage() {
         setIsLoading(true);
         try {
             const data = await getPublicExamRecords(db, viewYear, activeTab);
-            setRecords(data.sort((a, b) => (parseFloat(b.gpa.toString()) || 0) - (parseFloat(a.gpa.toString()) || 0)));
+            // Updated sort logic to sort by Roll Number numerically (ascending)
+            setRecords(data.sort((a, b) => {
+                const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
+                const rollA = parseInt(bnToEn(a.rollNo), 10) || 0;
+                const rollB = parseInt(bnToEn(b.rollNo), 10) || 0;
+                return rollA - rollB;
+            }));
         } catch (e) {
             console.error(e);
         }
