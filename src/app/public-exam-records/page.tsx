@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -33,8 +34,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Student, studentFromDoc } from '@/lib/student-data';
+import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage } from '@/lib/student-data';
 import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
+import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const examTypes: { id: PublicExamType; label: string }[] = [
     { id: 'SSC', label: 'এসএসসি পরীক্ষা' },
@@ -86,6 +89,7 @@ export default function PublicExamRecordsPage() {
         registrationNo: '',
         rollNo: '',
         studentName: '',
+        photoUrl: '',
         group: 'general',
         centerName: '',
         totalMarks: 0,
@@ -158,6 +162,7 @@ export default function PublicExamRecordsPage() {
             setFormData(prev => ({
                 ...prev,
                 studentName: student.studentNameBn,
+                photoUrl: student.photoUrl || '',
                 rollNo: String(student.roll || ''),
                 registrationNo: student.prevRegNo || '',
                 group: (student.group || 'general').toLowerCase()
@@ -180,7 +185,7 @@ export default function PublicExamRecordsPage() {
             setIsAddOpen(false);
             setEditingId(null);
             setFormData({
-                registrationNo: '', rollNo: '', studentName: '', group: 'general',
+                registrationNo: '', rollNo: '', studentName: '', photoUrl: '', group: 'general',
                 centerName: '', totalMarks: 0, grade: '', gpa: 0,
                 examType: activeTab, academicYear: viewYear
             });
@@ -197,6 +202,7 @@ export default function PublicExamRecordsPage() {
             registrationNo: record.registrationNo,
             rollNo: record.rollNo,
             studentName: record.studentName,
+            photoUrl: record.photoUrl || '',
             group: record.group,
             centerName: record.centerName || '',
             totalMarks: record.totalMarks || 0,
@@ -252,7 +258,7 @@ export default function PublicExamRecordsPage() {
                                 if (!open) {
                                     setEditingId(null);
                                     setFormData({
-                                        registrationNo: '', rollNo: '', studentName: '', group: 'general',
+                                        registrationNo: '', rollNo: '', studentName: '', photoUrl: '', group: 'general',
                                         centerName: '', totalMarks: 0, grade: '', gpa: 0,
                                         examType: activeTab, academicYear: viewYear
                                     });
@@ -412,6 +418,7 @@ export default function PublicExamRecordsPage() {
                                             <Table className="border-collapse border-spacing-0 w-full min-w-[1000px] border-black">
                                                 <TableHeader className="bg-slate-100">
                                                     <TableRow className="h-14 border-b-[3px] border-black">
+                                                        <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-16">ছবি</TableHead>
                                                         <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-40">রেজিস্ট্রেশন নং</TableHead>
                                                         <TableHead className="border-r-[2px] border-black text-center font-black text-black text-base w-32">রোল নং</TableHead>
                                                         <TableHead className="border-r-[2px] border-black text-left pl-6 font-black text-black text-base">নাম</TableHead>
@@ -425,12 +432,18 @@ export default function PublicExamRecordsPage() {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {isLoading ? (
-                                                        <TableRow><TableCell colSpan={9} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
+                                                        <TableRow><TableCell colSpan={10} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
                                                     ) : records.length === 0 ? (
-                                                        <TableRow><TableCell colSpan={9} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                                        <TableRow><TableCell colSpan={10} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                                                     ) : (
                                                         records.map((record) => (
                                                             <TableRow key={record.id} className="h-12 border-b-2 border-black hover:bg-slate-50 transition-colors">
+                                                                <TableCell className="border-r-2 border-black text-center p-1">
+                                                                    <Avatar className="h-10 w-10 border shadow-sm mx-auto">
+                                                                        <AvatarImage src={record.photoUrl || getStudentPlaceholderImage()} className="object-cover" />
+                                                                        <AvatarFallback className="font-black text-xs">S</AvatarFallback>
+                                                                    </Avatar>
+                                                                </TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
                                                                 <TableCell className="border-r-2 border-black font-black text-base pl-6 text-slate-900">{record.studentName}</TableCell>

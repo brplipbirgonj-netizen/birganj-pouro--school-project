@@ -27,6 +27,7 @@ export interface PublicExamRecord {
     registrationNo: string;
     rollNo: string;
     studentName: string;
+    photoUrl?: string;
     group: string; // 'science', 'arts', 'commerce', 'general'
     centerName: string;
     totalMarks: number;
