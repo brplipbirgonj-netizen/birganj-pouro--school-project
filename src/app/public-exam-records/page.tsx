@@ -52,12 +52,13 @@ const educationBoards = [
 ];
 
 const birganjCenters = [
-    'Birganj Govt. High School',
+    'Birganj Govt. Pilot High School',
     'Birganj Govt. Girls\' High School',
-    'Birganj Pilot Model High School',
     'Gopalganj High School',
     'Jharbari High School',
     'Paltapur Adarsha High School',
+    'Mohamadpur High School',
+    'Kholshichandra High School',
     'Birganj Mohila College',
     'Birganj Degree College'
 ];
@@ -82,7 +83,7 @@ const classNamesMap: Record<string, string> = {
 export default function PublicExamRecordsPage() {
     const db = useFirestore();
     const { selectedYear, availableYears } = useAcademicYear();
-    const { user, hasPermission } = useAuth();
+    const { user, hasPermission, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const { schoolInfo } = useSchoolInfo();
 
@@ -91,18 +92,14 @@ export default function PublicExamRecordsPage() {
     const [activeTab, setActiveTab] = useState<PublicExamType>('SSC');
     const [records, setRecords] = useState<PublicExamRecord[]>([]);
     
-    // Exam Year State
     const [viewYear, setViewYear] = useState<string>(selectedYear);
     
-    // Student Link States
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isFetchingStudents, setIsFetchingStudents] = useState(false);
     
-    // Selection States
     const [selectedStudentIdsInDialog, setSelectedStudentIdsInDialog] = useState<Set<string>>(new Set());
     const [dialogSearchQuery, setDialogSearchQuery] = useState('');
 
-    // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -129,7 +126,6 @@ export default function PublicExamRecordsPage() {
         setIsLoading(true);
         try {
             const data = await getPublicExamRecords(db, viewYear, activeTab);
-            // Sort by Class Roll Number numerically (ascending)
             setRecords(data.sort((a, b) => {
                 const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
                 const rollA = parseInt(bnToEn(a.rollNo), 10) || 0;
@@ -204,7 +200,6 @@ export default function PublicExamRecordsPage() {
     const handleSave = async () => {
         if (!db) return;
         
-        // Handle Bulk Save in Add Mode
         if (!editingId && selectedStudentIdsInDialog.size > 0) {
             setIsSaving(true);
             try {
@@ -214,7 +209,7 @@ export default function PublicExamRecordsPage() {
                     if (student) {
                         const data: NewPublicExamData = {
                             registrationNo: student.prevRegNo || '',
-                            rollNo: String(student.roll || ''), // Class Roll
+                            rollNo: String(student.roll || ''), 
                             examRoll: '',
                             studentName: student.studentNameBn,
                             photoUrl: student.photoUrl || '',
@@ -244,7 +239,6 @@ export default function PublicExamRecordsPage() {
             return;
         }
 
-        // Handle Single Save (Manual Entry or Edit)
         if (!formData.registrationNo && !formData.rollNo && !formData.studentName) {
             toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'অন্তত একটি শিক্ষার্থী নির্বাচন করুন অথবা তথ্য পূরণ করুন।' });
             return;
@@ -536,10 +530,9 @@ export default function PublicExamRecordsPage() {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="printable-area bg-white p-0 sm:p-4">
-                                        {/* Print Only Title */}
                                         <div className="hidden print:block text-center mb-10 border-b-4 border-black pb-4">
                                             <h1 className="text-3xl font-black uppercase mb-1">{schoolInfo?.name}</h1>
-                                            <p className="text-lg font-bold text-slate-700 mb-4">{schoolInfo?.address}</p>
+                                            <p className="text-lg font-bold text-slate-700">{schoolInfo?.address}</p>
                                             <div className="inline-block border-2 border-black px-10 py-1.5 rounded-full font-black text-xl uppercase bg-slate-50">
                                                 {type.label} - অংশগ্রহণকারী শিক্ষার্থীর তথ্য ({toBengaliNumber(viewYear)})
                                             </div>
@@ -627,7 +620,6 @@ export default function PublicExamRecordsPage() {
                                             </Table>
                                         </div>
 
-                                        {/* Print Footer */}
                                         <div className="hidden print:flex justify-between items-end mt-32 px-10">
                                             <div className="text-center w-56 border-t-2 border-black pt-2 font-black text-lg">অফিস সহকারী</div>
                                             <div className="text-center w-56 border-t-2 border-black pt-2 font-black text-lg">প্রধান শিক্ষক</div>
