@@ -19,7 +19,18 @@ import {
     FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight, Calendar
 } from 'lucide-react';
 import { PublicExamRecord, PublicExamType, getPublicExamRecords, savePublicExamRecord, deletePublicExamRecord, NewPublicExamData } from '@/lib/public-exam-data';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { 
+    AlertDialog, 
+    AlertDialogAction, 
+    AlertDialogCancel, 
+    AlertDialogContent, 
+    AlertDialogDescription, 
+    AlertDialogFooter, 
+    AlertDialogHeader, 
+    AlertDialogTitle, 
+    AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Student, studentFromDoc } from '@/lib/student-data';
@@ -42,6 +53,10 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
     const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);
+};
+
+const classNamesMap: Record<string, string> = {
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
 };
 
 export default function PublicExamRecordsPage() {
