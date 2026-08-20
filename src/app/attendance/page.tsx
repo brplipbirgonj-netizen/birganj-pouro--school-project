@@ -36,7 +36,7 @@ import {
     BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, 
     MessageSquareDashed, UserX, Printer, Wifi, WifiOff, Trash2,
     Info, MousePointer2
-} from 'lucide-center';
+} from 'lucide-react';
 import { 
     AlertDialog, 
     AlertDialogAction, 
