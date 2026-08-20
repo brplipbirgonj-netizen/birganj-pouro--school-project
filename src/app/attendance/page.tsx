@@ -418,7 +418,7 @@ const MonthlyAttendanceGrid = ({
                                             <AlertDialogCancel className="font-bold">না, ফিরে যাই</AlertDialogCancel>
                                             <AlertDialogAction onClick={handleDeleteMonth} className="bg-destructive text-white font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
                                         </AlertDialogFooter>
-                                    </AlertDialogContent>
+                                    </AlertDialog>
                                 </AlertDialog>
                             )}
                         </div>
@@ -443,7 +443,7 @@ const MonthlyAttendanceGrid = ({
                     className="overflow-x-auto permanent-scroll no-print mb-1 h-3"
                     style={{ width: '100%' }}
                 >
-                    <div style={{ width: `${(daysInMonth.length * 48) + 310}px`, height: '1px' }} />
+                    <div style={{ width: `${(daysInMonth.length * 96) + 310}px`, height: '1px' }} />
                 </div>
 
                 <div 
@@ -463,7 +463,7 @@ const MonthlyAttendanceGrid = ({
                                     
                                     return (
                                         <TableHead key={d} className={cn(
-                                            "w-12 text-center border-r border-black p-0 group/header relative",
+                                            "w-24 text-center border-r border-black p-0 group/header relative",
                                             isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100 text-black",
                                             isOff && !isSelected && "bg-rose-50 text-rose-400"
                                         )}>
@@ -476,21 +476,21 @@ const MonthlyAttendanceGrid = ({
                                                 <Button 
                                                     variant="secondary" 
                                                     size="icon" 
-                                                    className="h-5 w-5 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
+                                                    className="h-4 w-4 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
                                                     onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
                                                     title="এডিট"
                                                 >
-                                                    <Edit2 className="h-2.5 w-2.5" />
+                                                    <Edit2 className="h-2 w-2" />
                                                 </Button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                         <Button 
                                                             variant="destructive" 
                                                             size="icon" 
-                                                            className="h-5 w-5 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
+                                                            className="h-4 w-4 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
                                                             title="ডিলিট"
                                                         >
-                                                            <Trash2 className="h-2.5 w-2.5" />
+                                                            <Trash2 className="h-2 w-2" />
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent className="font-kalpurush">
@@ -533,7 +533,7 @@ const MonthlyAttendanceGrid = ({
                                                             id={`present-${student.id}`}
                                                             ref={el => inputRefs.current[`present-${student.id}`] = el}
                                                             className={cn(
-                                                                "flex-1 h-full text-[10px] font-black transition-all border-r border-blue-200",
+                                                                "flex-1 h-full text-base font-black transition-all border-r border-blue-200",
                                                                 status === 'present' ? "bg-emerald-600 text-white" : "hover:bg-emerald-50 text-emerald-600"
                                                             )}
                                                             onClick={() => toggleStatus(student.id, 'present', sIdx)}
@@ -545,7 +545,7 @@ const MonthlyAttendanceGrid = ({
                                                             id={`absent-${student.id}`}
                                                             ref={el => inputRefs.current[`absent-${student.id}`] = el}
                                                             className={cn(
-                                                                "flex-1 h-full text-[10px] font-black transition-all",
+                                                                "flex-1 h-full text-base font-black transition-all",
                                                                 status === 'absent' ? "bg-rose-600 text-white" : "hover:bg-rose-50 text-rose-600"
                                                             )}
                                                             onClick={() => toggleStatus(student.id, 'absent', sIdx)}
@@ -563,7 +563,7 @@ const MonthlyAttendanceGrid = ({
                                         
                                         return (
                                             <TableCell key={d} className={cn(
-                                                "text-center p-0 border-r border-black text-[11px] font-black",
+                                                "text-center p-0 border-r border-black text-base font-black",
                                                 isOff && "bg-rose-50/30",
                                                 att?.status === 'present' && "text-emerald-700 bg-emerald-50/50",
                                                 att?.status === 'absent' && "text-rose-700 bg-rose-50/50"
