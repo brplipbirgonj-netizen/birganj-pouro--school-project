@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -17,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { 
     Award, Plus, Search, Trash2, Printer, Loader2, Save, X, 
-    FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight, Calendar, FilePen
+    FileText, GraduationCap, School, Info, CheckCircle2, History, User, Users, ChevronRight, Calendar, FilePen, Check
 } from 'lucide-react';
 import { PublicExamRecord, PublicExamType, getPublicExamRecords, savePublicExamRecord, deletePublicExamRecord, NewPublicExamData } from '@/lib/public-exam-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -38,6 +37,8 @@ import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage }
 import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const examTypes: { id: PublicExamType; label: string }[] = [
     { id: 'SSC', label: 'এসএসসি পরীক্ষা' },
@@ -81,6 +82,10 @@ export default function PublicExamRecordsPage() {
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isFetchingStudents, setIsFetchingStudents] = useState(false);
     
+    // Selection States
+    const [selectedStudentIdsInDialog, setSelectedStudentIdsInDialog] = useState<Set<string>>(new Set());
+    const [dialogSearchQuery, setDialogSearchQuery] = useState('');
+
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -151,30 +156,71 @@ export default function PublicExamRecordsPage() {
 
     const candidateStudents = useMemo(() => {
         const targetClass = activeTab === 'SSC' ? '10' : '8';
-        return allStudents
-            .filter(s => s.className === targetClass)
-            .sort((a, b) => (a.roll || 0) - (b.roll || 0));
-    }, [allStudents, activeTab]);
-
-    const handleStudentLink = (studentId: string) => {
-        const student = allStudents.find(s => s.id === studentId);
-        if (student) {
-            setFormData(prev => ({
-                ...prev,
-                studentName: student.studentNameBn,
-                photoUrl: student.photoUrl || '',
-                rollNo: String(student.roll || ''),
-                registrationNo: student.prevRegNo || '',
-                group: (student.group || 'general').toLowerCase()
-            }));
-            toast({ title: 'শিক্ষার্থীর তথ্য লোড হয়েছে', description: `${student.studentNameBn} এর তথ্য ফরমে যুক্ত হয়েছে।` });
+        let filtered = allStudents.filter(s => s.className === targetClass);
+        
+        if (dialogSearchQuery.trim()) {
+            const q = dialogSearchQuery.toLowerCase();
+            filtered = filtered.filter(s => 
+                s.studentNameBn.toLowerCase().includes(q) || 
+                String(s.roll).includes(q) || 
+                (s.generatedId || '').toLowerCase().includes(q)
+            );
         }
+
+        return filtered.sort((a, b) => (a.roll || 0) - (b.roll || 0));
+    }, [allStudents, activeTab, dialogSearchQuery]);
+
+    const toggleStudentSelection = (id: string) => {
+        const next = new Set(selectedStudentIdsInDialog);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedStudentIdsInDialog(next);
     };
 
     const handleSave = async () => {
         if (!db) return;
-        if (!formData.registrationNo || !formData.rollNo || !formData.studentName) {
-            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'রেজিস্ট্রেশন, রোল এবং নাম অবশ্যই দিতে হবে।' });
+        
+        // Handle Bulk Save in Add Mode
+        if (!editingId && selectedStudentIdsInDialog.size > 0) {
+            setIsSaving(true);
+            try {
+                let successCount = 0;
+                for (const studentId of Array.from(selectedStudentIdsInDialog)) {
+                    const student = allStudents.find(s => s.id === studentId);
+                    if (student) {
+                        const data: NewPublicExamData = {
+                            registrationNo: student.prevRegNo || '',
+                            rollNo: String(student.roll || ''),
+                            studentName: student.studentNameBn,
+                            photoUrl: student.photoUrl || '',
+                            group: (student.group || 'general').toLowerCase(),
+                            centerName: '',
+                            totalMarks: 0,
+                            grade: '',
+                            gpa: 0,
+                            examType: activeTab,
+                            academicYear: viewYear
+                        };
+                        await savePublicExamRecord(db, data);
+                        successCount++;
+                    }
+                }
+                toast({ title: 'সফল', description: `${toBengaliNumber(successCount)} জন শিক্ষার্থীর রেকর্ড সংরক্ষিত হয়েছে।` });
+                setIsAddOpen(false);
+                setSelectedStudentIdsInDialog(new Set());
+                fetchRecords();
+            } catch (e) {
+                console.error(e);
+                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'রেকর্ড সংরক্ষণ করা যায়নি। ' + e });
+            } finally {
+                setIsSaving(false);
+            }
+            return;
+        }
+
+        // Handle Single Save (Manual Entry or Edit)
+        if (!formData.registrationNo && !formData.rollNo && !formData.studentName) {
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'অন্তত একটি শিক্ষার্থী নির্বাচন করুন অথবা তথ্য পূরণ করুন।' });
             return;
         }
 
@@ -257,6 +303,8 @@ export default function PublicExamRecordsPage() {
                                 setIsAddOpen(open);
                                 if (!open) {
                                     setEditingId(null);
+                                    setSelectedStudentIdsInDialog(new Set());
+                                    setDialogSearchQuery('');
                                     setFormData({
                                         registrationNo: '', rollNo: '', studentName: '', photoUrl: '', group: 'general',
                                         centerName: '', totalMarks: 0, grade: '', gpa: 0,
@@ -271,107 +319,144 @@ export default function PublicExamRecordsPage() {
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-3xl font-kalpurush p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
                                     <DialogHeader className="p-6 bg-primary text-white">
-                                        <DialogTitle className="text-2xl font-black">{editingId ? 'রেকর্ড সংশোধন করুন' : 'নতুন রেকর্ড যোগ'} (সাল: {toBengaliNumber(viewYear)})</DialogTitle>
+                                        <DialogTitle className="text-2xl font-black">{editingId ? 'রেকর্ড সংশোধন করুন' : 'অংশগ্রহণকারী শিক্ষার্থী নির্বাচন'} (সাল: {toBengaliNumber(viewYear)})</DialogTitle>
                                         <DialogDescription className="text-white/80 font-bold">
                                             {activeTab === 'SSC' 
-                                                ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের শিক্ষার্থীদের মধ্য থেকে নির্বাচন করুন`
-                                                : `${toBengaliNumber(viewYear)} সালের শিক্ষার্থীদের মধ্য থেকে নির্বাচন করুন`}
+                                                ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের ১০ম শ্রেণির শিক্ষার্থীদের তালিকা`
+                                                : `${toBengaliNumber(viewYear)} সালের ৮ম শ্রেণির শিক্ষার্থীদের তালিকা`}
                                         </DialogDescription>
                                     </DialogHeader>
+                                    
                                     <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto bg-white">
-                                        
-                                        {!editingId && (
-                                            <div className="p-4 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <Label className="font-black text-primary uppercase text-[10px] tracking-widest">
-                                                        {activeTab === 'SSC' ? 'পূর্ববর্তী বছরের ডাটাবেস' : 'বর্তমান বছরের ডাটাবেস'} থেকে খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'}, {activeTab === 'SSC' ? toBengaliNumber(parseInt(viewYear) - 1) : toBengaliNumber(viewYear)})
-                                                    </Label>
-                                                    {isFetchingStudents && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                                        {!editingId ? (
+                                            <div className="space-y-4">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="relative flex-1">
+                                                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                                        <Input 
+                                                            placeholder="শিক্ষার্থী খুঁজুন (নাম বা রোল)..." 
+                                                            value={dialogSearchQuery}
+                                                            onChange={e => setDialogSearchQuery(e.target.value)}
+                                                            className="pl-9 h-10 border-2"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-lg border">
+                                                        <Checkbox 
+                                                            id="select-all" 
+                                                            checked={selectedStudentIdsInDialog.size === candidateStudents.length && candidateStudents.length > 0}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) setSelectedStudentIdsInDialog(new Set(candidateStudents.map(s => s.id)));
+                                                                else setSelectedStudentIdsInDialog(new Set());
+                                                            }}
+                                                        />
+                                                        <Label htmlFor="select-all" className="text-xs font-black cursor-pointer">সবাইকে টিক দিন</Label>
+                                                    </div>
                                                 </div>
-                                                <Select onValueChange={handleStudentLink}>
-                                                    <SelectTrigger className="h-11 bg-white border-2">
-                                                        <SelectValue placeholder="শিক্ষার্থী নির্বাচন করুন..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
+
+                                                <ScrollArea className="h-[400px] border-2 rounded-xl p-2 bg-slate-50/30">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {candidateStudents.length === 0 ? (
-                                                            <div className="p-4 text-center text-xs font-bold text-muted-foreground italic">
-                                                                {activeTab === 'SSC' 
-                                                                    ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`
-                                                                    : `${toBengaliNumber(viewYear)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`}
+                                                            <div className="col-span-full py-20 text-center text-muted-foreground italic font-bold">
+                                                                কোনো শিক্ষার্থী পাওয়া যায়নি।
                                                             </div>
                                                         ) : (
                                                             candidateStudents.map(s => (
-                                                                <SelectItem key={s.id} value={s.id} className="font-bold">
-                                                                    রোল: {toBengaliNumber(s.roll)} - {s.studentNameBn}
-                                                                </SelectItem>
+                                                                <div 
+                                                                    key={s.id} 
+                                                                    className={cn(
+                                                                        "flex items-center gap-3 p-3 border-2 rounded-xl transition-all cursor-pointer",
+                                                                        selectedStudentIdsInDialog.has(s.id) ? "bg-primary/5 border-primary shadow-sm" : "bg-white border-slate-100 hover:border-primary/20"
+                                                                    )}
+                                                                    onClick={() => toggleStudentSelection(s.id)}
+                                                                >
+                                                                    <Checkbox 
+                                                                        checked={selectedStudentIdsInDialog.has(s.id)}
+                                                                        onCheckedChange={() => toggleStudentSelection(s.id)}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                    />
+                                                                    <Avatar className="h-10 w-10 border shadow-sm shrink-0">
+                                                                        <AvatarImage src={s.photoUrl || getStudentPlaceholderImage(s.gender)} className="object-cover" />
+                                                                        <AvatarFallback className="font-black text-xs">S</AvatarFallback>
+                                                                    </Avatar>
+                                                                    <div className="flex-1 overflow-hidden">
+                                                                        <p className="font-black text-slate-800 truncate text-sm">{s.studentNameBn}</p>
+                                                                        <p className="text-[10px] font-bold text-muted-foreground">রোল: {toBengaliNumber(s.roll)} | আইডি: {toBengaliNumber(s.generatedId || '')}</p>
+                                                                    </div>
+                                                                </div>
                                                             ))
                                                         )}
-                                                    </SelectContent>
-                                                </Select>
-                                                <p className="text-[10px] font-bold text-muted-foreground italic">
-                                                    * {activeTab === 'SSC' 
-                                                        ? `${toBengaliNumber(viewYear)} সালের এসএসসি পরীক্ষার্থীরা মূলত ${toBengaliNumber(parseInt(viewYear) - 1)} সালের দশম শ্রেণির শিক্ষার্থী।`
-                                                        : `${toBengaliNumber(viewYear)} সালের পরীক্ষার্থীরা এই বছরেরই অষ্টম শ্রেণির শিক্ষার্থী।`}
-                                                </p>
+                                                    </div>
+                                                </ScrollArea>
+                                                
+                                                <div className="p-4 bg-amber-50 rounded-xl border-2 border-dashed border-amber-200 flex items-start gap-3">
+                                                    <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                                                    <p className="text-xs font-bold text-amber-900 leading-relaxed">
+                                                        শিক্ষার্থীদের টিক দিয়ে সেভ করুন। পরবর্তীতে মূল টেবিলের **এডিট** বাটন ব্যবহার করে প্রত্যেকের জিপিএ ও নম্বর সংশোধন করা যাবে।
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">পরীক্ষার ধরন</Label>
+                                                    <Select value={formData.examType} onValueChange={(v: any) => setFormData({...formData, examType: v})}>
+                                                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {examTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">শিক্ষার্থীর নাম *</Label>
+                                                    <Input value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} placeholder="নাম লিখুন" className="border-2 font-black" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">রেজিস্ট্রেশন নং (ESIF অনুযায়ী)</Label>
+                                                    <Input value={formData.registrationNo} onChange={e => setFormData({...formData, registrationNo: e.target.value})} placeholder="রেজিস্ট্রেশন নম্বর লিখুন" className="border-2 font-black text-blue-900" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">পাবলিক পরীক্ষার রোল নং *</Label>
+                                                    <Input value={formData.rollNo} onChange={e => setFormData({...formData, rollNo: e.target.value})} placeholder="বোর্ড রোল লিখুন" className="border-2 font-black text-rose-700" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">বিভাগ/গ্রুপ</Label>
+                                                    <Select value={formData.group} onValueChange={(v) => setFormData({...formData, group: v})}>
+                                                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">পরীক্ষা কেন্দ্রের নাম</Label>
+                                                    <Input value={formData.centerName} onChange={e => setFormData({...formData, centerName: e.target.value})} placeholder="কেন্দ্রের নাম" className="border-2" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-bold">প্রাপ্ত মোট নম্বর</Label>
+                                                    <Input type="number" value={formData.totalMarks || ''} onChange={e => setFormData({...formData, totalMarks: parseInt(e.target.value) || 0})} className="border-2 font-black" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold">প্রাপ্ত গ্রেড</Label>
+                                                        <Input value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} placeholder="A+" className="border-2 font-black text-center" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="font-bold">প্রাপ্ত জিপিএ</Label>
+                                                        <Input type="number" step="0.01" value={formData.gpa || ''} onChange={e => setFormData({...formData, gpa: parseFloat(e.target.value) || 0})} placeholder="৫.০০" className="border-2 font-black text-center" />
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">পরীক্ষার ধরন</Label>
-                                                <Select value={formData.examType} onValueChange={(v: any) => setFormData({...formData, examType: v})}>
-                                                    <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        {examTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">শিক্ষার্থীর নাম *</Label>
-                                                <Input value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} placeholder="নাম লিখুন" className="border-2 font-black" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">রেজিস্ট্রেশন নং (ESIF অনুযায়ী)</Label>
-                                                <Input value={formData.registrationNo} onChange={e => setFormData({...formData, registrationNo: e.target.value})} placeholder="রেজিস্ট্রেশন নম্বর লিখুন" className="border-2 font-black text-blue-900" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">পাবলিক পরীক্ষার রোল নং *</Label>
-                                                <Input value={formData.rollNo} onChange={e => setFormData({...formData, rollNo: e.target.value})} placeholder="বোর্ড রোল লিখুন" className="border-2 font-black text-rose-700" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">বিভাগ/গ্রুপ</Label>
-                                                <Select value={formData.group} onValueChange={(v) => setFormData({...formData, group: v})}>
-                                                    <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">পরীক্ষা কেন্দ্রের নাম</Label>
-                                                <Input value={formData.centerName} onChange={e => setFormData({...formData, centerName: e.target.value})} placeholder="কেন্দ্রের নাম" className="border-2" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">প্রাপ্ত মোট নম্বর</Label>
-                                                <Input type="number" value={formData.totalMarks || ''} onChange={e => setFormData({...formData, totalMarks: parseInt(e.target.value) || 0})} className="border-2 font-black" />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label className="font-bold">প্রাপ্ত গ্রেড</Label>
-                                                    <Input value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} placeholder="A+" className="border-2 font-black text-center" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="font-bold">প্রাপ্ত জিপিএ</Label>
-                                                    <Input type="number" step="0.01" value={formData.gpa || ''} onChange={e => setFormData({...formData, gpa: parseFloat(e.target.value) || 0})} placeholder="৫.০০" className="border-2 font-black text-center" />
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                     <DialogFooter className="p-6 bg-slate-50 border-t">
                                         <DialogClose asChild><Button variant="ghost" className="font-bold h-12 px-6">বাতিল</Button></DialogClose>
-                                        <Button onClick={handleSave} disabled={isSaving} className="px-12 font-black h-12 shadow-xl min-w-[160px]">
+                                        <Button 
+                                            onClick={handleSave} 
+                                            disabled={isSaving || (!editingId && selectedStudentIdsInDialog.size === 0 && !formData.studentName)} 
+                                            className="px-12 font-black h-12 shadow-xl min-w-[160px]"
+                                        >
                                             {isSaving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />}
-                                            {editingId ? 'আপডেট করুন' : 'রেকর্ড সেভ করুন'}
+                                            {editingId ? 'আপডেট করুন' : (selectedStudentIdsInDialog.size > 0 ? `নির্বাচিত ${toBengaliNumber(selectedStudentIdsInDialog.size)} জনকে যুক্ত করুন` : 'রেকর্ড সেভ করুন')}
                                         </Button>
                                     </DialogFooter>
                                 </DialogContent>
