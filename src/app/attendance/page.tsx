@@ -15,7 +15,7 @@ import {
     StudentConsecutiveAbsence,
     deleteDailyAttendance
 } from '@/lib/attendance-data';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFirestore } from '@/firebase';
@@ -148,6 +148,9 @@ const AttendanceSheet = ({
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    
+    // Refs for keyboard navigation
+    const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
     const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; 
     const isAdmin = user?.role === 'admin';
@@ -206,7 +209,6 @@ const AttendanceSheet = ({
             attendance: attendanceData,
         };
 
-        // Optimistic save: Update UI state immediately without waiting for server promise
         saveDailyAttendance(db, dailyAttendance);
         
         setSavedAttendance(dailyAttendance);
@@ -214,7 +216,7 @@ const AttendanceSheet = ({
         onRefresh();
         toast({ 
             title: isEditing ? "হাজিরা আপডেট হয়েছে" : "হাজিরা সেভ হয়েছে",
-            description: currentAttendance.size < students.length ? "বাকি শিক্ষার্থীরা অনুপস্থিত হিসেবে গণ্য হবে।" : "সফলভাবে সংরক্ষিত হয়েছে।"
+            description: "তথ্য সফলভাবে সংরক্ষিত হয়েছে।"
         });
     };
 
@@ -231,6 +233,32 @@ const AttendanceSheet = ({
             console.error(e);
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent, studentId: string, index: number) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            onStatusChange(studentId, 'present');
+            // Move to next student present button if exists
+            if (index < students.length - 1) {
+                const nextId = students[index + 1].id;
+                rowRefs.current[`present-${nextId}`]?.focus();
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (index < students.length - 1) {
+                const nextId = students[index + 1].id;
+                const activeType = e.currentTarget.id.startsWith('present') ? 'present' : 'absent';
+                rowRefs.current[`${activeType}-${nextId}`]?.focus();
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (index > 0) {
+                const prevId = students[index - 1].id;
+                const activeType = e.currentTarget.id.startsWith('present') ? 'present' : 'absent';
+                rowRefs.current[`${activeType}-${prevId}`]?.focus();
+            }
         }
     };
 
@@ -321,9 +349,14 @@ const AttendanceSheet = ({
     return (
         <div className="animate-in fade-in duration-500">
             <div className="p-4 bg-muted/30 border-b flex justify-between items-center">
-                <span className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Edit2 className="h-3 w-3" /> {isEditing ? 'হাজিরা সংশোধন' : 'নতুন হাজিরা নিন'} ({format(date, 'PPP', { locale: bn })})
-                </span>
+                <div className="flex flex-col gap-1">
+                    <span className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                        <Edit2 className="h-3 w-3" /> {isEditing ? 'হাজিরা সংশোধন' : 'নতুন হাজিরা নিন'} ({format(date, 'PPP', { locale: bn })})
+                    </span>
+                    <p className="text-[10px] font-bold text-primary flex items-center gap-2">
+                        <Info className="h-3 w-3" /> কিবোর্ড টিপস: এন্টার দিলে উপস্থিত, ট্যাব দিলে পরের জন। যাদের কিছু দিবেন না তারা অনুপস্থিত হবে।
+                    </p>
+                </div>
                 {isEditing && (
                     <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-8 text-xs font-bold text-rose-600">
                         <RotateCcw className="h-3 w-3 mr-1" /> বাতিল করুন
@@ -336,46 +369,48 @@ const AttendanceSheet = ({
                         <TableRow>
                             <TableHead className="w-20 text-center font-black">রোল</TableHead>
                             <TableHead>নাম</TableHead>
-                            <TableHead className="text-right">হাজিরা বাটন</TableHead>
+                            <TableHead className="text-center font-black w-60">হাজিরা বাটন</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {students.map(student => {
+                        {students.map((student, idx) => {
                             const currentStatus = currentAttendance.get(student.id);
                             return (
-                                <TableRow key={student.id} className="hover:bg-accent/5 h-16 transition-colors">
+                                <TableRow key={student.id} className="hover:bg-accent/5 h-16 transition-colors group">
                                     <TableCell className="text-center font-black text-lg">{toBengaliNumber(student.roll)}</TableCell>
                                     <TableCell className="font-black text-slate-700">{student.studentNameBn}</TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end items-center gap-3">
+                                    <TableCell className="text-center">
+                                        <div className="flex justify-center items-center gap-0 border-2 rounded-xl overflow-hidden max-w-[240px] mx-auto bg-slate-50">
                                             <Button
+                                                id={`present-${student.id}`}
+                                                ref={el => rowRefs.current[`present-${student.id}`] = el}
                                                 type="button"
-                                                size="sm"
-                                                variant={currentStatus === 'present' ? 'default' : 'outline'}
+                                                variant="ghost"
                                                 className={cn(
-                                                    "h-10 px-6 font-black transition-all duration-300 border-2",
+                                                    "flex-1 h-12 rounded-none font-black transition-all border-r-2",
                                                     currentStatus === 'present' 
-                                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white scale-110 shadow-xl border-emerald-700 ring-4 ring-emerald-100 z-10" 
-                                                        : "text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 opacity-60 hover:opacity-100"
+                                                        ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                                                        : "text-emerald-600 hover:bg-emerald-50"
                                                 )}
                                                 onClick={() => onStatusChange(student.id, 'present')}
+                                                onKeyDown={(e) => handleKeyDown(e, student.id, idx)}
                                             >
-                                                <Check className={cn("mr-2 h-5 w-5", currentStatus === 'present' ? "block" : "hidden")} />
                                                 উপস্থিত
                                             </Button>
                                             <Button
+                                                id={`absent-${student.id}`}
+                                                ref={el => rowRefs.current[`absent-${student.id}`] = el}
                                                 type="button"
-                                                size="sm"
-                                                variant={currentStatus === 'absent' ? 'default' : 'outline'}
+                                                variant="ghost"
                                                 className={cn(
-                                                    "h-10 px-6 font-black transition-all duration-300 border-2",
+                                                    "flex-1 h-12 rounded-none font-black transition-all",
                                                     currentStatus === 'absent' 
-                                                        ? "bg-rose-600 hover:bg-rose-700 text-white scale-110 shadow-xl border-rose-700 ring-4 ring-rose-100 z-10" 
-                                                        : "text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 opacity-60 hover:opacity-100"
+                                                        ? "bg-rose-600 text-white hover:bg-rose-700" 
+                                                        : "text-rose-600 hover:bg-rose-50"
                                                 )}
                                                 onClick={() => onStatusChange(student.id, 'absent')}
+                                                onKeyDown={(e) => handleKeyDown(e, student.id, idx)}
                                             >
-                                                <X className={cn("mr-2 h-5 w-5", currentStatus === 'absent' ? "block" : "hidden")} />
                                                 অনুপস্থিত
                                             </Button>
                                         </div>
@@ -966,7 +1001,7 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
 
     useEffect(() => {
         if (isClient) fetchMissedAttendance();
-    }, [fetchMissedAttendance, isClient]);
+    }, [fetchMissedAttendance, iIsClient]);
 
     if (!isClient) return null;
 
