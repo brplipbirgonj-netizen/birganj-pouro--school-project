@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Header } from '@/components/Header';
@@ -26,7 +27,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday, getHolidays } from '@/lib/holiday-data';
-import { format, eachDayOfInterval } from 'date-fns';
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, getDate } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,7 +36,7 @@ import {
     CalendarDays, CalendarCheck, Plus, Save, Loader2, 
     BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, 
     MessageSquareDashed, UserX, Printer, Wifi, WifiOff, Trash2,
-    Info
+    Info, MousePointer2
 } from 'lucide-react';
 import { 
     AlertDialog, 
@@ -120,324 +121,301 @@ const SchoolPrintHeader = ({ title, schoolInfo, startDate, endDate }: { title: s
     </div>
 );
 
-// --- Sub Tabs Components ---
+// --- Monthly Grid Register Component ---
 
-const AttendanceSheet = ({ 
+const MonthlyAttendanceGrid = ({ 
     classId, 
     students, 
-    date,
-    currentAttendance, 
-    onStatusChange, 
+    selectedDate,
     onRefresh 
 }: { 
     classId: string, 
     students: Student[], 
-    date: Date,
-    currentAttendance: Map<string, AttendanceStatus>,
-    onStatusChange: (studentId: string, status: AttendanceStatus) => void,
+    selectedDate: Date,
     onRefresh: () => void
 }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { user } = useAuth();
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayOfWeek = date.getDay(); 
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const activeDay = getDate(selectedDate);
+    const monthStart = startOfMonth(selectedDate);
+    const monthEnd = endOfMonth(selectedDate);
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-    const [savedAttendance, setSavedAttendance] = useState<DailyAttendance | undefined>(undefined);
+    const [monthRecords, setMonthRecords] = useState<DailyAttendance[]>([]);
+    const [currentStatusMap, setCurrentStatusMap] = useState<Map<string, AttendanceStatus>>(new Map());
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [activeHoliday, setActiveHoliday] = useState<Holiday | undefined>(undefined);
-    const [isEditing, setIsEditing] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    
-    // Refs for keyboard navigation
-    const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+    const [holidays, setHolidays] = useState<string[]>([]);
 
-    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; 
-    const isAdmin = user?.role === 'admin';
+    const inputRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
-    useEffect(() => {
+    const fetchData = useCallback(async () => {
         if (!db || !user) return;
-        
-        const checkExistingData = async () => {
-            setIsLoading(true);
-            try {
-                const existingAttendance = await getAttendanceForClassAndDate(db, dateStr, classId, selectedYear);
-                setSavedAttendance(existingAttendance);
-                
-                if (existingAttendance) {
-                    existingAttendance.attendance.forEach(item => {
-                        if (currentAttendance.get(item.studentId) !== item.status) {
-                            onStatusChange(item.studentId, item.status);
-                        }
-                    });
-                }
-
-                const holidayToday = await isHoliday(db, dateStr);
-                setActiveHoliday(holidayToday);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        checkExistingData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [classId, dateStr, selectedYear, db, user]);
-
-    const handleSaveAttendance = () => {
-        if (!db || !user) return;
-        
-        if (isWeekend) {
-            toast({ variant: "destructive", title: "সাপ্তাহিক ছুটির দিনে হাজিরা গ্রহণ সম্ভব নয়।" });
-            return;
-        }
-        if (activeHoliday) {
-            toast({ variant: "destructive", title: `আজ ${activeHoliday.description}। হাজিরা বন্ধ রয়েছে।` });
-            return;
-        }
-
-        const attendanceData: StudentAttendance[] = students.map(student => ({
-            studentId: student.id,
-            status: currentAttendance.get(student.id) || 'absent'
-        }));
-
-        const dailyAttendance: DailyAttendance = {
-            date: dateStr,
-            academicYear: selectedYear,
-            className: classId,
-            attendance: attendanceData,
-        };
-
-        saveDailyAttendance(db, dailyAttendance);
-        
-        setSavedAttendance(dailyAttendance);
-        setIsEditing(false);
-        onRefresh();
-        toast({ 
-            title: isEditing ? "হাজিরা আপডেট হয়েছে" : "হাজিরা সেভ হয়েছে",
-            description: "তথ্য সফলভাবে সংরক্ষিত হয়েছে।"
-        });
-    };
-
-    const handleDeleteRecord = async () => {
-        if (!db || !isAdmin || !savedAttendance) return;
-        setIsDeleting(true);
+        setIsLoading(true);
         try {
-            await deleteDailyAttendance(db, dateStr, classId, selectedYear);
-            toast({ title: 'হাজিরা রেকর্ড মুছে ফেলা হয়েছে' });
-            setSavedAttendance(undefined);
-            setIsEditing(false);
-            onRefresh();
+            const startStr = format(monthStart, 'yyyy-MM-dd');
+            const endStr = format(monthEnd, 'yyyy-MM-dd');
+            
+            const q = query(
+                collection(db, 'attendance'),
+                where('academicYear', '==', selectedYear),
+                where('className', '==', classId),
+                where('date', '>=', startStr),
+                where('date', '<=', endStr)
+            );
+            
+            const [attSnap, holidayList] = await Promise.all([
+                getDocs(q),
+                getHolidays(db)
+            ]);
+
+            const records = attSnap.docs.map(doc => doc.data() as DailyAttendance);
+            setMonthRecords(records);
+            setHolidays(holidayList.map(h => h.date));
+            
+            const todayRecord = records.find(r => r.date === dateStr);
+            const statusMap = new Map<string, AttendanceStatus>();
+            if (todayRecord) {
+                todayRecord.attendance.forEach(a => statusMap.set(a.studentId, a.status));
+            }
+            setCurrentStatusMap(statusMap);
+
+            const holidayToday = await isHoliday(db, dateStr);
+            setActiveHoliday(holidayToday);
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    }, [db, user, classId, selectedYear, dateStr, monthStart, monthEnd]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const handleSave = async () => {
+        if (!db || !user || isSaving) return;
+        
+        const dayOfWeek = selectedDate.getDay();
+        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+        if (isWeekend) { toast({ variant: "destructive", title: "সাপ্তাহিক ছুটিতে হাজিরা বন্ধ।" }); return; }
+        if (activeHoliday) { toast({ variant: "destructive", title: `আজ ${activeHoliday.description}।` }); return; }
+
+        setIsSaving(true);
+        try {
+            const attendanceData: StudentAttendance[] = students.map(student => ({
+                studentId: student.id,
+                status: currentStatusMap.get(student.id) || 'absent'
+            }));
+
+            const dailyAttendance: DailyAttendance = {
+                date: dateStr,
+                academicYear: selectedYear,
+                className: classId,
+                attendance: attendanceData,
+            };
+
+            await saveDailyAttendance(db, dailyAttendance);
+            toast({ title: "হাজিরা সংরক্ষিত হয়েছে", description: `${format(selectedDate, 'PPP', { locale: bn })} এর তথ্য সেভ হয়েছে।` });
+            fetchData();
         } catch (e) {
             console.error(e);
         } finally {
-            setIsDeleting(false);
+            setIsSaving(false);
+        }
+    };
+
+    const toggleStatus = (studentId: string, status: AttendanceStatus, index: number) => {
+        setCurrentStatusMap(prev => {
+            const next = new Map(prev);
+            next.set(studentId, status);
+            return next;
+        });
+
+        // If 'Enter' is used, it should ideally move focus down
+        if (index < students.length - 1) {
+            const nextId = students[index + 1].id;
+            inputRefs.current[`present-${nextId}`]?.focus();
         }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent, studentId: string, index: number) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            onStatusChange(studentId, 'present');
-            // Move to next student present button if exists
-            if (index < students.length - 1) {
-                const nextId = students[index + 1].id;
-                rowRefs.current[`present-${nextId}`]?.focus();
-            }
+            toggleStatus(studentId, 'present', index);
         } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
             if (index < students.length - 1) {
                 const nextId = students[index + 1].id;
-                const activeType = e.currentTarget.id.startsWith('present') ? 'present' : 'absent';
-                rowRefs.current[`${activeType}-${nextId}`]?.focus();
+                const type = e.currentTarget.id.startsWith('present') ? 'present' : 'absent';
+                inputRefs.current[`${type}-${nextId}`]?.focus();
             }
         } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
             if (index > 0) {
                 const prevId = students[index - 1].id;
-                const activeType = e.currentTarget.id.startsWith('present') ? 'present' : 'absent';
-                rowRefs.current[`${activeType}-${prevId}`]?.focus();
+                const type = e.currentTarget.id.startsWith('present') ? 'present' : 'absent';
+                inputRefs.current[`${type}-${prevId}`]?.focus();
             }
         }
     };
 
-    if (isLoading) return <div className="p-12 text-center italic text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /> <span>লোড হচ্ছে...</span></div>;
+    if (isLoading) return <div className="p-20 text-center italic"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" /> ডাটা লোড হচ্ছে...</div>;
 
-    if (isWeekend) return <p className="text-center text-rose-600 font-bold p-12 bg-rose-50 rounded-lg border-2 border-dashed border-rose-200">{format(date, 'PPP', { locale: bn })} সাপ্তাহিক ছুটি, তাই হাজিরা বন্ধ আছে।</p>;
-
-    if (activeHoliday) return <p className="text-center text-amber-700 font-bold p-12 bg-amber-50 rounded-lg border-2 border-dashed border-amber-200">{format(date, 'PPP', { locale: bn })} {activeHoliday.description}, তাই হাজিরা বন্ধ আছে।</p>;
-    
-    if (savedAttendance && !isEditing) {
-        const savedMap = new Map(savedAttendance.attendance.map(item => [item.studentId, item.status]));
-        const presentCount = savedAttendance.attendance.filter(a => a.status === 'present').length;
-        const absentCount = savedAttendance.attendance.length - presentCount;
-
-        return (
-            <div className="p-4 space-y-6 animate-in fade-in duration-500">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/20 p-4 rounded-lg border">
-                    <div>
-                        <h3 className="font-black text-xl text-primary">{format(date, 'PPP', { locale: bn })} এর হাজিরা সম্পন্ন হয়েছে</h3>
-                        <div className="mt-1 flex flex-wrap gap-4 text-sm font-bold">
-                            <Badge variant="outline" className="bg-white">মোট: {toBengaliNumber(presentCount + absentCount)}</Badge>
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">উপস্থিত: {toBengaliNumber(presentCount)}</Badge>
-                            <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">অনুপস্থিত: {toBengaliNumber(absentCount)}</Badge>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        {isAdmin && (
-                            <>
-                                <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2 border-primary text-primary hover:bg-primary/5 shadow-sm">
-                                    <Edit2 className="h-4 w-4" /> হাজিরা সংশোধন করুন
-                                </Button>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="outline" className="flex items-center gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 shadow-sm">
-                                            <Trash2 className="h-4 w-4" /> মুছে ফেলুন
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="font-kalpurush">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-rose-700 font-black">নিশ্চিত তো?</AlertDialogTitle>
-                                            <AlertDialogDescription className="font-bold">
-                                                আপনি কি নিশ্চিতভাবে এই তারিখের হাজিরা রেকর্ডটি পুরোপুরি মুছে ফেলতে চান?
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>না</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDeleteRecord} className="bg-destructive text-white" disabled={isDeleting}>
-                                                {isDeleting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : 'হ্যাঁ, মুছুন'}
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </>
-                        )}
-                    </div>
-                </div>
-                 <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-                    <Table>
-                        <TableHeader className="bg-muted/50">
-                            <TableRow>
-                                <TableHead className="w-20 text-center font-black">রোল</TableHead>
-                                <TableHead>শিক্ষার্থীর নাম</TableHead>
-                                <TableHead className="text-right">অবস্থা</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {students.map(student => (
-                                <TableRow key={student.id} className="hover:bg-muted/10 h-14">
-                                    <TableCell className="text-center font-black">{toBengaliNumber(student.roll)}</TableCell>
-                                    <TableCell className="font-bold">{student.studentNameBn}</TableCell>
-                                    <TableCell className="text-right">
-                                         <span className={cn(
-                                             "px-4 py-1.5 rounded-full text-sm font-black shadow-sm flex items-center gap-2 ml-auto w-fit",
-                                             savedMap.get(student.id) === 'present' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200'
-                                         )}>
-                                            {savedMap.get(student.id) === 'present' ? <><Check className="h-4 w-4" /> উপস্থিত</> : <><X className="h-4 w-4" /> অনুপস্থিত</>}
-                                        </span>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                 </div>
-            </div>
-        );
-    }
-    
     return (
-        <div className="animate-in fade-in duration-500">
-            <div className="p-4 bg-muted/30 border-b flex justify-between items-center">
-                <div className="flex flex-col gap-1">
-                    <span className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                        <Edit2 className="h-3 w-3" /> {isEditing ? 'হাজিরা সংশোধন' : 'নতুন হাজিরা নিন'} ({format(date, 'PPP', { locale: bn })})
-                    </span>
-                    <p className="text-[10px] font-bold text-primary flex items-center gap-2">
-                        <Info className="h-3 w-3" /> কিবোর্ড টিপস: এন্টার দিলে উপস্থিত, ট্যাব দিলে পরের জন। যাদের কিছু দিবেন না তারা অনুপস্থিত হবে।
-                    </p>
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-primary/5 p-4 rounded-xl border-2 border-primary/10 gap-4 no-print">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg"><CalendarCheck className="h-5 w-5 text-primary" /></div>
+                    <div>
+                        <h3 className="font-black text-lg text-slate-800">মাসিক হাজিরা রেজিস্টার</h3>
+                        <p className="text-xs font-bold text-muted-foreground">{BENGALI_MONTHS[selectedDate.getMonth()]} {toBengaliNumber(selectedYear)}</p>
+                    </div>
                 </div>
-                {isEditing && (
-                    <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-8 text-xs font-bold text-rose-600">
-                        <RotateCcw className="h-3 w-3 mr-1" /> বাতিল করুন
+                <div className="flex items-center gap-2">
+                    <p className="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                        আজকের কলাম: {toBengaliNumber(activeDay)} তারিখ
+                    </p>
+                    <Button onClick={handleSave} disabled={isSaving || isOffDay(selectedDate, holidays)} className="font-black shadow-lg">
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        হাজিরা সেভ করুন
                     </Button>
-                )}
+                </div>
             </div>
-            <div className="table-container">
-                <Table>
-                    <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                        <TableRow>
-                            <TableHead className="w-20 text-center font-black">রোল</TableHead>
-                            <TableHead>নাম</TableHead>
-                            <TableHead className="text-center font-black w-60">হাজিরা বাটন</TableHead>
+
+            <div className="table-container !max-h-[600px] border-2 border-black rounded-xl shadow-xl overflow-auto relative">
+                <Table className="border-collapse border-spacing-0 min-w-max">
+                    <TableHeader className="sticky top-0 z-40 bg-slate-100">
+                        <TableRow className="h-12 border-b-2 border-black">
+                            <TableHead className="w-12 text-center font-black border-r border-black bg-slate-100 sticky left-0 z-50">রোল</TableHead>
+                            <TableHead className="min-w-[150px] font-black border-r border-black bg-slate-100 sticky left-12 z-50">শিক্ষার্থীর নাম</TableHead>
+                            {daysInMonth.map(day => {
+                                const d = getDate(day);
+                                const isSelected = d === activeDay;
+                                const dateStr = format(day, 'yyyy-MM-dd');
+                                const isOff = isOffDay(day, holidays);
+                                return (
+                                    <TableHead key={d} className={cn(
+                                        "w-10 text-center font-black border-r border-black p-0 text-[10px]",
+                                        isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100",
+                                        isOff && !isSelected && "bg-rose-50 text-rose-400"
+                                    )}>
+                                        <div className="flex flex-col items-center">
+                                            <span>{toBengaliNumber(d)}</span>
+                                            <span className="text-[8px] opacity-60 uppercase">{format(day, 'EEE', { locale: bn }).slice(0, 3)}</span>
+                                        </div>
+                                    </TableHead>
+                                );
+                            })}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {students.map((student, idx) => {
-                            const currentStatus = currentAttendance.get(student.id);
-                            return (
-                                <TableRow key={student.id} className="hover:bg-accent/5 h-16 transition-colors group">
-                                    <TableCell className="text-center font-black text-lg">{toBengaliNumber(student.roll)}</TableCell>
-                                    <TableCell className="font-black text-slate-700">{student.studentNameBn}</TableCell>
-                                    <TableCell className="text-center">
-                                        <div className="flex justify-center items-center gap-0 border-2 rounded-xl overflow-hidden max-w-[240px] mx-auto bg-slate-50">
-                                            <Button
-                                                id={`present-${student.id}`}
-                                                ref={el => rowRefs.current[`present-${student.id}`] = el}
-                                                type="button"
-                                                variant="ghost"
-                                                className={cn(
-                                                    "flex-1 h-12 rounded-none font-black transition-all border-r-2",
-                                                    currentStatus === 'present' 
-                                                        ? "bg-emerald-600 text-white hover:bg-emerald-700" 
-                                                        : "text-emerald-600 hover:bg-emerald-50"
-                                                )}
-                                                onClick={() => onStatusChange(student.id, 'present')}
-                                                onKeyDown={(e) => handleKeyDown(e, student.id, idx)}
-                                            >
-                                                উপস্থিত
-                                            </Button>
-                                            <Button
-                                                id={`absent-${student.id}`}
-                                                ref={el => rowRefs.current[`absent-${student.id}`] = el}
-                                                type="button"
-                                                variant="ghost"
-                                                className={cn(
-                                                    "flex-1 h-12 rounded-none font-black transition-all",
-                                                    currentStatus === 'absent' 
-                                                        ? "bg-rose-600 text-white hover:bg-rose-700" 
-                                                        : "text-rose-600 hover:bg-rose-50"
-                                                )}
-                                                onClick={() => onStatusChange(student.id, 'absent')}
-                                                onKeyDown={(e) => handleKeyDown(e, student.id, idx)}
-                                            >
-                                                অনুপস্থিত
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
+                        {students.map((student, sIdx) => (
+                            <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors">
+                                <TableCell className="text-center font-black border-r border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
+                                <TableCell className="font-bold border-r border-black bg-white sticky left-12 z-30 whitespace-nowrap px-3 text-xs">{student.studentNameBn}</TableCell>
+                                {daysInMonth.map(day => {
+                                    const d = getDate(day);
+                                    const isSelected = d === activeDay;
+                                    const dateStr = format(day, 'yyyy-MM-dd');
+                                    const isOff = isOffDay(day, holidays);
+                                    
+                                    if (isSelected) {
+                                        const status = currentStatusMap.get(student.id);
+                                        return (
+                                            <TableCell key={d} className="p-0 border-r border-black bg-blue-50/50">
+                                                <div className="flex gap-0 h-10 w-24">
+                                                    <button
+                                                        id={`present-${student.id}`}
+                                                        ref={el => inputRefs.current[`present-${student.id}`] = el}
+                                                        className={cn(
+                                                            "flex-1 h-full text-[10px] font-black transition-all border-r border-blue-200",
+                                                            status === 'present' ? "bg-emerald-600 text-white" : "hover:bg-emerald-50 text-emerald-600"
+                                                        )}
+                                                        onClick={() => toggleStatus(student.id, 'present', sIdx)}
+                                                        onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
+                                                    >
+                                                        P
+                                                    </button>
+                                                    <button
+                                                        id={`absent-${student.id}`}
+                                                        ref={el => inputRefs.current[`absent-${student.id}`] = el}
+                                                        className={cn(
+                                                            "flex-1 h-full text-[10px] font-black transition-all",
+                                                            status === 'absent' ? "bg-rose-600 text-white" : "hover:bg-rose-50 text-rose-600"
+                                                        )}
+                                                        onClick={() => toggleStatus(student.id, 'absent', sIdx)}
+                                                        onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
+                                                    >
+                                                        A
+                                                    </button>
+                                                </div>
+                                            </TableCell>
+                                        );
+                                    }
+
+                                    const record = monthRecords.find(r => r.date === dateStr);
+                                    const att = record?.attendance.find(a => a.studentId === student.id);
+                                    
+                                    return (
+                                        <TableCell key={d} className={cn(
+                                            "text-center p-0 border-r border-black text-[11px] font-black",
+                                            isOff && "bg-rose-50/30",
+                                            att?.status === 'present' && "text-emerald-700 bg-emerald-50/50",
+                                            att?.status === 'absent' && "text-rose-700 bg-rose-50/50"
+                                        )}>
+                                            {att?.status === 'present' ? 'P' : att?.status === 'absent' ? 'A' : ''}
+                                        </TableCell>
+                                    );
+                                })}
+                            </TableRow>
+                        ))}
                     </TableBody>
                 </Table>
             </div>
-            <div className="flex justify-end p-6 mt-4 border-t gap-4 bg-muted/10">
-                {isEditing && <Button variant="outline" onClick={() => setIsEditing(false)} className="font-bold">বাতিল</Button>}
-                <Button onClick={handleSaveAttendance} size="lg" className="shadow-2xl min-w-[200px] font-black h-14 text-lg">
-                    {isEditing ? 'পরিবর্তন সেভ করুন' : 'হাজিরা সেভ করুন'}
-                </Button>
+            
+            <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-xl flex items-start gap-3 no-print">
+                <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs font-bold text-amber-900 space-y-1">
+                    <p>• নীল কলামটি আজকের তারিখ নির্দেশ করে। এখানে P = উপস্থিত এবং A = অনুপস্থিত।</p>
+                    <p>• কিবোর্ড টিপস: <strong>Enter</strong> চাপলে শিক্ষার্থী উপস্থিত হবে এবং ফোকাস নিচের জনের ঘরে চলে যাবে।</p>
+                    <p>• যাদের জন্য কিছুই নির্বাচন করবেন না, সেভ দেওয়ার সময় তারা স্বয়ংক্রিয়ভাবে অনুপস্থিত হিসেবে গণ্য হবে।</p>
+                </div>
             </div>
         </div>
     );
 };
 
+const isOffDay = (date: Date, holidays: string[]) => {
+    const d = date.getDay();
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return d === 5 || d === 6 || holidays.includes(dateStr);
+};
+
+// --- Sub Tabs Components ---
+
+const AttendanceSheet = ({ 
+    classId, 
+    students, 
+    date,
+    onRefresh 
+}: { 
+    classId: string, 
+    students: Student[], 
+    date: Date,
+    onRefresh: () => void
+}) => {
+    return (
+        <MonthlyAttendanceGrid 
+            classId={classId} 
+            students={students} 
+            selectedDate={date} 
+            onRefresh={onRefresh} 
+        />
+    );
+};
+
 const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date, onDateChange: (d: Date) => void }) => {
     const { selectedYear } = useAcademicYear();
-    const [classAttendance, setClassAttendance] = useState<Record<string, Map<string, AttendanceStatus>>>({
-        '6': new Map(), '7': new Map(), '8': new Map(), '9': new Map(), '10': new Map()
-    });
-
     const studentsForYear = useMemo(() => {
         return allStudents.filter(student => student.academicYear === selectedYear);
     }, [allStudents, selectedYear]);
@@ -445,67 +423,45 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
     const classes = ['6', '7', '8', '9', '10'];
 
     const getStudentsByClass = (className: string): Student[] => {
-        return studentsForYear.filter((student) => student.className === className);
-    };
-
-    const handleStatusChange = useCallback((className: string, studentId: string, status: AttendanceStatus) => {
-        setClassAttendance(prev => {
-            const nextMap = new Map(prev[className]);
-            nextMap.set(studentId, status);
-            return { ...prev, [className]: nextMap };
-        });
-    }, []);
-
-    const getPresentCount = (className: string) => {
-        const map = classAttendance[className];
-        let count = 0;
-        map.forEach(status => {
-            if (status === 'present') count++;
-        });
-        return count;
+        return studentsForYear.filter((student) => student.className === className).sort((a, b) => a.roll - b.roll);
     };
 
     const formattedDate = format(date, "EEEE, d MMMM yyyy", { locale: bn });
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
-            <div className="flex flex-col sm:flex-row items-center justify-between bg-primary/5 p-4 rounded-lg border-2 border-primary/10 gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between bg-white p-4 rounded-xl border shadow-sm gap-4 no-print">
                 <div className="space-y-1">
-                    <p className="text-sm font-black text-primary flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4" /> হাজিরা তারিখ: {formattedDate}
+                    <p className="text-sm font-black text-slate-800 flex items-center gap-2">
+                        <CalendarDays className="h-5 w-5 text-primary" /> হাজিরা তারিখ: <span className="text-primary">{formattedDate}</span>
                     </p>
-                    <p className="text-[10px] font-bold text-muted-foreground italic hidden sm:block">বাটন ক্লিক করে হাজিরা নিশ্চিত করুন। বাকিরা স্বয়ংক্রিয়ভাবে অনুপস্থিত হবে।</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Label className="font-bold text-xs whitespace-nowrap">তারিখ পরিবর্তন:</Label>
+                    <Label className="font-black text-xs whitespace-nowrap">তারিখ পরিবর্তন:</Label>
                     <DatePicker value={date} onChange={(d) => d && onDateChange(d)} />
                 </div>
             </div>
             <Tabs defaultValue="6">
                 <TabsList className="grid w-full grid-cols-5 h-auto flex-wrap bg-muted p-1">
-                    {classes.map((className) => {
-                        const count = getPresentCount(className);
-                        return (
-                            <TabsTrigger key={className} value={className} className="py-2.5 text-xs sm:text-sm font-black flex flex-col sm:flex-row items-center gap-1">
-                                <span>{classNamesMap[className]}</span>
-                                {count > 0 && <Badge variant="secondary" className="bg-emerald-600 text-white text-[10px] px-2 h-5 ml-1 shadow-sm">({toBengaliNumber(count)})</Badge>}
-                            </TabsTrigger>
-                        );
-                    })}
+                    {classes.map((className) => (
+                        <TabsTrigger key={className} value={className} className="py-2.5 text-xs sm:text-sm font-black">
+                            {classNamesMap[className]}
+                        </TabsTrigger>
+                    ))}
                 </TabsList>
                 {classes.map((className) => (
                     <TabsContent key={className} value={className}>
-                        <Card className="border-2 border-primary/5 shadow-md bg-white">
+                        <Card className="border-none shadow-none bg-transparent">
                             <CardContent className="p-0">
                                 {getStudentsByClass(className).length === 0 ? (
-                                    <p className="text-center text-muted-foreground py-12 italic">এই শ্রেণিতে কোনো শিক্ষার্থী নেই।</p>
+                                    <div className="p-20 text-center text-muted-foreground italic border-4 border-dashed rounded-3xl opacity-50 bg-white">
+                                        এই শ্রেণিতে কোনো শিক্ষার্থী নেই।
+                                    </div>
                                 ) : (
                                     <AttendanceSheet 
                                         classId={className} 
                                         students={getStudentsByClass(className)} 
                                         date={date}
-                                        currentAttendance={classAttendance[className]}
-                                        onStatusChange={(sId, status) => handleStatusChange(className, sId, status)}
                                         onRefresh={() => {}}
                                     />
                                 )}
@@ -550,9 +506,8 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
 
-            // Check for holiday (Non-blocking for offline)
             let activeHoliday = undefined;
-            try { activeHoliday = await isHoliday(db, dateStr); } catch (e) { console.log("Holiday check bypassed (offline)"); }
+            try { activeHoliday = await isHoliday(db, dateStr); } catch (e) { }
 
             if (isWeekend || activeHoliday) {
                 toast({ 
@@ -564,10 +519,9 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                 return;
             }
 
-            // Check if attendance already exists for this class and date (Non-blocking for offline)
             if (!isConfirming) {
                 let existing = undefined;
-                try { existing = await getAttendanceForClassAndDate(db, dateStr, selectedClass, selectedYear); } catch (e) { console.log("Duplicate check bypassed (offline)"); }
+                try { existing = await getAttendanceForClassAndDate(db, dateStr, selectedClass, selectedYear); } catch (e) { }
                 
                 if (existing) {
                     setIsConfirming(true);
@@ -613,7 +567,6 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                 attendance: attendanceData,
             };
 
-            // Initiate offline-first save without awaiting for immediate UI feedback
             saveDailyAttendance(db, dailyAttendance);
             
             toast({ 
@@ -634,7 +587,6 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
             e.preventDefault();
             handleSave();
         } else {
-            // Reset confirmation if user starts typing again
             if (isConfirming) setIsConfirming(false);
         }
     };
@@ -954,13 +906,11 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
             const monthIndex = BENGALI_MONTHS.indexOf(selectedMonth);
             const year = parseInt(selectedYear);
             
-            // Logic to calculate missed days
             const start = new Date(year, monthIndex, 1);
             const end = new Date(year, monthIndex + 1, 0);
             const today = new Date();
             today.setHours(23, 59, 59, 999);
 
-            // If the month is in the future, don't show any missed attendance
             if (start > today) {
                 setMissedDays([]);
                 setIsLoading(false);
@@ -1265,7 +1215,6 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsLoading(true);
         const data = await getConsecutiveAbsences(db, selectedClass, selectedYear);
         
-        // রোলের ক্রমানুসারে সাজানো (Sort by Roll Number)
         const sortedData = data.sort((a, b) => {
             const studentA = allStudents.find(s => s.id === a.studentId);
             const studentB = allStudents.find(s => s.id === b.studentId);
@@ -1650,7 +1599,7 @@ export default function AttendancePage() {
             <Header />
             <main className="flex-1 p-4 md:p-10 pb-40">
                 <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
-                    {/* Sidebar Navigation - Fixed/Sticky */}
+                    {/* Sidebar Navigation */}
                     <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
                         <div className="mb-6 px-4 hidden md:block">
                             <h2 className="text-2xl font-black text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
