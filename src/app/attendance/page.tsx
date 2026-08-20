@@ -26,7 +26,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import { isHoliday, Holiday, getHolidays } from '@/lib/holiday-data';
-import { format, eachDayOfInterval, startOfMonth, endOfMonth, getDate } from 'date-fns';
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, getDate, isSameMonth, isSameYear } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
@@ -131,7 +131,7 @@ const MonthlyAttendanceGrid = ({
 }: { 
     classId: string, 
     students: Student[], 
-    selectedDate: Date,
+    selectedDate: Date | undefined,
     onRefresh: () => void,
     onDateChange: (d: Date) => void
 }) => {
@@ -146,12 +146,14 @@ const MonthlyAttendanceGrid = ({
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const isFirstLoad = useRef(true);
 
-    // Memoize date calculations
-    const dateStr = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
-    const activeDay = useMemo(() => getDate(selectedDate), [selectedDate]);
-    const monthStart = useMemo(() => startOfMonth(selectedDate), [selectedDate]);
-    const monthEnd = useMemo(() => endOfMonth(selectedDate), [selectedDate]);
+    // Default reference date for calendar calculation (Today or first of month)
+    const referenceDate = useMemo(() => selectedDate || new Date(), [selectedDate]);
+    const monthStart = useMemo(() => startOfMonth(referenceDate), [referenceDate]);
+    const monthEnd = useMemo(() => endOfMonth(referenceDate), [referenceDate]);
     const daysInMonth = useMemo(() => eachDayOfInterval({ start: monthStart, end: monthEnd }), [monthStart, monthEnd]);
+
+    // Track which day is currently being highlighted/edited
+    const activeDay = useMemo(() => selectedDate ? getDate(selectedDate) : null, [selectedDate]);
 
     const [monthRecords, setMonthRecords] = useState<DailyAttendance[]>([]);
     const [currentStatusMap, setCurrentStatusMap] = useState<Map<string, AttendanceStatus>>(new Map());
@@ -189,22 +191,26 @@ const MonthlyAttendanceGrid = ({
             setMonthRecords(records);
             setHolidays(holidayList.map(h => h.date));
             
-            const todayRecord = records.find(r => r.date === dateStr);
-            const statusMap = new Map<string, AttendanceStatus>();
-            if (todayRecord) {
-                todayRecord.attendance.forEach(a => statusMap.set(a.studentId, a.status));
-            }
-            setCurrentStatusMap(statusMap);
+            if (selectedDate) {
+                const dateStr = format(selectedDate, 'yyyy-MM-dd');
+                const todayRecord = records.find(r => r.date === dateStr);
+                const statusMap = new Map<string, AttendanceStatus>();
+                if (todayRecord) {
+                    todayRecord.attendance.forEach(a => statusMap.set(a.studentId, a.status));
+                }
+                setCurrentStatusMap(statusMap);
 
-            const holidayToday = await isHoliday(db, dateStr);
-            setActiveHoliday(holidayToday);
+                const holidayToday = await isHoliday(db, dateStr);
+                setActiveHoliday(holidayToday);
+            }
+            
             isFirstLoad.current = false;
         } catch (e) {
             console.error("Fetch Data Error:", e);
         }
         setIsLoading(false);
         setIsRefreshing(false);
-    }, [db, user, classId, selectedYear, dateStr, monthStart, monthEnd]);
+    }, [db, user, classId, selectedYear, selectedDate, monthStart, monthEnd]);
 
     useEffect(() => { 
         fetchData(); 
@@ -223,8 +229,9 @@ const MonthlyAttendanceGrid = ({
     };
 
     const handleSave = async () => {
-        if (!db || !user || isSaving) return;
+        if (!db || !user || isSaving || !selectedDate) return;
         
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
         const dayOfWeek = selectedDate.getDay();
         const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
         if (isWeekend) { toast({ variant: "destructive", title: "সাপ্তাহিক ছুটিতে হাজিরা বন্ধ।" }); return; }
@@ -357,14 +364,6 @@ const MonthlyAttendanceGrid = ({
         }
     }, [activeDay, currentStatusMap, monthRecords]);
 
-    const monthTotalPresent = useMemo(() => {
-        let total = 0;
-        students.forEach(s => {
-            total += getStudentTotalPresent(s.id);
-        });
-        return total;
-    }, [students, getStudentTotalPresent]);
-
     if (isLoading && isFirstLoad.current) return <div className="p-20 text-center italic"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" /> ডাটা লোড হচ্ছে...</div>;
 
     return (
@@ -411,7 +410,7 @@ const MonthlyAttendanceGrid = ({
                                         <AlertDialogHeader>
                                             <AlertDialogTitle className="text-rose-700 font-black">পুরো মাসের হাজিরা মুছতে চান?</AlertDialogTitle>
                                             <AlertDialogDescription className="font-bold text-base">
-                                                আপনি কি {classNamesMap[classId]} শ্রেণির **{BENGALI_MONTHS[selectedDate.getMonth()]}** মাসের সকল হাজিরা রেকর্ড স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরে পাওয়া যাবে না।
+                                                আপনি কি {classNamesMap[classId]} শ্রেণির **{BENGALI_MONTHS[referenceDate.getMonth()]}** মাসের সকল হাজিরা রেকর্ড স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরে পাওয়া যাবে না।
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -422,14 +421,16 @@ const MonthlyAttendanceGrid = ({
                                 </AlertDialog>
                             )}
                         </div>
-                        <p className="text-xs font-bold text-muted-foreground">{BENGALI_MONTHS[selectedDate.getMonth()]} {toBengaliNumber(selectedYear)}</p>
+                        <p className="text-xs font-bold text-muted-foreground">{BENGALI_MONTHS[referenceDate.getMonth()]} {toBengaliNumber(selectedYear)}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <p className="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                        আজকের কলাম: {toBengaliNumber(activeDay)} তারিখ
-                    </p>
-                    <Button onClick={handleSave} disabled={isSaving || isOffDay(selectedDate, holidays)} className="font-black shadow-lg">
+                    {activeDay && (
+                        <p className="text-xs font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                            আজকের কলাম: {toBengaliNumber(activeDay)} তারিখ
+                        </p>
+                    )}
+                    <Button onClick={handleSave} disabled={isSaving || !selectedDate || isOffDay(selectedDate, holidays)} className="font-black shadow-lg">
                         {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         হাজিরা সেভ করুন
                     </Button>
@@ -449,13 +450,13 @@ const MonthlyAttendanceGrid = ({
                 <div 
                     ref={tableContainerRef}
                     onScroll={() => handleScrollSync('table')}
-                    className="table-container attendance-table !max-h-[600px] border-2 border-black rounded-sm shadow-xl overflow-auto relative permanent-scroll"
+                    className="table-container attendance-table !max-h-[600px] border rounded-lg overflow-auto relative permanent-scroll"
                 >
-                    <Table className="border-collapse border-spacing-0 min-w-max border-black">
+                    <Table className="border-collapse border-spacing-0 min-w-max">
                         <TableHeader className="sticky top-0 z-40 bg-slate-100">
-                            <TableRow className="border-y-2 border-black">
-                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-50 text-black h-20">রোল</TableHead>
-                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-50 text-black h-20">শিক্ষার্থীর নাম</TableHead>
+                            <TableRow>
+                                <TableHead className="w-14 text-center font-bold border-r bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
+                                <TableHead className="min-w-[180px] font-bold border-r bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
@@ -463,33 +464,31 @@ const MonthlyAttendanceGrid = ({
                                     
                                     return (
                                         <TableHead key={d} className={cn(
-                                            "w-24 text-center border-r border-black p-0 group/header relative h-20",
+                                            "w-24 text-center border-r p-0 group/header relative h-20",
                                             isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100 text-black",
                                             isOff && !isSelected && "bg-rose-50 text-rose-400"
                                         )}>
-                                            <div className="flex flex-col items-center justify-center h-full py-2 gap-1">
+                                            <div className="flex flex-col items-center justify-center h-full py-2">
                                                 <span className="text-lg font-black leading-none">{toBengaliNumber(d)}</span>
-                                                <span className="text-[10px] font-bold opacity-70 leading-none">{format(day, 'EEEE', { locale: bn })}</span>
+                                                <span className="text-[10px] font-bold opacity-70 mt-1">{format(day, 'E', { locale: bn })}</span>
                                                 
-                                                <div className="flex justify-center gap-1.5 no-print mt-1">
+                                                <div className="flex justify-center gap-1 mt-2 opacity-0 group-hover/header:opacity-100 transition-opacity no-print">
                                                     <Button 
                                                         variant="secondary" 
                                                         size="icon" 
-                                                        className="h-4 w-4 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
+                                                        className="h-6 w-6 rounded-full bg-white shadow-md border text-blue-600"
                                                         onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
-                                                        title="এডিট"
                                                     >
-                                                        <Edit2 className="h-2 w-2" />
+                                                        <Edit2 className="h-3 w-3" />
                                                     </Button>
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <Button 
                                                                 variant="destructive" 
                                                                 size="icon" 
-                                                                className="h-4 w-4 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
-                                                                title="ডিলিট"
+                                                                className="h-6 w-6 rounded-full shadow-md"
                                                             >
-                                                                <Trash2 className="h-2 w-2" />
+                                                                <Trash2 className="h-3 w-3" />
                                                             </Button>
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent className="font-kalpurush">
@@ -510,14 +509,13 @@ const MonthlyAttendanceGrid = ({
                                         </TableHead>
                                     );
                                 })}
-                                <TableHead className="w-16 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-black shadow-[-2px_0_4px_rgba(0,0,0,0.1)] h-20">মোট উপস্থিত</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {students.map((student, sIdx) => (
-                                <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors border-b border-black">
-                                    <TableCell className="text-center font-black border-r-2 border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
-                                    <TableCell className="font-bold border-r-2 border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
+                                <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors">
+                                    <TableCell className="text-center font-bold border-r bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
+                                    <TableCell className="font-bold border-r bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
                                     {daysInMonth.map(day => {
                                         const d = getDate(day);
                                         const isSelected = d === activeDay;
@@ -527,7 +525,7 @@ const MonthlyAttendanceGrid = ({
                                         if (isSelected) {
                                             const status = currentStatusMap.get(student.id);
                                             return (
-                                                <TableCell key={d} className="p-0 border-r border-black bg-blue-50/50">
+                                                <TableCell key={d} className="p-0 border-r bg-blue-50/50">
                                                     <div className="flex gap-0 h-10 w-24">
                                                         <button
                                                             id={`present-${student.id}`}
@@ -563,7 +561,7 @@ const MonthlyAttendanceGrid = ({
                                         
                                         return (
                                             <TableCell key={d} className={cn(
-                                                "text-center p-0 border-r border-black text-base font-black",
+                                                "text-center p-0 border-r text-base font-black",
                                                 isOff && "bg-rose-50/30",
                                                 att?.status === 'present' && "text-emerald-700 bg-emerald-50/50",
                                                 att?.status === 'absent' && "text-rose-700 bg-rose-50/50"
@@ -572,38 +570,31 @@ const MonthlyAttendanceGrid = ({
                                             </TableCell>
                                         );
                                     })}
-                                    <TableCell className="text-center font-black border-l-2 border-black bg-white sticky right-0 z-30 text-emerald-700 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
-                                        {toBengaliNumber(getStudentTotalPresent(student.id))}
-                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
-                        <TableFooter className="sticky bottom-0 z-40 bg-slate-200 border-t-2 border-black">
+                        <TableFooter className="sticky bottom-0 z-40 bg-slate-200">
                             <TableRow className="h-10">
-                                <TableCell colSpan={2} className="text-right pr-4 font-black bg-slate-200 sticky left-0 z-50 border-r-2 border-black text-blue-900">
+                                <TableCell colSpan={2} className="text-right pr-4 font-black bg-slate-200 sticky left-0 z-50 border-r">
                                     মোট উপস্থিত:
                                 </TableCell>
                                 {daysInMonth.map(day => (
-                                    <TableCell key={getDate(day)} className="text-center font-black border-r border-black text-blue-700 bg-slate-50">
+                                    <TableCell key={getDate(day)} className="text-center font-black border-r text-blue-700">
                                         {toBengaliNumber(getDayTotalPresent(day))}
                                     </TableCell>
                                 ))}
-                                <TableCell className="text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-50 text-emerald-950 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
-                                    {toBengaliNumber(monthTotalPresent)}
-                                </TableCell>
                             </TableRow>
                         </TableFooter>
                     </Table>
                 </div>
             </div>
             
-            <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-xl flex items-start gap-3 no-print">
-                <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs font-bold text-amber-900 space-y-1">
+            <div className="p-4 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl flex items-start gap-3 no-print">
+                <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-xs font-bold text-blue-900 space-y-1">
                     <p>• প্রতিটি তারিখের কলামে <strong>Edit</strong> বাটনে ক্লিক করে ওই দিনের হাজিরা নিতে পারবেন।</p>
                     <p>• নীল কলামটি বর্তমান নির্বাচিত তারিখ নির্দেশ করে। এখানে P = উপস্থিত এবং A = অনুপস্থিত।</p>
                     <p>• কিবোর্ড টিপস: <strong>Enter</strong> চাপলে শিক্ষার্থী উপস্থিত হবে এবং ফোকাস নিচের জনের ঘরে চলে যাবে।</p>
-                    <p>• যাদের জন্য কিছুই নির্বাচন করবেন না, সেভ দেওয়ার সময় তারা স্বয়ংক্রিয়ভাবে অনুপস্থিত হিসেবে গণ্য হবে।</p>
                 </div>
             </div>
         </div>
@@ -627,7 +618,7 @@ const AttendanceSheet = ({
 }: { 
     classId: string, 
     students: Student[], 
-    date: Date,
+    date: Date | undefined,
     onRefresh: () => void,
     onDateChange: (d: Date) => void
 }) => {
@@ -642,7 +633,7 @@ const AttendanceSheet = ({
     );
 };
 
-const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date, onDateChange: (d: Date) => void }) => {
+const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date | undefined, onDateChange: (d: Date) => void }) => {
     const { selectedYear } = useAcademicYear();
     const studentsForYear = useMemo(() => {
         return allStudents.filter(student => student.academicYear === selectedYear);
@@ -654,7 +645,8 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
         return studentsForYear.filter((student) => student.className === className).sort((a, b) => a.roll - b.roll);
     };
 
-    const formattedDate = format(date, "EEEE, d MMMM yyyy", { locale: bn });
+    const formattedDate = date ? format(date, "EEEE, d MMMM yyyy", { locale: bn }) : "তারিখ নির্বাচন করুন";
+    const currentMonthIdx = date ? date.getMonth() : new Date().getMonth();
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
@@ -667,9 +659,9 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
                 <div className="flex items-center gap-3">
                     <Label className="font-black text-xs whitespace-nowrap">মাস পরিবর্তন করুন:</Label>
                     <Select 
-                        value={date.getMonth().toString()} 
+                        value={currentMonthIdx.toString()} 
                         onValueChange={(val) => {
-                            const nextDate = new Date(date);
+                            const nextDate = date ? new Date(date) : new Date();
                             nextDate.setMonth(parseInt(val));
                             onDateChange(nextDate);
                         }}
@@ -719,7 +711,7 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
     );
 };
 
-const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date, onDateChange: (d: Date) => void }) => {
+const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents: Student[], date: Date | undefined, onDateChange: (d: Date) => void }) => {
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
     const { toast } = useToast();
@@ -743,7 +735,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
     }, [rollsInput]);
 
     const handleSave = async () => {
-        if (!db || !user || !selectedClass) return;
+        if (!db || !user || !selectedClass || !date) return;
         
         setIsProcessing(true);
         try {
@@ -901,7 +893,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                         )}
                         <Button 
                             onClick={handleSave} 
-                            disabled={isProcessing || !rollsInput.trim()}
+                            disabled={isProcessing || !rollsInput.trim() || !date}
                             className={cn(
                                 "px-12 h-14 text-lg font-black shadow-xl transition-all",
                                 isConfirming ? "bg-rose-600 hover:bg-rose-700 animate-in zoom-in-95" : "bg-primary"
@@ -1058,10 +1050,10 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                 />
                 
                 <CardContent className="p-0">
-                    <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible border-black">
-                        <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full print:border-black">
+                    <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible">
+                        <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full">
                             <TableHeader className="bg-muted sticky top-0 z-30 print:bg-white print:static">
-                                <TableRow className="h-16 print:h-8 print:border-black">
+                                <TableRow className="h-16 print:h-8">
                                     <TableHead className="text-center font-black border-r border-b w-48 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black text-[14px]">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
                                         <TableHead key={cls} className="text-center font-black border-r border-b text-[14px] leading-tight print:border-black">{classNamesMap[cls]}</TableHead>
@@ -1820,7 +1812,7 @@ export default function AttendancePage() {
     const isOnline = useOnlineStatus();
     
     const [activeSection, setActiveSection] = useState('digital-attendance');
-    const [attendanceDate, setAttendanceDate] = useState<Date>(new Date());
+    const [attendanceDate, setAttendanceDate] = useState<Date | undefined>(undefined);
 
     useEffect(() => { setIsClient(true); }, []);
 
