@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -580,7 +579,7 @@ export default function PublicExamRecordsPage() {
                                                                 </TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-medium text-xs text-slate-600">{record.centerName || '-'}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-base text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
-                                                                <TableCell className={cn("border-r-2 border-black text-center font-black text-base", record.grade === 'F' ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
+                                                                <TableCell className={cn("border-r-2 border-black text-center font-black text-base", record.grade?.startsWith('F') ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
                                                                 <TableCell className="border-r-2 border-black text-center font-black text-base text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
                                                                 <TableCell className="text-right pr-6 no-print">
                                                                     <div className="flex justify-end gap-2">
