@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -14,6 +13,7 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { 
     Award, Plus, Search, Trash2, Printer, Loader2, Save, X, 
     FileText, GraduationCap, School, Info, CheckCircle2, History
@@ -47,6 +47,7 @@ export default function PublicExamRecordsPage() {
     const { selectedYear, availableYears } = useAcademicYear();
     const { user, hasPermission } = useAuth();
     const { toast } = useToast();
+    const { schoolInfo } = useSchoolInfo();
 
     const [isClient, setIsClient] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
