@@ -1,7 +1,7 @@
 'use client';
 
 import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student } from '@/lib/student-data';
 import { 
@@ -140,7 +140,11 @@ const MonthlyAttendanceGrid = ({
     const db = useFirestore();
     const { user } = useAuth();
     
-    // Memoize date calculations to prevent infinite loops
+    // Scroll Sync Refs
+    const topScrollRef = useRef<HTMLDivElement>(null);
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    // Memoize date calculations
     const dateStr = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
     const activeDay = useMemo(() => getDate(selectedDate), [selectedDate]);
     const monthStart = useMemo(() => startOfMonth(selectedDate), [selectedDate]);
@@ -199,6 +203,18 @@ const MonthlyAttendanceGrid = ({
         fetchData(); 
     }, [fetchData]);
 
+    // Handle Scroll Sync
+    const handleScrollSync = (source: 'top' | 'table') => {
+        const top = topScrollRef.current;
+        const table = tableContainerRef.current;
+        if (!top || !table) return;
+        if (source === 'top') {
+            table.scrollLeft = top.scrollLeft;
+        } else {
+            top.scrollLeft = table.scrollLeft;
+        }
+    };
+
     const handleSave = async () => {
         if (!db || !user || isSaving) return;
         
@@ -247,7 +263,6 @@ const MonthlyAttendanceGrid = ({
             return next;
         });
 
-        // If 'Enter' is used or after manual selection, it should ideally move focus down
         if (index < students.length - 1) {
             const nextId = students[index + 1].id;
             inputRefs.current[`present-${nextId}`]?.focus();
@@ -277,6 +292,24 @@ const MonthlyAttendanceGrid = ({
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            <style jsx global>{`
+                .attendance-table th, .attendance-table td {
+                    border: 1px solid black !important;
+                }
+                /* Force scrollbar visibility */
+                .permanent-scroll::-webkit-scrollbar {
+                    height: 12px;
+                    display: block;
+                }
+                .permanent-scroll::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                }
+                .permanent-scroll::-webkit-scrollbar-thumb {
+                    background: #2418ff;
+                    border-radius: 10px;
+                }
+            `}</style>
+            
             <div className="flex flex-col sm:flex-row justify-between items-center bg-primary/5 p-4 rounded-xl border-2 border-primary/10 gap-4 no-print">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg"><CalendarCheck className="h-5 w-5 text-primary" /></div>
@@ -296,133 +329,148 @@ const MonthlyAttendanceGrid = ({
                 </div>
             </div>
 
-            <div className="table-container !max-h-[600px] border-2 border-black rounded-xl shadow-xl overflow-auto relative">
-                <Table className="border-collapse border-spacing-0 min-w-max">
-                    <TableHeader className="sticky top-0 z-40 bg-slate-100">
-                        <TableRow className="h-14 border-b-2 border-black">
-                            <TableHead className="w-12 text-center font-black border-r border-black bg-slate-100 sticky left-0 z-50">রোল</TableHead>
-                            <TableHead className="min-w-[150px] font-black border-r border-black bg-slate-100 sticky left-12 z-50">শিক্ষার্থীর নাম</TableHead>
-                            {daysInMonth.map(day => {
-                                const d = getDate(day);
-                                const isSelected = d === activeDay;
-                                const isOff = isOffDay(day, holidays);
-                                const recordDateStr = format(day, 'yyyy-MM-dd');
-                                
-                                return (
-                                    <TableHead key={d} className={cn(
-                                        "w-12 text-center font-black border-r border-black p-0 text-[10px] group/header relative",
-                                        isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100",
-                                        isOff && !isSelected && "bg-rose-50 text-rose-400"
-                                    )}>
-                                        <div className="flex flex-col items-center py-1">
-                                            <span>{toBengaliNumber(d)}</span>
-                                            <span className="text-[8px] opacity-60 uppercase">{format(day, 'EEE', { locale: bn }).slice(0, 3)}</span>
-                                        </div>
+            <div className="relative group">
+                {/* Top Scrollbar Synchronizer */}
+                <div 
+                    ref={topScrollRef}
+                    onScroll={() => handleScrollSync('top')}
+                    className="overflow-x-auto permanent-scroll no-print mb-1 h-3"
+                    style={{ width: '100%' }}
+                >
+                    <div style={{ width: `${(daysInMonth.length * 48) + 300}px`, height: '1px' }} />
+                </div>
 
-                                        {/* Edit and Delete Action Overlay */}
-                                        <div className="absolute inset-x-0 -bottom-1 flex justify-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity no-print">
-                                            <Button 
-                                                variant="secondary" 
-                                                size="icon" 
-                                                className="h-5 w-5 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
-                                                onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
-                                                title="এডিট (এই দিনটি নির্বাচন করুন)"
-                                            >
-                                                <Edit2 className="h-2.5 w-2.5" />
-                                            </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button 
-                                                        variant="destructive" 
-                                                        size="icon" 
-                                                        className="h-5 w-5 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
-                                                        title="ডিলিট"
-                                                    >
-                                                        <Trash2 className="h-2.5 w-2.5" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent className="font-kalpurush">
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle className="text-rose-700">হাজিরা মুছতে চান?</AlertDialogTitle>
-                                                        <AlertDialogDescription className="font-bold">
-                                                            আপনি কি {format(day, 'd MMMM', { locale: bn })} এর {classNamesMap[classId]} শ্রেণির সকল হাজিরা রেকর্ড মুছে ফেলতে চান?
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>না</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteDay(recordDateStr)} className="bg-destructive">হ্যাঁ, মুছুন</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </TableHead>
-                                );
-                            })}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {students.map((student, sIdx) => (
-                            <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors">
-                                <TableCell className="text-center font-black border-r border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
-                                <TableCell className="font-bold border-r border-black bg-white sticky left-12 z-30 whitespace-nowrap px-3 text-xs">{student.studentNameBn}</TableCell>
+                <div 
+                    ref={tableContainerRef}
+                    onScroll={() => handleScrollSync('table')}
+                    className="table-container attendance-table !max-h-[600px] border-2 border-black rounded-sm shadow-xl overflow-auto relative permanent-scroll"
+                >
+                    <Table className="border-collapse border-spacing-0 min-w-max border-black">
+                        <TableHeader className="sticky top-0 z-40 bg-slate-100">
+                            <TableRow className="h-14 border-b-2 border-black">
+                                <TableHead className="w-14 text-center font-black border-r border-black bg-slate-200 sticky left-0 z-50 text-black">রোল</TableHead>
+                                <TableHead className="min-w-[180px] font-black border-r border-black bg-slate-200 sticky left-14 z-50 text-black">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
-                                    const recordDateStr = format(day, 'yyyy-MM-dd');
                                     const isOff = isOffDay(day, holidays);
-                                    
-                                    if (isSelected) {
-                                        const status = currentStatusMap.get(student.id);
-                                        return (
-                                            <TableCell key={d} className="p-0 border-r border-black bg-blue-50/50">
-                                                <div className="flex gap-0 h-10 w-24">
-                                                    <button
-                                                        id={`present-${student.id}`}
-                                                        ref={el => inputRefs.current[`present-${student.id}`] = el}
-                                                        className={cn(
-                                                            "flex-1 h-full text-[10px] font-black transition-all border-r border-blue-200",
-                                                            status === 'present' ? "bg-emerald-600 text-white" : "hover:bg-emerald-50 text-emerald-600"
-                                                        )}
-                                                        onClick={() => toggleStatus(student.id, 'present', sIdx)}
-                                                        onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
-                                                    >
-                                                        P
-                                                    </button>
-                                                    <button
-                                                        id={`absent-${student.id}`}
-                                                        ref={el => inputRefs.current[`absent-${student.id}`] = el}
-                                                        className={cn(
-                                                            "flex-1 h-full text-[10px] font-black transition-all",
-                                                            status === 'absent' ? "bg-rose-600 text-white" : "hover:bg-rose-50 text-rose-600"
-                                                        )}
-                                                        onClick={() => toggleStatus(student.id, 'absent', sIdx)}
-                                                        onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
-                                                    >
-                                                        A
-                                                    </button>
-                                                </div>
-                                            </TableCell>
-                                        );
-                                    }
-
-                                    const record = monthRecords.find(r => r.date === recordDateStr);
-                                    const att = record?.attendance.find(a => a.studentId === student.id);
+                                    const recordDateStr = format(day, 'yyyy-MM-dd');
                                     
                                     return (
-                                        <TableCell key={d} className={cn(
-                                            "text-center p-0 border-r border-black text-[11px] font-black",
-                                            isOff && "bg-rose-50/30",
-                                            att?.status === 'present' && "text-emerald-700 bg-emerald-50/50",
-                                            att?.status === 'absent' && "text-rose-700 bg-rose-50/50"
+                                        <TableHead key={d} className={cn(
+                                            "w-12 text-center border-r border-black p-0 group/header relative",
+                                            isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100 text-black",
+                                            isOff && !isSelected && "bg-rose-50 text-rose-400"
                                         )}>
-                                            {att?.status === 'present' ? 'P' : att?.status === 'absent' ? 'A' : ''}
-                                        </TableCell>
+                                            <div className="flex flex-col items-center py-1">
+                                                <span className="text-lg font-black">{toBengaliNumber(d)}</span>
+                                                <span className="text-[9px] font-black opacity-60 uppercase">{format(day, 'EEE', { locale: bn }).slice(0, 3)}</span>
+                                            </div>
+
+                                            <div className="absolute inset-x-0 -bottom-1 flex justify-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity no-print">
+                                                <Button 
+                                                    variant="secondary" 
+                                                    size="icon" 
+                                                    className="h-5 w-5 rounded-full bg-white shadow-md border text-blue-600 hover:bg-blue-50"
+                                                    onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
+                                                    title="এডিট"
+                                                >
+                                                    <Edit2 className="h-2.5 w-2.5" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button 
+                                                            variant="destructive" 
+                                                            size="icon" 
+                                                            className="h-5 w-5 rounded-full shadow-md text-white bg-rose-500 hover:bg-rose-600"
+                                                            title="ডিলিট"
+                                                        >
+                                                            <Trash2 className="h-2.5 w-2.5" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent className="font-kalpurush">
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="text-rose-700">হাজিরা মুছতে চান?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="font-bold">
+                                                                আপনি কি {format(day, 'd MMMM', { locale: bn })} এর হাজিরা রেকর্ড মুছে ফেলতে চান?
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>না</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteDay(recordDateStr)} className="bg-destructive">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </TableHead>
                                     );
                                 })}
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {students.map((student, sIdx) => (
+                                <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors border-b border-black">
+                                    <TableCell className="text-center font-black border-r border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
+                                    <TableCell className="font-bold border-r border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
+                                    {daysInMonth.map(day => {
+                                        const d = getDate(day);
+                                        const isSelected = d === activeDay;
+                                        const recordDateStr = format(day, 'yyyy-MM-dd');
+                                        const isOff = isOffDay(day, holidays);
+                                        
+                                        if (isSelected) {
+                                            const status = currentStatusMap.get(student.id);
+                                            return (
+                                                <TableCell key={d} className="p-0 border-r border-black bg-blue-50/50">
+                                                    <div className="flex gap-0 h-10 w-24">
+                                                        <button
+                                                            id={`present-${student.id}`}
+                                                            ref={el => inputRefs.current[`present-${student.id}`] = el}
+                                                            className={cn(
+                                                                "flex-1 h-full text-[10px] font-black transition-all border-r border-blue-200",
+                                                                status === 'present' ? "bg-emerald-600 text-white" : "hover:bg-emerald-50 text-emerald-600"
+                                                            )}
+                                                            onClick={() => toggleStatus(student.id, 'present', sIdx)}
+                                                            onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
+                                                        >
+                                                            P
+                                                        </button>
+                                                        <button
+                                                            id={`absent-${student.id}`}
+                                                            ref={el => inputRefs.current[`absent-${student.id}`] = el}
+                                                            className={cn(
+                                                                "flex-1 h-full text-[10px] font-black transition-all",
+                                                                status === 'absent' ? "bg-rose-600 text-white" : "hover:bg-rose-50 text-rose-600"
+                                                            )}
+                                                            onClick={() => toggleStatus(student.id, 'absent', sIdx)}
+                                                            onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
+                                                        >
+                                                            A
+                                                        </button>
+                                                    </div>
+                                                </TableCell>
+                                            );
+                                        }
+
+                                        const record = monthRecords.find(r => r.date === recordDateStr);
+                                        const att = record?.attendance.find(a => a.studentId === student.id);
+                                        
+                                        return (
+                                            <TableCell key={d} className={cn(
+                                                "text-center p-0 border-r border-black text-[11px] font-black",
+                                                isOff && "bg-rose-50/30",
+                                                att?.status === 'present' && "text-emerald-700 bg-emerald-50/50",
+                                                att?.status === 'absent' && "text-rose-700 bg-rose-50/50"
+                                            )}>
+                                                {att?.status === 'present' ? 'P' : att?.status === 'absent' ? 'A' : ''}
+                                            </TableCell>
+                                        );
+                                    })}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
             
             <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-xl flex items-start gap-3 no-print">
