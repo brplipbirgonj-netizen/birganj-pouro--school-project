@@ -377,9 +377,8 @@ const MonthlyAttendanceGrid = ({
                                             <AlertDialogCancel className="font-bold">না, ফিরে যাই</AlertDialogCancel>
                                             <AlertDialogAction onClick={handleDeleteMonth} className="bg-destructive text-white font-black">হ্যাঁ, সব মুছুন</AlertDialogAction>
                                         </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
+                                    </AlertDialog>
+                                )}
                         </div>
                         <p className="text-xs font-bold text-muted-foreground">{BENGALI_MONTHS[selectedDate.getMonth()]} {toBengaliNumber(selectedYear)}</p>
                     </div>
@@ -605,8 +604,24 @@ const DigitalAttendanceTab = ({ allStudents, date, onDateChange }: { allStudents
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Label className="font-black text-xs whitespace-nowrap">তারিখ পরিবর্তন:</Label>
-                    <DatePicker value={date} onChange={(d) => d && onDateChange(d)} />
+                    <Label className="font-black text-xs whitespace-nowrap">মাস পরিবর্তন করুন:</Label>
+                    <Select 
+                        value={date.getMonth().toString()} 
+                        onValueChange={(val) => {
+                            const nextDate = new Date(date);
+                            nextDate.setMonth(parseInt(val));
+                            onDateChange(nextDate);
+                        }}
+                    >
+                        <SelectTrigger className="w-40 bg-white shadow-sm font-bold text-primary h-9">
+                            <SelectValue placeholder="মাস নির্বাচন" />
+                        </SelectTrigger>
+                        <SelectContent className="font-kalpurush">
+                            {BENGALI_MONTHS.map((m, i) => (
+                                <SelectItem key={m} value={i.toString()}>{m}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
             <Tabs defaultValue="6">
@@ -955,7 +970,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                 <div className="space-y-2 flex-1 w-full max-w-xs">
                     <Label className="font-black text-primary block text-base">মাস নির্বাচন করুন</Label>
                     <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger className="bg-white font-bold h-11 text-lg border-2"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="bg-white font-bold h-11 text-lg border-2"><SelectValue placeholder="মাস" /></SelectTrigger>
                         <SelectContent>
                             {BENGALI_MONTHS.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
                         </SelectContent>
