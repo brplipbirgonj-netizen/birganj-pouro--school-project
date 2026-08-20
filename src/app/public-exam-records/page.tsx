@@ -99,18 +99,21 @@ export default function PublicExamRecordsPage() {
         fetchRecords();
     }, [fetchRecords]);
 
-    // Corrected Student Linking Logic: 
-    // In 2026 (viewYear), SSC candidates are those who were in Class 10 in 2025 (viewYear - 1).
+    // Student Linking Logic: 
+    // 1. SSC candidates are those who were in Class 10 in the previous year (viewYear - 1).
+    // 2. JSC/Scholarship candidates are from Class 8 of the current year (viewYear).
     useEffect(() => {
         if (!db || !user || !isClient) return;
         
-        const previousYear = (parseInt(viewYear) - 1).toString();
+        const targetYear = activeTab === 'SSC' 
+            ? (parseInt(viewYear) - 1).toString() 
+            : viewYear;
+
         setIsFetchingStudents(true);
         
-        // Fetch students from the previous academic year relative to the exam year
         const q = query(
             collection(db, 'students'), 
-            where('academicYear', '==', previousYear)
+            where('academicYear', '==', targetYear)
         );
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -122,15 +125,13 @@ export default function PublicExamRecordsPage() {
         });
         
         return () => unsubscribe();
-    }, [db, user, isClient, viewYear]);
+    }, [db, user, isClient, viewYear, activeTab]);
 
     useEffect(() => {
         setFormData(prev => ({ ...prev, examType: activeTab, academicYear: viewYear }));
     }, [activeTab, viewYear]);
 
     const candidateStudents = useMemo(() => {
-        // SSC candidates are from Class 10 of the previous year
-        // JSC/Scholarship candidates are from Class 8 of the previous year
         const targetClass = activeTab === 'SSC' ? '10' : '8';
         return allStudents
             .filter(s => s.className === targetClass)
@@ -224,7 +225,9 @@ export default function PublicExamRecordsPage() {
                                     <DialogHeader className="p-6 bg-primary text-white">
                                         <DialogTitle className="text-2xl font-black">শিক্ষার্থীর তথ্য এন্ট্রি করুন (সাল: {toBengaliNumber(viewYear)})</DialogTitle>
                                         <DialogDescription className="text-white/80 font-bold">
-                                            {toBengaliNumber(parseInt(viewYear) - 1)} সালের শিক্ষার্থীদের মধ্য থেকে নির্বাচন করুন
+                                            {activeTab === 'SSC' 
+                                                ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের শিক্ষার্থীদের মধ্য থেকে নির্বাচন করুন`
+                                                : `${toBengaliNumber(viewYear)} সালের শিক্ষার্থীদের মধ্য থেকে নির্বাচন করুন`}
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto bg-white">
@@ -233,7 +236,7 @@ export default function PublicExamRecordsPage() {
                                         <div className="p-4 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <Label className="font-black text-primary uppercase text-[10px] tracking-widest">
-                                                    পূর্ববর্তী বছরের ডাটাবেস থেকে খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'}, {toBengaliNumber(parseInt(viewYear) - 1)})
+                                                    {activeTab === 'SSC' ? 'পূর্ববর্তী বছরের ডাটাবেস' : 'বর্তমান বছরের ডাটাবেস'} থেকে খুঁজুন ({activeTab === 'SSC' ? '১০ম শ্রেণি' : '৮ম শ্রেণি'}, {activeTab === 'SSC' ? toBengaliNumber(parseInt(viewYear) - 1) : toBengaliNumber(viewYear)})
                                                 </Label>
                                                 {isFetchingStudents && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                                             </div>
@@ -244,7 +247,9 @@ export default function PublicExamRecordsPage() {
                                                 <SelectContent>
                                                     {candidateStudents.length === 0 ? (
                                                         <div className="p-4 text-center text-xs font-bold text-muted-foreground italic">
-                                                            {toBengaliNumber(parseInt(viewYear) - 1)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।
+                                                            {activeTab === 'SSC' 
+                                                                ? `${toBengaliNumber(parseInt(viewYear) - 1)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`
+                                                                : `${toBengaliNumber(viewYear)} সালের কোনো শিক্ষার্থী পাওয়া যায়নি।`}
                                                         </div>
                                                     ) : (
                                                         candidateStudents.map(s => (
@@ -256,7 +261,9 @@ export default function PublicExamRecordsPage() {
                                                 </SelectContent>
                                             </Select>
                                             <p className="text-[10px] font-bold text-muted-foreground italic">
-                                                * {toBengaliNumber(viewYear)} সালের পরীক্ষার্থীরা মূলত {toBengaliNumber(parseInt(viewYear) - 1)} সালের দশম/অষ্টম শ্রেণির শিক্ষার্থী।
+                                                * {activeTab === 'SSC' 
+                                                    ? `${toBengaliNumber(viewYear)} সালের এসএসসি পরীক্ষার্থীরা মূলত ${toBengaliNumber(parseInt(viewYear) - 1)} সালের দশম শ্রেণির শিক্ষার্থী।`
+                                                    : `${toBengaliNumber(viewYear)} সালের পরীক্ষার্থীরা এই বছরেরই অষ্টম শ্রেণির শিক্ষার্থী।`}
                                             </p>
                                         </div>
 
