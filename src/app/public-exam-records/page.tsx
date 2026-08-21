@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -113,9 +113,24 @@ export default function PublicExamRecordsPage() {
         totalMarks: 0,
         grade: '',
         gpa: 0,
-        examType: 'SSC',
+        examType: activeTab,
         academicYear: selectedYear
     });
+
+    // Scroll Sync Refs
+    const topScrollRef = useRef<HTMLDivElement>(null);
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    const handleScrollSync = (source: 'top' | 'table') => {
+        const top = topScrollRef.current;
+        const table = tableContainerRef.current;
+        if (!top || !table) return;
+        if (source === 'top') {
+            table.scrollLeft = top.scrollLeft;
+        } else {
+            top.scrollLeft = table.scrollLeft;
+        }
+    };
 
     const canView = hasPermission('view:public-records') || user?.role === 'admin';
     const canManage = hasPermission('manage:public-records') || user?.role === 'admin';
@@ -145,7 +160,6 @@ export default function PublicExamRecordsPage() {
     useEffect(() => {
         if (!db || !user || !isClient || !canView) return;
         
-        // Year Logic: SSC 2026 participants are 2025 Class 10 students
         const targetYear = activeTab === 'SSC' 
             ? (parseInt(viewYear) - 1).toString() 
             : viewYear;
@@ -572,7 +586,17 @@ export default function PublicExamRecordsPage() {
                                 মোট: {toBengaliNumber(records.length)} জন
                             </Badge>
                         </CardHeader>
-                        <CardContent className="p-0">
+                        <CardContent className="p-4">
+                            {/* Top Scroll Sync Bar */}
+                            <div 
+                                ref={topScrollRef}
+                                onScroll={() => handleScrollSync('top')}
+                                className="overflow-x-auto no-print mb-1 h-3 scrollbar-thin scrollbar-thumb-primary/20"
+                                style={{ width: '100%' }}
+                            >
+                                <div style={{ width: '1600px', height: '1px' }} />
+                            </div>
+
                             <div className="printable-area bg-white p-0 sm:p-4">
                                 <div className="hidden print:block text-center mb-6 border-b-4 border-black pb-4">
                                     <h1 className="text-3xl font-black uppercase mb-1">{schoolInfo?.name}</h1>
@@ -582,8 +606,12 @@ export default function PublicExamRecordsPage() {
                                     </div>
                                 </div>
 
-                                <div className="overflow-x-auto">
-                                    <Table className="border-collapse border-spacing-0 w-full min-w-full border-2 border-black">
+                                <div 
+                                    ref={tableContainerRef}
+                                    onScroll={() => handleScrollSync('table')}
+                                    className="overflow-x-auto border-2 border-black rounded-lg"
+                                >
+                                    <Table className="border-collapse border-spacing-0 w-full min-w-full">
                                         <TableHeader className="bg-slate-100">
                                             <TableRow className="h-8 border-b-[3px] border-black">
                                                 <TableHead className="border-l-2 border-r-2 border-black text-center font-black text-black text-[13px] w-12">ছবি</TableHead>
