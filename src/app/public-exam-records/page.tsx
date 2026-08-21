@@ -592,7 +592,7 @@ export default function PublicExamRecordsPage() {
                                                 <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-20">বোর্ড রোল</TableHead>
                                                 {activeTab === 'Scholarship' && <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-24">বৃত্তির ধরন</TableHead>}
                                                 <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-16">শ্রেণি রোল</TableHead>
-                                                <TableHead className="border-r-2 border-black text-left pl-3 font-black text-black text-[13px] min-w-[150px]">শিক্ষার্থীর নাম</TableHead>
+                                                <TableHead className="border-r-2 border-black text-left pl-3 font-black text-black text-[13px] min-w-[250px]">শিক্ষার্থীর নাম</TableHead>
                                                 <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-16">বিভাগ</TableHead>
                                                 <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] min-w-[200px]">কেন্দ্র</TableHead>
                                                 <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-14">নম্বর</TableHead>
@@ -624,7 +624,7 @@ export default function PublicExamRecordsPage() {
                                                             </TableCell>
                                                         )}
                                                         <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
-                                                        <TableCell className="border-r-2 border-black font-black text-base pl-3 text-slate-900">{record.studentName}</TableCell>
+                                                        <TableCell className="border-r-2 border-black font-black text-base pl-3 text-slate-900 whitespace-nowrap">{record.studentName}</TableCell>
                                                         <TableCell className="border-r-2 border-black text-center font-bold text-sm uppercase">
                                                             {groups.find(g => g.id === record.group)?.label || record.group}
                                                         </TableCell>
