@@ -217,7 +217,7 @@ export default function PublicExamRecordsPage() {
                             boardName: 'Dinajpur',
                             centerName: '',
                             totalMarks: 0,
-                            grade: '',
+                            grade: activeTab === 'Scholarship' ? 'পায়নী' : '',
                             gpa: 0,
                             examType: activeTab,
                             academicYear: viewYear
@@ -520,8 +520,19 @@ export default function PublicExamRecordsPage() {
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div className="space-y-2">
-                                                            <Label className="font-bold">প্রাপ্ত গ্রেড</Label>
-                                                            <Input value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} placeholder="A+" className="border-2 font-black text-center" />
+                                                            <Label className="font-bold">{activeTab === 'Scholarship' ? 'বৃত্তির ধরন' : 'প্রাপ্ত গ্রেড'}</Label>
+                                                            {activeTab === 'Scholarship' ? (
+                                                                <Select value={formData.grade} onValueChange={(v) => setFormData({...formData, grade: v})}>
+                                                                    <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="ট্যালেন্টপুল">ট্যালেন্টপুল</SelectItem>
+                                                                        <SelectItem value="সাধারণ">সাধারণ</SelectItem>
+                                                                        <SelectItem value="পায়নী">পায়নী</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            ) : (
+                                                                <Input value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} placeholder="A+" className="border-2 font-black text-center" />
+                                                            )}
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label className="font-bold">প্রাপ্ত জিপিএ</Label>
@@ -579,6 +590,7 @@ export default function PublicExamRecordsPage() {
                                                 <TableHead className="border-r-[2px] border-black text-center font-black text-black text-xs w-20">বোর্ড</TableHead>
                                                 <TableHead className="border-r-[2px] border-black text-center font-black text-black text-xs w-24">রেজিস্ট্রেশন নং</TableHead>
                                                 <TableHead className="border-r-[2px] border-black text-center font-black text-black text-xs w-20">বোর্ড রোল</TableHead>
+                                                {activeTab === 'Scholarship' && <TableHead className="border-r-[2px] border-black text-center font-black text-black text-xs w-24">বৃত্তির ধরন</TableHead>}
                                                 <TableHead className="border-r-[2px] border-black text-center font-black text-black text-xs w-16">শ্রেণি রোল</TableHead>
                                                 <TableHead className="border-r-[2px] border-black text-left pl-3 font-black text-black text-xs min-w-[150px]">শিক্ষার্থীর নাম</TableHead>
                                                 <TableHead className="border-r-[2px] border-black text-center font-black text-black text-xs w-16">বিভাগ</TableHead>
@@ -591,9 +603,9 @@ export default function PublicExamRecordsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {isLoading ? (
-                                                <TableRow><TableCell colSpan={12} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
+                                                <TableRow><TableCell colSpan={activeTab === 'Scholarship' ? 13 : 12} className="text-center py-20 italic font-bold text-muted-foreground"><Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> লোড হচ্ছে...</TableCell></TableRow>
                                             ) : records.length === 0 ? (
-                                                <TableRow><TableCell colSpan={12} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
+                                                <TableRow><TableCell colSpan={activeTab === 'Scholarship' ? 13 : 12} className="text-center py-24 text-xl font-black text-slate-300 italic border-b-2 border-black">কোনো রেকর্ড পাওয়া যায়নি।</TableCell></TableRow>
                                             ) : (
                                                 records.map((record) => (
                                                     <TableRow key={record.id} className="h-12 border-b-2 border-black hover:bg-slate-50 transition-colors">
@@ -606,6 +618,11 @@ export default function PublicExamRecordsPage() {
                                                         <TableCell className="border-r-2 border-black text-center font-bold text-[10px] text-slate-700">{record.boardName || '-'}</TableCell>
                                                         <TableCell className="border-r-2 border-black text-center font-black text-[11px] text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
                                                         <TableCell className="border-r-2 border-black text-center font-black text-[11px] text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
+                                                        {activeTab === 'Scholarship' && (
+                                                            <TableCell className="border-r-2 border-black text-center font-black text-[11px] text-emerald-700">
+                                                                {record.grade || 'পায়নী'}
+                                                            </TableCell>
+                                                        )}
                                                         <TableCell className="border-r-2 border-black text-center font-black text-[11px] text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
                                                         <TableCell className="border-r-2 border-black font-black text-xs pl-3 text-slate-900">{record.studentName}</TableCell>
                                                         <TableCell className="border-r-2 border-black text-center font-bold text-[10px] uppercase">
