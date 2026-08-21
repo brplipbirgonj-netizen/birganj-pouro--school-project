@@ -31,11 +31,10 @@ import { bn } from 'date-fns/locale';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
 import { 
-    Edit2, RotateCcw, AlertCircle, CalendarX, Check, X, 
+    Edit2, CalendarX, Check, 
     CalendarDays, CalendarCheck, Plus, Save, Loader2, 
-    BarChart3, ListChecks, ChevronRight, Phone, MessageCircle, 
-    MessageSquareDashed, UserX, Printer, Wifi, WifiOff, Trash2,
-    Info, MousePointer2
+    ListChecks, ChevronRight, UserX, Printer, Wifi, WifiOff, Trash2,
+    Info
 } from 'lucide-react';
 import { 
     AlertDialog, 
@@ -140,8 +139,9 @@ const MonthlyAttendanceGrid = ({
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
     const db = useFirestore();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isAdmin = user?.role === 'admin';
+    const canManageAttendance = hasPermission('manage:attendance');
     
     // Scroll Sync Refs
     const topScrollRef = useRef<HTMLDivElement>(null);
@@ -460,7 +460,7 @@ const MonthlyAttendanceGrid = ({
                 >
                     <Table className="border-separate border-spacing-0 min-w-max">
                         <TableHeader className="sticky top-0 z-40">
-                            <TableRow className="border-t-2 border-b-2 border-black bg-slate-100 h-24">
+                            <TableRow className="border-t-2 border-b-2 border-black bg-slate-100 h-20">
                                 <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-[60] text-black">রোল</TableHead>
                                 <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-[60] text-black">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
@@ -474,55 +474,61 @@ const MonthlyAttendanceGrid = ({
                                             isSelected ? "bg-blue-600 text-white z-20" : "bg-slate-100 text-black",
                                             isOff && !isSelected && "bg-rose-50 text-rose-400"
                                         )}>
-                                            <div className="flex flex-col items-center justify-center h-full py-2">
-                                                <span className="text-lg font-black leading-none">{toBengaliNumber(d)}</span>
-                                                <span className="text-[10px] font-bold opacity-70 mt-1 uppercase">{format(day, 'EEEE', { locale: bn })}</span>
+                                            <div className="flex flex-col items-center justify-center h-full py-1">
+                                                <span className="text-base font-black leading-none">{toBengaliNumber(d)}</span>
+                                                <span className="text-[9px] font-bold opacity-70 mt-0.5 uppercase">{format(day, 'EEEE', { locale: bn })}</span>
                                                 
-                                                <div className="flex justify-center gap-1 mt-2 transition-opacity no-print">
-                                                    <Button 
-                                                        variant="secondary" 
-                                                        size="icon" 
-                                                        className="h-4 w-4 rounded-full bg-white shadow-md border text-blue-600"
-                                                        onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
-                                                    >
-                                                        <Edit2 className="h-2 w-2" />
-                                                    </Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button 
-                                                                variant="destructive" 
-                                                                size="icon" 
-                                                                className="h-4 w-4 rounded-full shadow-md"
-                                                            >
-                                                                <Trash2 className="h-2 w-2" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent className="font-kalpurush">
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle className="text-rose-700">হাজিরা মুছতে চান?</AlertDialogTitle>
-                                                                <AlertDialogDescription className="font-bold">
-                                                                    আপনি কি {format(day, 'd MMMM', { locale: bn })} এর হাজিরা রেকর্ড মুছে ফেলতে চান?
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDeleteDay(day)} className="bg-destructive font-black">হ্যাঁ, মুছুন</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                <div className="flex justify-center items-center gap-1.5 mt-1 transition-opacity no-print">
+                                                    {canManageAttendance && (
+                                                        <Button 
+                                                            variant="secondary" 
+                                                            size="icon" 
+                                                            className="h-5 w-5 rounded-md bg-white shadow-sm border border-slate-300 text-blue-600 hover:bg-blue-50"
+                                                            onClick={(e) => { e.stopPropagation(); onDateChange(day); }}
+                                                            title="এডিট"
+                                                        >
+                                                            <Edit2 className="h-2.5 w-2.5" />
+                                                        </Button>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button 
+                                                                    variant="destructive" 
+                                                                    size="icon" 
+                                                                    className="h-5 w-5 rounded-md shadow-sm border border-rose-300"
+                                                                    title="মুছুন"
+                                                                >
+                                                                    <Trash2 className="h-2.5 w-2.5" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent className="font-kalpurush">
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle className="text-rose-700">হাজিরা মুছতে চান?</AlertDialogTitle>
+                                                                    <AlertDialogDescription className="font-bold">
+                                                                        আপনি কি {format(day, 'd MMMM', { locale: bn })} এর হাজিরা রেকর্ড মুছে ফেলতে চান?
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteDay(day)} className="bg-destructive font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
                                                 </div>
                                             </div>
                                         </TableHead>
                                     );
                                 })}
-                                <TableHead className="w-20 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-[60] text-black">মোট উপস্থিত</TableHead>
+                                <TableHead className="w-20 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-[60] text-black shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">মোট উপস্থিত</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {students.map((student, sIdx) => (
-                                <TableRow key={student.id} className="h-10 hover:bg-slate-50 transition-colors">
+                                <TableRow key={student.id} className="h-8 hover:bg-slate-50 transition-colors">
                                     <TableCell className="text-center font-black border-r-2 border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
-                                    <TableCell className="font-black border-r-2 border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-xs text-slate-800">{student.studentNameBn}</TableCell>
+                                    <TableCell className="font-black border-r-2 border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-[11px] text-slate-800">{student.studentNameBn}</TableCell>
                                     {daysInMonth.map(day => {
                                         const d = getDate(day);
                                         const isSelected = d === activeDay;
@@ -533,13 +539,13 @@ const MonthlyAttendanceGrid = ({
                                             const status = currentStatusMap.get(student.id);
                                             return (
                                                 <TableCell key={d} className="p-0 border-r border-black/20 bg-blue-50/50">
-                                                    <div className="flex gap-0 h-10 w-24">
+                                                    <div className="flex gap-0 h-8 w-24">
                                                         <button
                                                             id={`present-${student.id}`}
                                                             ref={el => inputRefs.current[`present-${student.id}`] = el}
                                                             className={cn(
                                                                 "flex-1 h-full text-base font-black transition-all border-r border-blue-200",
-                                                                status === 'present' ? "bg-emerald-600 text-white" : "hover:bg-emerald-50 text-emerald-600"
+                                                                status === 'present' ? "bg-emerald-600 text-white shadow-inner" : "hover:bg-emerald-50 text-emerald-600"
                                                             )}
                                                             onClick={() => toggleStatus(student.id, 'present', sIdx)}
                                                             onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
@@ -551,7 +557,7 @@ const MonthlyAttendanceGrid = ({
                                                             ref={el => inputRefs.current[`absent-${student.id}`] = el}
                                                             className={cn(
                                                                 "flex-1 h-full text-base font-black transition-all",
-                                                                status === 'absent' ? "bg-rose-600 text-white" : "hover:bg-rose-50 text-rose-600"
+                                                                status === 'absent' ? "bg-rose-600 text-white shadow-inner" : "hover:bg-rose-50 text-rose-600"
                                                             )}
                                                             onClick={() => toggleStatus(student.id, 'absent', sIdx)}
                                                             onKeyDown={e => handleKeyDown(e, student.id, sIdx)}
@@ -577,7 +583,7 @@ const MonthlyAttendanceGrid = ({
                                             </TableCell>
                                         );
                                     })}
-                                    <TableCell className="text-center font-black border-l-2 border-black bg-white sticky right-0 z-30 text-blue-700">
+                                    <TableCell className="text-center font-black border-l-2 border-black bg-white sticky right-0 z-30 text-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
                                         {toBengaliNumber(getStudentTotalPresent(student.id))}
                                     </TableCell>
                                 </TableRow>
@@ -593,7 +599,7 @@ const MonthlyAttendanceGrid = ({
                                         {toBengaliNumber(getDayTotalPresent(day))}
                                     </TableCell>
                                 ))}
-                                <TableCell className="sticky right-0 z-50 border-l-2 border-black bg-slate-200"></TableCell>
+                                <TableCell className="sticky right-0 z-50 border-l-2 border-black bg-slate-200 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]"></TableCell>
                             </TableRow>
                         </TableFooter>
                     </Table>
@@ -602,7 +608,7 @@ const MonthlyAttendanceGrid = ({
             
             <div className="p-4 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl flex items-start gap-3 no-print">
                 <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-xs font-bold text-blue-900 space-y-1">
+                <div className="text-[11px] font-bold text-blue-900 space-y-1">
                     <p>• প্রতিটি তারিখের কলামে <strong>Edit</strong> বাটনে ক্লিক করে ওই দিনের হাজিরা নিতে পারবেন।</p>
                     <p>• নীল কলামটি বর্তমান নির্বাচিত তারিখ নির্দেশ করে। এখানে P = উপস্থিত এবং A = অনুপস্থিত।</p>
                     <p>• কিবোর্ড টিপস: <strong>Enter</strong> চাপলে শিক্ষার্থী উপস্থিত হবে এবং ফোকাস নিচের জনের ঘরে চলে যাবে।</p>
@@ -852,7 +858,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
             )}>
                 <CardHeader className={cn("transition-colors duration-300", isConfirming ? "bg-rose-50" : "bg-primary/5")}>
                     <CardTitle className={cn("text-xl flex items-center gap-2", isConfirming && "text-rose-700")}>
-                        {isConfirming ? <AlertCircle className="h-6 w-6 animate-bounce" /> : <Plus className="h-5 w-5" />}
+                        {isConfirming ? <Plus className="h-6 w-6 animate-bounce" /> : <Plus className="h-5 w-5" />}
                         {isConfirming ? "পূর্বের হাজিরা রিপ্লেস করতে চান?" : "রোল ইনপুট দিয়ে দ্রুত হাজিরা"}
                     </CardTitle>
                     <CardDescription className={cn(isConfirming && "text-rose-600 font-bold")}>
@@ -901,7 +907,7 @@ const QuickRollAttendanceTab = ({ allStudents, date, onDateChange }: { allStuden
                             <p className="text-[10px] text-muted-foreground italic font-bold">*** বাংলা বা ইংরেজি উভয় অংকেই রোল নম্বর লেখা যাবে।</p>
                             {isConfirming && (
                                 <p className="text-xs font-black text-rose-600 animate-pulse flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" /> আবার এন্টার দিলে সেভ হবে
+                                    <Plus className="h-3 w-3" /> আবার এন্টার দিলে সেভ হবে
                                 </p>
                             )}
                         </div>
@@ -1387,29 +1393,6 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     useEffect(() => { fetchAbsentees(); }, [fetchAbsentees]);
 
-    const handleAction = (type: 'call' | 'sms' | 'whatsapp', student: Student, count: number) => {
-        const mobile = student.guardianMobile || student.studentMobile;
-        if (!mobile) {
-            toast({ variant: 'destructive', title: 'মোবাইল নম্বর নেই' });
-            return;
-        }
-        
-        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} এই মাসে মোট ${toBengaliNumber(count)} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অনুপস্থিতির কারণ জানানোর জন্য অনুরোধ করা হলো। বীপৌউবি`;
-        
-        if (type === 'call') {
-            window.location.href = `tel:${mobile}`;
-        } else if (type === 'sms') {
-            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const separator = isIOS ? '&' : '?';
-            window.location.href = `sms:${mobile}${separator}body=${encodeURIComponent(msg)}`;
-        } else if (type === 'whatsapp') {
-            let cleanNum = mobile.replace(/[^\d]/g, '');
-            if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
-            if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
-            window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-    };
-
     return (
         <div className="mt-4 space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-white/50 items-end no-print">
@@ -1459,7 +1442,6 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableHead className="w-16 text-center font-black">রোল</TableHead>
                                         <TableHead className="font-black">নাম ও মোবাইল</TableHead>
                                         <TableHead className="text-center font-black">অনুপস্থিত দিন</TableHead>
-                                        <TableHead className="text-right font-black pr-6">যোগাযোগ</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1472,19 +1454,6 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Badge variant="destructive" className="font-black px-4 h-7 text-sm">{toBengaliNumber(count)} দিন</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right pr-6">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="outline" size="icon" title="কল করুন" className="h-8 w-8 text-blue-600 border-blue-200 bg-white hover:bg-blue-50" onClick={() => handleAction('call', student, count)}>
-                                                        <Phone className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="outline" size="icon" title="SMS পাঠান" className="h-8 w-8 text-indigo-600 border-indigo-200 bg-white hover:bg-indigo-50" onClick={() => handleAction('sms', student, count)}>
-                                                        <MessageSquareDashed className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="outline" size="icon" title="WhatsApp করুন" className="h-8 w-8 text-emerald-600 border-emerald-200 bg-white hover:bg-emerald-50" onClick={() => handleAction('whatsapp', student, count)}>
-                                                        <MessageCircle className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -1525,30 +1494,6 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
 
-    const handleAction = (type: 'call' | 'sms' | 'whatsapp', alert: StudentConsecutiveAbsence) => {
-        const student = allStudents.find(s => s.id === alert.studentId);
-        if (!student) return;
-        const mobile = student.guardianMobile || student.studentMobile;
-        if (!mobile) {
-            toast({ variant: 'destructive', title: 'মোাবাইল নম্বর নেই' });
-            return;
-        }
-        
-        const msg = `সম্মানিত অভিভাবক, আপনার সন্তান ${student.studentNameBn} টানা ${toBengaliNumber(alert.absentDays)} দিন বিদ্যালয়ে অনুপস্থিত রয়েছে। অনুপস্থিতির কারণ জানান। বীপৌউবি`;
-        
-        if (type === 'call') window.location.href = `tel:${mobile}`;
-        else if (type === 'sms') {
-            const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const separator = isIOS ? '&' : '?';
-            window.location.href = `sms:${mobile}${separator}body=${encodeURIComponent(msg)}`;
-        } else if (type === 'whatsapp') {
-            let cleanNum = mobile.replace(/[^\d]/g, '');
-            if (cleanNum.startsWith('0')) cleanNum = '88' + cleanNum;
-            if (!cleanNum.startsWith('88')) cleanNum = '880' + cleanNum;
-            window.open(`https://wa.me/${cleanNum}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-    };
-
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center gap-4 p-4 border rounded-lg bg-white/50 no-print">
@@ -1569,7 +1514,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle className="text-red-900 flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5" /> অনুপস্থিতি সতর্কবার্তা (Absence Alerts)
+                                <Plus className="h-5 w-5" /> অনুপস্থিতি সতর্কবার্তা (Absence Alerts)
                             </CardTitle>
                             <CardDescription>টানা ৩ দিন বা তার বেশি অনুপস্থিত শিক্ষার্থীদের তালিকা</CardDescription>
                         </div>
@@ -1592,7 +1537,6 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableHead className="w-16 text-center font-black">রোল</TableHead>
                                         <TableHead className="font-black">নাম ও মোবাইল</TableHead>
                                         <TableHead className="text-center font-black">অনুপস্থিতি (টানা)</TableHead>
-                                        <TableHead className="text-right font-black pr-6">যোগাযোগ</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1608,19 +1552,6 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge variant="destructive" className="font-black text-sm px-4 h-7">{toBengaliNumber(alert.absentDays)} দিন</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right pr-6">
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-200" onClick={() => handleAction('call', alert)}>
-                                                            <Phone className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-indigo-600 border-indigo-200" onClick={() => handleAction('sms', alert)}>
-                                                            <MessageSquareDashed className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-emerald-600 border-emerald-200" onClick={() => handleAction('whatsapp', alert)}>
-                                                            <MessageCircle className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -1883,7 +1814,7 @@ export default function AttendancePage() {
             items.push({ id: 'missed-attendance', label: 'বকেয়া হাজিরা', icon: CalendarX, color: 'text-amber-600 bg-amber-50' });
         }
         
-        items.push({ id: 'alerts', label: 'সতর্কবার্তা', icon: AlertCircle, color: 'text-rose-600 bg-rose-50' });
+        items.push({ id: 'alerts', label: 'সতর্কবার্তা', icon: Plus, color: 'text-rose-600 bg-rose-50' });
         
         return items;
     }, [canInputQuickRoll, canViewMissedAttendance, canViewAbsentList]);
