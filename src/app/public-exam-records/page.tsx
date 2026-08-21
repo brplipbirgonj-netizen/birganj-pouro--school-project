@@ -586,19 +586,19 @@ export default function PublicExamRecordsPage() {
                                     <Table className="border-collapse border-spacing-0 w-full min-w-full border-2 border-black">
                                         <TableHeader className="bg-slate-100">
                                             <TableRow className="h-8 border-b-[3px] border-black">
-                                                <TableHead className="border-l-2 border-r-2 border-black text-center font-black text-black text-xs w-12">ছবি</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-20">বোর্ড</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-24">রেজিস্ট্রেশন নং</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-20">বোর্ড রোল</TableHead>
-                                                {activeTab === 'Scholarship' && <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-24">বৃত্তির ধরন</TableHead>}
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-16">শ্রেণি রোল</TableHead>
-                                                <TableHead className="border-r-2 border-black text-left pl-3 font-black text-black text-xs min-w-[150px]">শিক্ষার্থীর নাম</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-16">বিভাগ</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs">কেন্দ্র</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-14">নম্বর</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-12">গ্রেড</TableHead>
-                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-xs w-12">GPA</TableHead>
-                                                <TableHead className="border-r-2 border-black text-right pr-6 font-black text-black text-xs no-print">কার্যক্রম</TableHead>
+                                                <TableHead className="border-l-2 border-r-2 border-black text-center font-black text-black text-[13px] w-12">ছবি</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-20">বোর্ড</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-24">রেজিস্ট্রেশন নং</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-20">বোর্ড রোল</TableHead>
+                                                {activeTab === 'Scholarship' && <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-24">বৃত্তির ধরন</TableHead>}
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-16">শ্রেণি রোল</TableHead>
+                                                <TableHead className="border-r-2 border-black text-left pl-3 font-black text-black text-[13px] min-w-[150px]">শিক্ষার্থীর নাম</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-16">বিভাগ</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] min-w-[200px]">কেন্দ্র</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-14">নম্বর</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-12">গ্রেড</TableHead>
+                                                <TableHead className="border-r-2 border-black text-center font-black text-black text-[13px] w-12">GPA</TableHead>
+                                                <TableHead className="border-r-2 border-black text-right pr-6 font-black text-black text-[13px] no-print">কার্যক্রম</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -615,23 +615,23 @@ export default function PublicExamRecordsPage() {
                                                                 <AvatarFallback className="font-black text-xs">S</AvatarFallback>
                                                             </Avatar>
                                                         </TableCell>
-                                                        <TableCell className="border-r-2 border-black text-center font-bold text-xs text-slate-700">{record.boardName || '-'}</TableCell>
-                                                        <TableCell className="border-r-2 border-black text-center font-black text-sm text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
-                                                        <TableCell className="border-r-2 border-black text-center font-black text-sm text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
+                                                        <TableCell className="border-r-2 border-black text-center font-bold text-sm text-slate-700">{record.boardName || '-'}</TableCell>
+                                                        <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.registrationNo)}</TableCell>
+                                                        <TableCell className="border-r-2 border-black text-center font-black text-base text-rose-700">{toBengaliNumber(record.examRoll || '-')}</TableCell>
                                                         {activeTab === 'Scholarship' && (
-                                                            <TableCell className="border-r-2 border-black text-center font-black text-sm text-emerald-700">
+                                                            <TableCell className="border-r-2 border-black text-center font-black text-base text-emerald-700">
                                                                 {record.grade || 'পায়নী'}
                                                             </TableCell>
                                                         )}
-                                                        <TableCell className="border-r-2 border-black text-center font-black text-sm text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
-                                                        <TableCell className="border-r-2 border-black font-black text-sm pl-3 text-slate-900">{record.studentName}</TableCell>
-                                                        <TableCell className="border-r-2 border-black text-center font-bold text-xs uppercase">
+                                                        <TableCell className="border-r-2 border-black text-center font-black text-base text-slate-800">{toBengaliNumber(record.rollNo)}</TableCell>
+                                                        <TableCell className="border-r-2 border-black font-black text-base pl-3 text-slate-900">{record.studentName}</TableCell>
+                                                        <TableCell className="border-r-2 border-black text-center font-bold text-sm uppercase">
                                                             {groups.find(g => g.id === record.group)?.label || record.group}
                                                         </TableCell>
-                                                        <TableCell className="border-r-2 border-black text-center font-medium text-xs text-slate-600 px-1">{record.centerName || '-'}</TableCell>
-                                                        <TableCell className="border-r-2 border-black text-center font-black text-sm text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
-                                                        <TableCell className={cn("border-r-2 border-black text-center font-black text-sm", record.grade?.startsWith('F') ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
-                                                        <TableCell className="border-r-2 border-black text-center font-black text-sm text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
+                                                        <TableCell className="border-r-2 border-black text-center font-medium text-sm text-slate-600 px-2 whitespace-nowrap">{record.centerName || '-'}</TableCell>
+                                                        <TableCell className="border-r-2 border-black text-center font-black text-base text-primary">{toBengaliNumber(record.totalMarks)}</TableCell>
+                                                        <TableCell className={cn("border-r-2 border-black text-center font-black text-base", record.grade?.startsWith('F') ? "text-rose-600" : "text-emerald-700")}>{record.grade}</TableCell>
+                                                        <TableCell className="border-r-2 border-black text-center font-black text-base text-blue-900">{toBengaliNumber(record.gpa.toFixed(2))}</TableCell>
                                                         <TableCell className="border-r-2 border-black text-right pr-6 no-print">
                                                             <div className="flex justify-end gap-2">
                                                                 {canManage && (
