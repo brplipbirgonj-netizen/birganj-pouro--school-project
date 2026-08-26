@@ -13,7 +13,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
-import { getSubjects, subjectNameNormalization } from '@/lib/subjects';
+import { getSubjects } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Printer, ArrowLeft, User, Users, Info, FileBadge, Loader2, Minus, Plus } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -38,12 +38,6 @@ const examNameEnglishMap: { [key: string]: string } = {
     'বার্ষিক পরীক্ষা': 'Annual Examination',
     'প্রাক-নির্বাচনী পরীক্ষা': 'Pre-Test Examination',
     'নির্বাচনী পরীক্ষা': 'Test Examination'
-};
-
-const normalize = (name: string) => {
-    if (!name) return "";
-    const trimmed = name.trim();
-    return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
 };
 
 const MarksheetGeneratorPage = () => {
@@ -286,16 +280,6 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
     const subjects = getSubjects(student.className, student.group).filter(s => s.isExamSubject !== false);
     const displayExamName = examNameEnglishMap[examName] || examName;
 
-    const gradingScale = [
-        { interval: '80-100', point: '5.00', grade: 'A+' },
-        { interval: '70-79', point: '4.00', grade: 'A' },
-        { interval: '60-69', point: '3.50', grade: 'A-' },
-        { interval: '50-59', point: '3.00', grade: 'B' },
-        { interval: '40-49', point: '2.00', grade: 'C' },
-        { interval: '33-39', point: '1.00', grade: 'D' },
-        { interval: '0-32', point: '0.00', grade: 'F' },
-    ];
-
     const renderMeritPosition = (position?: number) => {
         if (!position) return '-';
         if (position % 10 === 1 && position % 100 !== 11) return `${position}st`;
@@ -390,9 +374,13 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                         <div className="font-bold text-gray-600 uppercase">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
                         <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                     </div>
+                    <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">
+                        <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameEn || student.motherNameBn}</div>
+                        <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group.toLowerCase()] || student.group : 'General'}</div>
+                    </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
-                        <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {toBengaliNumber(student.generatedId || '-')}</div>
-                        <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
+                        <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId || '-'}</div>
+                        <div className=""></div><div></div>
                     </div>
                 </section>
 

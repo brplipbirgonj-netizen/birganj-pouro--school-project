@@ -328,8 +328,9 @@ function MarksheetContent() {
                             <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
                             <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group.toLowerCase()] || student.group : 'General'}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr] gap-x-4 mt-1">
-                            <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {toBengaliNumber(student.generatedId || '-')}</div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
+                            <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId || '-'}</div>
+                            <div></div><div></div>
                         </div>
                     </section>
 
