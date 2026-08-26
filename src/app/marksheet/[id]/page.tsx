@@ -113,7 +113,7 @@ function MarksheetContent() {
                         const optSubNorm = normalize(studentData.optionalSubject || '');
 
                         // Handle Class 9-10 Science HM vs Agri exclusive logic
-                        if (parseInt(studentData.className) >= 9 && (studentData.group === 'science' || studentGroupMap[studentData.group?.toLowerCase() || ''] === 'science')) {
+                        if (parseInt(studentData.className) >= 9 && (studentData.group?.toLowerCase() === 'science' || studentData.group === 'বিজ্ঞান')) {
                              const hmNorm = normalize('উচ্চতর গণিত');
                              const agriNorm = normalize('কৃষি শিক্ষা');
                              
@@ -122,7 +122,7 @@ function MarksheetContent() {
                                  if (optSubNorm && subNameNorm !== optSubNorm) return false;
                              }
                         }
-                        return subInfo.fullMarks > 0;
+                        return true;
                     });
 
                     setSubjects(subjectsToShow);
@@ -137,13 +137,6 @@ function MarksheetContent() {
 
         fetchAllData();
     }, [db, studentId, academicYear, currentExamName]);
-
-    // Local mapping for group detection
-    const studentGroupMap: Record<string, string> = { 
-        'science': 'science', 'বিজ্ঞান': 'science',
-        'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts',
-        'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce'
-    };
 
     const gradingScale = [
         { interval: '80-100', point: '5.00', grade: 'A+' },

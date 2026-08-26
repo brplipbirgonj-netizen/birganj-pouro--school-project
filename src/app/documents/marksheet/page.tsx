@@ -40,6 +40,22 @@ const examNameEnglishMap: { [key: string]: string } = {
     'নির্বাচনী পরীক্ষা': 'Test Examination'
 };
 
+const gradingScale = [
+    { interval: '80-100', point: '5.00', grade: 'A+' },
+    { interval: '70-79', point: '4.00', grade: 'A' },
+    { interval: '60-69', point: '3.50', grade: 'A-' },
+    { interval: '50-59', point: '3.00', grade: 'B' },
+    { interval: '40-49', point: '2.00', grade: 'C' },
+    { interval: '33-39', point: '1.00', grade: 'D' },
+    { interval: '0-32', point: '0.00', grade: 'F' },
+];
+
+const normalize = (name: string) => {
+    if (!name) return "";
+    const trimmed = name.trim();
+    return (trimmed).toLowerCase();
+};
+
 const MarksheetGeneratorPage = () => {
     const db = useFirestore();
     const { schoolInfo } = useSchoolInfo();
@@ -277,7 +293,25 @@ const MarksheetGeneratorPage = () => {
 
 const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, watermarkOpacity }: any) => {
     const student = result.student;
-    const subjects = getSubjects(student.className, student.group).filter(s => s.isExamSubject !== false);
+    
+    // Filter subjects to show only what the student actually took (exclusive logic for Science 9-10)
+    const allSubjectsForGroup = getSubjects(student.className, student.group).filter(s => s.isExamSubject !== false);
+    const subjects = allSubjectsForGroup.filter(subInfo => {
+        const subNameNorm = normalize(subInfo.name);
+        const optSubNorm = normalize(student.optionalSubject || '');
+        const classNum = parseInt(student.className);
+
+        if (classNum >= 9 && (student.group?.toLowerCase() === 'science' || student.group === 'বিজ্ঞান')) {
+            const hmNorm = normalize('উচ্চতর গণিত');
+            const agriNorm = normalize('কৃষি শিক্ষা');
+            if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
+                if (optSubNorm && subNameNorm !== optSubNorm) return false;
+            }
+        }
+        return true;
+    });
+
+    const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
     const displayExamName = examNameEnglishMap[examName] || examName;
 
     const renderMeritPosition = (position?: number) => {
@@ -406,7 +440,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                             </tr>
                         </thead>
                         <tbody>
-                            {subjects.map((sub, sIdx) => {
+                            {sortedSubjects.map((sub, sIdx) => {
                                 const sr = result.subjectResults.get(sub.name);
                                 const isFail = sr?.isPass === false;
                                 return (
