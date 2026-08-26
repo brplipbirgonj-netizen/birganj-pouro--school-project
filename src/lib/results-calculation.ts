@@ -52,9 +52,6 @@ const getFinalGrade = (gpa: number): string => {
     return 'F';
 }
 
-/**
- * Normalizes a subject name for comparison
- */
 const normalize = (name: string) => {
     if (!name) return "";
     const trimmed = name.trim();
@@ -81,30 +78,15 @@ export function processStudentResults(
 
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized);
         
-        // Final subject list for this student (max 12 for 9-10)
         const subjectsForStudent = groupAllowedSubjects.filter(subInfo => {
             const currentSubNameNormalized = normalize(subInfo.name);
-            
-            // For 9-10 Science: Exclusive check between HM and Agri
             if (studentClassNum >= 9 && studentGroupNormalized === 'science') {
                 const hmNormalized = normalize('উচ্চতর গণিত');
                 const agriNormalized = normalize('কৃষি শিক্ষা');
-                
-                // If student takes Higher Math, exclude Agriculture
-                if (optionalSubjectNameNormalized === hmNormalized && currentSubNameNormalized === agriNormalized) {
-                    return false;
-                }
-                // If student takes Agriculture, exclude Higher Math
-                if (optionalSubjectNameNormalized === agriNormalized && currentSubNameNormalized === hmNormalized) {
-                    return false;
-                }
-                
-                // Keep the chosen one
-                if ((currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) && currentSubNameNormalized !== optionalSubjectNameNormalized) {
-                    return false;
-                }
+                if (optionalSubjectNameNormalized === hmNormalized && currentSubNameNormalized === agriNormalized) return false;
+                if (optionalSubjectNameNormalized === agriNormalized && currentSubNameNormalized === hmNormalized) return false;
+                if ((currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) && optionalSubjectNameNormalized && currentSubNameNormalized !== optionalSubjectNameNormalized) return false;
             }
-            
             return true;
         });
 
@@ -115,7 +97,6 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const normalizedSubjectName = normalize(subjectInfo.name);
             
-            // Find result record for this specific subject and class
             const classResult = resultsBySubject.find(r => 
                 normalize(r.subject) === normalizedSubjectName && 
                 r.className === student.className &&
@@ -164,7 +145,7 @@ export function processStudentResults(
                 if (result && result.isPass && result.point > 2.0) {
                     bonusPoints = result.point - 2.0;
                 }
-            } else {
+            } else if (subjectInfo.fullMarks > 0) {
                 compulsorySubjectsCount++;
                 if (!result || !result.isPass) {
                     failedInCompulsoryCount++;

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Student } from '@/lib/student-data';
 import { getSubjects, Subject, subjectNameNormalization } from '@/lib/subjects';
-import { getResultsForClass, ClassResult } from '@/lib/results-data';
+import { getAllResults, ClassResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { getExams, Exam } from '@/lib/exam-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -66,8 +66,10 @@ function MarksheetContent() {
 
             setIsLoading(true);
             try {
+                // Fetch exams for the year
                 getExams(db, academicYear).then(data => setAllExams(data));
 
+                // Fetch student details
                 const studentDoc = await getDoc(doc(db, 'students', studentId));
                 if (!studentDoc.exists()) {
                     setIsLoading(false);
@@ -76,6 +78,7 @@ function MarksheetContent() {
                 const studentData = { id: studentDoc.id, ...studentDoc.data() } as Student;
                 setStudent(studentData);
 
+                // Fetch all students of same class for merit calculation
                 const classQuery = query(
                     collection(db, 'students'),
                     where('academicYear', '==', academicYear),
@@ -85,40 +88,38 @@ function MarksheetContent() {
                 const studentsList = classSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
                 setAllStudentsInClass(studentsList);
 
-                const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
-                
-                const resultsPromises = allSubjectsForGroup
-                    .map(subject => getResultsForClass(db, academicYear, currentExamName, studentData.className, subject.name, studentData.group || undefined));
-                
-                const fetchedResultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
+                // Fetch all results for this exam and class once (Optimized)
+                const allResults = await getAllResults(db, academicYear, currentExamName);
+                const fetchedResultsBySubject = allResults.filter(r => r.className === studentData.className);
                 setResultsBySubject(fetchedResultsBySubject);
 
-                const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
-                    const subNameNorm = normalize(subjectInfo.name);
-                    const optSubNorm = normalize(studentData.optionalSubject || '');
-
-                    // Handle Elective/Optional exclusion for Class 9-10
-                    if (parseInt(studentData.className) >= 9) {
-                        const hmName = normalize('উচ্চতর গণিত');
-                        const agriName = normalize('কৃষি শিক্ষা');
-
-                        // If the subject is one of the contested ones
-                        if (subNameNorm === hmName || subNameNorm === agriName) {
-                            // If it doesn't match the student's choice, hide it
-                            if (optSubNorm && subNameNorm !== optSubNorm) return false;
-                            // If no optional choice made by science student, hide both electives
-                            if (!optSubNorm && studentData.group === 'science') return false;
-                        }
-                    }
-                    
-                    return subjectInfo.fullMarks > 0;
-                });
-
+                // Get allowed subjects for this class/group
+                const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
+                
+                // Process results to get GPA and merit
                 const allFinalResults = processStudentResults(studentsList, fetchedResultsBySubject, allSubjectsForGroup);
                 const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
 
                 if (finalResultForThisStudent) {
-                    setSubjects(subjectsForThisStudent);
+                    // Filter subjects to show only what the student actually took (important for 9-10 science electives)
+                    const subjectsToShow = allSubjectsForGroup.filter(subInfo => {
+                        const subNameNorm = normalize(subInfo.name);
+                        const optSubNorm = normalize(studentData.optionalSubject || '');
+
+                        // Handle Class 9-10 Science HM vs Agri exclusive logic
+                        if (parseInt(studentData.className) >= 9 && (studentData.group === 'science' || studentData.group === 'বিজ্ঞান')) {
+                             const hmNorm = normalize('উচ্চতর গণিত');
+                             const agriNorm = normalize('কৃষি শিক্ষা');
+                             
+                             if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
+                                 // If student has chosen an optional, hide the other one
+                                 if (optSubNorm && subNameNorm !== optSubNorm) return false;
+                             }
+                        }
+                        return subInfo.fullMarks > 0;
+                    });
+
+                    setSubjects(subjectsToShow);
                     setProcessedResult(finalResultForThisStudent);
                 }
             } catch (e) {
@@ -131,26 +132,6 @@ function MarksheetContent() {
         fetchAllData();
     }, [db, studentId, academicYear, currentExamName]);
 
-    
-    const renderMeritPosition = (position?: number) => {
-        if (!position) return '-';
-        if (position % 10 === 1 && position % 100 !== 11) return `${position}st`;
-        if (position % 10 === 2 && position % 100 !== 12) return `${position}nd`;
-        if (position % 10 === 3 && position % 100 !== 13) return `${position}rd`;
-        return `${position}th`;
-    }
-
-    const getRemarks = (gpa: number, isPass: boolean) => {
-        if (!isPass) return "Work hard to do well in the next exam";
-        if (gpa >= 5.0) return "Excellent results. Keep it up!";
-        if (gpa >= 4.0) return "Satisfactory performance. Aim higher!";
-        if (gpa >= 3.5) return "Good result. Needs more focus.";
-        if (gpa >= 3.0) return "Average result. Improvement needed.";
-        if (gpa >= 2.0) return "Below average. Study hard.";
-        if (gpa >= 1.0) return "Poor performance. Needs regular study.";
-        return "Work hard to do well in the next exam";
-    };
-
     const gradingScale = [
         { interval: '80-100', point: '5.00', grade: 'A+' },
         { interval: '70-79', point: '4.00', grade: 'A' },
@@ -160,7 +141,6 @@ function MarksheetContent() {
         { interval: '33-39', point: '1.00', grade: 'D' },
         { interval: '0-32', point: '0.00', grade: 'F' },
     ];
-
 
     if (isLoading) {
         return (
@@ -180,7 +160,6 @@ function MarksheetContent() {
     }
 
     const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
-    const studentOptionalSubject = student.optionalSubject;
 
     return (
         <div className="bg-slate-100 min-h-screen p-4 sm:p-8 font-sans print:p-0 print:bg-white flex flex-col items-center overflow-x-hidden">
@@ -235,23 +214,11 @@ function MarksheetContent() {
                     <div className="flex items-center gap-2 flex-1 sm:flex-initial bg-slate-50 p-1.5 rounded-xl border border-slate-200">
                         <Label className="text-[10px] font-black text-slate-500 uppercase px-1">WATERMARK</Label>
                         <div className="flex items-center gap-1">
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-7 w-7 rounded-lg"
-                                onClick={() => setWatermarkOpacity(prev => Math.max(0, parseFloat((prev - 0.05).toFixed(2))))}
-                                title="স্বচ্ছতা কমান"
-                            >
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setWatermarkOpacity(prev => Math.max(0, parseFloat((prev - 0.05).toFixed(2))))}>
                                 <Minus className="h-3.5 w-3.5" />
                             </Button>
                             <span className="text-[11px] font-black w-8 text-center bg-white border rounded py-0.5">{Math.round(watermarkOpacity * 100)}%</span>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-7 w-7 rounded-lg"
-                                onClick={() => setWatermarkOpacity(prev => Math.min(1, parseFloat((prev + 0.05).toFixed(2))))}
-                                title="স্বচ্ছতা বাড়ান"
-                            >
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setWatermarkOpacity(prev => Math.min(1, parseFloat((prev + 0.05).toFixed(2))))}>
                                 <Plus className="h-3.5 w-3.5" />
                             </Button>
                         </div>
@@ -263,21 +230,11 @@ function MarksheetContent() {
                                 <SelectValue placeholder="পরীক্ষা নির্বাচন করুন" />
                             </SelectTrigger>
                             <SelectContent className="font-kalpurush">
-                                {allExams.length > 0 ? (
-                                    allExams.map((e) => (
-                                        <SelectItem key={e.id || e.name} value={e.name} className="font-bold text-xs">
-                                            {e.name}
-                                        </SelectItem>
-                                    ))
-                                ) : (
-                                    <>
-                                        <SelectItem value="১ম সাময়িক পরীক্ষা" className="font-bold text-xs">১ম সাময়িক পরীক্ষা</SelectItem>
-                                        <SelectItem value="২য় সাময়িক পরীক্ষা" className="font-bold text-xs">২য় সাময়িক পরীক্ষা</SelectItem>
-                                        <SelectItem value="বার্ষিক পরীক্ষা" className="font-bold text-xs">বার্ষিক পরীক্ষা</SelectItem>
-                                        <SelectItem value="প্রাক-নির্বাচনী পরীক্ষা" className="font-bold text-xs">প্রাক-নির্বাচনী পরীক্ষা</SelectItem>
-                                        <SelectItem value="নির্বাচনী পরীক্ষা" className="font-bold text-xs">নির্বাচনী পরীক্ষা</SelectItem>
-                                    </>
-                                )}
+                                {allExams.map((e) => (
+                                    <SelectItem key={e.id || e.name} value={e.name} className="font-bold text-xs">
+                                        {e.name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -289,18 +246,11 @@ function MarksheetContent() {
                 </div>
             </div>
             
-            {/* Printable Marksheet Card */}
+            {/* Marksheet Layout */}
             <div className="printable-area marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                 {schoolInfo.logoUrl && (
-                    <div 
-                        className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none watermark-layer"
-                        style={{ opacity: watermarkOpacity }}
-                    >
-                        <img 
-                            src={schoolInfo.logoUrl} 
-                            alt="Watermark" 
-                            className="w-[300px] h-[300px] object-contain" 
-                        />
+                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none watermark-layer" style={{ opacity: watermarkOpacity }}>
+                        <img src={schoolInfo.logoUrl} alt="Watermark" className="w-[300px] h-[300px] object-contain" />
                     </div>
                 )}
                 
@@ -317,15 +267,12 @@ function MarksheetContent() {
                                 <h1 className="text-3xl font-black uppercase text-[#003366] tracking-tight leading-none mb-1">
                                     {schoolInfo.nameEn || "BIRGANJ POURO HIGH SCHOOL"}
                                 </h1>
-                                <p className="text-sm font-bold text-gray-700">
-                                    {schoolInfo.address || "Birganj, Dinajpur"}
-                                </p>
+                                <p className="text-sm font-bold text-gray-700">{schoolInfo.address || "Birganj, Dinajpur"}</p>
                                 <div className="mt-2 inline-block bg-[#eef6ff] px-3 py-1 rounded border border-[#b3d7ff]">
                                     <p className="text-sm text-[#0056b3] font-bold">Academic Session: {academicYear}</p>
                                 </div>
                             </div>
                         </div>
-                        {/* Grading Scale Table */}
                         <div className="text-[9px]">
                             <table className="border-collapse border border-black text-center w-full">
                                 <thead className="bg-gray-100">
@@ -364,16 +311,9 @@ function MarksheetContent() {
                             <div className="font-bold text-gray-600 uppercase">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
                             <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
-                            <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameEn || student.motherNameBn}</div>
-                            <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
-                        </div>
                         <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
-                            <div className="font-bold text-gray-600 uppercase">Date of Birth</div><div>: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
-                            <div className="font-bold text-gray-600 text-right uppercase">Religion</div><div>: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
-                        </div>
-                        <div className="grid grid-cols-[1.5fr_4fr] gap-x-4 mt-1">
                             <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId}</div>
+                            <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
                         </div>
                     </section>
 
@@ -383,18 +323,17 @@ function MarksheetContent() {
                             <div className="py-1.5">Status: <span className={cn("font-black", processedResult.isPass ? "text-green-400" : "text-red-400")}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
                             <div className="py-1.5">GPA: <span className="font-black text-amber-300">{processedResult.gpa.toFixed(2)}</span></div>
                             <div className="py-1.5">Final Grade: <span className="font-black text-amber-300">{processedResult.finalGrade}</span></div>
-                            <div className="py-1.5">Merit Rank: <span className="font-black">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</span></div>
+                            <div className="py-1.5">Merit Rank: <span className="font-black">{processedResult.isPass ? (processedResult.meritPosition % 10 === 1 ? processedResult.meritPosition + 'st' : processedResult.meritPosition % 10 === 2 ? processedResult.meritPosition + 'nd' : processedResult.meritPosition + 'th') : 'N/A'}</span></div>
                         </div>
                     </section>
 
-                    {/* Table */}
+                    {/* Subject Table */}
                     <section className="flex-grow overflow-visible">
                         <table className="w-full border-collapse border-[1.5px] border-black text-[11px]">
                             <thead>
                                 <tr className="border-b-[1.5px] border-black bg-gray-100 font-bold">
                                     <th className="border-r border-black p-1 w-10 text-center">SL</th>
                                     <th className="border-r border-black p-1 text-left pl-4">Subject Name</th>
-                                    <th className="border-r border-black p-1 w-14 text-center">Code</th>
                                     <th className="border-r border-black p-1 w-20 text-center">Full Marks</th>
                                     <th className="border-r border-black p-1 w-20 text-center">Obtained</th>
                                     <th className="border-r border-black p-1 w-14 text-center">Grade</th>
@@ -403,28 +342,27 @@ function MarksheetContent() {
                             </thead>
                             <tbody>
                                 {sortedSubjects.map((subject, index) => {
-                                    const res = processedResult.subjectResults.get(subject.name);
-                                    const isFail = res?.isPass === false;
+                                    const subResult = processedResult.subjectResults.get(subject.name);
+                                    const isFail = subResult?.isPass === false;
                                     
                                     return (
                                         <tr key={subject.code} className={cn("border-b border-black last:border-0", isFail ? "bg-red-50/30" : "")}>
                                             <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
                                             <td className="border-r border-black p-1 px-4 font-semibold">
                                                 {subject.englishName}
-                                                {studentOptionalSubject === subject.name && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
+                                                {student.optionalSubject === subject.name && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
                                             </td>
-                                            <td className="border-r border-black p-1 text-center text-gray-600">{subject.code}</td>
-                                            <td className="border-r border-black p-1 text-center font-medium">{res?.fullMarks ?? subject.fullMarks}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{res?.marks ?? '-'}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-black text-[12px]", isFail ? "text-red-600" : "")}>{res?.grade ?? '-'}</td>
-                                            <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{res?.point !== undefined ? res.point.toFixed(2) : '-'}</td>
+                                            <td className="border-r border-black p-1 text-center font-medium">{subResult?.fullMarks ?? subject.fullMarks}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{subResult?.marks ?? '-'}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-black text-[12px]", isFail ? "text-red-600" : "")}>{subResult?.grade ?? '-'}</td>
+                                            <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{subResult?.point !== undefined ? subResult.point.toFixed(2) : '-'}</td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
                             <tfoot>
                                 <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[12px]">
-                                    <td colSpan={4} className="p-2 pr-8 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
+                                    <td colSpan={3} className="p-2 pr-8 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
                                     <td className="p-2 text-center border-r border-black text-[16px] text-blue-950">{processedResult.totalMarks}</td>
                                     <td className="p-2 text-center border-r border-black text-[16px] text-blue-950">{processedResult.finalGrade}</td>
                                     <td className="p-2 text-center text-[16px] text-blue-950">{processedResult.gpa.toFixed(2)}</td>
@@ -433,27 +371,21 @@ function MarksheetContent() {
                         </table>
                     </section>
 
-                    {/* Remarks Section */}
                     <section className="mt-4 mb-2 p-2 border border-black rounded bg-gray-50/30">
-                        <p className="text-[10px] font-bold uppercase text-gray-600 mb-1">Remarks:</p>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Remarks:</p>
                         <p className="text-[12px] font-black italic text-blue-900 leading-tight">
-                            "{getRemarks(processedResult.gpa, processedResult.isPass)}"
+                            "{processedResult.isPass ? (processedResult.gpa >= 5 ? "Excellent results. Keep it up!" : "Satisfactory performance. Aim higher!") : "Work hard to do well in the next exam"}"
                         </p>
                     </section>
 
-                    {/* Footer */}
-                    <footer className="mt-auto pt-8 pb-4 text-[11px] print-footer">
+                    <footer className="mt-auto pt-8 pb-4 text-[11px]">
                         <div className="flex justify-between px-16">
-                            <div className="text-center">
-                                <div className="w-32 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="w-32 border-t border-black pt-1 font-bold text-gray-700 uppercase">Headmaster</div>
-                            </div>
+                            <div className="text-center w-32 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>
+                            <div className="text-center w-32 border-t border-black pt-1 font-bold text-gray-700 uppercase">Headmaster</div>
                         </div>
                         <div className="mt-8 flex justify-between items-center text-[9px] text-muted-foreground italic border-t pt-2">
                             <span>Issue Date: {new Date().toLocaleDateString('en-GB')}</span>
-                            <span>Powered by: {schoolInfo.nameEn || "Birganj Pouro High School"} Management System</span>
+                            <span>Powered by: {schoolInfo.nameEn || "BPHS"} Management System</span>
                         </div>
                     </footer>
                 </div>
