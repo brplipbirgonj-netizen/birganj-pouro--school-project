@@ -29,6 +29,14 @@ const DOCUMENT_TOOLS = [
     desc: 'পরীক্ষার জন্য ব্যক্তিগত বা শ্রেণিভিত্তিক ডিজিটাল প্রবেশপত্র লাইভ প্রিভিউ দেখে প্রিন্ট করুন।' 
   },
   { 
+    id: 'marksheet', 
+    label: 'মার্কশিট (Marksheet)', 
+    icon: FileBadge, 
+    href: '/documents/marksheet', 
+    color: 'text-violet-600 bg-violet-50', 
+    desc: 'শিক্ষার্থীদের জন্য প্রফেশনাল একাডেমিক মার্কশিট বা ফলাফল বিবরণী তৈরি ও প্রিন্ট করুন।' 
+  },
+  { 
     id: 'seat-plan', 
     label: 'আসন বিন্যাস (Seat Plan)', 
     icon: Grid3X3, 
@@ -38,7 +46,7 @@ const DOCUMENT_TOOLS = [
   },
   { 
     id: 'testimonial', 
-    label: 'প্রত্যয়ন পত্র', 
+    label: 'प्रत्यয়ন পত্র', 
     icon: FileBadge, 
     href: '/documents/testimonial', 
     color: 'text-emerald-600 bg-emerald-50', 

@@ -44,7 +44,6 @@ function MarksheetContent() {
     const searchParams = useSearchParams();
     const studentId = params.id as string;
     const db = useFirestore();
-    const { user } = useAuth();
     const { schoolInfo } = useSchoolInfo();
 
     const [student, setStudent] = useState<Student | null>(null);
@@ -67,10 +66,8 @@ function MarksheetContent() {
 
             setIsLoading(true);
             try {
-                // 0. Fetch all exams for session
                 getExams(db, academicYear).then(data => setAllExams(data));
 
-                // 1. Fetch the specific student
                 const studentDoc = await getDoc(doc(db, 'students', studentId));
                 if (!studentDoc.exists()) {
                     setIsLoading(false);
@@ -79,7 +76,6 @@ function MarksheetContent() {
                 const studentData = { id: studentDoc.id, ...studentDoc.data() } as Student;
                 setStudent(studentData);
 
-                // 2. Fetch all students in the same class (Needed for Merit calculation)
                 const classQuery = query(
                     collection(db, 'students'),
                     where('academicYear', '==', academicYear),
@@ -89,7 +85,6 @@ function MarksheetContent() {
                 const studentsList = classSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
                 setAllStudentsInClass(studentsList);
 
-                // 3. Fetch results
                 const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
                 
                 const resultsPromises = allSubjectsForGroup
@@ -98,7 +93,6 @@ function MarksheetContent() {
                 const fetchedResultsBySubject = (await Promise.all(resultsPromises)).filter((result): result is ClassResult => !!result);
                 setResultsBySubject(fetchedResultsBySubject);
 
-                // 4. Filter subjects list based on effective full marks
                 const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
                     if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
                          if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
@@ -113,7 +107,6 @@ function MarksheetContent() {
                     return effectiveFullMarks > 0;
                 });
 
-                // 5. Process results
                 const allFinalResults = processStudentResults(studentsList, fetchedResultsBySubject, allSubjectsForGroup);
                 const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
 
@@ -403,15 +396,9 @@ function MarksheetContent() {
                             </thead>
                             <tbody>
                                 {sortedSubjects.map((subject, index) => {
-                                    const result = processedResult.subjectResults.get(subject.name);
-                                    const isFail = result?.isPass === false;
+                                    const res = processedResult.subjectResults.get(subject.name);
+                                    const isFail = res?.isPass === false;
                                     
-                                    const matchingRecord = resultsBySubject.find(r => 
-                                        normalize(r.subject) === normalize(subject.name) && 
-                                        r.className === student.className
-                                    );
-                                    const displayFullMarks = matchingRecord?.fullMarks ?? subject.fullMarks;
-
                                     return (
                                         <tr key={subject.code} className={cn("border-b border-black last:border-0", isFail ? "bg-red-50/30" : "")}>
                                             <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
@@ -420,10 +407,10 @@ function MarksheetContent() {
                                                 {studentOptionalSubject === subject.name && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
                                             </td>
                                             <td className="border-r border-black p-1 text-center text-gray-600">{subject.code}</td>
-                                            <td className="border-r border-black p-1 text-center font-medium">{displayFullMarks}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{result?.marks ?? '-'}</td>
-                                            <td className={cn("border-r border-black p-1 text-center font-black text-[12px]", isFail ? "text-red-600" : "")}>{result?.grade ?? '-'}</td>
-                                            <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{result?.point !== undefined ? result.point.toFixed(2) : '-'}</td>
+                                            <td className="border-r border-black p-1 text-center font-medium">{res?.fullMarks ?? subject.fullMarks}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{res?.marks ?? '-'}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-black text-[12px]", isFail ? "text-red-600" : "")}>{res?.grade ?? '-'}</td>
+                                            <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{res?.point !== undefined ? res.point.toFixed(2) : '-'}</td>
                                         </tr>
                                     );
                                 })}
