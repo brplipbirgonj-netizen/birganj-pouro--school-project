@@ -10,7 +10,7 @@ import { getExams, Exam } from '@/lib/exam-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Printer, Loader2, ArrowLeft } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, Plus, Minus } from 'lucide-react';
 import Image from 'next/image';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useFirestore } from '@/firebase';
@@ -54,6 +54,7 @@ function MarksheetContent() {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [allExams, setAllExams] = useState<Exam[]>([]);
+    const [watermarkOpacity, setWatermarkOpacity] = useState(0.15);
 
     const academicYear = searchParams.get('academicYear') || new Date().getFullYear().toString();
     const initialExam = searchParams.get('examName') || 'বার্ষিক পরীক্ষা';
@@ -190,10 +191,10 @@ function MarksheetContent() {
                         margin: 0 !important;
                     }
                     html, body {
-                        height: 100%;
+                        height: auto !important;
                         margin: 0 !important;
                         padding: 0 !important;
-                        overflow: hidden !important;
+                        overflow: visible !important;
                     }
                     .no-print {
                         display: none !important;
@@ -207,13 +208,15 @@ function MarksheetContent() {
                         box-shadow: none !important;
                         page-break-after: always !important;
                         overflow: hidden !important;
-                        position: absolute;
-                        top: 0;
-                        left: 0;
+                        position: relative !important;
                         display: flex !important;
                         flex-direction: column !important;
-                        z-index: 9999 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .watermark-layer img {
                         visibility: visible !important;
+                        display: block !important;
                     }
                 }
             `}</style>
@@ -229,8 +232,32 @@ function MarksheetContent() {
                 </div>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 flex-1 sm:flex-initial bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                        <Label className="text-[10px] font-black text-slate-500 uppercase px-1">WATERMARK</Label>
+                        <div className="flex items-center gap-1">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 rounded-lg"
+                                onClick={() => setWatermarkOpacity(prev => Math.max(0, parseFloat((prev - 0.05).toFixed(2))))}
+                                title="স্বচ্ছতা কমান"
+                            >
+                                <Minus className="h-3.5 w-3.5" />
+                            </Button>
+                            <span className="text-[11px] font-black w-8 text-center bg-white border rounded py-0.5">{Math.round(watermarkOpacity * 100)}%</span>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 rounded-lg"
+                                onClick={() => setWatermarkOpacity(prev => Math.min(1, parseFloat((prev + 0.05).toFixed(2))))}
+                                title="স্বচ্ছতা বাড়ান"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    </div>
+
                     <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                        <Label className="text-xs font-black text-slate-700 whitespace-nowrap">পরীক্ষা:</Label>
                         <Select value={currentExamName} onValueChange={setCurrentExamName}>
                             <SelectTrigger className="h-10 w-[180px] bg-slate-50 border-slate-200 text-xs font-black text-slate-800">
                                 <SelectValue placeholder="পরীক্ষা নির্বাচন করুন" />
@@ -265,18 +292,25 @@ function MarksheetContent() {
             {/* Printable Marksheet Card */}
             <div className="printable-area marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                 {schoolInfo.logoUrl && (
-                    <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-[0.1] print:opacity-[0.1]">
-                        <Image src={schoolInfo.logoUrl} alt="School Logo Watermark" width={300} height={300} className="object-contain" />
+                    <div 
+                        className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none watermark-layer"
+                        style={{ opacity: watermarkOpacity }}
+                    >
+                        <img 
+                            src={schoolInfo.logoUrl} 
+                            alt="Watermark" 
+                            className="w-[300px] h-[300px] object-contain" 
+                        />
                     </div>
                 )}
                 
-                <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col">
+                <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col bg-transparent">
                     {/* Header */}
                     <div className="printable-header mb-4 flex justify-between items-start">
                         <div className="flex items-center gap-4">
                             {schoolInfo.logoUrl && (
                                 <div className="w-20 h-20 relative">
-                                    <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="object-contain" />
+                                    <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="object-contain" priority />
                                 </div>
                             )}
                             <div className="text-left">
