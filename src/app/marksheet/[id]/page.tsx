@@ -94,17 +94,24 @@ function MarksheetContent() {
                 setResultsBySubject(fetchedResultsBySubject);
 
                 const subjectsForThisStudent = allSubjectsForGroup.filter(subjectInfo => {
-                    if (studentData.group === 'science' || studentData.group === 'arts' || studentData.group === 'commerce') {
-                         if (studentData.optionalSubject === 'উচ্চতর গণিত' && subjectInfo.name === 'কৃষি শিক্ষা') return false;
-                         if (studentData.optionalSubject === 'কৃষি শিক্ষা' && subjectInfo.name === 'উচ্চতর গণিত') return false;
+                    const subNameNorm = normalize(subjectInfo.name);
+                    const optSubNorm = normalize(studentData.optionalSubject || '');
+
+                    // Handle Elective/Optional exclusion for Class 9-10
+                    if (parseInt(studentData.className) >= 9) {
+                        const hmName = normalize('উচ্চতর গণিত');
+                        const agriName = normalize('কৃষি শিক্ষা');
+
+                        // If the subject is one of the contested ones
+                        if (subNameNorm === hmName || subNameNorm === agriName) {
+                            // If it doesn't match the student's choice, hide it
+                            if (optSubNorm && subNameNorm !== optSubNorm) return false;
+                            // If no optional choice made by science student, hide both electives
+                            if (!optSubNorm && studentData.group === 'science') return false;
+                        }
                     }
                     
-                    const matchingRecord = fetchedResultsBySubject.find(r => 
-                        normalize(r.subject) === normalize(subjectInfo.name) && 
-                        r.className === studentData.className
-                    );
-                    const effectiveFullMarks = matchingRecord?.fullMarks ?? subjectInfo.fullMarks;
-                    return effectiveFullMarks > 0;
+                    return subjectInfo.fullMarks > 0;
                 });
 
                 const allFinalResults = processStudentResults(studentsList, fetchedResultsBySubject, allSubjectsForGroup);
@@ -124,6 +131,37 @@ function MarksheetContent() {
         fetchAllData();
     }, [db, studentId, academicYear, currentExamName]);
 
+    
+    const renderMeritPosition = (position?: number) => {
+        if (!position) return '-';
+        if (position % 10 === 1 && position % 100 !== 11) return `${position}st`;
+        if (position % 10 === 2 && position % 100 !== 12) return `${position}nd`;
+        if (position % 10 === 3 && position % 100 !== 13) return `${position}rd`;
+        return `${position}th`;
+    }
+
+    const getRemarks = (gpa: number, isPass: boolean) => {
+        if (!isPass) return "Work hard to do well in the next exam";
+        if (gpa >= 5.0) return "Excellent results. Keep it up!";
+        if (gpa >= 4.0) return "Satisfactory performance. Aim higher!";
+        if (gpa >= 3.5) return "Good result. Needs more focus.";
+        if (gpa >= 3.0) return "Average result. Improvement needed.";
+        if (gpa >= 2.0) return "Below average. Study hard.";
+        if (gpa >= 1.0) return "Poor performance. Needs regular study.";
+        return "Work hard to do well in the next exam";
+    };
+
+    const gradingScale = [
+        { interval: '80-100', point: '5.00', grade: 'A+' },
+        { interval: '70-79', point: '4.00', grade: 'A' },
+        { interval: '60-69', point: '3.50', grade: 'A-' },
+        { interval: '50-59', point: '3.00', grade: 'B' },
+        { interval: '40-49', point: '2.00', grade: 'C' },
+        { interval: '33-39', point: '1.00', grade: 'D' },
+        { interval: '0-32', point: '0.00', grade: 'F' },
+    ];
+
+
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
@@ -140,6 +178,9 @@ function MarksheetContent() {
             </div>
         );
     }
+
+    const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
+    const studentOptionalSubject = student.optionalSubject;
 
     return (
         <div className="bg-slate-100 min-h-screen p-4 sm:p-8 font-sans print:p-0 print:bg-white flex flex-col items-center overflow-x-hidden">
@@ -250,202 +291,176 @@ function MarksheetContent() {
             
             {/* Printable Marksheet Card */}
             <div className="printable-area marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
-                <MarksheetTemplate 
-                    result={processedResult} 
-                    schoolInfo={schoolInfo} 
-                    examName={currentExamName} 
-                    academicYear={academicYear}
-                    watermarkOpacity={watermarkOpacity}
-                />
+                {schoolInfo.logoUrl && (
+                    <div 
+                        className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none watermark-layer"
+                        style={{ opacity: watermarkOpacity }}
+                    >
+                        <img 
+                            src={schoolInfo.logoUrl} 
+                            alt="Watermark" 
+                            className="w-[300px] h-[300px] object-contain" 
+                        />
+                    </div>
+                )}
+                
+                <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col bg-transparent">
+                    {/* Header */}
+                    <div className="printable-header mb-4 flex justify-between items-start">
+                        <div className="flex items-center gap-4">
+                            {schoolInfo.logoUrl && (
+                                <div className="w-20 h-20 relative">
+                                    <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="object-contain" priority />
+                                </div>
+                            )}
+                            <div className="text-left">
+                                <h1 className="text-3xl font-black uppercase text-[#003366] tracking-tight leading-none mb-1">
+                                    {schoolInfo.nameEn || "BIRGANJ POURO HIGH SCHOOL"}
+                                </h1>
+                                <p className="text-sm font-bold text-gray-700">
+                                    {schoolInfo.address || "Birganj, Dinajpur"}
+                                </p>
+                                <div className="mt-2 inline-block bg-[#eef6ff] px-3 py-1 rounded border border-[#b3d7ff]">
+                                    <p className="text-sm text-[#0056b3] font-bold">Academic Session: {academicYear}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Grading Scale Table */}
+                        <div className="text-[9px]">
+                            <table className="border-collapse border border-black text-center w-full">
+                                <thead className="bg-gray-100">
+                                    <tr className="border-b border-black">
+                                        <th className="p-1 px-2 border-r border-black font-bold">Range</th>
+                                        <th className="p-1 px-2 border-r border-black font-bold">GP</th>
+                                        <th className="p-1 px-2 font-bold">Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {gradingScale.map(g => (
+                                        <tr key={g.grade} className="border-b border-black last:border-b-0">
+                                            <td className="p-0.5 border-r border-black">{g.interval}</td>
+                                            <td className="p-0.5 border-r border-black">{g.point}</td>
+                                            <td className="p-0.5 font-bold">{g.grade}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="text-center mb-4">
+                        <h2 className="text-xl font-black underline underline-offset-8 uppercase tracking-widest text-black">
+                            {displayExamName} Progress Report
+                        </h2>
+                    </div>
+
+                    {/* Student Info */}
+                    <section className="mb-4 text-[12px] leading-relaxed bg-slate-50/50 p-2 border border-dashed border-gray-300 rounded">
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 border-b border-black/10 pb-1">
+                            <div className="font-bold text-gray-600 uppercase">Student's Name</div><div className="font-bold uppercase text-blue-900">: {student.studentNameEn || student.studentNameBn}</div>
+                            <div className="font-bold text-gray-600 text-right uppercase">Class</div><div className="font-bold">: {classMap[student.className] || student.className}</div>
+                        </div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
+                            <div className="font-bold text-gray-600 uppercase">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
+                            <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
+                        </div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
+                            <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameEn || student.motherNameBn}</div>
+                            <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
+                        </div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
+                            <div className="font-bold text-gray-600 uppercase">Date of Birth</div><div>: {student.dob ? new Date(student.dob).toLocaleDateString('en-GB') : 'N/A'}</div>
+                            <div className="font-bold text-gray-600 text-right uppercase">Religion</div><div>: {student.religion ? religionMap[student.religion] : 'N/A'}</div>
+                        </div>
+                        <div className="grid grid-cols-[1.5fr_4fr] gap-x-4 mt-1">
+                            <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId}</div>
+                        </div>
+                    </section>
+
+                    {/* Summary Bar */}
+                    <section className="mb-4">
+                        <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[12px] bg-blue-900 text-white rounded-sm">
+                            <div className="py-1.5">Status: <span className={cn("font-black", processedResult.isPass ? "text-green-400" : "text-red-400")}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
+                            <div className="py-1.5">GPA: <span className="font-black text-amber-300">{processedResult.gpa.toFixed(2)}</span></div>
+                            <div className="py-1.5">Final Grade: <span className="font-black text-amber-300">{processedResult.finalGrade}</span></div>
+                            <div className="py-1.5">Merit Rank: <span className="font-black">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</span></div>
+                        </div>
+                    </section>
+
+                    {/* Table */}
+                    <section className="flex-grow overflow-visible">
+                        <table className="w-full border-collapse border-[1.5px] border-black text-[11px]">
+                            <thead>
+                                <tr className="border-b-[1.5px] border-black bg-gray-100 font-bold">
+                                    <th className="border-r border-black p-1 w-10 text-center">SL</th>
+                                    <th className="border-r border-black p-1 text-left pl-4">Subject Name</th>
+                                    <th className="border-r border-black p-1 w-14 text-center">Code</th>
+                                    <th className="border-r border-black p-1 w-20 text-center">Full Marks</th>
+                                    <th className="border-r border-black p-1 w-20 text-center">Obtained</th>
+                                    <th className="border-r border-black p-1 w-14 text-center">Grade</th>
+                                    <th className="p-1 w-14 text-center">Point</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedSubjects.map((subject, index) => {
+                                    const res = processedResult.subjectResults.get(subject.name);
+                                    const isFail = res?.isPass === false;
+                                    
+                                    return (
+                                        <tr key={subject.code} className={cn("border-b border-black last:border-0", isFail ? "bg-red-50/30" : "")}>
+                                            <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
+                                            <td className="border-r border-black p-1 px-4 font-semibold">
+                                                {subject.englishName}
+                                                {studentOptionalSubject === subject.name && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
+                                            </td>
+                                            <td className="border-r border-black p-1 text-center text-gray-600">{subject.code}</td>
+                                            <td className="border-r border-black p-1 text-center font-medium">{res?.fullMarks ?? subject.fullMarks}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{res?.marks ?? '-'}</td>
+                                            <td className={cn("border-r border-black p-1 text-center font-black text-[12px]", isFail ? "text-red-600" : "")}>{res?.grade ?? '-'}</td>
+                                            <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{res?.point !== undefined ? res.point.toFixed(2) : '-'}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                            <tfoot>
+                                <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[12px]">
+                                    <td colSpan={4} className="p-2 pr-8 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
+                                    <td className="p-2 text-center border-r border-black text-[16px] text-blue-950">{processedResult.totalMarks}</td>
+                                    <td className="p-2 text-center border-r border-black text-[16px] text-blue-950">{processedResult.finalGrade}</td>
+                                    <td className="p-2 text-center text-[16px] text-blue-950">{processedResult.gpa.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </section>
+
+                    {/* Remarks Section */}
+                    <section className="mt-4 mb-2 p-2 border border-black rounded bg-gray-50/30">
+                        <p className="text-[10px] font-bold uppercase text-gray-600 mb-1">Remarks:</p>
+                        <p className="text-[12px] font-black italic text-blue-900 leading-tight">
+                            "{getRemarks(processedResult.gpa, processedResult.isPass)}"
+                        </p>
+                    </section>
+
+                    {/* Footer */}
+                    <footer className="mt-auto pt-8 pb-4 text-[11px] print-footer">
+                        <div className="flex justify-between px-16">
+                            <div className="text-center">
+                                <div className="w-32 border-t border-black pt-1 font-bold text-gray-700 uppercase">Class Teacher</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-32 border-t border-black pt-1 font-bold text-gray-700 uppercase">Headmaster</div>
+                            </div>
+                        </div>
+                        <div className="mt-8 flex justify-between items-center text-[9px] text-muted-foreground italic border-t pt-2">
+                            <span>Issue Date: {new Date().toLocaleDateString('en-GB')}</span>
+                            <span>Powered by: {schoolInfo.nameEn || "Birganj Pouro High School"} Management System</span>
+                        </div>
+                    </footer>
+                </div>
             </div>
         </div>
     );
 }
-
-const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, watermarkOpacity }: any) => {
-    const student = result.student;
-    const subjects = getSubjects(student.className, student.group).filter(s => s.isExamSubject !== false);
-    const displayExamName = examNameEnglishMap[examName] || examName;
-    const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
-    const studentOptionalSubject = student.optionalSubject;
-
-    const renderMeritPosition = (position?: number) => {
-        if (!position) return '-';
-        if (position % 10 === 1 && position % 100 !== 11) return `${position}st`;
-        if (position % 10 === 2 && position % 100 !== 12) return `${position}nd`;
-        if (position % 10 === 3 && position % 100 !== 13) return `${position}rd`;
-        return `${position}th`;
-    }
-
-    const getRemarks = (gpa: number, isPass: boolean) => {
-        if (!isPass) return "Work hard to do well in the next exam";
-        if (gpa >= 5.0) return "Excellent results. Keep it up!";
-        if (gpa >= 4.0) return "Satisfactory performance. Aim higher!";
-        if (gpa >= 3.5) return "Good result. Needs more focus.";
-        if (gpa >= 3.0) return "Average result. Improvement needed.";
-        if (gpa >= 2.0) return "Below average. Study hard.";
-        if (gpa >= 1.0) return "Poor performance. Needs regular study.";
-        return "Work hard to do well in the next exam";
-    };
-
-    const gradingScale = [
-        { interval: '80-100', point: '5.00', grade: 'A+' },
-        { interval: '70-79', point: '4.00', grade: 'A' },
-        { interval: '60-69', point: '3.50', grade: 'A-' },
-        { interval: '50-59', point: '3.00', grade: 'B' },
-        { interval: '40-49', point: '2.00', grade: 'C' },
-        { interval: '33-39', point: '1.00', grade: 'D' },
-        { interval: '0-32', point: '0.00', grade: 'F' },
-    ];
-
-    return (
-        <div className="marksheet-container w-[210mm] h-[280mm] bg-white relative flex flex-col box-border font-sans text-black">
-            <style jsx>{`
-                .watermark-layer img { visibility: visible !important; display: block !important; }
-                .marksheet-content { border: 1.5px solid black; padding: 16px; height: 100%; display: flex; flex-direction: column; background: transparent; position: relative; z-index: 10; }
-                @media print {
-                  .marksheet-container { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-                }
-            `}</style>
-
-            {schoolInfo.logoUrl && (
-                <div 
-                    className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none watermark-layer"
-                    style={{ opacity: watermarkOpacity }}
-                >
-                    <img src={schoolInfo.logoUrl} alt="Watermark" className="w-[300px] h-[300px] object-contain" />
-                </div>
-            )}
-            
-            <div className="marksheet-content">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-4">
-                        {schoolInfo.logoUrl && (
-                            <div className="w-20 h-20 relative">
-                                <img src={schoolInfo.logoUrl} alt="Logo" className="w-full h-full object-contain" />
-                            </div>
-                        )}
-                        <div className="text-left">
-                            <h1 className="text-2xl font-black uppercase text-[#003366] leading-none mb-1">
-                                {schoolInfo.nameEn || "BIRGANJ POURO HIGH SCHOOL"}
-                            </h1>
-                            <p className="text-sm font-bold text-gray-700">{schoolInfo.address}</p>
-                            <div className="mt-2 inline-block bg-[#eef6ff] px-3 py-1 rounded border border-[#b3d7ff]">
-                                <p className="text-xs text-[#0056b3] font-bold">Academic Session: {academicYear}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Grading Table */}
-                    <div className="text-[8px]">
-                        <table className="border-collapse border border-black text-center w-full">
-                            <thead className="bg-gray-100">
-                                <tr className="border-b border-black">
-                                    <th className="p-1 border-r border-black">Range</th>
-                                    <th className="p-1 border-r border-black">GP</th>
-                                    <th className="p-1">Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {gradingScale.map(g => (
-                                    <tr key={g.grade} className="border-b border-black last:border-b-0">
-                                        <td className="p-0.5 border-r border-black">{g.interval}</td>
-                                        <td className="p-0.5 border-r border-black">{g.point}</td>
-                                        <td className="p-0.5 font-bold">{g.grade}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div className="text-center mb-4">
-                    <h2 className="text-lg font-black underline underline-offset-8 uppercase tracking-widest">{displayExamName} Progress Report</h2>
-                </div>
-
-                {/* Info Bar */}
-                <section className="mb-4 text-[11px] leading-relaxed bg-slate-50/50 p-2 border border-dashed border-gray-300 rounded">
-                    <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 border-b pb-1">
-                        <div className="font-bold text-gray-600 uppercase">Student's Name</div><div className="font-bold uppercase text-blue-900">: {student.studentNameEn || student.studentNameBn}</div>
-                        <div className="font-bold text-gray-600 text-right uppercase">Class</div><div className="font-bold">: {classMap[student.className] || student.className}</div>
-                    </div>
-                    <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">
-                        <div className="font-bold text-gray-600 uppercase">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
-                        <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
-                    </div>
-                    <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
-                        <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId}</div>
-                        <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
-                    </div>
-                </section>
-
-                {/* Summary Table */}
-                <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[11px] bg-blue-900 text-white mb-4 rounded-sm">
-                    <div className="py-1.5 font-bold">Status: <span className={result.isPass ? "text-green-400" : "text-red-400"}>{result.isPass ? 'PASSED' : 'FAILED'}</span></div>
-                    <div className="py-1.5 font-bold">GPA: <span className="text-amber-300">{result.gpa.toFixed(2)}</span></div>
-                    <div className="py-1.5 font-bold">Final Grade: <span className="text-amber-300">{result.finalGrade}</span></div>
-                    <div className="py-1.5 font-bold">Merit Rank: <span>{result.isPass ? renderMeritPosition(result.meritPosition) : 'N/A'}</span></div>
-                </div>
-
-                {/* Subject Table */}
-                <div className="flex-grow">
-                    <table className="w-full border-collapse border-[1.5px] border-black text-[10px]">
-                        <thead className="bg-gray-100 font-bold">
-                            <tr className="border-b-[1.5px] border-black">
-                                <th className="border-r border-black p-1 w-8">SL</th>
-                                <th className="border-r border-black p-1 text-left pl-4">Subject Name</th>
-                                <th className="border-r border-black p-1 w-12">Full Marks</th>
-                                <th className="border-r border-black p-1 w-12">Obtained</th>
-                                <th className="border-r border-black p-1 w-10">Grade</th>
-                                <th className="p-1 w-10">Point</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedSubjects.map((sub, sIdx) => {
-                                const subResult = result.subjectResults.get(sub.name);
-                                const isFail = subResult?.isPass === false;
-                                return (
-                                    <tr key={sIdx} className={cn("border-b border-black", isFail && "bg-red-50/50")}>
-                                        <td className="border-r border-black p-1 text-center">{sIdx + 1}</td>
-                                        <td className="border-r border-black p-1 pl-4 font-semibold">{sub.englishName}</td>
-                                        <td className="border-r border-black p-1 text-center">{subResult?.fullMarks ?? sub.fullMarks}</td>
-                                        <td className={cn("border-r border-black p-1 text-center font-bold", isFail ? "text-red-600" : "text-blue-900")}>{subResult?.marks ?? '-'}</td>
-                                        <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{subResult?.grade ?? '-'}</td>
-                                        <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{subResult?.point !== undefined ? subResult.point.toFixed(2) : '-'}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                        <tfoot>
-                            <tr className="border-t-[1.5px] border-black font-black bg-blue-50">
-                                <td colSpan={3} className="p-2 pr-4 text-right border-r border-black uppercase text-[10px]">Total Marks & Final Results</td>
-                                <td className="p-2 text-center border-r border-black text-blue-950 text-sm">{result.totalMarks}</td>
-                                <td className="p-2 text-center border-r border-black text-blue-950 text-sm">{result.finalGrade}</td>
-                                <td className="p-2 text-center text-blue-950 text-sm">{result.gpa.toFixed(2)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                <div className="mt-4 p-2 border border-black rounded bg-gray-50/30">
-                    <p className="text-[9px] font-bold uppercase text-gray-500 mb-1">Remarks:</p>
-                    <p className="text-[11px] font-black italic text-blue-900">"{getRemarks(result.gpa, result.isPass)}"</p>
-                </div>
-
-                <footer className="mt-auto pt-8 flex flex-col">
-                    <div className="flex justify-between px-12 mb-6">
-                        <div className="text-center w-32 border-t border-black pt-1 font-bold text-[10px] uppercase">Class Teacher</div>
-                        <div className="text-center w-32 border-t border-black pt-1 font-bold text-[10px] uppercase">Headmaster</div>
-                    </div>
-                    <div className="pt-2 border-t border-dashed flex justify-between items-center text-[8px] text-gray-400 italic">
-                        <span>Report Date: {new Date().toLocaleDateString('en-GB')}</span>
-                        <span>Powered by: {schoolInfo.nameEn || "BPHS"} Management System</span>
-                    </div>
-                </footer>
-            </div>
-        </div>
-    );
-};
 
 export default function MarksheetPage() {
     return (
