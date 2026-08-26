@@ -31,7 +31,6 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten' };
 const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce', 'general': 'General' };
-const religionMap: { [key: string]: string } = { 'islam': 'Islam', 'hinduism': 'Hinduism', 'buddhism': 'Buddhism', 'christianity': 'Christianity', 'other': 'Other' };
 
 const examNameEnglishMap: { [key: string]: string } = {
     'অর্ধ-বার্ষিক পরীক্ষা': 'Half-Yearly Examination',
@@ -276,7 +275,6 @@ const MarksheetGeneratorPage = () => {
                                 examName={selectedExam?.name || ''} 
                                 academicYear={selectedYear}
                                 watermarkOpacity={watermarkOpacity}
-                                isPrint
                             />
                         </div>
                     </div>
@@ -290,6 +288,8 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
     const student = result.student;
     const subjects = getSubjects(student.className, student.group).filter(s => s.isExamSubject !== false);
     const displayExamName = examNameEnglishMap[examName] || examName;
+    const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
+    const studentOptionalSubject = student.optionalSubject;
 
     const renderMeritPosition = (position?: number) => {
         if (!position) return '-';
@@ -413,17 +413,17 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                             </tr>
                         </thead>
                         <tbody>
-                            {subjects.map((sub, sIdx) => {
-                                const sr = result.subjectResults.get(sub.name);
-                                const isFail = sr?.isPass === false;
+                            {sortedSubjects.map((sub, sIdx) => {
+                                const subResult = result.subjectResults.get(sub.name);
+                                const isFail = subResult?.isPass === false;
                                 return (
                                     <tr key={sIdx} className={cn("border-b border-black", isFail && "bg-red-50/50")}>
                                         <td className="border-r border-black p-1 text-center">{sIdx + 1}</td>
                                         <td className="border-r border-black p-1 pl-4 font-semibold">{sub.englishName}</td>
-                                        <td className="border-r border-black p-1 text-center">{sr?.fullMarks ?? sub.fullMarks}</td>
-                                        <td className={cn("border-r border-black p-1 text-center font-bold", isFail ? "text-red-600" : "text-blue-900")}>{sr?.marks ?? '-'}</td>
-                                        <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{sr?.grade ?? '-'}</td>
-                                        <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{sr?.point !== undefined ? sr.point.toFixed(2) : '-'}</td>
+                                        <td className="border-r border-black p-1 text-center">{subResult?.fullMarks ?? sub.fullMarks}</td>
+                                        <td className={cn("border-r border-black p-1 text-center font-bold", isFail ? "text-red-600" : "text-blue-900")}>{subResult?.marks ?? '-'}</td>
+                                        <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{subResult?.grade ?? '-'}</td>
+                                        <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{subResult?.point !== undefined ? subResult.point.toFixed(2) : '-'}</td>
                                     </tr>
                                 );
                             })}
