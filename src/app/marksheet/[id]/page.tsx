@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense, useMemo } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Student } from '@/lib/student-data';
+import { Student, studentFromDoc } from '@/lib/student-data';
 import { getSubjects, Subject, subjectNameNormalization } from '@/lib/subjects';
 import { getAllResults, ClassResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten' };
-const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce' };
+const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce', 'general': 'General' };
 const religionMap: { [key: string]: string } = { 'islam': 'Islam', 'hinduism': 'Hinduism', 'buddhism': 'Buddhism', 'christianity': 'Christianity', 'other': 'Other' };
 
 const examNameEnglishMap: { [key: string]: string } = {
@@ -31,6 +31,12 @@ const examNameEnglishMap: { [key: string]: string } = {
     'Annual Examination': 'Annual Examination',
     'Pre-Test Examination': 'Pre-Test Examination',
     'Test Examination': 'Test Examination'
+};
+
+const toBengaliNumber = (str: string | number | undefined | null) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 };
 
 const normalize = (name: string) => {
@@ -69,13 +75,13 @@ function MarksheetContent() {
                 // Fetch exams for the year
                 getExams(db, academicYear).then(data => setAllExams(data));
 
-                // Fetch student details
+                // Fetch student details using the helper to ensure generatedId is available
                 const studentDoc = await getDoc(doc(db, 'students', studentId));
                 if (!studentDoc.exists()) {
                     setIsLoading(false);
                     return;
                 }
-                const studentData = { id: studentDoc.id, ...studentDoc.data() } as Student;
+                const studentData = studentFromDoc(studentDoc);
                 setStudent(studentData);
 
                 // Fetch all students of same class for merit calculation
@@ -85,7 +91,7 @@ function MarksheetContent() {
                     where('className', '==', studentData.className)
                 );
                 const classSnap = await getDocs(classQuery);
-                const studentsList = classSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+                const studentsList = classSnap.docs.map(studentFromDoc);
                 setAllStudentsInClass(studentsList);
 
                 // Fetch all results for this exam and class once (Optimized)
@@ -107,7 +113,7 @@ function MarksheetContent() {
                         const optSubNorm = normalize(studentData.optionalSubject || '');
 
                         // Handle Class 9-10 Science HM vs Agri exclusive logic
-                        if (parseInt(studentData.className) >= 9 && (studentData.group === 'science' || studentData.group === 'বিজ্ঞান')) {
+                        if (parseInt(studentData.className) >= 9 && (studentData.group === 'science' || studentGroupMap[studentData.group?.toLowerCase() || ''] === 'science')) {
                              const hmNorm = normalize('উচ্চতর গণিত');
                              const agriNorm = normalize('কৃষি শিক্ষা');
                              
@@ -131,6 +137,13 @@ function MarksheetContent() {
 
         fetchAllData();
     }, [db, studentId, academicYear, currentExamName]);
+
+    // Local mapping for group detection
+    const studentGroupMap: Record<string, string> = { 
+        'science': 'science', 'বিজ্ঞান': 'science',
+        'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts',
+        'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce'
+    };
 
     const gradingScale = [
         { interval: '80-100', point: '5.00', grade: 'A+' },
@@ -311,9 +324,12 @@ function MarksheetContent() {
                             <div className="font-bold text-gray-600 uppercase">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
                             <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                         </div>
-                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
-                            <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId}</div>
-                            <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
+                            <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
+                            <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group.toLowerCase()] || student.group : 'General'}</div>
+                        </div>
+                        <div className="grid grid-cols-[1.5fr_4fr] gap-x-4 mt-1">
+                            <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {toBengaliNumber(student.generatedId || '-')}</div>
                         </div>
                     </section>
 
@@ -323,7 +339,7 @@ function MarksheetContent() {
                             <div className="py-1.5">Status: <span className={cn("font-black", processedResult.isPass ? "text-green-400" : "text-red-400")}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
                             <div className="py-1.5">GPA: <span className="font-black text-amber-300">{processedResult.gpa.toFixed(2)}</span></div>
                             <div className="py-1.5">Final Grade: <span className="font-black text-amber-300">{processedResult.finalGrade}</span></div>
-                            <div className="py-1.5">Merit Rank: <span className="font-black">{processedResult.isPass ? (processedResult.meritPosition % 10 === 1 ? processedResult.meritPosition + 'st' : processedResult.meritPosition % 10 === 2 ? processedResult.meritPosition + 'nd' : processedResult.meritPosition + 'th') : 'N/A'}</span></div>
+                            <div className="py-1.5">Merit Rank: <span className="font-black">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</span></div>
                         </div>
                     </section>
 
@@ -384,7 +400,7 @@ function MarksheetContent() {
                             <div className="text-center w-32 border-t border-black pt-1 font-bold text-gray-700 uppercase">Headmaster</div>
                         </div>
                         <div className="mt-8 flex justify-between items-center text-[9px] text-muted-foreground italic border-t pt-2">
-                            <span>Issue Date: {new Date().toLocaleDateString('en-GB')}</span>
+                            <span>Report Date: {new Date().toLocaleDateString('en-GB')}</span>
                             <span>Powered by: {schoolInfo.nameEn || "BPHS"} Management System</span>
                         </div>
                     </footer>
@@ -392,6 +408,14 @@ function MarksheetContent() {
             </div>
         </div>
     );
+}
+
+function renderMeritPosition(position?: number) {
+    if (!position) return '-';
+    if (position % 10 === 1 && position % 100 !== 11) return `${position}st`;
+    if (position % 10 === 2 && position % 100 !== 12) return `${position}nd`;
+    if (position % 10 === 3 && position % 100 !== 13) return `${position}rd`;
+    return `${position}th`;
 }
 
 export default function MarksheetPage() {

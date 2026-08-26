@@ -13,7 +13,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
-import { getSubjects } from '@/lib/subjects';
+import { getSubjects, subjectNameNormalization } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Printer, ArrowLeft, User, Users, Info, FileBadge, Loader2, Minus, Plus } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -31,6 +31,7 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten' };
 const groupMap: { [key: string]: string } = { 'science': 'Science', 'arts': 'Arts', 'commerce': 'Commerce', 'general': 'General' };
+const religionMap: { [key: string]: string } = { 'islam': 'Islam', 'hinduism': 'Hinduism', 'buddhism': 'Buddhism', 'christianity': 'Christianity', 'other': 'Other' };
 
 const examNameEnglishMap: { [key: string]: string } = {
     'অর্ধ-বার্ষিক পরীক্ষা': 'Half-Yearly Examination',
@@ -39,15 +40,11 @@ const examNameEnglishMap: { [key: string]: string } = {
     'নির্বাচনী পরীক্ষা': 'Test Examination'
 };
 
-const gradingScale = [
-    { interval: '80-100', point: '5.00', grade: 'A+' },
-    { interval: '70-79', point: '4.00', grade: 'A' },
-    { interval: '60-69', point: '3.50', grade: 'A-' },
-    { interval: '50-59', point: '3.00', grade: 'B' },
-    { interval: '40-49', point: '2.00', grade: 'C' },
-    { interval: '33-39', point: '1.00', grade: 'D' },
-    { interval: '0-32', point: '0.00', grade: 'F' },
-];
+const normalize = (name: string) => {
+    if (!name) return "";
+    const trimmed = name.trim();
+    return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
+};
 
 const MarksheetGeneratorPage = () => {
     const db = useFirestore();
@@ -288,8 +285,16 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
     const student = result.student;
     const subjects = getSubjects(student.className, student.group).filter(s => s.isExamSubject !== false);
     const displayExamName = examNameEnglishMap[examName] || examName;
-    const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
-    const studentOptionalSubject = student.optionalSubject;
+
+    const gradingScale = [
+        { interval: '80-100', point: '5.00', grade: 'A+' },
+        { interval: '70-79', point: '4.00', grade: 'A' },
+        { interval: '60-69', point: '3.50', grade: 'A-' },
+        { interval: '50-59', point: '3.00', grade: 'B' },
+        { interval: '40-49', point: '2.00', grade: 'C' },
+        { interval: '33-39', point: '1.00', grade: 'D' },
+        { interval: '0-32', point: '0.00', grade: 'F' },
+    ];
 
     const renderMeritPosition = (position?: number) => {
         if (!position) return '-';
@@ -353,9 +358,9 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                         <table className="border-collapse border border-black text-center w-full">
                             <thead className="bg-gray-100">
                                 <tr className="border-b border-black">
-                                    <th className="p-1 border-r border-black">Range</th>
-                                    <th className="p-1 border-r border-black">GP</th>
-                                    <th className="p-1">Grade</th>
+                                    <th className="p-1 px-2 border-r border-black font-bold">Range</th>
+                                    <th className="p-1 px-2 border-r border-black font-bold">GP</th>
+                                    <th className="p-1 px-2 font-bold">Grade</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -386,7 +391,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                         <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                     </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
-                        <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {student.generatedId}</div>
+                        <div className="font-bold text-gray-600 uppercase">Student ID</div><div className="font-black">: {toBengaliNumber(student.generatedId || '-')}</div>
                         <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group] : 'General'}</div>
                     </div>
                 </section>
@@ -413,17 +418,17 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                             </tr>
                         </thead>
                         <tbody>
-                            {sortedSubjects.map((sub, sIdx) => {
-                                const subResult = result.subjectResults.get(sub.name);
-                                const isFail = subResult?.isPass === false;
+                            {subjects.map((sub, sIdx) => {
+                                const sr = result.subjectResults.get(sub.name);
+                                const isFail = sr?.isPass === false;
                                 return (
                                     <tr key={sIdx} className={cn("border-b border-black", isFail && "bg-red-50/50")}>
                                         <td className="border-r border-black p-1 text-center">{sIdx + 1}</td>
                                         <td className="border-r border-black p-1 pl-4 font-semibold">{sub.englishName}</td>
-                                        <td className="border-r border-black p-1 text-center">{subResult?.fullMarks ?? sub.fullMarks}</td>
-                                        <td className={cn("border-r border-black p-1 text-center font-bold", isFail ? "text-red-600" : "text-blue-900")}>{subResult?.marks ?? '-'}</td>
-                                        <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{subResult?.grade ?? '-'}</td>
-                                        <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{subResult?.point !== undefined ? subResult.point.toFixed(2) : '-'}</td>
+                                        <td className="border-r border-black p-1 text-center">{sr?.fullMarks ?? sub.fullMarks}</td>
+                                        <td className={cn("border-r border-black p-1 text-center font-bold", isFail ? "text-red-600" : "text-blue-900")}>{sr?.marks ?? '-'}</td>
+                                        <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{sr?.grade ?? '-'}</td>
+                                        <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{sr?.point !== undefined ? sr.point.toFixed(2) : '-'}</td>
                                     </tr>
                                 );
                             })}
