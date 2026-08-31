@@ -130,19 +130,20 @@ export function processStudentResults(
             const practical = studentResult?.practical;
             const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
             
-            // Separate passing rule implementation
             let isPassSubject = true;
             const overallPassMark = Math.ceil(fullMarks * 0.33);
 
             if (obtainedMarks < overallPassMark) {
                 isPassSubject = false;
             } else {
-                // Check if the subject is English (which doesn't have MCQ)
                 const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
-                
+                const isIct25 = (normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি')) && fullMarks === 25;
+
                 if (!isEnglish) {
-                    // Check components separately if fullMarks matches standard patterns
-                    if (fullMarks === 100) {
+                    if (isIct25) {
+                        // For 25 marks ICT, check MCQ only
+                        if (mcq !== undefined && mcq < 8) isPassSubject = false;
+                    } else if (fullMarks === 100) {
                         if (subjectInfo.practical) {
                             // Standard: Theory 75 (Written 50, MCQ 25), Practical 25
                             // Pass marks: Written (17), MCQ (8), Practical (8)
