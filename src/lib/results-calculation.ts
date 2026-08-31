@@ -137,30 +137,32 @@ export function processStudentResults(
             if (obtainedMarks < overallPassMark) {
                 isPassSubject = false;
             } else {
-                // Check components separately if fullMarks matches standard patterns
-                // 100 Marks Patterns
-                if (fullMarks === 100) {
-                    if (subjectInfo.practical) {
-                        // Standard: Theory 75 (Written 50, MCQ 25), Practical 25
-                        // Pass marks: Written (17), MCQ (8), Practical (8)
-                        if (written !== undefined && written < 17) isPassSubject = false;
-                        if (mcq !== undefined && mcq < 8) isPassSubject = false;
-                        if (practical !== undefined && practical < 8) isPassSubject = false;
-                    } else {
-                        // Standard: Written (70), MCQ (30)
-                        // Pass marks: Written (23), MCQ (10)
-                        if (written !== undefined && written < 23) isPassSubject = false;
-                        if (mcq !== undefined && mcq < 10) isPassSubject = false;
+                // Check if the subject is English (which doesn't have MCQ)
+                const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
+                
+                if (!isEnglish) {
+                    // Check components separately if fullMarks matches standard patterns
+                    if (fullMarks === 100) {
+                        if (subjectInfo.practical) {
+                            // Standard: Theory 75 (Written 50, MCQ 25), Practical 25
+                            // Pass marks: Written (17), MCQ (8), Practical (8)
+                            if (written !== undefined && written < 17) isPassSubject = false;
+                            if (mcq !== undefined && mcq < 8) isPassSubject = false;
+                            if (practical !== undefined && practical < 8) isPassSubject = false;
+                        } else {
+                            // Standard: Written (70), MCQ (30)
+                            // Pass marks: Written (23), MCQ (10)
+                            if (written !== undefined && written < 23) isPassSubject = false;
+                            if (mcq !== undefined && mcq < 10) isPassSubject = false;
+                        }
+                    } 
+                    else if (fullMarks === 50) {
+                        // Standard: Written (35), MCQ (15)
+                        // Pass marks: Written (12), MCQ (5)
+                        if (written !== undefined && written < 12) isPassSubject = false;
+                        if (mcq !== undefined && mcq < 5) isPassSubject = false;
                     }
-                } 
-                // 50 Marks Patterns (e.g. Religion or ICT variations)
-                else if (fullMarks === 50) {
-                    // Standard: Written (35), MCQ (15)
-                    // Pass marks: Written (12), MCQ (5)
-                    if (written !== undefined && written < 12) isPassSubject = false;
-                    if (mcq !== undefined && mcq < 5) isPassSubject = false;
                 }
-                // For other marks (like 25 for ICT), we rely on overall 33% check done at line 125
             }
             
             const percentageForGrade = (obtainedMarks / fullMarks) * 100;
