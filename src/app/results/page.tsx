@@ -796,6 +796,12 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
             if (!groups[g]) groups[g] = [];
             groups[g].push(res);
         });
+        
+        // Sort each group by roll number
+        Object.keys(groups).forEach(key => {
+            groups[key].sort((a, b) => (a.student.roll || 0) - (b.student.roll || 0));
+        });
+        
         return groups;
     }, [processedResults, className, groupFilter]);
 
@@ -1325,7 +1331,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const allRes = await getAllResults(db, selectedYear, 'বার্ষিক পরীক্ষা').catch(() => []);
             const classRes = allRes.filter(r => r.className === sourceClass);
             const subs = getSubjects(sourceClass).filter(s => s.isExamSubject !== false);
-            const processed = processStudentResults(classStudents, classRes, subs);
+            const processed = studentFromDoc(classStudents, classRes, subs);
             
             setPassedStudents(processed.filter(r => r.isPass).sort((a,b) => (a.meritPosition || 0) - (b.meritPosition || 0)));
             setFailedStudents(processed.filter(r => !r.isPass).sort((a,b) => {
@@ -2247,7 +2253,7 @@ export default function ResultsPage() {
                                                     const match = specialPrintData.allSpecialResults.find((r: any) => {
                                                         const normalizedSearch = normalize(sub.name);
                                                         const normalizedRecord = normalize(r.subject);
-                                                        if (sub.isCombined) return sub.subList.some((innerSub: string) => normalize(innerSub) === normalizedRecord) && r.examType === type;
+                                                        if (sub.isCombined) return sub.subList.some((innerSub: string) => normalizedRecord === normalizedRecord) && r.examType === type;
                                                         return normalizedRecord === normalizedSearch && r.examType === type;
                                                     });
                                                     const marks = match?.results.find((res: any) => res.studentId === student.id)?.marks;
@@ -2272,4 +2278,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
