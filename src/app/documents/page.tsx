@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -7,11 +8,19 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { 
     ArrowRight, FilePlus, IdCard, FileText, FileBadge, Award, Grid3X3, Contact, 
-    ChevronRight, LayoutGrid, Info, ShieldCheck
+    ChevronRight, LayoutGrid, Info, ShieldCheck, FolderSearch
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DOCUMENT_TOOLS = [
+  { 
+    id: 'archive', 
+    label: 'ডিজিটাল আর্কাইভ (নথিপত্র)', 
+    icon: FolderSearch, 
+    href: '/documents/archive', 
+    color: 'text-rose-600 bg-rose-50', 
+    desc: 'বিদ্যালয়ের রেজুলেশন খাতা, রেজাল্ট শিট বা প্রয়োজনীয় নোটিশ ডিজিটাল ফরমেটে আপলোড করে আজীবনের জন্য সংরক্ষণ করুন।' 
+  },
   { 
     id: 'id-card', 
     label: 'পরিচয়পত্র (ID Card)', 
@@ -25,7 +34,7 @@ const DOCUMENT_TOOLS = [
     label: 'প্রবেশ পত্র', 
     icon: IdCard, 
     href: '/documents/admit-card', 
-    color: 'text-rose-600 bg-rose-50', 
+    color: 'text-amber-600 bg-amber-50', 
     desc: 'পরীক্ষার জন্য ব্যক্তিগত বা শ্রেণিভিত্তিক ডিজিটাল প্রবেশপত্র লাইভ প্রিভিউ দেখে প্রিন্ট করুন।' 
   },
   { 
