@@ -50,7 +50,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 const groupMap: Record<string, string> = { 
     'science': 'science', 'বিজ্ঞান': 'science',
@@ -548,7 +548,6 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         const table = tableContainerRefs.current[key];
         if (!top || !table) return;
 
-        // Prevent feedback loop using a frame-based guard
         if (scrollingRef.current && scrollingRef.current !== source + key) return;
         
         scrollingRef.current = source + key;
@@ -563,17 +562,16 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         });
     };
 
-    // Calculate a more precise table width based on column widths used in CSS
     const calculateTableWidth = (subs: SubjectType[]) => {
-        let width = 60 + 200 + 350; // Sticky columns: Roll (60) + Name (200) + End Summary (5 * 70 = 350)
+        let width = 60 + 200 + 350; 
         subs.forEach(s => {
             const isEng = s.name.includes('ইংরেজি');
             if (isEng) {
-                width += 144; // 3 columns (Obtained: 56, Grade: 40, Point: 48)
+                width += 144; 
             } else if (s.practical) {
-                width += 288; // 6 columns (Written: 48, MCQ: 48, Practical: 48, Obtained: 56, Grade: 40, Point: 48)
+                width += 288; 
             } else {
-                width += 240; // 5 columns (Written: 48, MCQ: 48, Obtained: 56, Grade: 40, Point: 48)
+                width += 240; 
             }
         });
         return width;
@@ -680,7 +678,6 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 const studentGroupNormalized = groupMap[rawSGroup] || rawSGroup;
 
                 subjects.forEach(sub => {
-                    // Optimized finding logic: Look for specific group first, then fallback to common (none)
                     const subRes = classRes.find(r => {
                         const rGroupRaw = (r.group || 'none').toLowerCase().trim();
                         const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
@@ -740,11 +737,25 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
 
                 for (const row of json) {
                     const roll = parseInt(String(row['রোল'] || row['roll'] || '0').replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)]), 10);
-                    const student = studentsInClass.find(s => s.roll === roll);
+                    
+                    const rowGroupRaw = String(row['বিভাগ'] || row['Group'] || row['group'] || '').toLowerCase().trim();
+                    const rowGroupNorm = groupMap[rowGroupRaw] || rowGroupRaw;
+
+                    const student = studentsInClass.find(s => {
+                        const rollMatch = s.roll === roll;
+                        if (!rollMatch) return false;
+                        if (parseInt(className) < 9) return true;
+                        
+                        if (!rowGroupNorm) return true;
+                        const sGroupRaw = (s.group || 'none').toLowerCase().trim();
+                        const sGroupNorm = groupMap[sGroupRaw] || sGroupRaw;
+                        return sGroupNorm === rowGroupNorm;
+                    });
+
                     if (!student) continue;
 
-                    const rawGroup = (student.group || 'none').toLowerCase().trim();
-                    let studentGroup = groupMap[rawGroup] || rawGroup;
+                    const studentGroupRaw = (student.group || 'none').toLowerCase().trim();
+                    let studentGroup = groupMap[studentGroupRaw] || studentGroupRaw;
                     if (parseInt(className) < 9) studentGroup = 'none';
 
                     subjects.forEach(sub => {
@@ -807,7 +818,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 handleViewResults();
             } catch (error) {
                 console.error(error);
-                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি। ' + error });
+                toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ফাইলটি প্রসেস করা সম্ভব হয়নি।' });
             } finally {
                 setIsBulkUploading(false);
                 if (bulkUploadRef.current) bulkUploadRef.current.value = '';
@@ -824,7 +835,6 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
             groups[g].push(res);
         });
         
-        // Sort each group by roll number
         Object.keys(groups).forEach(key => {
             groups[key].sort((a, b) => (a.student.roll || 0) - (b.student.roll || 0));
         });
@@ -895,7 +905,6 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                             <Badge variant="secondary" className="font-black px-3 text-xs">মোট: {toBengaliNumber(results.length)} জন</Badge>
                         </div>
                         
-                        {/* Top Scroll Sync Bar - Optimized with guard and matching width */}
                         <div 
                             ref={el => { topScrollRefs.current[gk] = el; }}
                             onScroll={() => handleScrollSync(gk, 'top')}
@@ -1344,7 +1353,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [promotionMode, setPromotionType] = useState<'pass' | 'special'>('pass');
     const [projectedPromotions, setProjectedPromotions] = useState<any[]>([]);
 
-    // History Logic States
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [historyLoading, setHistoryHistoryLoading] = useState(false);
     const [promotedHistory, setPromotedHistory] = useState<any[]>([]);
@@ -1358,7 +1366,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const allRes = await getAllResults(db, selectedYear, 'বার্ষিক পরীক্ষা').catch(() => []);
             const classRes = allRes.filter(r => r.className === sourceClass);
             const subs = getSubjects(sourceClass).filter(s => s.isExamSubject !== false);
-            const processed = studentProcessedResults(classStudents, classRes, subs);
+            const processed = processStudentResults(classStudents, classRes, subs);
             
             setPassedStudents(processed.filter(r => r.isPass).sort((a,b) => (a.meritPosition || 0) - (b.meritPosition || 0)));
             setFailedStudents(processed.filter(r => !r.isPass).sort((a,b) => {
@@ -1579,7 +1587,6 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </DialogContent>
             </Dialog>
 
-            {/* Promotion History Dialog */}
             <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
                 <DialogContent className="max-w-4xl h-[90vh] flex flex-col font-kalpurush p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
                     <DialogHeader className="p-6 bg-slate-800 text-white shrink-0">
@@ -1912,7 +1919,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
                                                 <React.Fragment key={`${sub.name}-h`}>
                                                     <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx % 2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-১</th>
                                                     <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx % 2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-২</th>
-                                                    <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx %2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-৩</th>
+                                                    <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx % 2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-৩</th>
                                                 </React.Fragment>
                                             ))}
                                         </tr>
