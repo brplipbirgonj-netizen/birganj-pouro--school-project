@@ -236,7 +236,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                 setMarks(newMarks); toast({ title: "নম্বর লোড হয়েছে", description: `${count} জনের তথ্য পাওয়া গেছে।` });
             } catch (error: any) { toast({ variant: "destructive", title: "ত্রুটি", description: error.message }); }
         };
-        reader.readAsArrayBuffer(file);
+        reader.readAsDataURL(file);
     };
 
     const numberInputClass = "h-9 font-bold border-2 border-black focus:ring-primary shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
@@ -644,10 +644,19 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         }
         
         const students = allStudents
-            .filter(s => s.academicYear === selectedYear && s.className === className)
+            .filter(s => {
+                const yearMatch = s.academicYear === selectedYear;
+                const classMatch = s.className === className;
+                if (!yearMatch || !classMatch) return false;
+                if (parseInt(className) < 9 || groupFilter === 'all') return true;
+                
+                const sGrp = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                const fGrp = groupMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
+                return sGrp === fGrp;
+            })
             .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
         
-        const subjects = getSubjects(className).filter(s => s.isExamSubject !== false);
+        const subjects = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
         
         const headers = ['রোল', 'নাম', 'বিভাগ'];
         subjects.forEach(s => {
@@ -665,8 +674,20 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
             const classRes = allRes.filter(r => r.className === className);
             const sheetData = students.map(s => {
                 const row: any = { 'রোল': s.roll, 'নাম': s.studentNameBn, 'বিভাগ': s.group || 'সাধারণ' };
+                
+                const rawSGroup = (s.group || 'none').toLowerCase().trim();
+                const studentGroupNormalized = groupMap[rawSGroup] || rawSGroup;
+
                 subjects.forEach(sub => {
-                    const subRes = classRes.find(r => normalize(r.subject) === normalize(sub.name));
+                    const subRes = classRes.find(r => {
+                        if (normalize(r.subject) !== normalize(sub.name)) return false;
+                        if (parseInt(className) < 9) return true;
+                        
+                        const rawRGroup = (r.group || 'none').toLowerCase().trim();
+                        const recordGroupNormalized = groupMap[rawRGroup] || rawRGroup;
+                        return recordGroupNormalized === studentGroupNormalized || recordGroupNormalized === 'none';
+                    });
+
                     const marks = subRes?.results.find(mr => mr.studentId === s.id);
                     const isEng = sub.name.includes('ইংরেজি');
                     if (!isEng) {
@@ -1048,7 +1069,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
             <div className="flex flex-col md:flex-row gap-6 items-end p-6 bg-white border-2 border-black/5 rounded-3xl shadow-sm no-print sticky top-0 z-[60] backdrop-blur-md">
                 <div className="w-full md:w-64 space-y-2">
                     <Label className="font-black text-xs text-primary mb-1 block uppercase tracking-wider">১. পরীক্ষা নির্বাচন</Label>
-                    <Select value={examName} onValueChange={setExamName}>
+                    <Select value={examName} onValueChange={setAcademicYear}>
                         <SelectTrigger className="h-11 border-2 font-black"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                         <SelectContent>
                             {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
