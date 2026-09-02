@@ -81,7 +81,8 @@ export function processStudentResults(
 
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized);
         
-        // Final subject list for this student (max 12 for 9-10)
+        // Final subject list for this student
+        // This is CRITICAL for Science students who must take exactly 12 subjects
         const subjectsForStudent = groupAllowedSubjects.filter(subInfo => {
             const currentSubNameNormalized = normalize(subInfo.name);
             
@@ -90,18 +91,18 @@ export function processStudentResults(
                 const hmNormalized = normalize('উচ্চতর গণিত');
                 const agriNormalized = normalize('কৃষি শিক্ষা');
                 
-                // If student takes Higher Math, exclude Agriculture
-                if (optionalSubjectNameNormalized === hmNormalized && currentSubNameNormalized === agriNormalized) {
-                    return false;
-                }
-                // If student takes Agriculture, exclude Higher Math
-                if (optionalSubjectNameNormalized === agriNormalized && currentSubNameNormalized === hmNormalized) {
-                    return false;
-                }
-                
-                // Keep the chosen one
-                if ((currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) && currentSubNameNormalized !== optionalSubjectNameNormalized) {
-                    return false;
+                // If this is one of the choices (HM/Agri)
+                if (currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) {
+                    // Only include if it's explicitly the optional OR if no optional is set yet (default to HM)
+                    if (optionalSubjectNameNormalized) {
+                        // If user picked one as optional, the other shouldn't be in the compulsory list either
+                        // In 9-10 Science, you take Phys, Chem, Bio as electives, and EITHER HM or Agri as optional.
+                        // The base scienceSubjects list has both. We filter the one that is NOT assigned.
+                        return currentSubNameNormalized === optionalSubjectNameNormalized;
+                    } else {
+                        // Default fallback if no optional is assigned: assume Agri is not taken if HM exists
+                        return currentSubNameNormalized === hmNormalized;
+                    }
                 }
             }
             
@@ -116,11 +117,21 @@ export function processStudentResults(
             const normalizedSubjectName = normalize(subjectInfo.name);
             
             // Find result record for this specific subject and class
-            const classResult = resultsBySubject.find(r => 
-                normalize(r.subject) === normalizedSubjectName && 
-                r.className === student.className &&
-                (!r.group || r.group === 'none' || groupMap[r.group.toLowerCase()] === studentGroupNormalized || studentClassNum < 9)
-            );
+            const classResult = resultsBySubject.find(r => {
+                const nameMatch = normalize(r.subject) === normalizedSubjectName;
+                if (!nameMatch) return false;
+
+                const classMatch = r.className === student.className;
+                if (!classMatch) return false;
+
+                // Group check
+                if (studentClassNum >= 9) {
+                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                    return rGroupNorm === 'none' || rGroupNorm === studentGroupNormalized;
+                }
+                return true;
+            });
 
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
@@ -141,25 +152,18 @@ export function processStudentResults(
 
                 if (!isEnglish) {
                     if (isIct25) {
-                        // For 25 marks ICT, check MCQ only
                         if (mcq !== undefined && mcq < 8) isPassSubject = false;
                     } else if (fullMarks === 100) {
                         if (subjectInfo.practical) {
-                            // Standard: Theory 75 (Written 50, MCQ 25), Practical 25
-                            // Pass marks: Written (17), MCQ (8), Practical (8)
                             if (written !== undefined && written < 17) isPassSubject = false;
                             if (mcq !== undefined && mcq < 8) isPassSubject = false;
                             if (practical !== undefined && practical < 8) isPassSubject = false;
                         } else {
-                            // Standard: Written (70), MCQ (30)
-                            // Pass marks: Written (23), MCQ (10)
                             if (written !== undefined && written < 23) isPassSubject = false;
                             if (mcq !== undefined && mcq < 10) isPassSubject = false;
                         }
                     } 
                     else if (fullMarks === 50) {
-                        // Standard: Written (35), MCQ (15)
-                        // Pass marks: Written (12), MCQ (5)
                         if (written !== undefined && written < 12) isPassSubject = false;
                         if (mcq !== undefined && mcq < 5) isPassSubject = false;
                     }
