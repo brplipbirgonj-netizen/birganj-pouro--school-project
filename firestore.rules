@@ -155,6 +155,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /archiveFolders/{id} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && (hasPermission('manage:archive') || isAdmin());
+    }
+
     match /archivedDocuments/{id} {
       allow read: if isAuthed();
       allow write: if isAuthed() && (hasPermission('manage:documents') || hasPermission('manage:archive') || isAdmin());
