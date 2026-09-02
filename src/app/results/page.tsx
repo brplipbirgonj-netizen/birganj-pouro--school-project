@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where, orderBy, FirestoreError, getDocs, limit, doc, writeBatch, serverTimestamp, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -1074,7 +1075,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
             <div className="flex flex-col md:flex-row gap-6 items-end p-6 bg-white border-2 border-black/5 rounded-3xl shadow-sm no-print sticky top-0 z-[60] backdrop-blur-md">
                 <div className="w-full md:w-64 space-y-2">
                     <Label className="font-black text-xs text-primary mb-1 block uppercase tracking-wider">১. পরীক্ষা নির্বাচন</Label>
-                    <Select value={examName} onValueChange={setAcademicYear}>
+                    <Select value={examName} onValueChange={setExamName}>
                         <SelectTrigger className="h-11 border-2 font-black"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                         <SelectContent>
                             {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
@@ -1357,7 +1358,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const allRes = await getAllResults(db, selectedYear, 'বার্ষিক পরীক্ষা').catch(() => []);
             const classRes = allRes.filter(r => r.className === sourceClass);
             const subs = getSubjects(sourceClass).filter(s => s.isExamSubject !== false);
-            const processed = processStudentResults(classStudents, classRes, subs);
+            const processed = studentProcessedResults(classStudents, classRes, subs);
             
             setPassedStudents(processed.filter(r => r.isPass).sort((a,b) => (a.meritPosition || 0) - (b.meritPosition || 0)));
             setFailedStudents(processed.filter(r => !r.isPass).sort((a,b) => {
