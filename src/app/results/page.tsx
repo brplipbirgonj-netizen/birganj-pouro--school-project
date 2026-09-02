@@ -927,7 +927,19 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 const results = groupedData[gk];
                 const subs = getSubjects(className, gk === 'all' ? undefined : gk).filter(s => {
                     if (!s.isExamSubject) return false;
-                    const matchingRecord = classResults.find(r => normalize(r.subject) === normalize(s.name));
+                    const matchingRecord = classResults.find(r => {
+                        const nameMatch = normalize(r.subject) === normalize(s.name);
+                        if (!nameMatch) return false;
+                        
+                        if (parseInt(className) >= 9) {
+                            const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                            const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                            const gkNorm = groupMap[gk.toLowerCase().trim()] || gk.toLowerCase().trim();
+                            
+                            return rGroupNorm === 'none' || rGroupNorm === gkNorm || gk === 'all';
+                        }
+                        return true;
+                    });
                     const effectiveFullMarks = matchingRecord?.fullMarks ?? s.fullMarks;
                     return effectiveFullMarks > 0;
                 });
@@ -1626,7 +1638,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <DialogTitle className="text-2xl font-black flex items-center gap-2"><Sparkles className="h-6 w-6" /> প্রমোশন কনফার্মেশন ও প্রিভিউ</DialogTitle>
                         <DialogDescription className="text-white/80 font-bold">{classNamesMap[sourceClass]} থেকে {classNamesMap[targetClass]} শ্রেণিতে উন্নীতকরণের তালিকা</DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50"><Card className="border-2 border-black/5 bg-white shadow-inner rounded-xl"><div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center"><span>শিক্ষার্থীর নাম (আইডি)</span><span>বর্তমান রোল</span><span>স্ট্যাটাস</span><span className="text-primary">নতুন রোল</span></div><div className="divide-y-2 divide-slate-50">{projectedPromotions.map((item) => (<div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors"><div className="flex flex-col items-center"><span className="font-black text-slate-800 text-sm truncate px-1">{item.name}</span><span className="text-[10px] font-bold text-muted-foreground">ID: {toBengaliNumber(item.generatedId || '')}</span></div><span className="font-bold text-slate-500">{toBengaliNumber(item.currentRoll)}</span><span><Badge className={item.resData.isPass ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>{item.resData.isPass ? 'কৃতকার্য' : 'বিশেষ পাশ'}</Badge></span><div className="flex justify-center"><Input type="number" value={item.projectedRoll} onChange={(e) => updateProjectedRoll(item.id, e.target.value)} className="w-20 h-9 text-center font-black border-2 border-primary/20 bg-white" /></div></div>))}</div></Card></div>
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50"><Card className="border-2 border-black/5 bg-white shadow-inner rounded-xl"><div className="grid grid-cols-4 p-3 text-[10px] font-black uppercase text-muted-foreground tracking-widest text-center"><span>শিক্ষার্থীর নাম (আইডি)</span><span>বর্তমান রোল</span><span>স্ট্যাটাস</span><span className="text-primary">নতুন রোল</span></div><div className="divide-y-2 divide-slate-50">{projectedPromotions.map((item) => (<div key={item.id} className="grid grid-cols-4 p-4 items-center text-center hover:bg-primary/5 transition-colors"><div className="flex flex-col items-center"><span className="font-black text-slate-800 text-sm truncate px-1">{item.name}</span><span className="text-[10px] font-bold text-muted-foreground">ID: {toBengaliNumber(item.generatedId || '')}</span></div><span className="font-bold text-slate-500">{toBengaliNumber(item.currentRoll)}</span><span><Badge className={item.isPass ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>{item.isPass ? 'কৃতকার্য' : 'বিশেষ পাশ'}</Badge></span><div className="flex justify-center"><Input type="number" value={item.projectedRoll} onChange={(e) => updateProjectedRoll(item.id, e.target.value)} className="w-20 h-9 text-center font-black border-2 border-primary/20 bg-white" /></div></div>))}</div></Card></div>
                     <DialogFooter className="p-6 bg-white border-t flex gap-3"><Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="flex-1 font-bold h-12">বাতিল</Button><Button onClick={handleConfirmPromotion} disabled={isPromoting} className="flex-1 min-w-[200px] h-12 text-lg font-black bg-emerald-600 hover:bg-emerald-700 shadow-xl">{isPromoting ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}প্রমোশন নিশ্চিত করুন</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -2198,7 +2210,19 @@ export default function ResultsPage() {
                         const allSubs = getSubjects(className, groupKey === 'all' ? undefined : groupKey);
                         const subjects = allSubs.filter(s => {
                             if (!s.isExamSubject) return false;
-                            const matchingRecord = classResults.find((r: any) => normalize(r.subject) === normalize(s.name));
+                            const matchingRecord = classResults.find((r: any) => {
+                                const nameMatch = normalize(r.subject) === normalize(s.name);
+                                if (!nameMatch) return false;
+                                
+                                if (parseInt(className) >= 9) {
+                                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                                    const groupKeyNorm = groupMap[groupKey.toLowerCase().trim()] || groupKey.toLowerCase().trim();
+                                    
+                                    return rGroupNorm === 'none' || rGroupNorm === groupKeyNorm || groupKey === 'all';
+                                }
+                                return true;
+                            });
                             const effectiveFullMarks = matchingRecord?.fullMarks ?? s.fullMarks;
                             return effectiveFullMarks > 0;
                         });
@@ -2231,7 +2255,7 @@ export default function ResultsPage() {
                                                                 {s.practical && <th className="border border-black font-bold p-0.5 text-[8px]">ব্যাব:</th>}
                                                             </>
                                                         )}
-                                                        <th className="border border-black font-black bg-blue-100 p-0.5 text-[8px]">মোট</th>
+                                                        <th className="border border-black font-black bg-blue-50 p-0.5 text-[8px]">মোট</th>
                                                         <th className="border border-black font-bold p-0.5 text-[8px]">গ্রেড</th>
                                                         <th className="border border-black font-bold p-0.5 text-[8px]">পয়েন্ট</th>
                                                     </React.Fragment>
