@@ -82,7 +82,6 @@ export function processStudentResults(
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized);
         
         // Final subject list for this student
-        // This is CRITICAL for Science students who must take exactly 12 subjects
         const subjectsForStudent = groupAllowedSubjects.filter(subInfo => {
             const currentSubNameNormalized = normalize(subInfo.name);
             
@@ -91,21 +90,15 @@ export function processStudentResults(
                 const hmNormalized = normalize('উচ্চতর গণিত');
                 const agriNormalized = normalize('কৃষি শিক্ষা');
                 
-                // If this is one of the choices (HM/Agri)
                 if (currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) {
-                    // Only include if it's explicitly the optional OR if no optional is set yet (default to HM)
                     if (optionalSubjectNameNormalized) {
-                        // If user picked one as optional, the other shouldn't be in the compulsory list either
-                        // In 9-10 Science, you take Phys, Chem, Bio as electives, and EITHER HM or Agri as optional.
-                        // The base scienceSubjects list has both. We filter the one that is NOT assigned.
                         return currentSubNameNormalized === optionalSubjectNameNormalized;
                     } else {
-                        // Default fallback if no optional is assigned: assume Agri is not taken if HM exists
+                        // Default fallback
                         return currentSubNameNormalized === hmNormalized;
                     }
                 }
             }
-            
             return true;
         });
 
@@ -116,15 +109,13 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const normalizedSubjectName = normalize(subjectInfo.name);
             
-            // Find result record for this specific subject and class
             const classResult = resultsBySubject.find(r => {
                 const nameMatch = normalize(r.subject) === normalizedSubjectName;
                 if (!nameMatch) return false;
 
-                const classMatch = r.className === student.className;
+                const classMatch = String(r.className) === String(student.className);
                 if (!classMatch) return false;
 
-                // Group check
                 if (studentClassNum >= 9) {
                     const rGroupRaw = (r.group || 'none').toLowerCase().trim();
                     const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
