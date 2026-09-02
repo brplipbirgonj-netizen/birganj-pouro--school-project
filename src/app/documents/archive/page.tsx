@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -69,12 +70,12 @@ export default function DocumentArchivePage() {
         const file = e.target.files?.[0];
         if (!file || !db || !user) return;
 
-        // Check file size (approx 750KB limit for Base64 in 1MB Firestore doc)
-        if (file.size > 800 * 1024) {
+        // Updated file size check to 2000 KB as requested
+        if (file.size > 2000 * 1024) {
             toast({ 
                 variant: 'destructive', 
                 title: 'ফাইলটি অনেক বড়', 
-                description: 'সরাসরি ডাটাবেসে সেভ করার জন্য ফাইলটি অবশ্যই ৮০০ কেবি (KB) এর কম হতে হবে।' 
+                description: 'সরাসরি ডাটাবেসে সেভ করার জন্য ফাইলটি অবশ্যই ২০০০ কেবি (KB) এর কম হতে হবে।' 
             });
             return;
         }
@@ -168,6 +169,12 @@ export default function DocumentArchivePage() {
     const pdfFiles = useMemo(() => filteredDocs.filter(d => d.mimeType.includes('pdf')), [filteredDocs]);
     const wordFiles = useMemo(() => filteredDocs.filter(d => d.mimeType.includes('msword') || d.mimeType.includes('officedocument')), [filteredDocs]);
 
+    function toBengaliNumber(str: string | number | undefined | null) {
+        if (!str && str !== 0) return '';
+        const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
@@ -240,7 +247,7 @@ export default function DocumentArchivePage() {
                                         <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2">
                                             <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                                             <p className="text-[10px] font-bold text-amber-800 leading-tight">
-                                                * সর্বোচ্চ ফাইল সাইজ ৮০০ KB। বড় ফাইলগুলোর জন্য লিংকিং পদ্ধতি ব্যবহার করুন।
+                                                * সর্বোচ্চ ফাইল সাইজ ২০০০ KB। বড় ফাইলগুলোর জন্য লিংকিং পদ্ধতি ব্যবহার করুন।
                                             </p>
                                         </div>
                                     </div>
@@ -321,6 +328,12 @@ export default function DocumentArchivePage() {
 function DocumentCard({ doc, onOpen, onDelete, canManage }: { doc: ArchivedDocument, onOpen: (d: ArchivedDocument) => void, onDelete: (id: string) => void, canManage: boolean }) {
     const isPdf = doc.mimeType.includes('pdf');
     
+    function toBengaliNumber(str: string | number | undefined | null) {
+        if (!str && str !== 0) return '';
+        const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+    }
+
     return (
         <Card className="group border-2 border-black/10 rounded-2xl bg-white hover:border-primary/30 transition-all shadow-sm overflow-hidden">
             <CardContent className="p-0">
@@ -383,10 +396,4 @@ function DocumentCard({ doc, onOpen, onDelete, canManage }: { doc: ArchivedDocum
             </CardContent>
         </Card>
     );
-}
-
-function toBengaliNumber(str: string | number | undefined | null) {
-    if (!str && str !== 0) return '';
-    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
