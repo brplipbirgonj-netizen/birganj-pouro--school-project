@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -384,4 +383,10 @@ function DocumentCard({ doc, onOpen, onDelete, canManage }: { doc: ArchivedDocum
             </CardContent>
         </Card>
     );
+}
+
+function toBengaliNumber(str: string | number | undefined | null) {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
