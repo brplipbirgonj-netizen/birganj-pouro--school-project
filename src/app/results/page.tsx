@@ -139,7 +139,17 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             return;
         }
         setIsLoadingStudents(true);
-        const filteredStudents = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (!showGroupSelector || !group || s.group === group)).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+        const filteredStudents = allStudents.filter(s => {
+            const yearMatch = s.academicYear === selectedYear;
+            const classMatch = s.className === className;
+            if (!yearMatch || !classMatch) return false;
+            if (!showGroupSelector || !group) return true;
+            
+            const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+            const filterGroupNorm = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
+            return sGroupNorm === filterGroupNorm;
+        }).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+
         setStudentsForClass(filteredStudents);
         
         const effectiveGroup = parseInt(className) < 9 ? undefined : group;
@@ -388,7 +398,15 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
             return;
         }
         const students = allStudents
-            .filter(s => s.academicYear === selectedYear && s.className === className && (!group || s.group === group))
+            .filter(s => {
+                const yearMatch = s.academicYear === selectedYear;
+                const classMatch = s.className === className;
+                if (!yearMatch || !classMatch) return false;
+                if (!group || group === 'all') return true;
+                const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                const filterGroupNorm = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
+                return sGroupNorm === filterGroupNorm;
+            })
             .sort((a, b) => a.roll - b.roll)
             .map(student => ({
                 student,
@@ -409,7 +427,15 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
     const reportStudents = useMemo(() => {
         if (!results) return [];
         return allStudents
-            .filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || !group || s.group === group))
+            .filter(s => {
+                const yearMatch = s.academicYear === selectedYear;
+                const classMatch = s.className === className;
+                if (!yearMatch || !classMatch) return false;
+                if (parseInt(className) < 9 || !group || group === 'all') return true;
+                const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                const filterGroupNorm = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
+                return sGroupNorm === filterGroupNorm;
+            })
             .sort((a, b) => a.roll - b.roll)
             .map(student => {
                 const marks = results.results.find(r => r.studentId === student.id);
@@ -585,11 +611,21 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         if (!examName || !className || !db || !user) { toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ' }); return; }
         setIsLoading(true);
         try {
-            const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim())).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+            const students = allStudents.filter(s => {
+                const yearMatch = s.academicYear === selectedYear;
+                const classMatch = s.className === className;
+                if (!yearMatch || !classMatch) return false;
+                if (parseInt(className) < 9 || groupFilter === 'all') return true;
+                
+                const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                const filterGroupNorm = groupMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
+                return sGroupNorm === filterGroupNorm;
+            }).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+
             if (students.length === 0) { toast({ title: 'কোনো শিক্ষার্থী নেই' }); setProcessedResults([]); setIsLoading(false); return; }
             
-            const allResults = await getAllResults(db, selectedYear, examName).catch(() => []);
-            const classRes = allResults.filter(r => r.className === className);
+            const allRes = await getAllResults(db, selectedYear, examName).catch(() => []);
+            const classRes = allRes.filter(r => r.className === className);
             setClassResults(classRes);
             const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
             setProcessedResults(processStudentResults(students, classRes, subs));
@@ -830,7 +866,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
     const groupedData = useMemo(() => {
         const groups: Record<string, StudentProcessedResult[]> = {};
         processedResults.forEach(res => {
-            const g = (parseInt(className) >= 9 && groupFilter !== 'all') ? (res.student.group || 'all') : 'all';
+            const g = (parseInt(className) >= 9 && groupFilter !== 'all') ? (groupMap[(res.student.group || 'all').toLowerCase().trim()] || res.student.group || 'all') : 'all';
             if (!groups[g]) groups[g] = [];
             groups[g].push(res);
         });
@@ -1269,7 +1305,15 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (!examName || !className || !db || !user) return;
         setIsLoading(true);
         try {
-            const students = allStudents.filter(s => s.academicYear === selectedYear && s.className === className && (parseInt(className) < 9 || groupFilter === 'all' || (s.group || '').toLowerCase().trim() === groupFilter.toLowerCase().trim()));
+            const students = allStudents.filter(s => {
+                const yearMatch = s.academicYear === selectedYear;
+                const classMatch = s.className === className;
+                if (!yearMatch || !classMatch) return false;
+                if (parseInt(className) < 9 || groupFilter === 'all') return true;
+                const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                const filterGroupNorm = groupMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
+                return sGroupNorm === filterGroupNorm;
+            });
             const allRes = await getAllResults(db, selectedYear, examName).catch(() => []);
             const classRes = allRes.filter(r => r.className === className);
             const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
