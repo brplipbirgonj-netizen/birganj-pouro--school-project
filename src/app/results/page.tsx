@@ -19,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { 
     Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, 
     FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText, 
-    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCw, Plus, AlertTriangle, Info, History
+    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCcw, Plus, AlertTriangle, Info, History
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
@@ -679,13 +679,15 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 const studentGroupNormalized = groupMap[rawSGroup] || rawSGroup;
 
                 subjects.forEach(sub => {
+                    // Optimized finding logic: Look for specific group first, then fallback to common (none)
                     const subRes = classRes.find(r => {
-                        if (normalize(r.subject) !== normalize(sub.name)) return false;
-                        if (parseInt(className) < 9) return true;
-                        
-                        const rawRGroup = (r.group || 'none').toLowerCase().trim();
-                        const recordGroupNormalized = groupMap[rawRGroup] || rawRGroup;
-                        return recordGroupNormalized === studentGroupNormalized || recordGroupNormalized === 'none';
+                        const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                        const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                        return normalize(r.subject) === normalize(sub.name) && (parseInt(className) < 9 || rGroupNorm === studentGroupNormalized);
+                    }) || classRes.find(r => {
+                        const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                        const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                        return normalize(r.subject) === normalize(sub.name) && rGroupNorm === 'none';
                     });
 
                     const marks = subRes?.results.find(mr => mr.studentId === s.id);
@@ -716,8 +718,11 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
-                const workbook = XLSX.read(evt.target?.result, { type: 'binary', cellDates: true });
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) as any[];
+                const bstr = evt.target?.result;
+                const workbook = XLSX.read(bstr, { type: 'binary', cellDates: true });
+                const wsname = workbook.SheetNames[0];
+                const ws = workbook.Sheets[wsname];
+                const json = XLSX.utils.sheet_to_json(ws) as any[];
                 
                 if (json.length === 0) {
                     toast({ variant: 'destructive', title: 'ফাইলটি খালি' });
@@ -1352,7 +1357,7 @@ const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
             const allRes = await getAllResults(db, selectedYear, 'বার্ষিক পরীক্ষা').catch(() => []);
             const classRes = allRes.filter(r => r.className === sourceClass);
             const subs = getSubjects(sourceClass).filter(s => s.isExamSubject !== false);
-            const processed = studentFromDoc(classStudents, classRes, subs);
+            const processed = processStudentResults(classStudents, classRes, subs);
             
             setPassedStudents(processed.filter(r => r.isPass).sort((a,b) => (a.meritPosition || 0) - (b.meritPosition || 0)));
             setFailedStudents(processed.filter(r => !r.isPass).sort((a,b) => {
@@ -1906,7 +1911,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
                                                 <React.Fragment key={`${sub.name}-h`}>
                                                     <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx % 2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-১</th>
                                                     <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx % 2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-২</th>
-                                                    <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx % 2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-৩</th>
+                                                    <th className={cn("border-r-2 border-b-2 border-black font-black p-0.5 w-10 sticky top-[40px] z-40 h-[40px] box-border text-center", sIdx %2 === 0 ? "bg-blue-50" : "bg-emerald-50")}>প-৩</th>
                                                 </React.Fragment>
                                             ))}
                                         </tr>
