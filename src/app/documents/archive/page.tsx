@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -12,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { 
     FileUp, FileText, Download, Trash2, Loader2, ArrowLeft, 
-    Search, FolderOpen, Files, ShieldCheck, Eye, Info, Clock, User, Plus, FolderPlus, Folder, ChevronRight
+    Search, FolderOpen, Files, ShieldCheck, Eye, Info, Clock, User, Plus, FolderPlus, Folder, ChevronRight, LayoutGrid
 } from 'lucide-react';
 import { 
     saveArchivedDocument, 
