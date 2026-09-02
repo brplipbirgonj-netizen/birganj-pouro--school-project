@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -11,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { 
     FileUp, FileText, Download, Trash2, Loader2, ArrowLeft, 
-    Search, FolderOpen, Files, ShieldCheck, Eye, Info, Clock, User, Plus, FolderPlus, Folder, ChevronRight, LayoutGrid
+    Search, FolderOpen, Files, ShieldCheck, Eye, Info, Clock, User, Plus, FolderPlus, Folder, ChevronRight, LayoutGrid, ShieldAlert
 } from 'lucide-react';
 import { 
     saveArchivedDocument, 
@@ -43,7 +44,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function DocumentArchivePage() {
     const db = useFirestore();
-    const { user, hasPermission } = useAuth();
+    const { user, hasPermission, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +62,7 @@ export default function DocumentArchivePage() {
     const [newFolderName, setNewFolderName] = useState('');
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
+    const canViewArchive = hasPermission('view:archive');
     const canManageArchive = hasPermission('manage:archive');
 
     const fetchAllData = async () => {
@@ -80,11 +82,11 @@ export default function DocumentArchivePage() {
     };
 
     useEffect(() => {
-        if (db) fetchAllData();
-    }, [db]);
+        if (db && canViewArchive) fetchAllData();
+    }, [db, canViewArchive]);
 
     const handleCreateFolder = async () => {
-        if (!db || !newFolderName.trim()) return;
+        if (!db || !newFolderName.trim() || !canManageArchive) return;
         setIsCreatingFolder(true);
         try {
             await saveArchiveFolder(db, { name: newFolderName.trim() });
@@ -100,7 +102,7 @@ export default function DocumentArchivePage() {
 
     const handleDeleteFolder = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!db) return;
+        if (!db || !canManageArchive) return;
         const hasFiles = documents.some(d => d.folderId === id);
         if (hasFiles) {
             toast({ variant: 'destructive', title: 'ফোল্ডারটি খালি নয়', description: 'আগে ফোল্ডারের ফাইলগুলো ডিলিট করুন।' });
@@ -114,7 +116,7 @@ export default function DocumentArchivePage() {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !db || !user) return;
+        if (!file || !db || !user || !canManageArchive) return;
 
         if (file.size > 2000 * 1024) {
             toast({ 
@@ -183,7 +185,7 @@ export default function DocumentArchivePage() {
     };
 
     const handleDeleteDoc = async (id: string) => {
-        if (!db) return;
+        if (!db || !canManageArchive) return;
         await deleteArchivedDocument(db, id);
         toast({ title: 'ডকুমেন্ট মুছে ফেলা হয়েছে' });
         fetchAllData();
@@ -223,6 +225,24 @@ export default function DocumentArchivePage() {
         return folders.find(f => f.id === selectedFolderId)?.name || 'অজানা ফোল্ডার';
     }, [selectedFolderId, folders]);
 
+    if (authLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+
+    if (!canViewArchive) {
+        return (
+            <div className="flex min-h-screen flex-col bg-slate-50 font-kalpurush">
+                <Header />
+                <main className="flex-1 flex items-center justify-center p-4">
+                    <Card className="max-w-md w-full border-2 border-rose-200 text-center p-10 bg-white">
+                        <ShieldAlert className="h-16 w-16 text-rose-500 mx-auto mb-4" />
+                        <CardTitle className="text-2xl font-black text-rose-900 mb-2">প্রবেশাধিকার নেই</CardTitle>
+                        <CardDescription className="text-base font-bold text-slate-600">আপনার নথিপত্র আর্কাইভ দেখার অনুমতি নেই।</CardDescription>
+                        <Button className="mt-6 font-black" onClick={() => window.history.back()}>ফিরে যান</Button>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
@@ -254,23 +274,25 @@ export default function DocumentArchivePage() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-4 space-y-4">
-                                    <div className="flex gap-2">
-                                        <Input 
-                                            placeholder="নতুন ফোল্ডারের নাম..." 
-                                            value={newFolderName}
-                                            onChange={e => setNewFolderName(e.target.value)}
-                                            className="h-9 text-xs border-2"
-                                            onKeyDown={e => e.key === 'Enter' && handleCreateFolder()}
-                                        />
-                                        <Button 
-                                            size="sm" 
-                                            className="h-9 px-3" 
-                                            onClick={handleCreateFolder}
-                                            disabled={isCreatingFolder || !newFolderName.trim()}
-                                        >
-                                            {isCreatingFolder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
+                                    {canManageArchive && (
+                                        <div className="flex gap-2">
+                                            <Input 
+                                                placeholder="নতুন ফোল্ডার..." 
+                                                value={newFolderName}
+                                                onChange={e => setNewFolderName(e.target.value)}
+                                                className="h-9 text-xs border-2"
+                                                onKeyDown={e => e.key === 'Enter' && handleCreateFolder()}
+                                            />
+                                            <Button 
+                                                size="sm" 
+                                                className="h-9 px-3" 
+                                                onClick={handleCreateFolder}
+                                                disabled={isCreatingFolder || !newFolderName.trim()}
+                                            >
+                                                {isCreatingFolder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                                            </Button>
+                                        </div>
+                                    )}
 
                                     <div className="space-y-1">
                                         <button 
@@ -317,7 +339,7 @@ export default function DocumentArchivePage() {
                                     <div className="relative">
                                         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                         <Input 
-                                            placeholder="ফাইলের নাম দিয়ে খুঁজুন..." 
+                                            placeholder="ফাইলের নাম দিন..." 
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
                                             className="pl-10 h-11 border-2 font-bold"
@@ -331,50 +353,52 @@ export default function DocumentArchivePage() {
                         <div className="lg:col-span-3 space-y-8">
                             
                             {/* Upload Section (Contextual to selected folder) */}
-                            <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,0.1)] bg-white">
-                                <div className="bg-primary/5 p-4 border-b-[2px] border-black flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 bg-primary rounded-lg text-white">
-                                            <FileUp className="h-5 w-5" />
+                            {canManageArchive && (
+                                <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-[8px_8px_0px_rgba(0,0,0,0.1)] bg-white">
+                                    <div className="bg-primary/5 p-4 border-b-[2px] border-black flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-primary rounded-lg text-white">
+                                                <FileUp className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-slate-800">ফাইল আপলোড করুন</h3>
+                                                <p className="text-[10px] font-bold text-muted-foreground">বর্তমানে <span className="text-primary font-black">[{currentFolderName}]</span> ফোল্ডারে আপলোড হবে</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="font-black text-slate-800">ফাইল আপলোড করুন</h3>
-                                            <p className="text-[10px] font-bold text-muted-foreground">বর্তমানে <span className="text-primary font-black">[{currentFolderName}]</span> ফোল্ডারে আপলোড হবে</p>
-                                        </div>
+                                        <Badge variant="outline" className="font-black border-primary/30 text-primary">সর্বোচ্চ ২০০০ KB</Badge>
                                     </div>
-                                    <Badge variant="outline" className="font-black border-primary/30 text-primary">সর্বোচ্চ ২০০০ KB</Badge>
-                                </div>
-                                <CardContent className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                                        <div className="space-y-2">
-                                            <Label className="font-black text-xs text-slate-700">ডকুমেন্টের শিরোনাম</Label>
-                                            <Input 
-                                                value={newDocTitle}
-                                                onChange={e => setNewDocTitle(e.target.value)}
-                                                placeholder="ফাইলের একটি নাম দিন"
-                                                className="h-10 border-2 font-bold"
-                                            />
+                                    <CardContent className="p-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                            <div className="space-y-2">
+                                                <Label className="font-black text-xs text-slate-700">ডকুমেন্টের শিরোনাম</Label>
+                                                <Input 
+                                                    value={newDocTitle}
+                                                    onChange={e => setNewDocTitle(e.target.value)}
+                                                    placeholder="ফাইলের একটি নাম দিন"
+                                                    className="h-10 border-2 font-bold"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button 
+                                                    className="flex-1 h-10 font-black gap-2"
+                                                    disabled={isUploading || !newDocTitle.trim()}
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                >
+                                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Files className="h-4 w-4" />}
+                                                    ফাইল সিলেক্ট করুন
+                                                </Button>
+                                                <input 
+                                                    type="file" 
+                                                    ref={fileInputRef} 
+                                                    onChange={handleFileUpload} 
+                                                    className="hidden" 
+                                                    accept=".pdf,.doc,.docx"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <Button 
-                                                className="flex-1 h-10 font-black gap-2"
-                                                disabled={isUploading || !newDocTitle.trim() || !canManageArchive}
-                                                onClick={() => fileInputRef.current?.click()}
-                                            >
-                                                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Files className="h-4 w-4" />}
-                                                ফাইল সিলেক্ট করুন
-                                            </Button>
-                                            <input 
-                                                type="file" 
-                                                ref={fileInputRef} 
-                                                onChange={handleFileUpload} 
-                                                className="hidden" 
-                                                accept=".pdf,.doc,.docx"
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    </CardContent>
+                                </Card>
+                            )}
 
                             {/* Grouped View by Extension */}
                             <div className="space-y-8">
