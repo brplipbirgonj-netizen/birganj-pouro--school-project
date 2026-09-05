@@ -495,23 +495,23 @@ export default function LoginPage() {
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-4">
                             <Button 
-                                variant="outline" 
+                                variant="ghost" 
                                 size="lg" 
-                                className="h-9 px-5 rounded-xl border-2 border-red-600 text-white font-black text-[10px] bg-white/10 backdrop-blur-md shadow-xl hover:bg-white hover:text-primary transition-all duration-500 group"
+                                className="h-11 px-6 rounded-xl bg-[#1e293b] text-white font-black text-sm border-b-4 border-slate-950 hover:bg-slate-800 transition-all active:border-b-0 active:translate-y-1 shadow-lg group"
                                 onClick={() => setIsSearchOpen(true)}
                             >
-                                <BookOpen className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
+                                <Search className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                                 {isEn ? 'Result Search' : 'ফলাফল অনুসন্ধান'}
                             </Button>
                             <Link href="/admission">
                                 <Button 
-                                    variant="outline" 
+                                    variant="ghost"
                                     size="lg" 
-                                    className="h-9 px-5 rounded-xl border-2 border-red-600 text-white font-black text-[10px] bg-emerald-600/20 backdrop-blur-md shadow-xl hover:bg-emerald-600 hover:text-white transition-all duration-500 group"
+                                    className="h-11 px-6 rounded-xl bg-[#059669] text-white font-black text-sm border-b-4 border-emerald-900 hover:bg-emerald-600 transition-all active:border-b-0 active:translate-y-1 shadow-lg group"
                                 >
-                                    <UserPlus className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
+                                    <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                                     {isEn ? 'Online Admission' : 'অনলাইন ভর্তি'}
                                 </Button>
                             </Link>
@@ -519,11 +519,11 @@ export default function LoginPage() {
                             <Dialog>
                                 <DialogTrigger asChild>
                                     <Button 
-                                        variant="outline" 
+                                        variant="ghost"
                                         size="lg" 
-                                        className="h-9 px-5 rounded-xl border-2 border-red-600 text-white font-black text-[10px] bg-blue-600/20 backdrop-blur-md shadow-xl hover:bg-blue-600 hover:text-white transition-all duration-500 group"
+                                        className="h-11 px-6 rounded-xl bg-[#dc2626] text-white font-black text-sm border-b-4 border-red-900 hover:bg-red-600 transition-all active:border-b-0 active:translate-y-1 shadow-lg group"
                                     >
-                                        <LogIn className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
+                                        <LogIn className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                                         {isEn ? 'Login' : 'লগইন করুন'}
                                     </Button>
                                 </DialogTrigger>
