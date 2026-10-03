@@ -2017,7 +2017,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
             {specialMode === 'fullmarks' && (
                 <div className="animate-in fade-in duration-500">
                     <Card className="max-w-md mx-auto border-2 shadow-lg rounded-3xl overflow-hidden">
-                        <CardHeader className="bg-muted/30 border-b"><CardTitle className="text-lg font-black flex items-center gap-2"><Settings className="h-5 w-5" /> বিশেষ পরীক্ষার পূর্ণমান নির্ধারণ</CardTitle></AccordionHeader>
+                        <CardHeader className="bg-muted/30 border-b"><CardTitle className="text-lg font-black flex items-center gap-2"><Settings className="h-5 w-5" /> বিশেষ পরীক্ষার পূর্ণমান নির্ধারণ</CardTitle></CardHeader>
                         <CardContent className="p-8 space-y-6">
                              <div className="space-y-4">
                                 <p className="text-sm font-bold text-muted-foreground leading-relaxed text-center">বিশেষ পরীক্ষার ফলাফল ইনপুট দেওয়ার সময় সরাসরি ওই সেকশন থেকেই পূর্ণমান এডিট করতে পারবেন। ডিফল্ট পূর্ণমান ২০ হিসেবে সেট করা থাকে।</p>

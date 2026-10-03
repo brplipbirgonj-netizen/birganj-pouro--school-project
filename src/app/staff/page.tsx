@@ -1291,6 +1291,7 @@ export default function StaffListPage() {
                     )}
                 </div>
             </div>
+        </div>
         </main>
 
         <div className="hidden print:block printable-area bg-white text-black font-kalpurush">

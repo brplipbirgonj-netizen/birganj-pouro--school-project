@@ -237,7 +237,7 @@ export function processStudentResults(
         if (idx > 0) {
             const prev = self[idx - 1];
             if (prev.isPass && prev.gpa === res.gpa && prev.totalMarks === res.totalMarks) {
-                meritPosition = prev.meritPosition!;
+                meritPosition = (prev as StudentProcessedResult).meritPosition!;
             }
         }
         return { ...res, meritPosition };
