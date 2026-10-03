@@ -1,5 +1,4 @@
-
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import { Noto_Sans_Bengali, PT_Sans } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -9,15 +8,16 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { AuthProvider } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { APP_ICON_URL, defaultSchoolInfo } from '@/lib/school-info';
+import { GoogleTranslateProvider } from '@/components/GoogleTranslateProvider';
 
 export const metadata: Metadata = {
   title: `${defaultSchoolInfo.name} - ম্যানেজমেন্ট সিস্টেম`,
-  description: 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়ের একটি কেন্দ্রীয় শিক্ষা ব্যবস্থাপনা পোর্টাল।',
+  description: 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়ের একটি কেন্দ্রীয় শিক্ষা ব্যবস্থাপনা পোর্টাল।',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: APP_ICON_URL,
-    shortcut: APP_ICON_URL,
-    apple: APP_ICON_URL,
+    icon: `${APP_ICON_URL}?v=2`,
+    shortcut: `${APP_ICON_URL}?v=2`,
+    apple: `${APP_ICON_URL}?v=2`,
   }
 };
 
@@ -32,8 +32,6 @@ const pt_sans = PT_Sans({
   weight: ['400', '700'],
   variable: '--font-pt-sans',
 });
-
-import { GoogleTranslateProvider } from '@/components/GoogleTranslateProvider';
 
 export default function RootLayout({
   children,
