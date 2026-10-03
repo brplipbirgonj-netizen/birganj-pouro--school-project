@@ -10,6 +10,7 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance, getAttendanceForClassAndDate } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
+import { getFullRoutine as getRoutineData, ClassRoutine as RoutineType } from '@/lib/routine-data';
 import { getNotices, Notice } from '@/lib/notice-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { getStaff } from '@/lib/staff-data';
@@ -988,14 +989,14 @@ export default function Home() {
         {/* Quick Actions Bar */}
         <div className="mb-8 flex flex-wrap gap-4 items-center justify-center sm:justify-start">
             <Link href="/add-student">
-                <Button className="h-12 px-6 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg font-black gap-2 transition-all active:scale-95">
+                <Button className="h-12 px-6 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg font-black gap-2 transition-all border-b-4 border-blue-900 active:border-b-0 active:translate-y-1">
                     <UserPlus className="h-5 w-5" /> কুইক ভর্তি
                 </Button>
             </Link>
 
             <Dialog open={isQuickPaymentOpen} onOpenChange={setIsQuickPaymentOpen}>
                 <DialogTrigger asChild>
-                    <Button className="h-12 px-6 rounded-2xl bg-teal-600 hover:bg-teal-700 shadow-lg font-black gap-2 transition-all active:scale-95">
+                    <Button className="h-12 px-6 rounded-2xl bg-teal-600 hover:bg-teal-700 shadow-lg font-black gap-2 transition-all border-b-4 border-teal-900 active:border-b-0 active:translate-y-1">
                         <Banknote className="h-5 w-5" /> কুইক পেমেন্ট
                     </Button>
                 </DialogTrigger>
@@ -1034,7 +1035,7 @@ export default function Home() {
 
             <Dialog open={isQuickAttendanceOpen} onOpenChange={(o) => { setIsQuickAttendanceOpen(o); if(!o) setIsConfirmingQuickAttendance(false); }}>
                 <DialogTrigger asChild>
-                    <Button className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg font-black gap-2 transition-all active:scale-95">
+                    <Button className={cn("h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg font-black gap-2 transition-all border-b-4 border-emerald-900 active:border-b-0 active:translate-y-1", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
                         <UserCheck className="h-5 w-5" /> কুইক হাজিরা
                     </Button>
                 </DialogTrigger>
