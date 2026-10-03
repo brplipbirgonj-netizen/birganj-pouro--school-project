@@ -749,7 +749,7 @@ export default function Home() {
         setClassAttendance(classMap);
       },
       (error: FirestoreError) => {
-        // Only emit if it's a real permission denial, ignore network errors when offline
+        // Only emit if it's a real permission denial, not just offline status
         if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: 'students',
@@ -763,7 +763,7 @@ export default function Home() {
         setTotalTeachers(querySnapshot.size);
       },
       (error: FirestoreError) => {
-        // Only emit if it's a real permission denial, ignore network errors when offline
+        // Only emit if it's a real permission denial, not just offline status
         if (error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: 'staff',
@@ -989,14 +989,14 @@ export default function Home() {
         {/* Quick Actions Bar */}
         <div className="mb-8 flex flex-wrap gap-4 items-center justify-center sm:justify-start">
             <Link href="/add-student">
-                <Button className="h-12 px-6 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg font-black gap-2 transition-all border-b-4 border-blue-900 active:border-b-0 active:translate-y-1">
+                <Button className="h-12 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-500 shadow-lg font-black gap-2 transition-all border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 text-yellow-950">
                     <UserPlus className="h-5 w-5" /> কুইক ভর্তি
                 </Button>
             </Link>
 
             <Dialog open={isQuickPaymentOpen} onOpenChange={setIsQuickPaymentOpen}>
                 <DialogTrigger asChild>
-                    <Button className="h-12 px-6 rounded-2xl bg-teal-600 hover:bg-teal-700 shadow-lg font-black gap-2 transition-all border-b-4 border-teal-900 active:border-b-0 active:translate-y-1">
+                    <Button className="h-12 px-6 rounded-2xl bg-red-600 hover:bg-red-700 shadow-lg font-black gap-2 transition-all border-b-4 border-red-900 active:border-b-0 active:translate-y-1">
                         <Banknote className="h-5 w-5" /> কুইক পেমেন্ট
                     </Button>
                 </DialogTrigger>
@@ -1035,7 +1035,7 @@ export default function Home() {
 
             <Dialog open={isQuickAttendanceOpen} onOpenChange={(o) => { setIsQuickAttendanceOpen(o); if(!o) setIsConfirmingQuickAttendance(false); }}>
                 <DialogTrigger asChild>
-                    <Button className={cn("h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg font-black gap-2 transition-all border-b-4 border-emerald-900 active:border-b-0 active:translate-y-1", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
+                    <Button className={cn("h-12 px-6 rounded-2xl bg-pink-500 hover:bg-pink-600 shadow-lg font-black gap-2 transition-all border-b-4 border-pink-800 active:border-b-0 active:translate-y-1", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
                         <UserCheck className="h-5 w-5" /> কুইক হাজিরা
                     </Button>
                 </DialogTrigger>
