@@ -44,7 +44,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import * as XLSX from 'xlsx';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 // --- Utility Functions ---
 const toBengaliNumber = (str: string | number | undefined | null) => {
