@@ -1746,7 +1746,7 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
-                        <Button type="submit" disabled={isSearching} className="w-full h-12 text-lg font-black">{isSearching ? <Loader2 className="animate-spin mr-2" /> : 'খুঁজুন'}</Button>
+                        <Button type="submit" disabled={isSearching} className="w-full h-12 text-lg font-black">{isSearching ? <Loader2 className="animate-spin mr-2 h-6 w-6" /> : 'খুঁজুন'}</Button>
                     </form>
                 </CardContent>
             </Card>
