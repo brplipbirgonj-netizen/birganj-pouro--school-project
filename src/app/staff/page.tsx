@@ -472,7 +472,7 @@ export default function StaffListPage() {
   const canViewAttendanceReport = hasPermission('view:staff-attendance-report');
 
   const [activeSection, setActiveSection] = useState('list');
-  const isEn = typeof document !== 'undefined' && document.cookie.includes('googtrans=/bn/en');
+  const isEn = isEnActive();
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [dailyAttendance, setDailyAttendance] = useState<StaffDailyAttendance | null>(null);
@@ -916,460 +916,460 @@ export default function StaffListPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
       <Header />
-      <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
-        
-        <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
-            <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">স্টাফ পোর্টাল</h2>
-            <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
-                {sidebarItems.map(item => (
-                    <button
-                        key={item.id}
-                        onClick={() => setActiveSection(item.id)}
-                        className={cn(
-                            "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
-                            activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
-                        )}
-                    >
-                        <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
-                            <item.icon className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="text-xs">{item.label}</span>
-                        {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
-                    </button>
-                ))}
-            </div>
-        </aside>
-
-        <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
-            <div className="p-4 sm:p-6 lg:p-8 flex-1">
-                <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
-                        <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">{schoolInfo.name}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                        {activeSection === 'list' && (
-                            <div className="flex bg-muted/50 p-1 rounded-xl shadow-inner border border-black/5 mr-2">
-                                <Button
-                                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    className="h-8 px-3 rounded-lg shadow-none"
-                                    onClick={() => setViewMode('table')}
-                                >
-                                    <List className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    className="h-8 px-3 rounded-lg shadow-none"
-                                    onClick={() => setViewMode('grid')}
-                                >
-                                    <LayoutGrid className="h-4 w-4" />
-                                </Button>
+      <main className="flex-1 p-4 md:p-10 pb-40">
+        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
+            <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+                <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">স্টাফ পোর্টাল</h2>
+                <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                    {sidebarItems.map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveSection(item.id)}
+                            className={cn(
+                                "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
+                                activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                            )}
+                        >
+                            <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
+                                <item.icon className="h-3.5 w-3.5" />
                             </div>
-                        )}
-                        {activeSection === 'list' && canManageStaff && (
-                            <Link href="/add-staff">
-                                <Button className="font-black h-10 px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> নতুন স্টাফ</Button>
-                            </Link>
-                        )}
-                    </div>
+                            <span className="text-xs">{item.label}</span>
+                            {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
+                        </button>
+                    ))}
                 </div>
+            </aside>
 
-                {activeSection === 'list' && (
-                    <div className="space-y-8 animate-in fade-in duration-500 no-print">
-                        <section>
-                            <div className="flex items-center gap-2 mb-6 px-2">
-                                <div className="h-6 w-1.5 bg-orange-500 rounded-full" />
-                                <h3 className="text-xl font-black text-orange-950">{isEn ? `Teachers List (${sortedTeachers.length})` : `শিক্ষকবৃন্দের তালিকা (${toBengaliNumber(sortedTeachers.length)} জন)`}</h3>
-                            </div>
-                            {viewMode === 'table' ? (
-                                <StaffTable data={sortedTeachers} colorClass="text-blue-700" />
-                            ) : (
-                                <StaffGrid data={sortedTeachers} colorClass="text-blue-700" />
-                            )}
-                        </section>
-                        <section>
-                            <div className="flex items-center gap-2 mb-6 px-2">
-                                <div className="h-6 w-1.5 bg-blue-500 rounded-full" />
-                                <h3 className="text-xl font-black text-blue-950">{isEn ? `Staff List (${sortedEmployees.length})` : `কর্মচারীবৃন্দের তালিকা (${toBengaliNumber(sortedEmployees.length)} জন)`}</h3>
-                            </div>
-                            {viewMode === 'table' ? (
-                                <StaffTable data={sortedEmployees} startIdx={sortedTeachers.length} colorClass="text-primary" />
-                            ) : (
-                                <StaffGrid data={sortedEmployees} colorClass="text-primary" />
-                            )}
-                        </section>
-                    </div>
-                )}
-
-                {activeSection === 'staff-profile' && (
-                    <StaffProfileTab staffList={activeStaffList} academicYear={selectedYear} />
-                )}
-
-                {activeSection === 'attendance' && (
-                    <div className="space-y-8 animate-in fade-in duration-500 no-print">
-                        <div className={cn(
-                            "grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 rounded-xl bg-white shadow-sm items-end transition-all duration-300",
-                            selectedDate ? "border-primary ring-2 ring-primary/5" : "border-orange-100"
-                        )}>
-                            <div className="space-y-2">
-                                <Label className="font-black text-primary flex items-center gap-2"><Calendar className="h-4 w-4" /> তারিখ নির্বাচন</Label>
-                                <DatePicker value={selectedDate} onChange={setSelectedDate} />
-                                <p className="text-[10px] font-black text-muted-foreground mt-1 italic">
-                                    {selectedDate ? format(selectedDate, 'EEEE, d MMMM yyyy', { locale: bn }) : ''}
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন করুন</Label>
-                                <Select 
-                                    value={selectedStaffId} 
-                                    onValueChange={handleStaffSelect}
-                                    disabled={isOffDay}
-                                >
-                                    <SelectTrigger className="h-10 bg-slate-50 border-2 border-primary/10 font-bold">
-                                        <SelectValue placeholder={isOffDay ? "ছুটির দিনে হাজিরা বন্ধ" : "নাম সিলেক্ট করুন"} />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-[300px]">
-                                        {activeStaffList.map(s => (
-                                            <SelectItem key={s.id} value={s.id} className="font-bold">{getStaffDisplayName(s)} ({s.designation})</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        {isOffDay && (
-                            <div className="p-10 border-4 border-dashed border-rose-300 bg-rose-50 rounded-[32px] flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-500">
-                                <AlertTriangle className="h-16 w-16 text-rose-500 mb-4 animate-pulse" />
-                                <h3 className="text-2xl font-black text-rose-900 mb-2">আজ ছুটির দিন!</h3>
-                                <p className="text-rose-700 font-bold max-w-md">
-                                    {activeHoliday ? `${activeHoliday.description} উপলক্ষে আজ বিদ্যালয় বন্ধ।` : 'আজ সাপ্তাহিক ছুটি।'} ছুটির দিনে কোনো ধরনের হাজিরা গ্রহণ করা সম্ভব নয়।
-                                </p>
-                            </div>
-                        )}
-
-                        {!isOffDay && selectedStaffId && tempEntry && currentSelectedStaff && (
-                            <Card className="border-4 border-primary rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                                <CardHeader className="bg-primary/5 border-b-2 border-primary/10">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-16 w-16 border-4 border-white shadow-md">
-                                            <AvatarImage src={currentSelectedStaff.photoUrl} />
-                                            <AvatarFallback className="font-black text-xl bg-muted text-muted-foreground">
-                                                {currentSelectedStaff.nameBn?.charAt(0)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1">
-                                            <CardTitle className="text-2xl font-black text-slate-900">{getStaffDisplayName(currentSelectedStaff)}</CardTitle>
-                                            <CardDescription className="text-primary font-bold text-base">
-                                                {currentSelectedStaff.designation}
-                                            </CardDescription>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="p-8 space-y-8">
-                                    <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                        {existingInToday?.status === 'leave' ? (
-                                            <div className="flex flex-col items-center justify-center p-6 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl w-full animate-in fade-in duration-500">
-                                                <Badge className="bg-blue-600 px-6 py-1.5 text-base font-black mb-2 shadow-lg">আজ ছুটিতে আছেন</Badge>
-                                                <p className="text-sm font-bold text-blue-800">এই শিক্ষক/কর্মচারীর আজকের হাজিরা 'ছুটি' হিসেবে সংরক্ষিত হয়েছে।</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                {!existingInToday?.checkIn && (
-                                                    <Button 
-                                                        size="lg" 
-                                                        className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
-                                                        onClick={() => handleActionChange('arrival')}
-                                                    >
-                                                        <LogIn className="h-5 w-5" /> আগমণ
-                                                    </Button>
-                                                )}
-                                                <Button 
-                                                    size="lg" 
-                                                    disabled={!existingInToday?.checkIn}
-                                                    title={!existingInToday?.checkIn ? "আগমণ সেভ করা ছাড়া প্রস্থান দেওয়া যাবে না" : ""}
-                                                    className={cn(
-                                                        "flex-1 h-14 text-lg font-black transition-all gap-2", 
-                                                        currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50",
-                                                        !existingInToday?.checkIn && "opacity-50 cursor-not-allowed border-slate-200 text-slate-300"
-                                                    )}
-                                                    onClick={() => handleActionChange('departure')}
-                                                >
-                                                    <LogOut className="h-5 w-5" /> প্রস্থান
-                                                </Button>
-                                                {!existingInToday?.checkIn && (
-                                                    <Button 
-                                                        size="lg" 
-                                                        className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'leave' ? "bg-blue-600 shadow-lg ring-4 ring-blue-100" : "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50")}
-                                                        onClick={() => handleActionChange('leave')}
-                                                    >
-                                                        <UserX className="h-5 w-5" /> ছুটি
-                                                    </Button>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {existingInToday?.status !== 'leave' && (
-                                        <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
-                                            {currentAction === 'arrival' && (
-                                                <div className="space-y-2 max-w-xs mx-auto">
-                                                    <Label className="font-black text-emerald-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময় লিখুন</Label>
-                                                    <Input 
-                                                        value={tempEntry.checkIn || ''} 
-                                                        onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
-                                                        className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300 focus:ring-emerald-500" 
-                                                        placeholder="উদা: 10:30 AM" 
-                                                    />
-                                                </div>
-                                            )}
-                                            {currentAction === 'departure' && (
-                                                <div className="space-y-2 max-w-xs mx-auto">
-                                                    <Label className="font-black text-rose-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময় লিখুন</Label>
-                                                    <Input 
-                                                        value={tempEntry.checkOut || ''} 
-                                                        onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} 
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
-                                                        className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300 focus:ring-rose-500" 
-                                                        placeholder="উদা: 04:00 PM" 
-                                                    />
-                                                </div>
-                                            )}
-                                            {currentAction === 'leave' && (
-                                                <div className="space-y-4 text-center">
-                                                    <Label className="font-black text-blue-800">ছুটির ধরন নির্বাচন করুন</Label>
-                                                    <div className="flex flex-wrap justify-center gap-2">
-                                                        {LEAVE_TYPES.map(t => (
-                                                            <Button 
-                                                                key={t.id} 
-                                                                variant={tempEntry.leaveType === t.id ? "default" : "outline"}
-                                                                size="sm" 
-                                                                className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-blue-600" : "bg-white")}
-                                                                onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
-                                                            >
-                                                                {t.label}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </CardContent>
-                                {existingInToday?.status !== 'leave' && (
-                                    <CardFooter className="bg-slate-50 p-6 border-t flex justify-between gap-4">
-                                        <Button variant="ghost" onClick={() => { setSelectedStaffId(''); setTempEntry(null); }} className="font-bold h-12 px-8">বাতিল</Button>
-                                        <Button 
-                                            onClick={handleSaveIndividualAttendance} 
-                                            disabled={isAttendanceLoading || (currentAction === 'leave' && !tempEntry.leaveType)}
-                                            className="h-12 px-12 text-lg font-black shadow-xl"
-                                        >
-                                            {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                                            হাজিরা নিশ্চিত করুন
-                                        </Button>
-                                    </CardFooter>
-                                )}
-                            </Card>
-                        )}
-
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-black text-slate-800 flex items-center gap-2 border-b-4 border-emerald-600 pb-2 max-w-fit px-2">
-                                <UserCheck className="h-6 w-6 text-emerald-600" /> আজকের গৃহীত হাজিরা তালিকা
-                            </h3>
-                            <div className="table-container shadow-xl border-2">
-                                <Table>
-                                    <TableHeader className="bg-muted/50">
-                                        <TableRow>
-                                            <TableHead className="w-16 font-black text-center">ক্রমিক</TableHead>
-                                            <TableHead className="font-black">নাম ও পদবি</TableHead>
-                                            <TableHead className="text-center font-black">অবস্থা</TableHead>
-                                            <TableHead className="text-center font-black">সময় / ছুটির ধরন</TableHead>
-                                            <TableHead className="text-center font-black">রেকর্ড সময়</TableHead>
-                                            <TableHead className="text-right font-black">কার্যক্রম</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {dailyAttendance?.attendance.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-16 italic font-bold text-muted-foreground">
-                                                    আজকের কোনো হাজিরা এখনো নেওয়া হয়নি।
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            dailyAttendance?.attendance.map((att, index) => {
-                                                const staff = activeStaffList.find(s => s.id === att.staffId);
-                                                return (
-                                                    <TableRow key={att.staffId} className="h-16 hover:bg-slate-50 transition-colors">
-                                                        <TableCell className="font-bold text-center">{toBengaliNumber(index + 1)}</TableCell>
-                                                        <TableCell>
-                                                            <div className="font-black text-sm text-slate-800">{staff?.nameBn}</div>
-                                                            <div className="text-[10px] font-bold text-muted-foreground">{staff?.designation}</div>
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <Badge className={cn("font-black px-4", att.status === 'present' ? "bg-emerald-600" : "bg-rose-600")}>
-                                                                {att.status === 'present' ? 'উপস্থিত' : 'ছুটি'}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            {att.status === 'present' ? (
-                                                                <div className="flex flex-col items-center">
-                                                                    <span className="text-[11px] font-black text-blue-900">{toBengaliNumber(att.checkIn || '-')}{att.checkOut ? ` - ${toBengaliNumber(att.checkOut)}` : ''}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-xs font-black text-rose-700">{LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <div className="flex flex-col items-center gap-0.5">
-                                                                <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">
-                                                                    {att.status === 'leave' ? 'রেকর্ড:' : 'আগমণ:'} {toBengaliNumber(att.entryTime || '-')}
-                                                                </span>
-                                                                {att.status !== 'leave' && (
-                                                                    <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">প্রস্থান: {toBengaliNumber(att.exitTime || '-')}</span>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-2">
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handleStaffSelect(att.staffId)}><Edit2 className="h-4 w-4" /></Button>
-                                                                {canDeleteAttendanceEntry && (
-                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteEntry(att.staffId)}><Trash2 className="h-4 w-4" /></Button>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeSection === 'report' && (
-                    <div className="space-y-8 animate-in fade-in duration-500 no-print">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 border-2 border-blue-100 rounded-xl bg-white shadow-sm items-end">
-                            <div className="space-y-2">
-                                <Label className="font-black text-primary">হতে (শুরুর তারিখ)</Label>
-                                <DatePicker value={reportStartDate} onChange={setReportStartDate} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-black text-primary">পর্যন্ত (শেষের তারিখ)</Label>
-                                <DatePicker value={reportEndDate} onChange={setReportEndDate} />
-                            </div>
-                            <Button className="font-black h-10 shadow-sm" onClick={fetchReport} disabled={isReportLoading || !reportStartDate || !reportEndDate}>
-                                {isReportLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                                রিপোর্ট তৈরি করুন
-                            </Button>
-                            <Button variant="outline" className="font-black h-10 border-primary text-primary" onClick={() => window.print()} disabled={rangeRecords.length === 0}>
-                                <Printer className="mr-2 h-4 w-4" /> রিপোর্ট প্রিন্ট
-                            </Button>
-                        </div>
-
-                        {rangeRecords.length > 0 && (
-                            <div className="space-y-8">
-                                <div className="p-4 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center no-print">
-                                    <Badge className="bg-emerald-600 px-6 py-1 text-sm font-black shadow-lg mb-2">রিপোর্ট প্রস্তুত হয়েছে!</Badge>
-                                    <p className="font-bold text-blue-700">নিচে প্রফেশনাল প্রিভিউ দেখা যাচ্ছে। আপনি চাইলে সরাসরি প্রিন্ট করতে পারেন।</p>
-                                </div>
-                                <div className="flex flex-col gap-12 items-center bg-slate-100 p-4 sm:p-10 rounded-3xl border-2 border-slate-200 shadow-inner overflow-x-auto">
-                                    {reportPages.map((page, pageIdx) => (
-                                        <div key={pageIdx} className="bg-white shadow-2xl shrink-0 overflow-hidden transform scale-95 sm:scale-100 origin-top">
-                                            <div style={{ width: '210mm', minHeight: '275mm', padding: '10mm' }} className="box-border">
-                                                {renderReportPage(page, pageIdx)}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
-      </main>
-
-      <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
-          <style jsx global>{`
-              @media print {
-                  @page { size: A4 portrait; margin: 0.4in !important; }
-                  html, body { height: auto !important; overflow: visible !important; background: white !important; margin: 0 !important; padding: 0 !important; }
-                  .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; padding: 0 !important; margin: 0 !important; width: 100% !important; box-sizing: border-box !important; }
-                  .report-page { 
-                      page-break-after: always; 
-                      width: 100% !important; 
-                      height: 275mm !important;
-                      padding: 0 !important; 
-                      margin: 0 !important;
-                      box-sizing: border-box;
-                      display: flex;
-                      flex-direction: column;
-                      background: white !important;
-                  }
-                  .report-header { 
-                      border-bottom: 2px solid black; 
-                      padding-bottom: 2px; 
-                      margin-bottom: 4px; 
-                      text-align: center;
-                      display: flex;
-                      flex-direction: column;
-                      align-items: center;
-                      width: 100%;
-                      margin-top: 0 !important;
-                  }
-                  .report-table { border: 1.5px solid black !important; width: 100%; border-collapse: collapse; }
-                  .report-table th, .report-table td { 
-                      border: 1px solid black !important; 
-                      padding: 2px 1px !important; 
-                      text-align: center; 
-                      font-size: 11px; 
-                      line-height: 1.1; 
-                  }
-                  .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; font-size: 11px; }
-                  .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 11px; border-top: 2px solid black !important; }
-                  .report-footer { margin-top: auto; padding-top: 10px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 5px; }
-                  .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 11px; font-weight: 900; padding-top: 2px; }
-              }
-          `}</style>
-          {reportPages.map((page, pageIdx) => (
-              <div key={pageIdx} className="report-page">
-                  {renderReportPage(page, pageIdx)}
-              </div>
-          ))}
-      </div>
-
-      <Dialog open={!!staffToView} onOpenChange={(isOpen) => !isOpen && setStaffToView(null)}>
-        <DialogContent className="max-w-xl font-kalpurush">
-             {staffToView && (
-                <>
-                    <DialogHeader className="flex-row items-center gap-4">
-                        <Image src={staffToView.photoUrl || 'https://picsum.photos/seed/staff/96/96'} alt={staffToView.nameBn} width={80} height={80} className="rounded-lg object-cover border shadow-sm" />
+            <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+                <div className="p-4 sm:p-6 lg:p-8 flex-1">
+                    <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
                         <div>
-                            <DialogTitle className="text-2xl mb-1 font-black notranslate" translate="no">{getStaffDisplayName(staffToView)}</DialogTitle>
-                            <DialogDescription className="font-black text-primary">{staffToView.designation}</DialogDescription>
+                            <h2 className="text-2xl font-black text-slate-800">{sidebarItems.find(i => i.id === activeSection)?.label}</h2>
+                            <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">{schoolInfo.name}</p>
                         </div>
-                    </DialogHeader>
-                    <div className="max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin">
-                        <div className="space-y-4 py-4 text-sm font-bold text-slate-700">
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">{isEn ? 'Name (Bangla):' : 'নাম (বাংলা):'}</span> <span className="notranslate" translate="no">{staffToView.nameBn}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">{isEn ? 'Name (English):' : 'নাম (ইংরেজি):'}</span> <span className="notranslate" translate="no">{staffToView.nameEn || '-'}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">জন্ম তারিখ:</span> <span>{staffToView.dob ? toBengaliNumber(format(new Date(staffToView.dob), "dd-MM-yyyy", { locale: bn })) : 'N/A'}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">ধরন:</span> <span>{staffToView.staffType === 'teacher' ? 'শিক্ষক' : 'কর্মচারী'}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">বিষয়:</span> <span>{staffToView.subject || 'N/A'}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">মোবাইল:</span> <span>{toBengaliNumber(staffToView.mobile)}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">যোগদানের তারিখ:</span> <span>{staffToView.joinDate ? toBengaliNumber(format(new Date(staffToView.joinDate), "dd-MM-yyyy", { locale: bn })) : 'N/A'}</span></p>
-                            <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">শিক্ষাগত যোগ্যতা:</span> <span>{staffToView.education || 'N/A'}</span></p>
-                            <p className="flex flex-col border-b pb-1.5"><span className="text-muted-foreground mb-1 font-medium">ঠিকানা:</span> <span>{staffToView.address || 'N/A'}</span></p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            {activeSection === 'list' && (
+                                <div className="flex bg-muted/50 p-1 rounded-xl shadow-inner border border-black/5 mr-2">
+                                    <Button
+                                        variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                                        size="sm"
+                                        className="h-8 px-3 rounded-lg shadow-none"
+                                        onClick={() => setViewMode('table')}
+                                    >
+                                        <List className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                        size="sm"
+                                        className="h-8 px-3 rounded-lg shadow-none"
+                                        onClick={() => setViewMode('grid')}
+                                    >
+                                        <LayoutGrid className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
+                            {activeSection === 'list' && canManageStaff && (
+                                <Link href="/add-staff">
+                                    <Button className="font-black h-10 px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> নতুন স্টাফ</Button>
+                                </Link>
+                            )}
                         </div>
                     </div>
-                </>
-             )}
-        </DialogContent>
-      </Dialog>
+
+                    {activeSection === 'list' && (
+                        <div className="space-y-8 animate-in fade-in duration-500 no-print">
+                            <section>
+                                <div className="flex items-center gap-2 mb-6 px-2">
+                                    <div className="h-6 w-1.5 bg-orange-500 rounded-full" />
+                                    <h3 className="text-xl font-black text-orange-950">{isEn ? `Teachers List (${sortedTeachers.length})` : `শিক্ষকবৃন্দের তালিকা (${toBengaliNumber(sortedTeachers.length)} জন)`}</h3>
+                                </div>
+                                {viewMode === 'table' ? (
+                                    <StaffTable data={sortedTeachers} colorClass="text-blue-700" />
+                                ) : (
+                                    <StaffGrid data={sortedTeachers} colorClass="text-blue-700" />
+                                )}
+                            </section>
+                            <section>
+                                <div className="flex items-center gap-2 mb-6 px-2">
+                                    <div className="h-6 w-1.5 bg-blue-500 rounded-full" />
+                                    <h3 className="text-xl font-black text-blue-950">{isEn ? `Staff List (${sortedEmployees.length})` : `কর্মচারীবৃন্দের তালিকা (${toBengaliNumber(sortedEmployees.length)} জন)`}</h3>
+                                </div>
+                                {viewMode === 'table' ? (
+                                    <StaffTable data={sortedEmployees} startIdx={sortedTeachers.length} colorClass="text-primary" />
+                                ) : (
+                                    <StaffGrid data={sortedEmployees} colorClass="text-primary" />
+                                )}
+                            </section>
+                        </div>
+                    )}
+
+                    {activeSection === 'staff-profile' && (
+                        <StaffProfileTab staffList={activeStaffList} academicYear={selectedYear} />
+                    )}
+
+                    {activeSection === 'attendance' && (
+                        <div className="space-y-8 animate-in fade-in duration-500 no-print">
+                            <div className={cn(
+                                "grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-2 rounded-xl bg-white shadow-sm items-end transition-all duration-300",
+                                selectedDate ? "border-primary ring-2 ring-primary/5" : "border-orange-100"
+                            )}>
+                                <div className="space-y-2">
+                                    <Label className="font-black text-primary flex items-center gap-2"><Calendar className="h-4 w-4" /> তারিখ নির্বাচন</Label>
+                                    <DatePicker value={selectedDate} onChange={setSelectedDate} />
+                                    <p className="text-[10px] font-black text-muted-foreground mt-1 italic">
+                                        {selectedDate ? format(selectedDate, 'EEEE, d MMMM yyyy', { locale: bn }) : ''}
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-black text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষক বা কর্মচারী নির্বাচন করুন</Label>
+                                    <Select 
+                                        value={selectedStaffId} 
+                                        onValueChange={handleStaffSelect}
+                                        disabled={isOffDay}
+                                    >
+                                        <SelectTrigger className="h-10 bg-slate-50 border-2 border-primary/10 font-bold">
+                                            <SelectValue placeholder={isOffDay ? "ছুটির দিনে হাজিরা বন্ধ" : "নাম সিলেক্ট করুন"} />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[300px]">
+                                            {activeStaffList.map(s => (
+                                                <SelectItem key={s.id} value={s.id} className="font-bold">{getStaffDisplayName(s)} ({s.designation})</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {isOffDay && (
+                                <div className="p-10 border-4 border-dashed border-rose-300 bg-rose-50 rounded-[32px] flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-500">
+                                    <AlertTriangle className="h-16 w-16 text-rose-500 mb-4 animate-pulse" />
+                                    <h3 className="text-2xl font-black text-rose-900 mb-2">আজ ছুটির দিন!</h3>
+                                    <p className="text-rose-700 font-bold max-w-md">
+                                        {activeHoliday ? `${activeHoliday.description} উপলক্ষে আজ বিদ্যালয় বন্ধ।` : 'আজ সাপ্তাহিক ছুটি।'} ছুটির দিনে কোনো ধরনের হাজিরা গ্রহণ করা সম্ভব নয়।
+                                    </p>
+                                </div>
+                            )}
+
+                            {!isOffDay && selectedStaffId && tempEntry && currentSelectedStaff && (
+                                <Card className="border-4 border-primary rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                                    <CardHeader className="bg-primary/5 border-b-2 border-primary/10">
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-16 w-16 border-4 border-white shadow-md">
+                                                <AvatarImage src={currentSelectedStaff.photoUrl} />
+                                                <AvatarFallback className="font-black text-xl bg-muted text-muted-foreground">
+                                                    {currentSelectedStaff.nameBn?.charAt(0)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                                <CardTitle className="text-2xl font-black text-slate-900">{getStaffDisplayName(currentSelectedStaff)}</CardTitle>
+                                                <CardDescription className="text-primary font-bold text-base">
+                                                    {currentSelectedStaff.designation}
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-8 space-y-8">
+                                        <div className="flex flex-col sm:flex-row gap-4">
+                                            {existingInToday?.status === 'leave' ? (
+                                                <div className="flex flex-col items-center justify-center p-6 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl w-full animate-in fade-in duration-500">
+                                                    <Badge className="bg-blue-600 px-6 py-1.5 text-base font-black mb-2 shadow-lg">আজ ছুটিতে আছেন</Badge>
+                                                    <p className="text-sm font-bold text-blue-800">এই শিক্ষক/কর্মচারীর আজকের হাজিরা 'ছুটি' হিসেবে সংরক্ষিত হয়েছে।</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {!existingInToday?.checkIn && (
+                                                        <Button 
+                                                            size="lg" 
+                                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'arrival' ? "bg-emerald-600 shadow-lg ring-4 ring-emerald-100" : "bg-white text-emerald-600 border-2 border-emerald-600 hover:bg-emerald-50")}
+                                                            onClick={() => handleActionChange('arrival')}
+                                                        >
+                                                            <LogIn className="h-5 w-5" /> আগমণ
+                                                        </Button>
+                                                    )}
+                                                    <Button 
+                                                        size="lg" 
+                                                        disabled={!existingInToday?.checkIn}
+                                                        title={!existingInToday?.checkIn ? "আগমণ সেভ করা ছাড়া প্রস্থান দেওয়া যাবে না" : ""}
+                                                        className={cn(
+                                                            "flex-1 h-14 text-lg font-black transition-all gap-2", 
+                                                            currentAction === 'departure' ? "bg-rose-600 shadow-lg ring-4 ring-rose-100" : "bg-white text-rose-600 border-2 border-rose-600 hover:bg-rose-50",
+                                                            !existingInToday?.checkIn && "opacity-50 cursor-not-allowed border-slate-200 text-slate-300"
+                                                        )}
+                                                        onClick={() => handleActionChange('departure')}
+                                                    >
+                                                        <LogOut className="h-5 w-5" /> প্রস্থান
+                                                    </Button>
+                                                    {!existingInToday?.checkIn && (
+                                                        <Button 
+                                                            size="lg" 
+                                                            className={cn("flex-1 h-14 text-lg font-black transition-all gap-2", currentAction === 'leave' ? "bg-blue-600 shadow-lg ring-4 ring-blue-100" : "bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50")}
+                                                            onClick={() => handleActionChange('leave')}
+                                                        >
+                                                            <UserX className="h-5 w-5" /> ছুটি
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {existingInToday?.status !== 'leave' && (
+                                            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
+                                                {currentAction === 'arrival' && (
+                                                    <div className="space-y-2 max-w-xs mx-auto">
+                                                        <Label className="font-black text-emerald-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> আগমনের সময় লিখুন</Label>
+                                                        <Input 
+                                                            value={tempEntry.checkIn || ''} 
+                                                            onChange={e => setTempEntry({...tempEntry, checkIn: e.target.value})} 
+                                                            onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
+                                                            className="h-11 font-black text-center bg-white text-xl border-2 border-emerald-300 focus:ring-emerald-500" 
+                                                            placeholder="উদা: 10:30 AM" 
+                                                        />
+                                                    </div>
+                                                )}
+                                                {currentAction === 'departure' && (
+                                                    <div className="space-y-2 max-w-xs mx-auto">
+                                                        <Label className="font-black text-rose-800 flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" /> প্রস্থানের সময় লিখুন</Label>
+                                                        <Input 
+                                                            value={tempEntry.checkOut || ''} 
+                                                            onChange={e => setTempEntry({...tempEntry, checkOut: e.target.value})} 
+                                                            onKeyDown={(e) => e.key === 'Enter' && handleSaveIndividualAttendance()}
+                                                            className="h-11 font-black text-center bg-white text-xl border-2 border-rose-300 focus:ring-rose-500" 
+                                                            placeholder="উদা: 04:00 PM" 
+                                                        />
+                                                    </div>
+                                                )}
+                                                {currentAction === 'leave' && (
+                                                    <div className="space-y-4 text-center">
+                                                        <Label className="font-black text-blue-800">ছুটির ধরন নির্বাচন করুন</Label>
+                                                        <div className="flex flex-wrap justify-center gap-2">
+                                                            {LEAVE_TYPES.map(t => (
+                                                                <Button 
+                                                                    key={t.id} 
+                                                                    variant={tempEntry.leaveType === t.id ? "default" : "outline"}
+                                                                    size="sm" 
+                                                                    className={cn("h-9 px-4 font-black shadow-sm", tempEntry.leaveType === t.id ? "bg-blue-600" : "bg-white")}
+                                                                    onClick={() => setTempEntry({...tempEntry, leaveType: t.id})}
+                                                                >
+                                                                    {t.label}
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                    {existingInToday?.status !== 'leave' && (
+                                        <CardFooter className="bg-slate-50 p-6 border-t flex justify-between gap-4">
+                                            <Button variant="ghost" onClick={() => { setSelectedStaffId(''); setTempEntry(null); }} className="font-bold h-12 px-8">বাতিল</Button>
+                                            <Button 
+                                                onClick={handleSaveIndividualAttendance} 
+                                                disabled={isAttendanceLoading || (currentAction === 'leave' && !tempEntry.leaveType)}
+                                                className="h-12 px-12 text-lg font-black shadow-xl"
+                                            >
+                                                {isAttendanceLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                                                হাজিরা নিশ্চিত করুন
+                                            </Button>
+                                        </CardFooter>
+                                    )}
+                                </Card>
+                            )}
+
+                            <div className="space-y-4">
+                                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2 border-b-4 border-emerald-600 pb-2 max-w-fit px-2">
+                                    <UserCheck className="h-6 w-6 text-emerald-600" /> আজকের গৃহীত হাজিরা তালিকা
+                                </h3>
+                                <div className="table-container shadow-xl border-2">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow>
+                                                <TableHead className="w-16 font-black text-center">ক্রমিক</TableHead>
+                                                <TableHead className="font-black">নাম ও পদবি</TableHead>
+                                                <TableHead className="text-center font-black">অবস্থা</TableHead>
+                                                <TableHead className="text-center font-black">সময় / ছুটির ধরন</TableHead>
+                                                <TableHead className="text-center font-black">রেকর্ড সময়</TableHead>
+                                                <TableHead className="text-right font-black">কার্যক্রম</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {dailyAttendance?.attendance.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-16 italic font-bold text-muted-foreground">
+                                                        আজকের কোনো হাজিরা এখনো নেওয়া হয়নি।
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                dailyAttendance?.attendance.map((att, index) => {
+                                                    const staff = activeStaffList.find(s => s.id === att.staffId);
+                                                    return (
+                                                        <TableRow key={att.staffId} className="h-16 hover:bg-slate-50 transition-colors">
+                                                            <TableCell className="font-bold text-center">{toBengaliNumber(index + 1)}</TableCell>
+                                                            <TableCell>
+                                                                <div className="font-black text-sm text-slate-800">{staff?.nameBn}</div>
+                                                                <div className="text-[10px] font-bold text-muted-foreground">{staff?.designation}</div>
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Badge className={cn("font-black px-4", att.status === 'present' ? "bg-emerald-600" : "bg-rose-600")}>
+                                                                    {att.status === 'present' ? 'উপস্থিত' : 'ছুটি'}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                {att.status === 'present' ? (
+                                                                    <div className="flex flex-col items-center">
+                                                                        <span className="text-[11px] font-black text-blue-900">{toBengaliNumber(att.checkIn || '-')}{att.checkOut ? ` - ${toBengaliNumber(att.checkOut)}` : ''}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-xs font-black text-rose-700">{LEAVE_TYPES.find(t => t.id === att.leaveType)?.label}</span>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <div className="flex flex-col items-center gap-0.5">
+                                                                    <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">
+                                                                        {att.status === 'leave' ? 'রেকর্ড:' : 'আগমণ:'} {toBengaliNumber(att.entryTime || '-')}
+                                                                    </span>
+                                                                    {att.status !== 'leave' && (
+                                                                        <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">প্রস্থান: {toBengaliNumber(att.exitTime || '-')}</span>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handleStaffSelect(att.staffId)}><Edit2 className="h-4 w-4" /></Button>
+                                                                    {canDeleteAttendanceEntry && (
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteEntry(att.staffId)}><Trash2 className="h-4 w-4" /></Button>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSection === 'report' && (
+                        <div className="space-y-8 animate-in fade-in duration-500 no-print">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 border-2 border-blue-100 rounded-xl bg-white shadow-sm items-end">
+                                <div className="space-y-2">
+                                    <Label className="font-black text-primary">হতে (শুরুর তারিখ)</Label>
+                                    <DatePicker value={reportStartDate} onChange={setReportStartDate} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-black text-primary">পর্যন্ত (শেষের তারিখ)</Label>
+                                    <DatePicker value={reportEndDate} onChange={setReportEndDate} />
+                                </div>
+                                <Button className="font-black h-10 shadow-sm" onClick={fetchReport} disabled={isReportLoading || !reportStartDate || !reportEndDate}>
+                                    {isReportLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                                    রিপোর্ট তৈরি করুন
+                                </Button>
+                                <Button variant="outline" className="font-black h-10 border-primary text-primary" onClick={() => window.print()} disabled={rangeRecords.length === 0}>
+                                    <Printer className="mr-2 h-4 w-4" /> রিপোর্ট প্রিন্ট
+                                </Button>
+                            </div>
+
+                            {rangeRecords.length > 0 && (
+                                <div className="space-y-8">
+                                    <div className="p-4 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl text-center no-print">
+                                        <Badge className="bg-emerald-600 px-6 py-1 text-sm font-black shadow-lg mb-2">রিপোর্ট প্রস্তুত হয়েছে!</Badge>
+                                        <p className="font-bold text-blue-700">নিচে প্রফেশনাল প্রিভিউ দেখা যাচ্ছে। আপনি চাইলে সরাসরি প্রিন্ট করতে পারেন।</p>
+                                    </div>
+                                    <div className="flex flex-col gap-12 items-center bg-slate-100 p-4 sm:p-10 rounded-3xl border-2 border-slate-200 shadow-inner overflow-x-auto">
+                                        {reportPages.map((page, pageIdx) => (
+                                            <div key={pageIdx} className="bg-white shadow-2xl shrink-0 overflow-hidden transform scale-95 sm:scale-100 origin-top">
+                                                <div style={{ width: '210mm', minHeight: '275mm', padding: '10mm' }} className="box-border">
+                                                    {renderReportPage(page, pageIdx)}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </main>
+
+        <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4 portrait; margin: 0.4in !important; }
+                    html, body { height: auto !important; overflow: visible !important; background: white !important; margin: 0 !important; padding: 0 !important; }
+                    .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; padding: 0 !important; margin: 0 !important; width: 100% !important; box-sizing: border-box !important; }
+                    .report-page { 
+                        page-break-after: always; 
+                        width: 100% !important; 
+                        height: 275mm !important;
+                        padding: 0 !important; 
+                        margin: 0 !important;
+                        box-sizing: border-box;
+                        display: flex;
+                        flex-direction: column;
+                        background: white !important;
+                    }
+                    .report-header { 
+                        border-bottom: 2px solid black; 
+                        padding-bottom: 2px; 
+                        margin-bottom: 4px; 
+                        text-align: center;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 100%;
+                        margin-top: 0 !important;
+                    }
+                    .report-table { border: 1.5px solid black !important; width: 100%; border-collapse: collapse; }
+                    .report-table th, .report-table td { 
+                        border: 1px solid black !important; 
+                        padding: 2px 1px !important; 
+                        text-align: center; 
+                        font-size: 11px; 
+                        line-height: 1.1; 
+                    }
+                    .report-table th { font-weight: 900 !important; background-color: #f1f5f9 !important; font-size: 11px; }
+                    .summary-row td { background-color: #f8fafc !important; font-weight: 900 !important; font-size: 11px; border-top: 2px solid black !important; }
+                    .report-footer { margin-top: auto; padding-top: 10px; width: 100%; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px; padding-bottom: 5px; }
+                    .sign-box { border-top: 1.5px solid black; width: 50mm; text-align: center; font-size: 11px; font-weight: 900; padding-top: 2px; }
+                }
+            `}</style>
+            {reportPages.map((page, pageIdx) => (
+                <div key={pageIdx} className="report-page">
+                    {renderReportPage(page, pageIdx)}
+                </div>
+            ))}
+        </div>
+
+        <Dialog open={!!staffToView} onOpenChange={(isOpen) => !isOpen && setStaffToView(null)}>
+            <DialogContent className="max-w-xl font-kalpurush">
+                 {staffToView && (
+                    <>
+                        <DialogHeader className="flex-row items-center gap-4">
+                            <Image src={staffToView.photoUrl || 'https://picsum.photos/seed/staff/96/96'} alt={staffToView.nameBn} width={80} height={80} className="rounded-lg object-cover border shadow-sm" />
+                            <div>
+                                <DialogTitle className="text-2xl mb-1 font-black notranslate" translate="no">{getStaffDisplayName(staffToView)}</DialogTitle>
+                                <DialogDescription className="font-black text-primary">{staffToView.designation}</DialogDescription>
+                            </div>
+                        </DialogHeader>
+                        <div className="max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin">
+                            <div className="space-y-4 py-4 text-sm font-bold text-slate-700">
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">{isEn ? 'Name (Bangla):' : 'নাম (বাংলা):'}</span> <span className="notranslate" translate="no">{staffToView.nameBn}</span></p>
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">{isEn ? 'Name (English):' : 'নাম (ইংরেজি):'}</span> <span className="notranslate" translate="no">{staffToView.nameEn || '-'}</span></p>
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">জন্ম তারিখ:</span> <span>{staffToView.dob ? toBengaliNumber(format(new Date(staffToView.dob), "dd-MM-yyyy")) : 'N/A'}</span></p>
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">ধরন:</span> <span>{staffToView.staffType === 'teacher' ? 'শিক্ষক' : 'কর্মচারী'}</span></p>
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">বিষয়:</span> <span>{staffToView.subject || 'N/A'}</span></p>
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">মোবাইল:</span> <span>{toBengaliNumber(staffToView.mobile)}</span></p>
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">যোগদানের তারিখ:</span> <span>{staffToView.joinDate ? toBengaliNumber(format(new Date(staffToView.joinDate), "dd-MM-yyyy", { locale: bn })) : 'N/A'}</span></p>
+                                <p className="flex justify-between border-b pb-1.5"><span className="text-muted-foreground font-medium">শিক্ষাগত যোগ্যতা:</span> <span>{staffToView.education || 'N/A'}</span></p>
+                                <p className="flex flex-col border-b pb-1.5"><span className="text-muted-foreground mb-1 font-medium">ঠিকানা:</span> <span>{staffToView.address || 'N/A'}</span></p>
+                            </div>
+                        </div>
+                    </>
+                 )}
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
