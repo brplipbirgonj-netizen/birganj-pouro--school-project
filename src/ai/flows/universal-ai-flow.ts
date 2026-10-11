@@ -64,18 +64,16 @@ export async function runUniversalAi(input: UniversalAiInput): Promise<Universal
 - নোটিশ বোর্ড → /notices-management
 - উপস্থিতি → /attendance
 - উপস্থিতি রিপোর্ট → /attendance-report
-- ফি সংগ্রহ → /collect-fee
-- হিসাব → /accounts
+- ফি সংগ্রহ ও হিসাব → /accounts
 - ছাত্র তালিকা → /student-list
-- ছাত্র যোগ → /add-student
-- ফলাফল → /results
+- নতুন ছাত্র যোগ → /add-student
+- ফলাফল ও মার্কশিট → /results
 - ফলাফল আপলোড → /results-upload
-- মার্কশিট → /marksheet
-- শিক্ষক/কর্মচারী → /staff
-- রুটিন → /routines
-- ভর্তি → /admission
+- শিক্ষক ও কর্মচারী → /staff
+- ক্লাস রুটিন → /routines
+- ভর্তি আবেদন → /admission
 - ভর্তি ব্যবস্থাপনা → /admissions-management
-- সেটিংস → /settings
+- সেটিংস ও কনফিগ → /settings
 
 ${historyText ? `\nআগের কথোপকথন:\n${historyText}\n` : ''}
 
