@@ -29,6 +29,7 @@ import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useAcademicYear } from '@/context/AcademicYearContext';
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
@@ -41,6 +42,7 @@ export default function NoticeManagementPage() {
     const { user, hasPermission, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const { schoolInfo } = useSchoolInfo();
+    const { selectedYear } = useAcademicYear();
     const router = useRouter();
     
     const [notices, setNotices] = useState<Notice[]>([]);
@@ -89,21 +91,29 @@ export default function NoticeManagementPage() {
         return () => unsubscribe();
     }, [db, user, isClient, authLoading, canViewNotices]);
 
-    const handleAiGenerate = async () => {
-      if (!aiTopic.trim()) {
-        toast({ variant: 'destructive', title: 'বিষয় লিখুন', description: 'AI দিয়ে ড্রাফট করতে একটি বিষয় লিখুন।' });
+    const handleAiGenerate = async (customTopic?: string) => {
+      const topicToUse = (typeof customTopic === 'string' && customTopic.trim()) ? customTopic : aiTopic;
+      if (!topicToUse.trim()) {
+        toast({ variant: 'destructive', title: 'বিষয় লিখুন', description: 'AI দিয়ে ড্রাফ্ট করতে একটি বিষয় লিখুন।' });
         return;
       }
 
       setIsAiLoading(true);
       try {
-        const result = await generateNotice({ topic: aiTopic });
+        const result = await generateNotice({ 
+            topic: topicToUse,
+            academicYear: selectedYear,
+            institutionName: schoolInfo.name,
+        });
         setNewNotice(prev => ({
           ...prev,
           title: result.title,
           content: result.content
         }));
-        toast({ title: 'AI ড্রাফট তৈরি হয়েছে' });
+        toast({ 
+            title: 'AI ড্রাফ্ট তৈরি হয়েছে',
+            description: 'সেশন ভিত্তিক নোটিশ তৈরি হয়েছে।'
+        });
         setAiTopic('');
       } catch (error) {
         toast({ variant: 'destructive', title: 'AI ত্রুটি' });
@@ -206,12 +216,17 @@ export default function NoticeManagementPage() {
                                 </DialogHeader>
                                 <div className="p-8 space-y-6">
                                     <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl space-y-3 shadow-inner">
-                                        <div className="flex items-center gap-2 text-indigo-700 font-black text-xs uppercase tracking-wider">
-                                            <Sparkles className="h-4 w-4" /> AI নোটিশ জেনারেটর
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-indigo-700 font-black text-xs uppercase tracking-wider">
+                                                <Sparkles className="h-4 w-4" /> AI নোটিশ জেনারেটর
+                                            </div>
+                                            <Badge variant="outline" className="bg-white text-indigo-800 border-indigo-300 font-black text-[10px] px-2 py-0.5">
+                                                সেশন: {toBengaliNumber(selectedYear)} শিক্ষাবর্ষ
+                                            </Badge>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="টপিক লিখুন (উদা: বার্ষিক ক্রীড়া প্রতিযোগিতা)" value={aiTopic} onChange={e => setAiTopic(e.target.value)} className="bg-white h-11 border-2 focus:ring-primary" />
-                                            <Button onClick={handleAiGenerate} disabled={isAiLoading} className="bg-indigo-600 h-11 px-4">
+                                            <Input placeholder={`টপিক লিখুন (যেমন: ${selectedYear} শিক্ষাবর্ষের ছুটির নোটিশ)...`} value={aiTopic} onChange={e => setAiTopic(e.target.value)} className="bg-white h-11 border-2 focus:ring-primary" onKeyDown={(e) => e.key === 'Enter' && handleAiGenerate()} />
+                                            <Button onClick={() => handleAiGenerate()} disabled={isAiLoading} className="bg-indigo-600 h-11 px-4">
                                                 {isAiLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                                             </Button>
                                         </div>
