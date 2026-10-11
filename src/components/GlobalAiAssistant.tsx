@@ -10,13 +10,16 @@ import {
   FileText, 
   UserCheck, 
   CreditCard, 
-  GraduationCap, 
-  Users, 
   Calendar, 
-  ArrowRight,
-  Maximize2,
-  Minimize2,
-  CheckCircle2,
+  Users, 
+  Maximize2, 
+  Minimize2, 
+  CheckCircle2, 
+  Mic, 
+  MicOff, 
+  Download, 
+  Printer, 
+  MessageSquare,
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,8 +30,10 @@ import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useFirestore } from '@/firebase';
 import { addNotice } from '@/lib/notice-data';
+import { getStudents, Student } from '@/lib/student-data';
+import { getHolidays, Holiday } from '@/lib/holiday-data';
 import { usePathname, useRouter } from 'next/navigation';
-import { runUniversalAi, ChatMessage, UniversalAiOutput } from '@/ai/flows/universal-ai-flow';
+import { runUniversalAi, ChatMessage, UniversalAiOutput, LiveSchoolContext } from '@/ai/flows/universal-ai-flow';
 import { useToast } from '@/hooks/use-toast';
 
 export function GlobalAiAssistant() {
@@ -38,12 +43,17 @@ export function GlobalAiAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'ai',
-      text: 'আসসালামু আলাইকুম! আমি বিদ্যালয়ের কেন্দ্রীয় AI সহকারী। আপনি যে কোনো সেকশনের কাজ বা তথ্য জানতে পারেন—যেমন নোটিশ তৈরি, উপস্থিতি, ফি, ছাত্র তথ্য ইত্যাদি।'
+      text: 'আসসালামু আলাইকুম! আমি বিদ্যালয়ের কেন্দ্রীয় AI সহকারী। আপনি ভয়েস বা লিখে যে কোনো সেকশনের কাজ সম্পন্ন করতে পারেন—যেমন নোটিশ তৈরি, উপস্থিতি, ফি, ছাত্র অনুসন্ধান ইত্যাদি।'
     }
   ]);
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [lastAction, setLastAction] = useState<UniversalAiOutput['actionData'] | null>(null);
   const [lastActionType, setLastActionType] = useState<string | null>(null);
+
+  // Live database caches for intelligent real-time answers
+  const [cachedStudents, setCachedStudents] = useState<Student[]>([]);
+  const [cachedHolidays, setCachedHolidays] = useState<Holiday[]>([]);
 
   const { selectedYear } = useAcademicYear();
   const { schoolInfo } = useSchoolInfo();
@@ -54,6 +64,14 @@ export function GlobalAiAssistant() {
   const { toast } = useToast();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Preload students and holidays in background for fast contextual replies
+  useEffect(() => {
+    if (!db) return;
+    getStudents(db).then(setCachedStudents).catch(() => {});
+    getHolidays(db).then(setCachedHolidays).catch(() => {});
+  }, [db]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -62,7 +80,70 @@ export function GlobalAiAssistant() {
     }
   }, [messages, isOpen, loading]);
 
-  // Don't show in print view or if not needed
+  // Speech Recognition (Web Speech API) setup for Bengali Voice Input
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'bn-BD'; // Bengali (Bangladesh)
+
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setInputQuery(prev => (prev ? `${prev} ${transcript}` : transcript));
+            toast({
+              title: 'ভয়েস শনাক্ত হয়েছে 🎙️',
+              description: `"${transcript}"`,
+            });
+          }
+          setIsListening(false);
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('Speech recognition error:', event.error);
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+      }
+    }
+  }, [toast]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast({
+        variant: 'destructive',
+        title: 'ভয়েস সাপোর্ট নেই',
+        description: 'আপনার ব্রাউজারটি বাংলা ভয়েস ইনপুট সমর্থন করে না। অনুগ্রহ করে Chrome ব্যবহার করুন।',
+      });
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        toast({
+          title: 'শুনছি... 🎙️',
+          description: 'স্পষ্ট করে বাংলায় বলুন...',
+        });
+      } catch (err) {
+        console.error('Recognition start error:', err);
+        setIsListening(false);
+      }
+    }
+  };
+
   if (typeof window !== 'undefined' && pathname === '/login') {
     return null;
   }
@@ -75,6 +156,9 @@ export function GlobalAiAssistant() {
     setMessages(prev => [...prev, userMsg]);
     if (!customPrompt) setInputQuery('');
     setLoading(true);
+    setLastAction(null);
+    setLastActionType(null);
+
     const lowerQuery = queryToSend.trim().toLowerCase();
     
     // Quick local navigation fallback for instant zero-latency redirect
@@ -112,6 +196,21 @@ export function GlobalAiAssistant() {
       return;
     }
 
+    // Build live school context snapshot from cached Firestore data
+    const liveContext: LiveSchoolContext = {
+      totalStudents: cachedStudents.length,
+      studentsSample: cachedStudents.slice(0, 20).map(s => ({
+        roll: s.roll,
+        className: s.className,
+        name: s.studentNameBn,
+        mobile: s.guardianMobile || s.studentMobile,
+      })),
+      upcomingHolidays: cachedHolidays.slice(0, 10).map(h => ({
+        date: h.date,
+        description: h.description,
+      })),
+    };
+
     try {
       const result = await runUniversalAi({
         query: queryToSend,
@@ -119,6 +218,7 @@ export function GlobalAiAssistant() {
         institutionName: schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়',
         currentPage: pathname,
         chatHistory: messages,
+        liveContext,
       });
 
       const aiMsg: ChatMessage = { role: 'ai', text: result.response };
@@ -177,12 +277,39 @@ export function GlobalAiAssistant() {
     }
   };
 
+  const handlePrintOrExport = (textToPrint: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${schoolInfo.name || 'বিদ্যালয়'} - রিপোর্ট</title>
+          <style>
+            body { font-family: 'SolaimanLipi', 'Kalpurush', sans-serif; padding: 40px; color: #111; line-height: 1.6; }
+            h2 { color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; }
+            .date { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+            .content { white-space: pre-wrap; font-size: 15px; }
+          </style>
+        </head>
+        <body>
+          <h2>${schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'}</h2>
+          <div class="date">তারিখ: ${new Date().toLocaleDateString('bn-BD')} | শিক্ষাবর্ষ: ${selectedYear}</div>
+          <div class="content">${textToPrint}</div>
+          <script>
+            window.onload = function() { window.print(); window.close(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const quickPrompts = [
     { label: 'নোটিশ ড্রাফট', query: 'আজকের একটি জরুরি নোটিশের খসড়া তৈরি করো', icon: FileText },
     { label: 'উপস্থিতি তথ্য', query: 'আজকের শ্রেণিভিত্তিক হাজিরা অবস্থা কেমন?', icon: UserCheck },
     { label: 'বকেয়া ফি', query: 'ফি আদায় ও বকেয়ার সারাংশ দাও', icon: CreditCard },
     { label: 'ছুটির তালিকা', query: 'এই শিক্ষাবর্ষের পরবর্তী ছুটিগুলো কবে?', icon: Calendar },
-    { label: 'ছাত্র তথ্য', query: 'বিদ্যালয়ের ছাত্রছাত্রী ও সেকশন সম্পর্কিত তথ্য দাও', icon: Users },
+    { label: 'ছাত্র তথ্য', query: 'বিদ্যালয়ের মোট কতজন শিক্ষার্থী আছে তাদের তালিকা বা সারসংক্ষেপ দাও', icon: Users },
   ];
 
   return (
@@ -214,8 +341,8 @@ export function GlobalAiAssistant() {
           <div 
             className={`flex flex-col bg-white rounded-2xl shadow-2xl border border-indigo-200 overflow-hidden font-kalpurush transition-all duration-300 ${
               isExpanded 
-                ? 'w-[95vw] md:w-[720px] h-[88vh] max-h-[850px]' 
-                : 'w-[92vw] sm:w-[420px] h-[580px] max-h-[85vh]'
+                ? 'w-[95vw] md:w-[760px] h-[88vh] max-h-[850px]' 
+                : 'w-[92vw] sm:w-[440px] h-[600px] max-h-[86vh]'
             }`}
           >
             {/* Header */}
@@ -226,9 +353,9 @@ export function GlobalAiAssistant() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-black text-base leading-tight">AI মাল্টি-ফাংশন সহকারী</h3>
+                    <h3 className="font-black text-base leading-tight">স্মার্ট কন্ট্রোল সেন্টার (AI)</h3>
                     <Badge variant="outline" className="text-[10px] bg-white/10 text-emerald-300 border-emerald-400/30 px-1.5 py-0">
-                      সক্রিয়
+                      লাইভ ডাটা
                     </Badge>
                   </div>
                   <p className="text-[11px] text-indigo-200 font-bold mt-0.5">
@@ -281,10 +408,10 @@ export function GlobalAiAssistant() {
               {messages.map((msg, index) => (
                 <div
                   key={index}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl p-3.5 shadow-sm leading-relaxed ${
+                    className={`max-w-[88%] rounded-2xl p-3.5 shadow-sm leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-indigo-600 text-white rounded-br-none font-medium'
                         : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-none font-normal'
@@ -292,12 +419,24 @@ export function GlobalAiAssistant() {
                   >
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                   </div>
+                  {/* Print / Export Action Button on AI responses */}
+                  {msg.role === 'ai' && index > 0 && (
+                    <div className="flex gap-2 mt-1 px-1">
+                      <button
+                        onClick={() => handlePrintOrExport(msg.text)}
+                        className="text-[10px] text-slate-500 hover:text-indigo-600 flex items-center gap-1 font-bold transition-colors"
+                        title="প্রিন্ট বা PDF হিসেবে সংরক্ষণ করুন"
+                      >
+                        <Printer className="h-3 w-3" /> প্রিন্ট / এক্সপোর্ট
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
 
-              {/* Action Preview Card (For Notice Draft or other actions) */}
+              {/* Action Preview Card (For Notice Draft) */}
               {lastActionType === 'NOTICE_DRAFT' && lastAction && (
-                <div className="p-3.5 bg-amber-50 border-2 border-amber-300 rounded-xl space-y-2.5 shadow-sm">
+                <div className="p-3.5 bg-amber-50 border-2 border-amber-300 rounded-xl space-y-2.5 shadow-sm animate-in fade-in">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-amber-900 flex items-center gap-1.5">
                       <FileText className="h-4 w-4 text-amber-700" /> নোটিশ ড্রাফট প্রস্তুত
@@ -316,7 +455,7 @@ export function GlobalAiAssistant() {
                       onClick={handlePublishNotice}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs h-8 px-4"
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> নোটিশ প্রকাশ করুন
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> নোটিশ বোর্ডে প্রকাশ করুন
                     </Button>
                   </div>
                 </div>
@@ -326,7 +465,7 @@ export function GlobalAiAssistant() {
                 <div className="flex justify-start">
                   <div className="bg-white border border-indigo-100 rounded-2xl rounded-bl-none p-3.5 shadow-sm flex items-center gap-2 text-indigo-700 font-bold text-xs">
                     <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-                    <span>AI চিন্তা করছে এবং তথ্য যাচাই করছে...</span>
+                    <span>AI ডাটাবেজ বিশ্লেষণ ও উত্তর তৈরি করছে...</span>
                   </div>
                 </div>
               )}
@@ -334,20 +473,34 @@ export function GlobalAiAssistant() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Bar */}
+            {/* Input Bar with Bengali Voice Support */}
             <div className="p-3 bg-white border-t border-slate-200 flex gap-2 items-center">
+              <Button
+                type="button"
+                variant={isListening ? 'destructive' : 'outline'}
+                size="icon"
+                onClick={toggleListening}
+                className={`h-10 w-10 shrink-0 transition-all ${
+                  isListening ? 'animate-pulse ring-2 ring-rose-500' : 'border-indigo-200 hover:bg-indigo-50 text-indigo-700'
+                }`}
+                title={isListening ? 'রেকর্ডিং বন্ধ করুন' : 'মুখে বাংলায় বলুন (ভয়েস ইনপুট)'}
+              >
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+
               <Input
-                placeholder="বাংলায় যেকোনো প্রশ্ন লিখুন বা কাজের নির্দেশ দিন..."
+                placeholder={isListening ? 'শুনছি... মুখে বলুন...' : 'বাংলায় লিখুন বা মুখে বলুন...'}
                 value={inputQuery}
                 onChange={e => setInputQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                 disabled={loading}
                 className="flex-1 font-medium text-xs md:text-sm h-10 border-indigo-200 focus-visible:ring-indigo-600"
               />
+
               <Button
                 onClick={() => handleSend()}
                 disabled={loading || !inputQuery.trim()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-4 font-black text-xs shrink-0"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-4 font-black text-xs shrink-0 shadow-md"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>

@@ -11,12 +11,21 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface LiveSchoolContext {
+  totalStudents?: number;
+  studentsSample?: Array<{ roll: number; className: string; name: string; mobile?: string }>;
+  todayAttendanceSummary?: string;
+  feesSummary?: string;
+  upcomingHolidays?: Array<{ date: string; description: string }>;
+}
+
 export interface UniversalAiInput {
   query: string;
   academicYear: string;
   institutionName: string;
   currentPage?: string;
   chatHistory?: ChatMessage[];
+  liveContext?: LiveSchoolContext;
 }
 
 export interface UniversalAiOutput {
@@ -41,24 +50,58 @@ export async function runUniversalAi(input: UniversalAiInput): Promise<Universal
 
   // Build chat history context
   const historyText = (input.chatHistory || [])
-    .slice(-6) // last 6 messages for context
+    .slice(-6)
     .map(m => `${m.role === 'user' ? 'ব্যবহারকারী' : 'AI'}: ${m.text}`)
     .join('\n');
 
-  const systemPrompt = `তুমি "${school}"-এর একজন বুদ্ধিমান AI সহকারী। তুমি বাংলায় কথা বলো।
+  // Build live context insights string if provided
+  let contextString = '';
+  if (input.liveContext) {
+    const ctx = input.liveContext;
+    const parts: string[] = [];
+    if (ctx.totalStudents !== undefined) {
+      parts.push(`- মোট নিবন্ধিত শিক্ষার্থী: ${ctx.totalStudents} জন`);
+    }
+    if (ctx.studentsSample && ctx.studentsSample.length > 0) {
+      const sampleList = ctx.studentsSample
+        .slice(0, 15)
+        .map(s => `[শ্রেণি ${s.className}, রোল ${s.roll}: ${s.name} (মোবাইল: ${s.mobile || 'নেই'})]`)
+        .join(', ');
+      parts.push(`- ডাটাবেজে উপস্থিত কয়েকজন শিক্ষার্থী: ${sampleList}`);
+    }
+    if (ctx.upcomingHolidays && ctx.upcomingHolidays.length > 0) {
+      const hList = ctx.upcomingHolidays
+        .map(h => `${h.date}: ${h.description}`)
+        .join('; ');
+      parts.push(`- ক্যালেন্ডারের আসন্ন ছুটিসমূহ: ${hList}`);
+    }
+    if (ctx.todayAttendanceSummary) {
+      parts.push(`- আজকের উপস্থিতি তথ্য: ${ctx.todayAttendanceSummary}`);
+    }
+    if (ctx.feesSummary) {
+      parts.push(`- ফি সংক্রান্ত তথ্য: ${ctx.feesSummary}`);
+    }
+    if (parts.length > 0) {
+      contextString = `\nলাইভ স্কুল ডাটাবেজ তথ্য (${year} সেশন):\n${parts.join('\n')}\n`;
+    }
+  }
+
+  const systemPrompt = `তুমি "${school}"-এর একজন অত্যন্ত দক্ষ, দায়িত্বশীল এবং বুদ্ধিমান ভার্চুয়াল প্রধান শিক্ষক / কেন্দ্রীয় AI সহকারী। তুমি বাংলায় সুন্দর ও প্রমিত ভাষায় কথা বলো।
 বর্তমান শিক্ষাবর্ষ: ${year} | আজকের তারিখ: ${today}
 বর্তমান পেজ: ${input.currentPage || 'ড্যাশবোর্ড'}
 
-তুমি নিচের সব কাজ করতে পারো:
+${contextString}
 
-📋 নোটিশ: যেকোনো নোটিশ তৈরি করা (ছুটি, পরীক্ষা, সভা, জরুরি ঘোষণা)
-👥 উপস্থিতি: উপস্থিতির তথ্য, রিপোর্ট সম্পর্কে জানানো
-💰 ফি: ফি সংক্রান্ত তথ্য ও রিপোর্ট সম্পর্কে জানানো
-👤 ছাত্র: ছাত্রছাত্রী সম্পর্কিত তথ্য ও অনুসন্ধান
+তুমি নিচের সব কাজ সরাসরি সম্পাদন ও উত্তর দিতে পারো:
+
+📋 নোটিশ: যেকোনো আনুষ্ঠানিক নোটিশের নিখুঁত ড্রাফট তৈরি করা
+👥 উপস্থিতি: উপস্থিতির তথ্য, হাজিরা রিপোর্ট সম্পর্কে জানানো
+💰 ফি: ফি সংক্রান্ত তথ্য, বকেয়া এবং আদায় সম্পর্কে জানানো
+👤 ছাত্র: ছাত্রছাত্রী সম্পর্কিত সুনির্দিষ্ট তথ্য ও অনুসন্ধান
 📊 ফলাফল: পরীক্ষার ফলাফল সম্পর্কে তথ্য
 👨‍🏫 শিক্ষক/কর্মচারী: শিক্ষক ও কর্মচারী সম্পর্কে তথ্য
 📅 ছুটি ও রুটিন: ছুটির তারিখ ও ক্লাস রুটিন জানানো
-🔗 পেজে নিয়ে যাওয়া: নির্দিষ্ট পেজে navigate করা
+🔗 পেজে নিয়ে যাওয়া: নির্দিষ্ট পেজে instant navigate করা
 
 পেজের পথসমূহ:
 - হোম পেজ / প্রধান ড্যাশবোর্ড → /
@@ -78,18 +121,18 @@ export async function runUniversalAi(input: UniversalAiInput): Promise<Universal
 
 ${historyText ? `\nআগের কথোপকথন:\n${historyText}\n` : ''}
 
-ব্যবহারকারীর প্রশ্ন: ${input.query}
+ব্যবহারকারীর প্রশ্ন বা নির্দেশ: ${input.query}
 
 IMPORTANT — তুমি MUST শুধুমাত্র নিচের JSON format-এ উত্তর দেবে (কোনো markdown বা extra text নয়):
 {
-  "response": "বাংলায় সম্পূর্ণ উত্তর",
+  "response": "বাংলায় সম্পূর্ণ ও গোছানো উত্তর",
   "actionType": "ACTION_TYPE",
   "actionData": {}
 }
 
 actionType নির্বাচনের নিয়ম:
-- নোটিশ তৈরির অনুরোধ → "NOTICE_DRAFT", actionData-তে title, content, priority রাখো
-- কোনো পেজে যেতে চাইলে (যেমন হোম পেজ, নোটিশ, হিসাব, ইত্যাদি) → "NAVIGATE", actionData-তে { "path": "উপযুক্ত_পাথ" } রাখো (যেমন হোম পেজের জন্য { "path": "/" })
+- নোটিশ তৈরির অনুরোধ → "NOTICE_DRAFT", actionData-তে { "title": "...", "content": "...", "priority": "normal"|"important"|"urgent" } রাখো
+- কোনো পেজে যেতে চাইলে (যেমন হোম পেজ, নোটিশ, হিসাব, ইত্যাদি) → "NAVIGATE", actionData-তে { "path": "উপযুক্ত_পাথ" } রাখো
 - ছাত্র সংক্রান্ত → "STUDENT_QUERY"
 - উপস্থিতি সংক্রান্ত → "ATTENDANCE_QUERY"
 - ফি সংক্রান্ত → "FEE_QUERY"
@@ -97,9 +140,6 @@ actionType নির্বাচনের নিয়ম:
 - শিক্ষক সংক্রান্ত → "STAFF_QUERY"
 - ছুটি/রুটিন সংক্রান্ত → "HOLIDAY_QUERY"
 - অন্য সব → "CHAT"
-
-NOTICE_DRAFT-এর জন্য actionData উদাহরণ:
-{ "title": "${year} শিক্ষাবর্ষের ... নোটিশ", "content": "বিস্তারিত নোটিশ...", "priority": "normal" }
 
 Raw JSON only, no backticks.`;
 
