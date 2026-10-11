@@ -9,6 +9,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { APP_ICON_URL, defaultSchoolInfo } from '@/lib/school-info';
 import { GoogleTranslateProvider } from '@/components/GoogleTranslateProvider';
+import { GlobalAiAssistant } from '@/components/GlobalAiAssistant';
 
 export const metadata: Metadata = {
   title: `${defaultSchoolInfo.name} - ম্যানেজমেন্ট সিস্টেম`,
@@ -47,6 +48,7 @@ export default function RootLayout({
               <SchoolInfoProvider>
                 <AcademicYearProvider>
                   {children}
+                  <GlobalAiAssistant />
                 </AcademicYearProvider>
               </SchoolInfoProvider>
             </AuthProvider>
