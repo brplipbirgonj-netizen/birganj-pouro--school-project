@@ -75,8 +75,42 @@ export function GlobalAiAssistant() {
     setMessages(prev => [...prev, userMsg]);
     if (!customPrompt) setInputQuery('');
     setLoading(true);
-    setLastAction(null);
-    setLastActionType(null);
+    const lowerQuery = queryToSend.trim().toLowerCase();
+    
+    // Quick local navigation fallback for instant zero-latency redirect
+    const quickNavMap: Record<string, string> = {
+      'হোম পেজ': '/',
+      'হোমপেজ': '/',
+      'হোম': '/',
+      'home': '/',
+      'ড্যাশবোর্ড': '/',
+      'নোটিশ বোর্ড': '/notices-management',
+      'নোটিশ': '/notices-management',
+      'হিসাব': '/accounts',
+      'ফি': '/accounts',
+      'হাজিরা': '/attendance',
+      'উপস্থিতি': '/attendance',
+      'ছাত্র তালিকা': '/student-list',
+      'রেজাল্ট': '/results',
+      'ফলাফল': '/results',
+      'শিক্ষক': '/staff',
+      'রুটিন': '/routines',
+    };
+
+    if (quickNavMap[lowerQuery]) {
+      const targetPath = quickNavMap[lowerQuery];
+      setMessages(prev => [
+        ...prev, 
+        { role: 'ai', text: `আপনাকে সংশ্লিষ্ট পেজে নিয়ে যাওয়া হচ্ছে...` }
+      ]);
+      setLoading(false);
+      router.push(targetPath);
+      toast({
+        title: 'পেজ পরিবর্তন করা হচ্ছে...',
+        description: targetPath,
+      });
+      return;
+    }
 
     try {
       const result = await runUniversalAi({

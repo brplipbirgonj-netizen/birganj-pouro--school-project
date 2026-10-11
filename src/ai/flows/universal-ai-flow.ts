@@ -61,6 +61,7 @@ export async function runUniversalAi(input: UniversalAiInput): Promise<Universal
 🔗 পেজে নিয়ে যাওয়া: নির্দিষ্ট পেজে navigate করা
 
 পেজের পথসমূহ:
+- হোম পেজ / প্রধান ড্যাশবোর্ড → /
 - নোটিশ বোর্ড → /notices-management
 - উপস্থিতি → /attendance
 - উপস্থিতি রিপোর্ট → /attendance-report
@@ -88,7 +89,7 @@ IMPORTANT — তুমি MUST শুধুমাত্র নিচের JSON
 
 actionType নির্বাচনের নিয়ম:
 - নোটিশ তৈরির অনুরোধ → "NOTICE_DRAFT", actionData-তে title, content, priority রাখো
-- কোনো পেজে যেতে চাইলে → "NAVIGATE", actionData-তে path রাখো
+- কোনো পেজে যেতে চাইলে (যেমন হোম পেজ, নোটিশ, হিসাব, ইত্যাদি) → "NAVIGATE", actionData-তে { "path": "উপযুক্ত_পাথ" } রাখো (যেমন হোম পেজের জন্য { "path": "/" })
 - ছাত্র সংক্রান্ত → "STUDENT_QUERY"
 - উপস্থিতি সংক্রান্ত → "ATTENDANCE_QUERY"
 - ফি সংক্রান্ত → "FEE_QUERY"
