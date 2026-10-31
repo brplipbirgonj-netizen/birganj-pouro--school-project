@@ -49,7 +49,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 const groupMap: Record<string, string> = { 
     'science': 'science', 'বিজ্ঞান': 'science',
@@ -117,7 +117,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const showGroupSelector = useMemo(() => parseInt(className) >= 9, [className]);
 
     useEffect(() => {
-        let newSubjects = getSubjects(className, group).filter(s => s.isExamSubject !== false);
+        let newSubjects = getSubjects(className, group === 'all' ? undefined : group).filter(s => s.isExamSubject !== false);
         if (user?.role !== 'admin' && !hasPermission('manage:results') && hasPermission('input:results') && className) {
             newSubjects = newSubjects.filter(s => isSubjectPermitted(className, s.name));
         }
@@ -142,7 +142,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         }
         setIsLoadingStudents(true);
 
-        const effectiveGroup = parseInt(className) < 9 ? undefined : group;
+        const effectiveGroup = (parseInt(className) < 9 || group === 'all') ? undefined : group;
         const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, effectiveGroup).catch(() => undefined);
         
         if (!existingResults) {
@@ -160,7 +160,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             const yearMatch = s.academicYear === selectedYear;
             const classMatch = s.className === className;
             if (!yearMatch || !classMatch) return false;
-            if (!showGroupSelector || !group) return true;
+            if (!showGroupSelector || !group || group === 'all') return true;
             
             const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
             const filterGroupNorm = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
@@ -215,7 +215,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (studentsForClass.length === 0) { toast({ variant: 'destructive', title: 'কোনো শিক্ষার্থী নেই' }); return; }
         
         const resultsData: StudentResult[] = Array.from(marks.entries()).map(([studentId, marks]) => ({ studentId, ...marks }));
-        const effectiveGroup = parseInt(className) < 9 ? undefined : group;
+        const effectiveGroup = (parseInt(className) < 9 || group === 'all') ? undefined : group;
         
         await saveClassResults(db, { 
             academicYear: selectedYear, 
@@ -293,7 +293,12 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                         <Label htmlFor="group">গ্রুপ</Label>
                         <Select value={group} onValueChange={setGroup} required>
                             <SelectTrigger id="group" className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="গ্রুপ নির্বাচন" /></SelectTrigger>
-                            <SelectContent><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent>
+                            <SelectContent>
+                                <SelectItem value="all">সকল শাখা</SelectItem>
+                                <SelectItem value="science">বিজ্ঞান</SelectItem>
+                                <SelectItem value="arts">মানবিক</SelectItem>
+                                <SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem>
+                            </SelectContent>
                         </Select>
                     </div>
                 )}
@@ -1124,7 +1129,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                             <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-500 italic text-[11px]")}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : 'ফেল'}</td>
                                             <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[70px] h-10 box-border">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-4 w-4 text-primary" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-6 v-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-4 w-4 text-primary" /></Button>
                                                 </Link>
                                             </td>
                                         </tr>
@@ -1299,11 +1304,11 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const defaultM = existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : (subInfo.fullMarks === 0 ? '0' : '15'))));
                                         const defaultP = existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0'));
 
-                                        const wLimitVal = writtenLimits[inputKey] ?? defaultW;
-                                        const mLimitVal = mcqLimits[inputKey] ?? defaultM;
-                                        const pLimitVal = practicalLimits[inputKey] ?? defaultP;
+                                        const wVal = writtenLimits[inputKey] ?? defaultW;
+                                        const mVal = mcqLimits[inputKey] ?? defaultM;
+                                        const pVal = practicalLimits[inputKey] ?? defaultP;
                                         
-                                        const autoTotal = (parseInt(wLimitVal, 10) || 0) + (parseInt(mLimitVal, 10) || 0) + (parseInt(pLimitVal, 10) || 0);
+                                        const autoTotal = (parseInt(wVal, 10) || 0) + (parseInt(mVal, 10) || 0) + (parseInt(pVal, 10) || 0);
 
                                         const isPermitted = isSubjectPermitted(selectedClass, subInfo.name);
 
@@ -1316,7 +1321,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center">
                                                     <Input 
                                                         type="number" 
-                                                        value={wLimitVal}
+                                                        value={wVal}
                                                         onChange={(e) => setWrittenLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
                                                         className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
                                                         disabled={!isPermitted} 
@@ -1325,7 +1330,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center">
                                                     <Input 
                                                         type="number" 
-                                                        value={mLimitVal}
+                                                        value={mVal}
                                                         onChange={(e) => setMcqLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
                                                         className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
                                                         disabled={!isPermitted || isEnglish} 
@@ -1335,7 +1340,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center">
                                                     <Input 
                                                         type="number" 
-                                                        value={pLimitVal}
+                                                        value={pVal}
                                                         onChange={(e) => setPracticalLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
                                                         className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
                                                         disabled={!isPermitted || !hasPractical} 
@@ -2349,3 +2354,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
