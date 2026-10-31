@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl, addStudent, updateStudent } from '@/lib/student-data';
+import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult, getGradePoint } from '@/lib/results-calculation';
@@ -706,7 +706,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 if (parseInt(className) < 9 || groupFilter === 'all') return true;
                 
                 const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
-                const filterGroupNorm = groupMap[groupFilter.toLowerCase().trim()] || group.toLowerCase().trim();
+                const filterGroupNorm = groupMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
                 return sGroupNorm === filterGroupNorm;
             }).sort((a,b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
 
@@ -774,7 +774,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 if (parseInt(className) < 9 || groupFilter === 'all') return true;
                 
                 const sGrp = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
-                const fGrp = groupMap[groupFilter.toLowerCase().trim()] || group.toLowerCase().trim();
+                const fGrp = groupMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
                 return sGrp === fGrp;
             })
             .sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
@@ -1313,7 +1313,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const isPermitted = isSubjectPermitted(selectedClass, subInfo.name);
 
                                         return (
-                                            <TableRow key={i} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
+                                            <TableRow key={`${selectedClass}-${subInfo.name}`} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
                                                 <TableCell className="pl-8 font-bold text-muted-foreground">{toBengaliNumber(i + 1)}</TableCell>
                                                 <TableCell className="font-black text-primary text-base">
                                                     {subInfo.name}
@@ -2354,4 +2354,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-
