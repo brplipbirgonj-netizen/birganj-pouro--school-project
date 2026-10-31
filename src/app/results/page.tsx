@@ -141,6 +141,21 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             return;
         }
         setIsLoadingStudents(true);
+
+        const effectiveGroup = parseInt(className) < 9 ? undefined : group;
+        const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, effectiveGroup).catch(() => undefined);
+        
+        if (!existingResults) {
+            toast({ 
+                variant: 'destructive', 
+                title: 'পূর্ণমান সেট করা নেই', 
+                description: 'নম্বর এন্ট্রি করার আগে "বিষয় ও পূর্ণমান" ট্যাব থেকে এই বিষয়ের পূর্ণমান সেট করুন।' 
+            });
+            setIsLoadingStudents(false);
+            setStudentsForClass([]);
+            return;
+        }
+
         const filteredStudents = allStudents.filter(s => {
             const yearMatch = s.academicYear === selectedYear;
             const classMatch = s.className === className;
@@ -154,27 +169,15 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         setStudentsForClass(filteredStudents);
         
-        const effectiveGroup = parseInt(className) < 9 ? undefined : group;
-        const existingResults = await getResultsForClass(db, selectedYear, examName, className, subject, effectiveGroup).catch(() => undefined);
         const initialMarks = new Map<string, Marks>();
-        if (existingResults) {
-            setFullMarks(existingResults.fullMarks);
-            setStoredLimits({
-                written: existingResults.writtenLimit ?? 0,
-                mcq: existingResults.mcqLimit ?? 0,
-                practical: existingResults.practicalLimit ?? 0
-            });
-            existingResults.results.forEach(res => initialMarks.set(res.studentId, { written: res.written, mcq: res.mcq, practical: res.practical }));
-        } else {
-            const subInfo = availableSubjects.find(s => s.name === subject);
-            const fm = subInfo?.fullMarks || 100;
-            setFullMarks(fm);
-            setStoredLimits({
-                written: fm === 100 ? (subInfo?.practical ? 50 : 70) : 35,
-                mcq: fm === 100 ? (subInfo?.practical ? 25 : 30) : 15,
-                practical: subInfo?.practical ? 25 : 0
-            });
-        }
+        setFullMarks(existingResults.fullMarks);
+        setStoredLimits({
+            written: existingResults.writtenLimit ?? 0,
+            mcq: existingResults.mcqLimit ?? 0,
+            practical: existingResults.practicalLimit ?? 0
+        });
+        existingResults.results.forEach(res => initialMarks.set(res.studentId, { written: res.written, mcq: res.mcq, practical: res.practical }));
+        
         filteredStudents.forEach(student => { if (!initialMarks.has(student.id)) initialMarks.set(student.id, { written: undefined, mcq: undefined, practical: undefined }); });
         setMarks(initialMarks);
         setIsLoadingStudents(false);
@@ -1175,7 +1178,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
         return (user as any)?.marksPermissions?.[cls]?.includes(sub) ?? false;
     }, [user, hasPermission]);
 
-    const handleUpdateFullMarks = (cls: string, sub: string, exam: string, currentRecord: ClassResult | null) => {
+    const handleUpdateFullMarks = (cls: string, sub: string, exam: string, currentRecord: ClassResult | null, defaultW: string, defaultM: string, defaultP: string) => {
         if (!db || !user) return;
         if (!isSubjectPermitted(cls, sub)) {
             toast({ variant: 'destructive', title: 'পারমিশন নেই' });
@@ -1183,9 +1186,9 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
         }
 
         const inputKey = `${cls}-${sub}-${exam}`;
-        const wLimit = parseInt(writtenLimits[inputKey] || (currentRecord?.writtenLimit?.toString() || '0'), 10) || 0;
-        const mLimit = parseInt(mcqLimits[inputKey] || (currentRecord?.mcqLimit?.toString() || '0'), 10) || 0;
-        const pLimit = parseInt(practicalLimits[inputKey] || (currentRecord?.practicalLimit?.toString() || '0'), 10) || 0;
+        const wLimit = parseInt(writtenLimits[inputKey] ?? defaultW, 10) || 0;
+        const mLimit = parseInt(mcqLimits[inputKey] ?? defaultM, 10) || 0;
+        const pLimit = parseInt(practicalLimits[inputKey] ?? defaultP, 10) || 0;
         const totalFm = wLimit + mLimit + pLimit;
 
         if (totalFm <= 0) {
@@ -1292,9 +1295,13 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const isEnglish = normalize(subInfo.name).includes('ইংরেজি') || normalize(subInfo.name).includes('english');
                                         const hasPractical = subInfo.practical;
 
-                                        const wLimitVal = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
-                                        const mLimitVal = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
-                                        const pLimitVal = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
+                                        const defaultW = existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : (subInfo.fullMarks === 0 ? '0' : '35')));
+                                        const defaultM = existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : (subInfo.fullMarks === 0 ? '0' : '15'))));
+                                        const defaultP = existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0'));
+
+                                        const wLimitVal = writtenLimits[inputKey] ?? defaultW;
+                                        const mLimitVal = mcqLimits[inputKey] ?? defaultM;
+                                        const pLimitVal = practicalLimits[inputKey] ?? defaultP;
                                         
                                         const autoTotal = (parseInt(wLimitVal, 10) || 0) + (parseInt(mLimitVal, 10) || 0) + (parseInt(pLimitVal, 10) || 0);
 
@@ -1350,7 +1357,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                                 isSaving === inputKey ? "text-slate-400" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                                                             )}
                                                             disabled={!isPermitted || isSaving === inputKey}
-                                                            onClick={() => handleUpdateFullMarks(selectedClass, subInfo.name, examName, existingRecord || null)}
+                                                            onClick={() => handleUpdateFullMarks(selectedClass, subInfo.name, examName, existingRecord || null, defaultW, defaultM, defaultP)}
                                                         >
                                                             {isSaving === inputKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                                         </Button>
