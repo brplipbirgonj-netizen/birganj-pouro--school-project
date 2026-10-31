@@ -11,7 +11,6 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance, getAttendanceForClassAndDate } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
 import { getProxyClasses, ProxyClass } from '@/lib/proxy-data';
-import { getFullRoutine as getRoutineData, ClassRoutine as RoutineType } from '@/lib/routine-data';
 import { getNotices, Notice } from '@/lib/notice-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { getStaff } from '@/lib/staff-data';
@@ -273,7 +272,7 @@ const TeachersOnLeaveCard = () => {
     return (
         <Card className="lg:col-span-1 shadow-md border-2 border-black bg-rose-50/30">
             <CardHeader className="bg-rose-100/50 rounded-t-lg pb-3">
-                <CardTitle className="text-lg flex items-center gap-2 text-rose-800">
+                <CardTitle className="text-lg font-black flex items-center gap-2 text-rose-800">
                     <UserMinus className="h-5 w-5" /> ছুটিতে থাকা শিক্ষক ও কর্মচারী
                 </CardTitle>
             </CardHeader>
@@ -292,7 +291,7 @@ const TeachersOnLeaveCard = () => {
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-2">
                                         <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                                        <span className="font-bold text-rose-900 text-sm">{person.name}</span>
+                                        <span className="font-black text-rose-900 text-sm">{person.name}</span>
                                     </div>
                                     {person.type && (
                                         <Badge variant="outline" className="text-[9px] h-4 font-black bg-rose-50 text-rose-700 border-rose-200">
@@ -480,11 +479,11 @@ const LiveRoutineCard = () => {
         <Card className="lg:col-span-2 shadow-md border-2 border-black">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex flex-col gap-1">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <CardTitle className="text-sm font-black flex items-center gap-2">
                         <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
                     </CardTitle>
-                    <div className="text-[10px] font-bold text-muted-foreground pl-6">
-                        {isClient && currentTime ? format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
+                    <div className="text-[10px] font-black text-muted-foreground pl-6">
+                        {isClient && currentTime ? format(now, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
                     </div>
                 </div>
                  <Badge variant="outline" className="flex items-center gap-2 bg-white shadow-sm">
@@ -507,7 +506,7 @@ const LiveRoutineCard = () => {
                         <div>
                             {periodInfo.runningClasses && periodInfo.runningClasses.length > 0 ? (
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-2 mb-2 text-emerald-600 font-semibold text-sm">
+                                    <div className="flex items-center gap-2 mb-2 text-emerald-600 font-black text-sm">
                                         <span className="relative flex h-2 w-2">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -525,12 +524,12 @@ const LiveRoutineCard = () => {
                                         <TableBody>
                                             {periodInfo.runningClasses.map((rc, index) => (
                                                 <TableRow key={index}>
-                                                    <TableCell className="text-xs font-medium">{rc.time}</TableCell>
-                                                    <TableCell className="font-semibold text-primary">
+                                                    <TableCell className="text-xs font-black">{toBengaliNumber(rc.time)}</TableCell>
+                                                    <TableCell className="font-black text-primary">
                                                         {rc.teacher} 
                                                         {rc.isProxy && <span className="ml-1 text-[10px] text-red-600 font-black animate-pulse">(বদলি)</span>}
                                                     </TableCell>
-                                                    <TableCell>{rc.displayClassName}</TableCell>
+                                                    <TableCell className="font-black">{rc.displayClassName}</TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
@@ -540,7 +539,7 @@ const LiveRoutineCard = () => {
                                 <div className="flex items-center justify-center h-20 text-center bg-muted/20 rounded-md border border-dashed">
                                     <p className={cn(
                                         "text-muted-foreground transition-all duration-500",
-                                        periodInfo.isSpecialStatus ? "text-red-600 font-bold" : "text-sm"
+                                        periodInfo.isSpecialStatus ? "text-red-600 font-black" : "text-sm font-bold"
                                     )}>
                                         {periodInfo.status}
                                     </p>
@@ -552,7 +551,7 @@ const LiveRoutineCard = () => {
                             <div>
                                 {periodInfo.nextClasses && periodInfo.nextClasses.length > 0 ? (
                                     <div className="space-y-2">
-                                        <div className="text-indigo-600 font-semibold text-sm mb-2 border-t pt-4">
+                                        <div className="text-indigo-600 font-black text-sm mb-2 border-t pt-4">
                                             {periodInfo.nextStatus}
                                         </div>
                                         <Table>
@@ -566,19 +565,19 @@ const LiveRoutineCard = () => {
                                             <TableBody>
                                                 {periodInfo.nextClasses.map((nc, index) => (
                                                     <TableRow key={index}>
-                                                        <TableCell className="text-xs text-muted-foreground">{nc.time}</TableCell>
-                                                        <TableCell className="font-medium text-indigo-900">
+                                                        <TableCell className="text-xs text-muted-foreground font-black">{toBengaliNumber(nc.time)}</TableCell>
+                                                        <TableCell className="font-black text-indigo-900">
                                                             {nc.teacher}
                                                             {nc.isProxy && <span className="ml-1 text-[10px] text-red-600 font-black">(বদলি)</span>}
                                                         </TableCell>
-                                                        <TableCell className="text-muted-foreground">{nc.displayClassName}</TableCell>
+                                                        <TableCell className="text-muted-foreground font-black">{nc.displayClassName}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
                                         </Table>
                                     </div>
                                 ) : (
-                                    <div className="text-center text-xs text-muted-foreground border-t pt-4">
+                                    <div className="text-center text-xs text-muted-foreground border-t pt-4 font-black">
                                         {periodInfo.nextStatus}
                                     </div>
                                 )}
@@ -624,7 +623,7 @@ const IncomeExpenseChart = () => {
     return (
         <Card className="shadow-md border-2 border-black">
             <CardHeader className="bg-primary/5 rounded-t-lg">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="text-lg font-black flex items-center gap-2">
                     <PieChartIcon className="h-5 w-5 text-primary" /> আয়-ব্যয় চিত্র
                 </CardTitle>
             </CardHeader>
@@ -1491,7 +1490,7 @@ export default function Home() {
                               placeholder="যেমন: ক্লাস ৯ এর রোল ১, ২, ৫ উপস্থিত... অথবা আজকের তারিখ ১২-০৩-২০২৬" 
                               value={aiRawText}
                               onChange={e => setAiRawText(e.target.value)}
-                              className="h-24 border-2 font-bold focus:ring-indigo-500"
+                              className="h-24 border-2 font-black text-xs sm:text-sm focus:ring-indigo-500"
                           />
                         </div>
 
@@ -1604,7 +1603,7 @@ export default function Home() {
                                                         const mName = BENGALI_MONTH_NAMES[parseInt(m, 10) - 1] || m;
                                                         return (
                                                             <div key={ym}>
-                                                                <p className="text-[10px] font-black text-indigo-700 mb-1.5">{mName} {toBengaliNumber(y)}</p>
+                                                                <p className="text-xs font-black text-indigo-700 mb-1.5">{mName} {toBengaliNumber(y)}</p>
                                                                 <div className="flex flex-wrap gap-1.5">
                                                                     {dates.map((dStr: string) => {
                                                                         const bdEntry = Array.isArray(aiResult.attendanceByDate)
@@ -1677,9 +1676,9 @@ export default function Home() {
                                         </div>
                                     )}
 
-                                    <details className="text-xs font-mono bg-white p-3 rounded-lg border">
+                                    <details className="text-[10px] font-mono bg-white p-3 rounded-lg border">
                                         <summary className="font-black text-slate-600 cursor-pointer text-xs mb-2">বিস্তারিত র JSON ডেটা দেখুন</summary>
-                                        <pre className="whitespace-pre-wrap overflow-y-auto max-h-[160px] text-[11px] text-slate-700">
+                                        <pre className="whitespace-pre-wrap overflow-y-auto max-h-[160px] text-[10px] text-slate-700">
                                             {JSON.stringify(aiResult, null, 2)}
                                         </pre>
                                     </details>
@@ -1707,7 +1706,7 @@ export default function Home() {
                         )}
                     </div>
                     <DialogFooter className="p-4 bg-slate-50 border-t">
-                        <DialogClose asChild><Button variant="ghost" className="font-bold">বন্ধ করুন</Button></DialogClose>
+                        <DialogClose asChild><Button variant="ghost" className="font-black">বন্ধ করুন</Button></DialogClose>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -1721,14 +1720,14 @@ export default function Home() {
                <Users className="h-28 w-28 text-indigo-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-indigo-900">মোট শিক্ষার্থী</CardTitle>
+              <CardTitle className="text-sm font-black text-indigo-900">মোট শিক্ষার্থী</CardTitle>
               <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <Users className="h-4 w-4 text-teal-700" />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-black text-indigo-950 mb-1">{totalStudents.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-indigo-700 font-medium mb-3">শিক্ষাবর্ষ {Number(selectedYear).toLocaleString('bn-BD')}</p>
+              <p className="text-[10px] text-indigo-700 font-black mb-3">শিক্ষাবর্ষ {toBengaliNumber(selectedYear)}</p>
               <div className="h-10 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
@@ -1744,7 +1743,7 @@ export default function Home() {
                <CheckCircle2 className="h-28 w-28 text-teal-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-teal-900">মোট উপস্থিত</CardTitle>
+              <CardTitle className="text-sm font-black text-teal-900">মোট উপস্থিত</CardTitle>
               <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <Users className="h-4 w-4 text-teal-700" />
               </div>
@@ -1753,7 +1752,7 @@ export default function Home() {
               <div className="flex items-baseline justify-between">
                 <div className="flex items-baseline gap-2">
                     <div className="text-3xl font-black text-teal-950 mb-1">{totalPresent.toLocaleString('bn-BD')}</div>
-                    <div className="text-sm font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-100">{toBengaliNumber(presentPercentage)}%</div>
+                    <div className="text-[10px] font-black text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-100">{toBengaliNumber(presentPercentage)}%</div>
                 </div>
                 <div className="h-12 w-12 -mt-4">
                     <ResponsiveContainer width="100%" height="100%">
@@ -1773,7 +1772,7 @@ export default function Home() {
                <XCircle className="h-28 w-28 text-red-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-red-900">মোট অনুপস্থিত</CardTitle>
+              <CardTitle className="text-sm font-black text-red-900">মোট অনুপস্থিত</CardTitle>
               <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <Users className="h-4 w-4 text-red-700" />
               </div>
@@ -1781,7 +1780,7 @@ export default function Home() {
             <CardContent className="relative z-10">
               <div className="flex items-baseline gap-2">
                 <div className="text-3xl font-black text-red-950 mb-1">{totalAbsent.toLocaleString('bn-BD')}</div>
-                <div className="text-sm font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-100">{toBengaliNumber(absentPercentage)}%</div>
+                <div className="text-[10px] font-black text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-100">{toBengaliNumber(absentPercentage)}%</div>
               </div>
               <div className="h-10 w-full mt-3">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1798,14 +1797,14 @@ export default function Home() {
                <GraduationCap className="h-28 w-28 text-orange-900" />
             </div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-bold text-orange-900">মোট শিক্ষক</CardTitle>
+              <CardTitle className="text-sm font-black text-orange-900">মোট শিক্ষক</CardTitle>
               <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
                 <GraduationCap className="h-4 w-4 text-orange-700" />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-black text-orange-950 mb-1">{totalTeachers.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-orange-700 font-medium mb-3">নিবন্ধিত সক্রিয় শিক্ষক</p>
+              <p className="text-[10px] font-black text-orange-700 mb-3">নিবন্ধিত সক্রিয় শিক্ষক</p>
               <div className="h-8 w-full mt-1">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={[{v:10}, {v:12}, {v:10}, {v:15}, {v:10}]}>
@@ -1820,10 +1819,10 @@ export default function Home() {
         <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
           <Card className="lg:col-span-1 shadow-md border-2 border-black">
             <CardHeader className="bg-primary/5 rounded-t-lg">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="text-lg font-black flex items-center gap-2">
                     <Info className="h-5 w-5 text-primary" /> আজকের হাজিরা
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="font-black text-xs">
                     {attendanceTaken ? 'শ্রেণিভিত্তিক আজকের উপস্থিতির সারসংক্ষেপ' : 'আজ এখনো কোনো শ্রেণির হাজিরা নেওয়া হয়নি।'}
                 </CardDescription>
             </CardHeader>
@@ -1831,19 +1830,19 @@ export default function Home() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="pl-4">শ্রেণি</TableHead>
-                            <TableHead className="text-center">মোট</TableHead>
-                            <TableHead className="text-center">উপস্থিত</TableHead>
-                            <TableHead className="text-center">অনুপস্থিত</TableHead>
+                            <TableHead className="pl-4 font-black">শ্রেণি</TableHead>
+                            <TableHead className="text-center font-black">মোট</TableHead>
+                            <TableHead className="text-center font-black">উপস্থিত</TableHead>
+                            <TableHead className="text-center font-black">অনুপস্থিত</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {Object.entries(classAttendance).map(([className, data]) => (
                             <TableRow key={className}>
-                                <TableCell className="font-medium pl-4 notranslate" translate="no">{isEn ? `Class ${className}` : `${classNamesMap[className]} শ্রেণি`}</TableCell>
-                                <TableCell className="text-center notranslate" translate="no">{isEn ? data.total : data.total.toLocaleString('bn-BD')}</TableCell>
-                                <TableCell className="text-center text-emerald-600 font-semibold notranslate" translate="no">{isEn ? data.present : data.present.toLocaleString('bn-BD')}</TableCell>
-                                <TableCell className="text-center text-rose-600 font-semibold notranslate" translate="no">{isEn ? data.absent : data.absent.toLocaleString('bn-BD')}</TableCell>
+                                <TableCell className="font-black pl-4 notranslate" translate="no">{isEn ? `Class ${className}` : `${classNamesMap[className]} শ্রেণি`}</TableCell>
+                                <TableCell className="text-center notranslate font-black" translate="no">{toBengaliNumber(data.total)}</TableCell>
+                                <TableCell className="text-center text-emerald-600 font-black notranslate" translate="no">{toBengaliNumber(data.present)}</TableCell>
+                                <TableCell className="text-center text-rose-600 font-black notranslate" translate="no">{toBengaliNumber(data.absent)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
