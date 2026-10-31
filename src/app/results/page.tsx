@@ -135,12 +135,6 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         } else setSelectedSubjectInfo(null);
     }, [subject, availableSubjects]);
 
-    const isEnglish = useMemo(() => {
-        if (!subject) return false;
-        const n = normalize(subject);
-        return n.includes('ইংরেজি') || n.includes('english');
-    }, [subject]);
-
     const handleLoadStudents = async () => {
         if (!examName || !className || !subject || !db || !user) {
             toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'অনুগ্রহ করে পরীক্ষা, শ্রেণি ও বিষয় নির্বাচন করুন।' });
@@ -166,9 +160,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         if (existingResults) {
             setFullMarks(existingResults.fullMarks);
             setStoredLimits({
-                written: existingResults.writtenLimit ?? (existingResults.fullMarks === 100 ? (selectedSubjectInfo?.practical ? 50 : 70) : 35),
-                mcq: existingResults.mcqLimit ?? (existingResults.fullMarks === 100 ? (selectedSubjectInfo?.practical ? 25 : 30) : 15),
-                practical: existingResults.practicalLimit ?? (selectedSubjectInfo?.practical ? 25 : 0)
+                written: existingResults.writtenLimit ?? 0,
+                mcq: existingResults.mcqLimit ?? 0,
+                practical: existingResults.practicalLimit ?? 0
             });
             existingResults.results.forEach(res => initialMarks.set(res.studentId, { written: res.written, mcq: res.mcq, practical: res.practical }));
         } else {
@@ -328,27 +322,28 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <CardContent className="p-0">
                         <div className="max-h-[500px] overflow-auto">
                             <Table>
-                                <TableHeader className="sticky top-0 bg-white z-20 shadow-sm">
+                                <TableHeader className="sticky top-0 bg-white z-20 shadow-sm border-b-2 border-black">
                                     <TableRow>
                                         <TableHead className="w-20 text-center font-black">রোল</TableHead>
                                         <TableHead className="font-black">শিক্ষার্থীর নাম</TableHead>
-                                        <TableHead className="w-28 font-black">লিখিত ({toBengaliNumber(storedLimits.written)})</TableHead>
-                                        {!isEnglish && <TableHead className="w-28 font-black">MCQ ({toBengaliNumber(storedLimits.mcq)})</TableHead>}
-                                        {selectedSubjectInfo?.practical && <TableHead className="w-28 font-black">ব্যবহারিক ({toBengaliNumber(storedLimits.practical)})</TableHead>}
-                                        <TableHead className="w-24 text-center font-black">মোট</TableHead>
+                                        {storedLimits.written > 0 && <TableHead className="w-28 font-black text-center">লিখিত ({toBengaliNumber(storedLimits.written)})</TableHead>}
+                                        {storedLimits.mcq > 0 && <TableHead className="w-28 font-black text-center">MCQ ({toBengaliNumber(storedLimits.mcq)})</TableHead>}
+                                        {storedLimits.practical > 0 && <TableHead className="w-28 font-black text-center">ব্যবহারিক ({toBengaliNumber(storedLimits.practical)})</TableHead>}
+                                        <TableHead className="w-24 text-center font-black text-blue-900">মোট</TableHead>
+                                        <TableHead className="w-32 text-center font-black">অবস্থা</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {studentsForClass.map(student => {
                                         const sMarks = marks.get(student.id);
                                         const written = sMarks?.written ?? 0;
-                                        const mcq = isEnglish ? 0 : (sMarks?.mcq ?? 0);
+                                        const mcq = sMarks?.mcq ?? 0;
                                         const practical = sMarks?.practical ?? 0;
                                         const total = written + mcq + practical;
                                         
-                                        const isWrittenFail = sMarks?.written !== undefined && written < (storedLimits.written * 0.33);
-                                        const isMcqFail = !isEnglish && sMarks?.mcq !== undefined && mcq < (storedLimits.mcq * 0.33);
-                                        const isPracticalFail = selectedSubjectInfo?.practical && sMarks?.practical !== undefined && practical < (storedLimits.practical * 0.33);
+                                        const isWrittenFail = storedLimits.written > 0 && sMarks?.written !== undefined && written < (storedLimits.written * 0.33);
+                                        const isMcqFail = storedLimits.mcq > 0 && sMarks?.mcq !== undefined && mcq < (storedLimits.mcq * 0.33);
+                                        const isPracticalFail = storedLimits.practical > 0 && sMarks?.practical !== undefined && practical < (storedLimits.practical * 0.33);
                                         const isAnyFail = isWrittenFail || isMcqFail || isPracticalFail;
 
                                         const writtenOver = written > storedLimits.written;
@@ -357,46 +352,50 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
 
                                         return (
                                             <TableRow key={student.id} className="hover:bg-accent/5">
-                                                <TableCell className="font-black text-center">{toBengaliNumber(student.roll)}</TableCell>
-                                                <TableCell className={cn("font-bold transition-colors", isAnyFail ? "text-red-600" : "text-slate-700")}>
+                                                <TableCell className="font-black text-center border-r">{toBengaliNumber(student.roll)}</TableCell>
+                                                <TableCell className={cn("font-bold border-r transition-colors", isAnyFail ? "text-red-600" : "text-slate-700")}>
                                                     {student.studentNameBn}
                                                 </TableCell>
-                                                <TableCell>
-                                                    <Input 
-                                                        type="number" 
-                                                        value={sMarks?.written ?? ''} 
-                                                        onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} 
-                                                        onKeyDown={handleKeyDown} 
-                                                        className={cn(numberInputClass, writtenOver && "bg-red-100 border-red-500 text-red-700")}
-                                                        title={writtenOver ? `লিখিত পূর্ণমান ${storedLimits.written} এর বেশি!` : ""}
-                                                    />
-                                                </TableCell>
-                                                {!isEnglish && (
-                                                    <TableCell>
+                                                {storedLimits.written > 0 && (
+                                                    <TableCell className="border-r">
+                                                        <Input 
+                                                            type="number" 
+                                                            value={sMarks?.written ?? ''} 
+                                                            onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} 
+                                                            onKeyDown={handleKeyDown} 
+                                                            className={cn(numberInputClass, writtenOver && "bg-red-100 border-red-500 text-red-700")}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                                {storedLimits.mcq > 0 && (
+                                                    <TableCell className="border-r">
                                                         <Input 
                                                             type="number" 
                                                             value={sMarks?.mcq ?? ''} 
                                                             onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
                                                             className={cn(numberInputClass, mcqOver && "bg-red-100 border-red-500 text-red-700")}
-                                                            title={mcqOver ? `MCQ পূর্ণমান ${storedLimits.mcq} এর বেশি!` : ""}
                                                         />
                                                     </TableCell>
                                                 )}
-                                                {selectedSubjectInfo?.practical && (
-                                                    <TableCell>
+                                                {storedLimits.practical > 0 && (
+                                                    <TableCell className="border-r">
                                                         <Input 
                                                             type="number" 
                                                             value={sMarks?.practical ?? ''} 
                                                             onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
                                                             className={cn(numberInputClass, practicalOver && "bg-red-100 border-red-500 text-red-700")}
-                                                            title={practicalOver ? `ব্যবহারিক পূর্ণমান ${storedLimits.practical} এর বেশি!` : ""}
                                                         />
                                                     </TableCell>
                                                 )}
-                                                <TableCell className="text-center font-black text-blue-900 bg-slate-50/50">
+                                                <TableCell className="text-center font-black text-blue-900 bg-slate-50/50 border-r">
                                                     {toBengaliNumber(total)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge className={cn("font-black px-3", isAnyFail ? "bg-rose-600" : "bg-emerald-600")}>
+                                                        {isAnyFail ? 'অকৃতকার্য' : 'কৃতকার্য'}
+                                                    </Badge>
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -404,7 +403,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="flex justify-end p-4 border-t bg-muted/10"><Button onClick={handleSaveResults} size="lg" className="px-10 font-black shadow-md">প্রাপ্ত নম্বর সেভ করুন</Button></div>
+                        <div className="flex justify-between items-center p-4 border-t bg-muted/10">
+                            <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4 text-primary" /> এন্টার চাপলে পরবর্তী শিক্ষার্থীর ইনপুট ঘরে চলে যাবে।</p>
+                            <Button onClick={handleSaveResults} size="lg" className="px-10 font-black shadow-md"><Save className="mr-2 h-5 w-5" /> প্রাপ্ত নম্বর সেভ করুন</Button>
+                        </div>
                     </CardContent>
                 </Card>
             )}
@@ -1090,8 +1092,8 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                 <tbody>
                                     {results.map(res => (
                                         <tr key={res.student.id} className="h-10 hover:bg-slate-50 transition-colors">
-                                            <td className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 w-[60px] h-[40px] box-border">{toBengaliNumber(res.student.roll)}</td>
-                                            <td className="font-bold sticky left-[60px] z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] h-[40px] box-border">{res.student.studentNameBn}</td>
+                                            <td className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 w-[60px] h-10 box-border">{toBengaliNumber(res.student.roll)}</td>
+                                            <td className="font-bold sticky left-[60px] z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] h-10 box-border">{res.student.studentNameBn}</td>
                                             {subs.map((s, idx) => {
                                                 const sr = res.subjectResults.get(s.name);
                                                 const isEng = s.name.includes('ইংরেজি');
@@ -1100,22 +1102,22 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                     <React.Fragment key={`${res.student.id}-${s.name}`}>
                                                         {!isEng && (
                                                             <>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{toBengaliNumber(sr?.written ?? '-') }</td>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{toBengaliNumber(sr?.mcq ?? '-') }</td>
-                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-[40px] box-border", bgColor)}>{toBengaliNumber(sr?.practical ?? '-') }</td>}
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor)}>{toBengaliNumber(sr?.written ?? '-') }</td>
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor)}>{toBengaliNumber(sr?.mcq ?? '-') }</td>
+                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor)}>{toBengaliNumber(sr?.practical ?? '-') }</td>}
                                                             </>
                                                         )}
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[13px] p-0.5 h-[40px] box-border", bgColor)}>{toBengaliNumber(sr?.marks ?? '-') }</td>
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] font-black p-0.5 h-[40px] box-border", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100")}>{sr?.grade ?? '-' }</td>
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-bold h-[40px] box-border", bgColor)}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-') }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[13px] p-0.5 h-10 box-border", bgColor)}>{toBengaliNumber(sr?.marks ?? '-') }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] font-black p-0.5 h-10 box-border", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100")}>{sr?.grade ?? '-' }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-bold h-10 box-border", bgColor)}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-') }</td>
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[280px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">{toBengaliNumber(res.totalMarks)}</td>
-                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[210px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">{toBengaliNumber(res.gpa.toFixed(2))}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border", !res.isPass && "text-rose-500 italic text-[11px]")}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : 'ফেল'}</td>
-                                            <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[70px] h-[40px] box-border">
+                                            <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[280px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.totalMarks)}</td>
+                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[210px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.gpa.toFixed(2))}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-500 italic text-[11px]")}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : 'ফেল'}</td>
+                                            <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[70px] h-10 box-border">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
                                                     <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-4 w-4 text-primary" /></Button>
                                                 </Link>
@@ -1288,9 +1290,9 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const isEnglish = normalize(subInfo.name).includes('ইংরেজি') || normalize(subInfo.name).includes('english');
                                         const hasPractical = subInfo.practical;
 
-                                        const wVal = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
-                                        const mVal = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
-                                        const pVal = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
+                                        const wLimit = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
+                                        const mLimit = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
+                                        const pLimit = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
                                         
                                         const autoTotal = (parseInt(wVal, 10) || 0) + (parseInt(mVal, 10) || 0) + (parseInt(pVal, 10) || 0);
 
@@ -2317,8 +2319,6 @@ export default function ResultsPage() {
                         </div>
                         <p className="text-[12px] font-bold mt-1">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</p>
                     </header>
-
-                    {/* ... results mapping ... */}
                 </div>
             )}
 
@@ -2332,7 +2332,6 @@ export default function ResultsPage() {
                             th, td { border: 1px solid black !important; padding: 1px !important; font-size: 8px !important; }
                         }
                     `}</style>
-                    {/* ... special report header ... */}
                 </div>
             )}
         </div>
