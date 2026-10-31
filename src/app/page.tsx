@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -483,7 +482,7 @@ const LiveRoutineCard = () => {
                         <Clock className="h-4 w-4 text-primary" /> লাইভ ক্লাস রুটিন
                     </CardTitle>
                     <div className="text-[10px] font-black text-muted-foreground pl-6">
-                        {isClient && currentTime ? format(now, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
+                        {isClient && currentTime ? format(currentTime, 'EEEE, d MMMM yyyy', { locale: bn }) : <Skeleton className="h-3 w-32" />}
                     </div>
                 </div>
                  <Badge variant="outline" className="flex items-center gap-2 bg-white shadow-sm">
