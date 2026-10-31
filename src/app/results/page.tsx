@@ -132,6 +132,19 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             setSelectedSubjectInfo(subInfo || null);
         } else setSelectedSubjectInfo(null);
     }, [subject, availableSubjects]);
+
+    // Validation Limits Helper
+    const markLimits = useMemo(() => {
+        if (fullMarks === 100) {
+            if (selectedSubjectInfo?.practical) return { written: 50, mcq: 25, practical: 25 };
+            return { written: 70, mcq: 30, practical: 0 };
+        }
+        if (fullMarks === 50) {
+            if (selectedSubjectInfo?.practical) return { written: 0, mcq: 25, practical: 25 };
+            return { written: 35, mcq: 15, practical: 0 };
+        }
+        return { written: fullMarks, mcq: 0, practical: 0 };
+    }, [fullMarks, selectedSubjectInfo]);
     
     const handleLoadStudents = async () => {
         if (!examName || !className || !subject || !db || !user) {
@@ -182,7 +195,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             const table = e.currentTarget.closest('table');
             if (!table) return;
             
-            const inputs = Array.from(table.querySelectorAll('tbody input[type="number"]')) as HTMLInputElement[];
+            const inputs = Array.from(table.querySelectorAll('tbody input[type="number"]:not([readonly])')) as HTMLInputElement[];
             const index = inputs.indexOf(e.currentTarget);
             
             if (index >= 0 && index < inputs.length - 1) {
@@ -310,21 +323,69 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <TableRow>
                                         <TableHead className="w-20 text-center font-black">রোল</TableHead>
                                         <TableHead className="font-black">শিক্ষার্থীর নাম</TableHead>
-                                        <TableHead className="w-32 font-black">লিখিত</TableHead>
-                                        <TableHead className="w-32 font-black">MCQ</TableHead>
-                                        {selectedSubjectInfo?.practical && <TableHead className="w-32 font-black">ব্যবহারিক</TableHead>}
+                                        <TableHead className="w-28 font-black">লিখিত ({toBengaliNumber(markLimits.written)})</TableHead>
+                                        <TableHead className="w-28 font-black">MCQ ({toBengaliNumber(markLimits.mcq)})</TableHead>
+                                        {selectedSubjectInfo?.practical && <TableHead className="w-28 font-black">ব্যবহারিক ({toBengaliNumber(markLimits.practical)})</TableHead>}
+                                        <TableHead className="w-24 text-center font-black">মোট</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {studentsForClass.map(student => (
-                                        <TableRow key={student.id} className="hover:bg-accent/5">
-                                            <TableCell className="font-black text-center">{toBengaliNumber(student.roll)}</TableCell>
-                                            <TableCell className="font-bold text-slate-700">{student.studentNameBn}</TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.written ?? ''} onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} onKeyDown={handleKeyDown} className={numberInputClass} /></TableCell>
-                                            <TableCell><Input type="number" value={marks.get(student.id)?.mcq ?? ''} onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} onKeyDown={handleKeyDown} className={numberInputClass} /></TableCell>
-                                            {selectedSubjectInfo?.practical && <TableCell><Input type="number" value={marks.get(student.id)?.practical ?? ''} onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} onKeyDown={handleKeyDown} className={numberInputClass} /></TableCell>}
-                                        </TableRow>
-                                    ))}
+                                    {studentsForClass.map(student => {
+                                        const sMarks = marks.get(student.id);
+                                        const written = sMarks?.written ?? 0;
+                                        const mcq = sMarks?.mcq ?? 0;
+                                        const practical = sMarks?.practical ?? 0;
+                                        const total = (sMarks?.written || 0) + (sMarks?.mcq || 0) + (sMarks?.practical || 0);
+                                        const isFailing = total < (fullMarks * 0.33);
+
+                                        const writtenOver = written > markLimits.written;
+                                        const mcqOver = mcq > markLimits.mcq;
+                                        const practicalOver = practical > markLimits.practical;
+
+                                        return (
+                                            <TableRow key={student.id} className="hover:bg-accent/5">
+                                                <TableCell className="font-black text-center">{toBengaliNumber(student.roll)}</TableCell>
+                                                <TableCell className={cn("font-bold transition-colors", isFailing ? "text-red-600" : "text-slate-700")}>
+                                                    {student.studentNameBn}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input 
+                                                        type="number" 
+                                                        value={sMarks?.written ?? ''} 
+                                                        onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} 
+                                                        onKeyDown={handleKeyDown} 
+                                                        className={cn(numberInputClass, writtenOver && "bg-red-100 border-red-500 text-red-700")}
+                                                        title={writtenOver ? `লিখিত পূর্ণমান ${markLimits.written} এর বেশি!` : ""}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input 
+                                                        type="number" 
+                                                        value={sMarks?.mcq ?? ''} 
+                                                        onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} 
+                                                        onKeyDown={handleKeyDown} 
+                                                        className={cn(numberInputClass, mcqOver && "bg-red-100 border-red-500 text-red-700")}
+                                                        title={mcqOver ? `MCQ পূর্ণমান ${markLimits.mcq} এর বেশি!` : ""}
+                                                    />
+                                                </TableCell>
+                                                {selectedSubjectInfo?.practical && (
+                                                    <TableCell>
+                                                        <Input 
+                                                            type="number" 
+                                                            value={sMarks?.practical ?? ''} 
+                                                            onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} 
+                                                            onKeyDown={handleKeyDown} 
+                                                            className={cn(numberInputClass, practicalOver && "bg-red-100 border-red-500 text-red-700")}
+                                                            title={practicalOver ? `ব্যবহারিক পূর্ণমান ${markLimits.practical} এর বেশি!` : ""}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                                <TableCell className="text-center font-black text-blue-900 bg-slate-50/50">
+                                                    {toBengaliNumber(total)}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>
