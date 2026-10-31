@@ -29,6 +29,9 @@ export interface ClassResult {
   group?: string;
   subject: string;
   fullMarks: number;
+  writtenLimit?: number;
+  mcqLimit?: number;
+  practicalLimit?: number;
   results: StudentResult[];
 }
 

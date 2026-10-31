@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -104,6 +103,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [marks, setMarks] = useState<Map<string, Marks>>(new Map());
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
+    // Stored Limits from DB
+    const [storedLimits, setStoredLimits] = useState<{ written: number, mcq: number, practical: number }>({ written: 70, mcq: 30, practical: 0 });
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canUploadMarks = hasPermission('upload:marks');
 
@@ -133,19 +135,12 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         } else setSelectedSubjectInfo(null);
     }, [subject, availableSubjects]);
 
-    // Validation Limits Helper
-    const markLimits = useMemo(() => {
-        if (fullMarks === 100) {
-            if (selectedSubjectInfo?.practical) return { written: 50, mcq: 25, practical: 25 };
-            return { written: 70, mcq: 30, practical: 0 };
-        }
-        if (fullMarks === 50) {
-            if (selectedSubjectInfo?.practical) return { written: 0, mcq: 25, practical: 25 };
-            return { written: 35, mcq: 15, practical: 0 };
-        }
-        return { written: fullMarks, mcq: 0, practical: 0 };
-    }, [fullMarks, selectedSubjectInfo]);
-    
+    const isEnglish = useMemo(() => {
+        if (!subject) return false;
+        const n = normalize(subject);
+        return n.includes('ইংরেজি') || n.includes('english');
+    }, [subject]);
+
     const handleLoadStudents = async () => {
         if (!examName || !className || !subject || !db || !user) {
             toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'অনুগ্রহ করে পরীক্ষা, শ্রেণি ও বিষয় নির্বাচন করুন।' });
@@ -170,10 +165,21 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         const initialMarks = new Map<string, Marks>();
         if (existingResults) {
             setFullMarks(existingResults.fullMarks);
+            setStoredLimits({
+                written: existingResults.writtenLimit ?? (existingResults.fullMarks === 100 ? (selectedSubjectInfo?.practical ? 50 : 70) : 35),
+                mcq: existingResults.mcqLimit ?? (existingResults.fullMarks === 100 ? (selectedSubjectInfo?.practical ? 25 : 30) : 15),
+                practical: existingResults.practicalLimit ?? (selectedSubjectInfo?.practical ? 25 : 0)
+            });
             existingResults.results.forEach(res => initialMarks.set(res.studentId, { written: res.written, mcq: res.mcq, practical: res.practical }));
         } else {
             const subInfo = availableSubjects.find(s => s.name === subject);
-            setFullMarks(subInfo?.fullMarks || 100);
+            const fm = subInfo?.fullMarks || 100;
+            setFullMarks(fm);
+            setStoredLimits({
+                written: fm === 100 ? (subInfo?.practical ? 50 : 70) : 35,
+                mcq: fm === 100 ? (subInfo?.practical ? 25 : 30) : 15,
+                practical: subInfo?.practical ? 25 : 0
+            });
         }
         filteredStudents.forEach(student => { if (!initialMarks.has(student.id)) initialMarks.set(student.id, { written: undefined, mcq: undefined, practical: undefined }); });
         setMarks(initialMarks);
@@ -220,7 +226,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             className, 
             group: effectiveGroup || undefined, 
             subject, 
-            fullMarks: fullMarks, 
+            fullMarks: fullMarks,
+            writtenLimit: storedLimits.written,
+            mcqLimit: storedLimits.mcq,
+            practicalLimit: storedLimits.practical,
             results: resultsData 
         });
         
@@ -323,9 +332,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <TableRow>
                                         <TableHead className="w-20 text-center font-black">রোল</TableHead>
                                         <TableHead className="font-black">শিক্ষার্থীর নাম</TableHead>
-                                        <TableHead className="w-28 font-black">লিখিত ({toBengaliNumber(markLimits.written)})</TableHead>
-                                        <TableHead className="w-28 font-black">MCQ ({toBengaliNumber(markLimits.mcq)})</TableHead>
-                                        {selectedSubjectInfo?.practical && <TableHead className="w-28 font-black">ব্যবহারিক ({toBengaliNumber(markLimits.practical)})</TableHead>}
+                                        <TableHead className="w-28 font-black">লিখিত ({toBengaliNumber(storedLimits.written)})</TableHead>
+                                        {!isEnglish && <TableHead className="w-28 font-black">MCQ ({toBengaliNumber(storedLimits.mcq)})</TableHead>}
+                                        {selectedSubjectInfo?.practical && <TableHead className="w-28 font-black">ব্যবহারিক ({toBengaliNumber(storedLimits.practical)})</TableHead>}
                                         <TableHead className="w-24 text-center font-black">মোট</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -333,19 +342,23 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     {studentsForClass.map(student => {
                                         const sMarks = marks.get(student.id);
                                         const written = sMarks?.written ?? 0;
-                                        const mcq = sMarks?.mcq ?? 0;
+                                        const mcq = isEnglish ? 0 : (sMarks?.mcq ?? 0);
                                         const practical = sMarks?.practical ?? 0;
-                                        const total = (sMarks?.written || 0) + (sMarks?.mcq || 0) + (sMarks?.practical || 0);
-                                        const isFailing = total < (fullMarks * 0.33);
+                                        const total = written + mcq + practical;
+                                        
+                                        const isWrittenFail = sMarks?.written !== undefined && written < (storedLimits.written * 0.33);
+                                        const isMcqFail = !isEnglish && sMarks?.mcq !== undefined && mcq < (storedLimits.mcq * 0.33);
+                                        const isPracticalFail = selectedSubjectInfo?.practical && sMarks?.practical !== undefined && practical < (storedLimits.practical * 0.33);
+                                        const isAnyFail = isWrittenFail || isMcqFail || isPracticalFail;
 
-                                        const writtenOver = written > markLimits.written;
-                                        const mcqOver = mcq > markLimits.mcq;
-                                        const practicalOver = practical > markLimits.practical;
+                                        const writtenOver = written > storedLimits.written;
+                                        const mcqOver = mcq > storedLimits.mcq;
+                                        const practicalOver = practical > storedLimits.practical;
 
                                         return (
                                             <TableRow key={student.id} className="hover:bg-accent/5">
                                                 <TableCell className="font-black text-center">{toBengaliNumber(student.roll)}</TableCell>
-                                                <TableCell className={cn("font-bold transition-colors", isFailing ? "text-red-600" : "text-slate-700")}>
+                                                <TableCell className={cn("font-bold transition-colors", isAnyFail ? "text-red-600" : "text-slate-700")}>
                                                     {student.studentNameBn}
                                                 </TableCell>
                                                 <TableCell>
@@ -355,19 +368,21 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                         onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} 
                                                         onKeyDown={handleKeyDown} 
                                                         className={cn(numberInputClass, writtenOver && "bg-red-100 border-red-500 text-red-700")}
-                                                        title={writtenOver ? `লিখিত পূর্ণমান ${markLimits.written} এর বেশি!` : ""}
+                                                        title={writtenOver ? `লিখিত পূর্ণমান ${storedLimits.written} এর বেশি!` : ""}
                                                     />
                                                 </TableCell>
-                                                <TableCell>
-                                                    <Input 
-                                                        type="number" 
-                                                        value={sMarks?.mcq ?? ''} 
-                                                        onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} 
-                                                        onKeyDown={handleKeyDown} 
-                                                        className={cn(numberInputClass, mcqOver && "bg-red-100 border-red-500 text-red-700")}
-                                                        title={mcqOver ? `MCQ পূর্ণমান ${markLimits.mcq} এর বেশি!` : ""}
-                                                    />
-                                                </TableCell>
+                                                {!isEnglish && (
+                                                    <TableCell>
+                                                        <Input 
+                                                            type="number" 
+                                                            value={sMarks?.mcq ?? ''} 
+                                                            onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} 
+                                                            onKeyDown={handleKeyDown} 
+                                                            className={cn(numberInputClass, mcqOver && "bg-red-100 border-red-500 text-red-700")}
+                                                            title={mcqOver ? `MCQ পূর্ণমান ${storedLimits.mcq} এর বেশি!` : ""}
+                                                        />
+                                                    </TableCell>
+                                                )}
                                                 {selectedSubjectInfo?.practical && (
                                                     <TableCell>
                                                         <Input 
@@ -376,7 +391,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                             onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
                                                             className={cn(numberInputClass, practicalOver && "bg-red-100 border-red-500 text-red-700")}
-                                                            title={practicalOver ? `ব্যবহারিক পূর্ণমান ${markLimits.practical} এর বেশি!` : ""}
+                                                            title={practicalOver ? `ব্যবহারিক পূর্ণমান ${storedLimits.practical} এর বেশি!` : ""}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -1127,7 +1142,12 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [examName, setExamName] = useState('');
     const [selectedClass, setSelectedClass] = useState('6');
     const [savedResults, setSavedResults] = useState<ClassResult[]>([]);
-    const [fullMarksInputs, setFullMarksInputs] = useState<Record<string, string>>({});
+    
+    // Separate Limit States for fine-grained control
+    const [writtenLimits, setWrittenLimits] = useState<Record<string, string>>({});
+    const [mcqLimits, setMcqLimits] = useState<Record<string, string>>({});
+    const [practicalLimits, setPracticalLimits] = useState<Record<string, string>>({});
+    
     const [isSaving, setIsSaving] = useState<string | null>(null);
 
     useEffect(() => {
@@ -1151,22 +1171,31 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
         return (user as any)?.marksPermissions?.[cls]?.includes(sub) ?? false;
     }, [user, hasPermission]);
 
-    const handleUpdateFullMarks = (cls: string, sub: string, exam: string, currentRecord: ClassResult | null, newVal: string) => {
-        const val = parseInt(newVal, 10);
-        if (isNaN(val) || !db || !user) return;
+    const handleUpdateFullMarks = (cls: string, sub: string, exam: string, currentRecord: ClassResult | null) => {
+        if (!db || !user) return;
         if (!isSubjectPermitted(cls, sub)) {
             toast({ variant: 'destructive', title: 'পারমিশন নেই' });
             return;
         }
-        
+
         const inputKey = `${cls}-${sub}-${exam}`;
+        const wLimit = parseInt(writtenLimits[inputKey] || (currentRecord?.writtenLimit?.toString() || '0'), 10) || 0;
+        const mLimit = parseInt(mcqLimits[inputKey] || (currentRecord?.mcqLimit?.toString() || '0'), 10) || 0;
+        const pLimit = parseInt(practicalLimits[inputKey] || (currentRecord?.practicalLimit?.toString() || '0'), 10) || 0;
+        const totalFm = wLimit + mLimit + pLimit;
+
+        if (totalFm <= 0) {
+            toast({ variant: 'destructive', title: 'পূর্ণমান ০ হতে পারে না' });
+            return;
+        }
+
         setIsSaving(inputKey);
 
-        const mutationPromise = currentRecord 
-            ? saveClassResults(db, { ...currentRecord, fullMarks: val })
-            : saveClassResults(db, { academicYear: selectedYear, examName: exam, className: cls, subject: sub, fullMarks: val, results: [] });
+        const dataToSave: ClassResult = currentRecord 
+            ? { ...currentRecord, fullMarks: totalFm, writtenLimit: wLimit, mcqLimit: mLimit, practicalLimit: pLimit }
+            : { academicYear: selectedYear, examName: exam, className: cls, subject: sub, fullMarks: totalFm, writtenLimit: wLimit, mcqLimit: mLimit, practicalLimit: pLimit, results: [] };
 
-        mutationPromise.finally(() => {
+        saveClassResults(db, dataToSave).finally(() => {
             setIsSaving(null);
             updateSavedResults();
         });
@@ -1238,8 +1267,10 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                     <TableRow>
                                         <TableHead className="pl-8 font-black text-black">ক্রমিক</TableHead>
                                         <TableHead className="font-black text-black">বিষয়ের নাম</TableHead>
-                                        <TableHead className="text-center font-black text-black">পোস্টিং স্ট্যাটাস</TableHead>
-                                        <TableHead className="w-48 text-center font-black text-black">পূর্ণমান (Full Marks)</TableHead>
+                                        <TableHead className="w-32 text-center font-black text-black">লিখিত</TableHead>
+                                        <TableHead className="w-32 text-center font-black text-black">MCQ</TableHead>
+                                        <TableHead className="w-32 text-center font-black text-black">ব্যবহারিক</TableHead>
+                                        <TableHead className="w-32 text-center font-black text-primary">মোট পূর্ণমান</TableHead>
                                         <TableHead className="text-right pr-8 font-black text-black">কার্যক্রম</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -1253,31 +1284,17 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         
                                         const existingRecord = matchingRecords.length > 0 ? matchingRecords[0] : null;
                                         const inputKey = `${selectedClass}-${subInfo.name}-${examName}`;
-                                        const inputValue = fullMarksInputs[inputKey] !== undefined 
-                                            ? fullMarksInputs[inputKey] 
-                                            : (existingRecord?.fullMarks?.toString() || subInfo.fullMarks.toString());
                                         
+                                        const isEnglish = normalize(subInfo.name).includes('ইংরেজি') || normalize(subInfo.name).includes('english');
+                                        const hasPractical = subInfo.practical;
+
+                                        const wVal = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
+                                        const mVal = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
+                                        const pVal = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
+                                        
+                                        const autoTotal = (parseInt(wVal, 10) || 0) + (parseInt(mVal, 10) || 0) + (parseInt(pVal, 10) || 0);
+
                                         const isPermitted = isSubjectPermitted(selectedClass, subInfo.name);
-                                        
-                                        const totalClassStudents = allStudents.filter(s => {
-                                            if (s.academicYear !== selectedYear || s.className !== selectedClass) return false;
-                                            if (parseInt(selectedClass) < 9) return true;
-                                            const studentGroupSubjects = getSubjects(s.className, s.group);
-                                            return studentGroupSubjects.some(sub => normalize(sub.name) === normalize(subInfo.name));
-                                        }).length;
-
-                                        const uniqueStudentsWithMarks = new Set<string>();
-                                        matchingRecords.forEach(record => {
-                                            record.results.forEach(res => {
-                                                if (res.studentId && (typeof res.written === 'number' || typeof res.mcq === 'number' || typeof res.practical === 'number')) {
-                                                    uniqueStudentsWithMarks.add(res.studentId);
-                                                }
-                                            });
-                                        });
-
-                                        const postedCount = uniqueStudentsWithMarks.size;
-                                        const remaining = Math.max(0, totalClassStudents - postedCount);
-                                        const hasData = postedCount > 0;
 
                                         return (
                                             <TableRow key={i} className="h-16 border-b last:border-0 hover:bg-slate-50/50 transition-colors">
@@ -1286,65 +1303,75 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     {subInfo.name}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        {hasData ? (
-                                                            <Badge className={cn("font-black text-[10px]", remaining === 0 ? "bg-emerald-600" : "bg-blue-600")}>
-                                                                {remaining === 0 ? 'সম্পন্ন' : 'চলমান'}
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">বকেয়া</Badge>
-                                                        )}
-                                                        <div className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
-                                                            পোস্টিং: {toBengaliNumber(postedCount)} / {toBengaliNumber(totalClassStudents)} 
-                                                            {remaining > 0 && postedCount > 0 && <span className="text-rose-600 ml-1 font-black">(বাকি: {toBengaliNumber(remaining)})</span>}
-                                                        </div>
-                                                    </div>
+                                                    <Input 
+                                                        type="number" 
+                                                        value={wVal}
+                                                        onChange={(e) => setWrittenLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
+                                                        className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
+                                                        disabled={!isPermitted} 
+                                                    />
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="flex items-center gap-2 justify-center">
-                                                        <Input 
-                                                            type="number" 
-                                                            value={inputValue}
-                                                            onChange={(e) => setFullMarksInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
-                                                            className="h-10 w-24 text-center font-black bg-white border-2 border-black text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                                                            disabled={!isPermitted} 
-                                                        />
+                                                    <Input 
+                                                        type="number" 
+                                                        value={mVal}
+                                                        onChange={(e) => setMcqLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
+                                                        className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
+                                                        disabled={!isPermitted || isEnglish} 
+                                                        placeholder={isEnglish ? 'N/A' : ''}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Input 
+                                                        type="number" 
+                                                        value={pVal}
+                                                        onChange={(e) => setPracticalLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
+                                                        className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
+                                                        disabled={!isPermitted || !hasPractical} 
+                                                        placeholder={!hasPractical ? 'N/A' : ''}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="h-10 w-24 flex items-center justify-center font-black bg-primary/5 border-2 border-primary/20 text-primary text-lg rounded-md mx-auto">
+                                                        {toBengaliNumber(autoTotal)}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right pr-8">
+                                                    <div className="flex gap-2 justify-end">
                                                         <Button 
                                                             variant="outline" 
                                                             size="icon" 
                                                             className={cn(
-                                                                "h-10 w-10 shrink-0 shadow-sm border-2",
+                                                                "h-9 w-9 shrink-0 shadow-sm border-2",
                                                                 isSaving === inputKey ? "text-slate-400" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                                                             )}
                                                             disabled={!isPermitted || isSaving === inputKey}
-                                                            onClick={() => handleUpdateFullMarks(selectedClass, subInfo.name, examName, existingRecord || null, inputValue)}
+                                                            onClick={() => handleUpdateFullMarks(selectedClass, subInfo.name, examName, existingRecord || null)}
                                                         >
-                                                            {isSaving === inputKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-5 w-5" />}
+                                                            {isSaving === inputKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                                         </Button>
+                                                        {existingRecord && (
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button variant="outline" size="icon" className="h-9 w-9 text-rose-600 border-rose-100 hover:bg-rose-50" disabled={!isPermitted}>
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent className="font-kalpurush">
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle className="font-black text-rose-700">আপনি কি নিশ্চিত?</AlertDialogTitle>
+                                                                        <AlertDialogDescription className="font-bold">
+                                                                            এই বিষয়ের জন্য এন্ট্রি করা সকল ফলাফল মুছে যাবে। (পূর্ণমান সংরক্ষিত থাকবে না)
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDeleteResult(existingRecord.id!)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">মুছে ফেলুন</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        )}
                                                     </div>
-                                                </TableCell>
-                                                <TableCell className="text-right pr-8">
-                                                    {existingRecord && (
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="outline" size="icon" className="h-9 w-9 text-rose-600 border-rose-100 hover:bg-rose-50" disabled={!isPermitted}>
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent className="font-kalpurush">
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle className="font-black text-rose-700">আপনি কি নিশ্চিত?</AlertDialogTitle>
-                                                                    <AlertDialogDescription className="font-bold">
-                                                                        এই বিষয়ের জন্য এন্ট্রি করা সকল ফলাফল মুছে যাবে। (পূর্ণমান সংরক্ষিত থাকবে না)
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDeleteResult(existingRecord.id!)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black">মুছে ফেলুন</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         );
