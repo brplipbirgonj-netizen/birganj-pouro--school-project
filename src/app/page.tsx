@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -29,7 +30,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend, AreaChart, Area, BarChart, Bar } from 'recharts';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1304,6 +1305,25 @@ export default function Home() {
       }
   };
 
+  const chartData = useMemo(() => {
+    return Object.entries(classAttendance).map(([className, data]) => ({
+      name: classNamesMap[className] || className,
+      value: data.total
+    }));
+  }, [classAttendance]);
+
+  const presenceRatioData = useMemo(() => [
+    { name: 'উপস্থিত', value: totalPresent, color: '#10b981' },
+    { name: 'অনুপস্থিত', value: totalAbsent, color: '#ef4444' }
+  ], [totalPresent, totalAbsent]);
+
+  const absenceClassData = useMemo(() => {
+    return Object.entries(classAttendance).map(([className, data]) => ({
+      name: classNamesMap[className] || className,
+      absent: data.absent
+    }));
+  }, [classAttendance]);
+
   if (authLoading || !user) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-sky-100 font-kalpurush">
@@ -1708,7 +1728,14 @@ export default function Home() {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-black text-indigo-950 mb-1">{totalStudents.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-indigo-700 font-medium">শিক্ষাবর্ষ {Number(selectedYear).toLocaleString('bn-BD')}</p>
+              <p className="text-xs text-indigo-700 font-medium mb-3">শিক্ষাবর্ষ {Number(selectedYear).toLocaleString('bn-BD')}</p>
+              <div className="h-10 w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                        <Area type="monotone" dataKey="value" stroke="#312e81" fill="#4338ca" fillOpacity={0.2} />
+                    </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
           
@@ -1723,9 +1750,20 @@ export default function Home() {
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-black text-teal-950 mb-1">{totalPresent.toLocaleString('bn-BD')}</div>
-                <div className="text-sm font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-100">{toBengaliNumber(presentPercentage)}%</div>
+              <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline gap-2">
+                    <div className="text-3xl font-black text-teal-950 mb-1">{totalPresent.toLocaleString('bn-BD')}</div>
+                    <div className="text-sm font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-100">{toBengaliNumber(presentPercentage)}%</div>
+                </div>
+                <div className="h-12 w-12 -mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie data={presenceRatioData} innerRadius={12} outerRadius={20} paddingAngle={2} dataKey="value">
+                                {presenceRatioData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                            </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1745,6 +1783,13 @@ export default function Home() {
                 <div className="text-3xl font-black text-red-950 mb-1">{totalAbsent.toLocaleString('bn-BD')}</div>
                 <div className="text-sm font-bold text-rose-700 bg-white/80 px-2 py-0.5 rounded-full border border-rose-100">{toBengaliNumber(absentPercentage)}%</div>
               </div>
+              <div className="h-10 w-full mt-3">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={absenceClassData}>
+                        <Bar dataKey="absent" fill="#b91c1c" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
@@ -1760,7 +1805,14 @@ export default function Home() {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-black text-orange-950 mb-1">{totalTeachers.toLocaleString('bn-BD')}</div>
-              <p className="text-xs text-orange-700 font-medium">নিবন্ধিত সক্রিয় শিক্ষক</p>
+              <p className="text-xs text-orange-700 font-medium mb-3">নিবন্ধিত সক্রিয় শিক্ষক</p>
+              <div className="h-8 w-full mt-1">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={[{v:10}, {v:12}, {v:10}, {v:15}, {v:10}]}>
+                        <Area type="step" dataKey="v" stroke="#9a3412" fill="#ea580c" fillOpacity={0.1} />
+                    </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
         </div>
