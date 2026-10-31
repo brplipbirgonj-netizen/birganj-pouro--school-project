@@ -49,7 +49,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 const groupMap: Record<string, string> = { 
     'science': 'science', 'বিজ্ঞান': 'science',
@@ -2269,10 +2269,13 @@ export default function ResultsPage() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex justify-between items-end mt-4 px-2">
-                                <div className="text-2xl font-black">বিষয়ঃ {printingReport.info.subject}</div>
-                                <div className="text-2xl font-black text-center">শ্রেণিঃ {classNamesMap[printingReport.info.className]}</div>
-                                <div className="text-2xl font-black text-right">পূর্ণমান- {toBengaliNumber(printingReport.info.fullMarks)}</div>
+                            <div className="flex flex-col gap-2 mt-4 px-2 font-black text-lg">
+                                <div className="text-center text-xl underline underline-offset-8 mb-2">পরীক্ষার নামঃ {printingReport.info.examName}</div>
+                                <div className="flex justify-between items-center border-b-2 border-slate-300 pb-1">
+                                    <span>বিষয়ঃ {printingReport.info.subject}</span>
+                                    <span>শ্রেণিঃ {classNamesMap[printingReport.info.className]}</span>
+                                    <span>পূর্ণমান- {toBengaliNumber(printingReport.info.fullMarks)}</span>
+                                </div>
                             </div>
                         )}
                     </header>

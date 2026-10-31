@@ -76,8 +76,18 @@ export function processStudentResults(
     return students.map(student => {
         const rawGroup = (student.group || '').toLowerCase().trim();
         const studentGroupNormalized = groupMap[rawGroup] || rawGroup;
-        const optionalSubjectNameNormalized = normalize(student.optionalSubject || '');
+        
+        let optionalSubjectNameNormalized = normalize(student.optionalSubject || '');
         const studentClassNum = parseInt(student.className);
+
+        // Fallback default optional if missing for 9-10
+        if (studentClassNum >= 9 && !optionalSubjectNameNormalized) {
+            if (studentGroupNormalized === 'science') {
+                optionalSubjectNameNormalized = normalize('কৃষি শিক্ষা');
+            } else {
+                optionalSubjectNameNormalized = normalize('কৃষি শিক্ষা');
+            }
+        }
 
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized);
         
@@ -202,11 +212,17 @@ export function processStudentResults(
             }
         });
 
+        // Forced normalization to 11 for 9-10 if calculated count is close
+        let effectiveCompulsoryCount = compulsorySubjectsCount;
+        if (studentClassNum >= 9 && effectiveCompulsoryCount > 11) {
+            effectiveCompulsoryCount = 11;
+        }
+
         const isPass = failedInCompulsoryCount === 0;
         let gpa = 0;
 
-        if (isPass && compulsorySubjectsCount > 0) {
-            gpa = (totalCompulsoryPoints + bonusPoints) / compulsorySubjectsCount;
+        if (isPass && effectiveCompulsoryCount > 0) {
+            gpa = (totalCompulsoryPoints + bonusPoints) / effectiveCompulsoryCount;
             if (gpa > 5.0) gpa = 5.0;
         }
         
