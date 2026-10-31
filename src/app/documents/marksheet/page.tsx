@@ -409,7 +409,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                         <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                     </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">
-                        <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameEn || student.motherNameBn}</div>
+                        <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
                         <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group.toLowerCase()] || student.group : 'General'}</div>
                     </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
@@ -434,6 +434,9 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                                 <th className="border-r border-black p-1 w-8">SL</th>
                                 <th className="border-r border-black p-1 text-left pl-4">Subject Name</th>
                                 <th className="border-r border-black p-1 w-12">Full Marks</th>
+                                <th className="border-r border-black p-1 w-10">Written</th>
+                                <th className="border-r border-black p-1 w-10">MCQ</th>
+                                <th className="border-r border-black p-1 w-10">Prac.</th>
                                 <th className="border-r border-black p-1 w-12">Obtained</th>
                                 <th className="border-r border-black p-1 w-10">Grade</th>
                                 <th className="p-1 w-10">Point</th>
@@ -448,6 +451,9 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                                         <td className="border-r border-black p-1 text-center">{sIdx + 1}</td>
                                         <td className="border-r border-black p-1 pl-4 font-semibold">{sub.englishName}</td>
                                         <td className="border-r border-black p-1 text-center">{sr?.fullMarks ?? sub.fullMarks}</td>
+                                        <td className="border-r border-black p-1 text-center">{sr?.written ?? '-'}</td>
+                                        <td className="border-r border-black p-1 text-center">{sr?.mcq ?? '-'}</td>
+                                        <td className="border-r border-black p-1 text-center">{sr?.practical ?? '-'}</td>
                                         <td className={cn("border-r border-black p-1 text-center font-bold", isFail ? "text-red-600" : "text-blue-900")}>{sr?.marks ?? '-'}</td>
                                         <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{sr?.grade ?? '-'}</td>
                                         <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{sr?.point !== undefined ? sr.point.toFixed(2) : '-'}</td>
@@ -457,7 +463,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                         </tbody>
                         <tfoot>
                             <tr className="border-t-[1.5px] border-black font-black bg-blue-50">
-                                <td colSpan={3} className="p-2 pr-4 text-right border-r border-black uppercase text-[10px]">Total Marks & Final Results</td>
+                                <td colSpan={6} className="p-2 pr-4 text-right border-r border-black uppercase text-[10px]">Total Marks & Final Results</td>
                                 <td className="p-2 text-center border-r border-black text-blue-950 text-sm">{result.totalMarks}</td>
                                 <td className="p-2 text-center border-r border-black text-blue-950 text-sm">{result.finalGrade}</td>
                                 <td className="p-2 text-center text-blue-950 text-sm">{result.gpa.toFixed(2)}</td>
