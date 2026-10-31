@@ -251,6 +251,7 @@ const MarksheetGeneratorPage = () => {
                                 ) : resultsToPrint.length > 0 ? (
                                     <div className="origin-top scale-[0.5] sm:scale-[0.6] lg:scale-[0.7] xl:scale-[0.8] mb-[-200px]">
                                         <MarksheetTemplate 
+                                            key={resultsToPrint[0].student.id}
                                             result={resultsToPrint[0]} 
                                             schoolInfo={schoolInfo} 
                                             examName={selectedExam?.name || ''} 
@@ -443,6 +444,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                         <thead className="bg-gray-100 font-bold">
                             <tr className="border-b-[1.5px] border-black">
                                 <th className="border-r border-black p-1 w-8">SL</th>
+                                <th className="border-r border-black p-1 w-10">Code</th>
                                 <th className="border-r border-black p-1 text-left pl-4">Subject Name</th>
                                 <th className="border-r border-black p-1 w-12">Full Marks</th>
                                 <th className="border-r border-black p-1 w-10">Written</th>
@@ -460,6 +462,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                                 return (
                                     <tr key={sub.code} className={cn("border-b border-black", isFail && "bg-red-50/50")}>
                                         <td className="border-r border-black p-1 text-center font-medium text-gray-500">{sIdx + 1}</td>
+                                        <td className="border-r border-black p-1 text-center font-medium">{sub.code}</td>
                                         <td className="border-r border-black p-1 pl-4 font-semibold">
                                             {sub.englishName}
                                         </td>
@@ -476,7 +479,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                         </tbody>
                         <tfoot>
                             <tr className="border-t-[1.5px] border-black font-black bg-blue-50">
-                                <td colSpan={6} className="p-2 pr-4 text-right border-r border-black uppercase text-[10px]">Total Marks & Final Results</td>
+                                <td colSpan={7} className="p-2 pr-4 text-right border-r border-black uppercase text-[10px]">Total Marks & Final Results</td>
                                 <td className="p-2 text-center border-r border-black text-blue-950 text-sm">{result.totalMarks}</td>
                                 <td className="p-2 text-center border-r border-black text-blue-950 text-sm">{result.finalGrade}</td>
                                 <td className="p-2 text-center text-blue-950 text-sm">{result.gpa.toFixed(2)}</td>

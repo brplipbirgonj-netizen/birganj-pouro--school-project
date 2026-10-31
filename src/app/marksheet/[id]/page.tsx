@@ -352,6 +352,7 @@ function MarksheetContent() {
                             <thead>
                                 <tr className="border-b-[1.5px] border-black bg-gray-100 font-bold">
                                     <th className="border-r border-black p-1 w-8 text-center">SL</th>
+                                    <th className="border-r border-black p-1 w-10 text-center">Code</th>
                                     <th className="border-r border-black p-1 text-left pl-4">Subject Name</th>
                                     <th className="border-r border-black p-1 w-12 text-center">Full Marks</th>
                                     <th className="border-r border-black p-1 w-10 text-center">Written</th>
@@ -370,6 +371,7 @@ function MarksheetContent() {
                                     return (
                                         <tr key={subject.code} className={cn("border-b border-black last:border-0", isFail ? "bg-red-50/30" : "")}>
                                             <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
+                                            <td className="border-r border-black p-1 text-center font-medium">{subject.code}</td>
                                             <td className="border-r border-black p-1 px-4 font-semibold">
                                                 {subject.englishName}
                                                 {normalize(student.optionalSubject || '') === normalize(subject.name) && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
@@ -387,7 +389,7 @@ function MarksheetContent() {
                             </tbody>
                             <tfoot>
                                 <tr className="border-t-[1.5px] border-black font-black bg-blue-50 text-[12px]">
-                                    <td colSpan={6} className="p-2 pr-8 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
+                                    <td colSpan={7} className="p-2 pr-8 text-right border-r border-black uppercase text-blue-900">Total Marks & Final Results</td>
                                     <td className="p-2 text-center border-r border-black text-[16px] text-blue-950">{processedResult.totalMarks}</td>
                                     <td className="p-2 text-center border-r border-black text-[16px] text-blue-950">{processedResult.finalGrade}</td>
                                     <td className="p-2 text-center text-[16px] text-blue-950">{processedResult.gpa.toFixed(2)}</td>
