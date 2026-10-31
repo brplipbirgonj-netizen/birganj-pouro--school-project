@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck, AlertCircle, MousePointer2, UserPlus } from 'lucide-react';
+import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck, AlertCircle, MousePointer2, UserPlus, Trophy } from 'lucide-react';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance, getAttendanceForClassAndDate } from '@/lib/attendance-data';
@@ -1418,6 +1418,12 @@ export default function Home() {
                 </DialogContent>
             </Dialog>
 
+            <Link href="/results">
+                <Button className="h-12 px-6 rounded-2xl bg-violet-600 hover:bg-violet-700 shadow-lg font-black gap-2 transition-all border-b-4 border-violet-900 active:border-b-0 active:translate-y-1 text-white">
+                    <Trophy className="h-5 w-5" /> কুইক ফলাফল
+                </Button>
+            </Link>
+
             {/* AI Assistant Portal */}
             <Dialog open={isAiPortalOpen} onOpenChange={setIsAiPortalOpen}>
                 <DialogTrigger asChild>
@@ -1697,7 +1703,7 @@ export default function Home() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
               <CardTitle className="text-sm font-bold text-indigo-900">মোট শিক্ষার্থী</CardTitle>
               <div className="p-2 bg-white/60 rounded-full backdrop-blur-sm shadow-sm">
-                <Users className="h-4 w-4 text-indigo-700" />
+                <Users className="h-4 w-4 text-teal-700" />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
