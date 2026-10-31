@@ -13,7 +13,7 @@ import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestor
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
-import { getSubjects } from '@/lib/subjects';
+import { getSubjects, subjectNameNormalization } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
 import { Printer, ArrowLeft, User, Users, Info, FileBadge, Loader2, Minus, Plus } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -52,7 +52,7 @@ const gradingScale = [
 const normalize = (name: string) => {
     if (!name) return "";
     const trimmed = name.trim();
-    return (trimmed).toLowerCase();
+    return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
 };
 
 const MarksheetGeneratorPage = () => {
@@ -305,12 +305,12 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
         
         // Filter out mutually exclusive electives if student has one picked
         const filtered = allSubs.filter(subInfo => {
-            const subNameNorm = subInfo.name.toLowerCase().trim();
-            const optSubNorm = (student.optionalSubject || '').toLowerCase().trim();
+            const subNameNorm = normalize(subInfo.name);
+            const optSubNorm = normalize(student.optionalSubject || '');
 
             if (parseInt(student.className) >= 9) {
-                const hmNorm = 'উচ্চতর গণিত';
-                const agriNorm = 'কৃষি শিক্ষা';
+                const hmNorm = normalize('উচ্চতর গণিত');
+                const agriNorm = normalize('কৃষি শিক্ষা');
                 
                 if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
                     if (optSubNorm) return subNameNorm === optSubNorm;

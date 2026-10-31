@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck, AlertCircle, MousePointer2, UserPlus, Trophy } from 'lucide-react';
-import { Student, studentFromDoc } from '@/lib/student-data';
+import { 
+    Users, GraduationCap, Clock, Bell, Info, Plus, Trash2, CheckCircle2, XCircle, 
+    Banknote, PieChart as PieChartIcon, UserMinus, Sparkles, Loader2, FilePen, 
+    Megaphone, RefreshCcw, Image as ImageIcon, Search, UserCheck, AlertCircle, 
+    MousePointer2, UserPlus, Trophy, FileType, BrainCircuit, ArrowRight 
+} from 'lucide-react';
+import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { getAttendanceForDate, saveDailyAttendance, StudentAttendance, DailyAttendance, getAttendanceForClassAndDate } from '@/lib/attendance-data';
 import { getFullRoutine, ClassRoutine } from '@/lib/routine-data';
@@ -38,8 +43,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import Link from 'next/link';
-import { useRef } from 'react';
-import { FileType, BrainCircuit, ArrowRight } from 'lucide-react';
 import { runMultiTaskAi } from '@/ai/flows/multi-task-ai-flow';
 
 const parseTeacherName = (cell: string): string => {
@@ -1637,7 +1640,7 @@ export default function Home() {
 
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <div className="p-2.5 bg-white rounded-xl border">
-                                            <p className="text-[10px] font-black text-muted-foreground uppercase">নির্বাচিত শ্রেণি</p>
+                                            <p className="text-[10px] font-black text-muted-foreground uppercase">নির্দেশিত শ্রেণি</p>
                                             <p className="font-black text-primary text-base">{classNamesMap[selectedAiClass] || selectedAiClass} শ্রেণি</p>
                                         </div>
                                         <div className="p-2.5 bg-white rounded-xl border">
@@ -1676,7 +1679,7 @@ export default function Home() {
                                     )}
 
                                     <details className="text-[10px] font-mono bg-white p-3 rounded-lg border">
-                                        <summary className="font-black text-slate-600 cursor-pointer text-xs mb-2">বিস্তারিত র JSON ডেটা দেখুন</summary>
+                                        <summary className="font-black text-slate-600 cursor-pointer text-xs mb-2">বিস্তারিত JSON ডেটা দেখুন</summary>
                                         <pre className="whitespace-pre-wrap overflow-y-auto max-h-[160px] text-[10px] text-slate-700">
                                             {JSON.stringify(aiResult, null, 2)}
                                         </pre>
