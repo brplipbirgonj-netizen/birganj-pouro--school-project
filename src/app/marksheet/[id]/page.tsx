@@ -75,7 +75,7 @@ function MarksheetContent() {
                 // Fetch exams for the year
                 getExams(db, academicYear).then(data => setAllExams(data));
 
-                // Fetch student details using the helper to ensure generatedId is available
+                // Fetch student details
                 const studentDoc = await getDoc(doc(db, 'students', studentId));
                 if (!studentDoc.exists()) {
                     setIsLoading(false);
@@ -94,7 +94,7 @@ function MarksheetContent() {
                 const studentsList = classSnap.docs.map(studentFromDoc);
                 setAllStudentsInClass(studentsList);
 
-                // Fetch all results for this exam and class once (Optimized)
+                // Fetch all results for this exam and class
                 const allResults = await getAllResults(db, academicYear, currentExamName);
                 const fetchedResultsBySubject = allResults.filter(r => r.className === studentData.className);
                 setResultsBySubject(fetchedResultsBySubject);
@@ -102,25 +102,30 @@ function MarksheetContent() {
                 // Get allowed subjects for this class/group
                 const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
                 
-                // Process results to get GPA and merit
+                // Process results
                 const allFinalResults = processStudentResults(studentsList, fetchedResultsBySubject, allSubjectsForGroup);
                 const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
 
                 if (finalResultForThisStudent) {
-                    // Filter subjects to show only what the student actually took (important for 9-10 science electives)
+                    // Filter subjects to show only what the student actually took
                     const subjectsToShow = allSubjectsForGroup.filter(subInfo => {
                         const subNameNorm = normalize(subInfo.name);
                         const optSubNorm = normalize(studentData.optionalSubject || '');
 
-                        // Handle Class 9-10 Science HM vs Agri exclusive logic
-                        if (parseInt(studentData.className) >= 9 && (studentData.group?.toLowerCase() === 'science' || studentData.group === 'বিজ্ঞান')) {
-                             const hmNorm = normalize('উচ্চতর গণিত');
-                             const agriNorm = normalize('কৃষি শিক্ষা');
-                             
-                             if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
-                                 // If student has chosen an optional, hide the other one
-                                 if (optSubNorm && subNameNorm !== optSubNorm) return false;
-                             }
+                        if (parseInt(studentData.className) >= 9) {
+                            const hmNorm = normalize('উচ্চতর গণিত');
+                            const agriNorm = normalize('কৃষি শিক্ষা');
+                            
+                            if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
+                                // Strictly follow optionalSubject if defined
+                                if (optSubNorm) {
+                                    return subNameNorm === optSubNorm;
+                                }
+                                // If not defined, only show if marks exist
+                                const sr = finalResultForThisStudent.subjectResults.get(subInfo.name);
+                                const hasMarks = sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
+                                return hasMarks;
+                            }
                         }
                         return true;
                     });
@@ -266,7 +271,7 @@ function MarksheetContent() {
                         <div className="flex items-center gap-4">
                             {schoolInfo.logoUrl && (
                                 <div className="w-20 h-20 relative">
-                                    <Image src={schoolInfo.logoUrl} alt="School Logo" fill className="object-contain" priority />
+                                    <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" priority />
                                 </div>
                             )}
                             <div className="text-left">
@@ -319,6 +324,10 @@ function MarksheetContent() {
                         </div>
                         <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
                             <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
+                            <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
+                        </div>
+                        <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
+                            <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
                             <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group.toLowerCase()] || student.group : 'General'}</div>
                         </div>
                         <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
@@ -363,7 +372,7 @@ function MarksheetContent() {
                                             <td className="border-r border-black p-1 text-center font-medium text-gray-500">{index + 1}</td>
                                             <td className="border-r border-black p-1 px-4 font-semibold">
                                                 {subject.englishName}
-                                                {student.optionalSubject === subject.name && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
+                                                {normalize(student.optionalSubject || '') === normalize(subject.name) && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
                                             </td>
                                             <td className="border-r border-black p-1 text-center font-medium">{subResult?.fullMarks ?? subject.fullMarks}</td>
                                             <td className="border-r border-black p-1 text-center">{subResult?.written ?? '-'}</td>

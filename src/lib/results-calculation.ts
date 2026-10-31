@@ -80,33 +80,41 @@ export function processStudentResults(
         let optionalSubjectNameNormalized = normalize(student.optionalSubject || '');
         const studentClassNum = parseInt(student.className);
 
-        // Fallback default optional if missing for 9-10
-        if (studentClassNum >= 9 && !optionalSubjectNameNormalized) {
-            if (studentGroupNormalized === 'science') {
-                optionalSubjectNameNormalized = normalize('কৃষি শিক্ষা');
-            } else {
-                optionalSubjectNameNormalized = normalize('কৃষি শিক্ষা');
-            }
-        }
-
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized);
         
         // Final subject list for this student
         const subjectsForStudent = groupAllowedSubjects.filter(subInfo => {
             const currentSubNameNormalized = normalize(subInfo.name);
             
-            // For 9-10 Science: Exclusive check between HM and Agri
-            if (studentClassNum >= 9 && studentGroupNormalized === 'science') {
+            // For 9-10: Handle mutually exclusive electives (like HM and Agri)
+            if (studentClassNum >= 9) {
                 const hmNormalized = normalize('উচ্চতর গণিত');
                 const agriNormalized = normalize('কৃষি শিক্ষা');
                 
                 if (currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) {
+                    // If student has specified an optional in profile, strictly show only that one
                     if (optionalSubjectNameNormalized) {
                         return currentSubNameNormalized === optionalSubjectNameNormalized;
-                    } else {
-                        // Default fallback
-                        return currentSubNameNormalized === hmNormalized;
                     }
+                    
+                    // If no optional specified in profile, check if marks exist in the database for this subject
+                    const classResult = resultsBySubject.find(r => {
+                        const nameMatch = normalize(r.subject) === currentSubNameNormalized;
+                        if (!nameMatch) return false;
+                        
+                        if (studentClassNum >= 9) {
+                            const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                            const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                            return rGroupNorm === 'none' || rGroupNorm === studentGroupNormalized;
+                        }
+                        return true;
+                    });
+                    
+                    const studentResult = classResult?.results.find(r => r.studentId === student.id);
+                    const hasMarks = studentResult && (studentResult.written !== undefined || studentResult.mcq !== undefined || studentResult.practical !== undefined);
+                    
+                    // If student didn't pick an optional and hasn't sat for the exam, hide both
+                    return hasMarks;
                 }
             }
             return true;

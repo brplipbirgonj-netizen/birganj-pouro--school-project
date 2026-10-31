@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
@@ -294,24 +294,12 @@ const MarksheetGeneratorPage = () => {
 const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, watermarkOpacity }: any) => {
     const student = result.student;
     
-    // Filter subjects to show only what the student actually took (exclusive logic for Science 9-10)
-    const allSubjectsForGroup = getSubjects(student.className, student.group).filter(s => s.isExamSubject !== false);
-    const subjects = allSubjectsForGroup.filter(subInfo => {
-        const subNameNorm = normalize(subInfo.name);
-        const optSubNorm = normalize(student.optionalSubject || '');
-        const classNum = parseInt(student.className);
-
-        if (classNum >= 9 && (student.group?.toLowerCase() === 'science' || student.group === 'বিজ্ঞান')) {
-            const hmNorm = normalize('উচ্চতর গণিত');
-            const agriNorm = normalize('কৃষি শিক্ষা');
-            if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
-                if (optSubNorm && subNameNorm !== optSubNorm) return false;
-            }
-        }
-        return true;
+    // Subjects are already filtered in the processed result Map, but we need to sort them consistently
+    const sortedSubjectResults = Array.from(result.subjectResults.entries()).sort((a, b) => {
+        // Find subject codes for sorting if possible, otherwise use a default subject list order
+        return a[0].localeCompare(b[0]); 
     });
 
-    const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
     const displayExamName = examNameEnglishMap[examName] || examName;
 
     const renderMeritPosition = (position?: number) => {
@@ -395,7 +383,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                 </div>
 
                 <div className="text-center mb-4">
-                    <h2 className="text-lg font-black underline underline-offset-8 uppercase tracking-widest">{displayExamName} Progress Report</h2>
+                    <h2 className="text-lg font-black uppercase tracking-widest">{displayExamName} Progress Report</h2>
                 </div>
 
                 {/* Info Bar */}
@@ -443,14 +431,17 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                             </tr>
                         </thead>
                         <tbody>
-                            {sortedSubjects.map((sub, sIdx) => {
-                                const sr = result.subjectResults.get(sub.name);
+                            {sortedSubjectResults.map(([name, sr], sIdx) => {
                                 const isFail = sr?.isPass === false;
+                                const isOptional = normalize(student.optionalSubject || '') === normalize(name);
                                 return (
                                     <tr key={sIdx} className={cn("border-b border-black", isFail && "bg-red-50/50")}>
-                                        <td className="border-r border-black p-1 text-center">{sIdx + 1}</td>
-                                        <td className="border-r border-black p-1 pl-4 font-semibold">{sub.englishName}</td>
-                                        <td className="border-r border-black p-1 text-center">{sr?.fullMarks ?? sub.fullMarks}</td>
+                                        <td className="border-r border-black p-1 text-center font-medium text-gray-500">{sIdx + 1}</td>
+                                        <td className="border-r border-black p-1 pl-4 font-semibold">
+                                            {name}
+                                            {isOptional && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
+                                        </td>
+                                        <td className="border-r border-black p-1 text-center">{sr?.fullMarks}</td>
                                         <td className="border-r border-black p-1 text-center">{sr?.written ?? '-'}</td>
                                         <td className="border-r border-black p-1 text-center">{sr?.mcq ?? '-'}</td>
                                         <td className="border-r border-black p-1 text-center">{sr?.practical ?? '-'}</td>
