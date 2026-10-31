@@ -99,14 +99,16 @@ export const getSubjects = (className: string, group?: string): Subject[] => {
             artsSubjects.forEach(s => uniqueSubjects.set(s.name, s));
         } else if (normalizedGroup === 'commerce' || normalizedGroup === 'ব্যবসায় শিক্ষা' || normalizedGroup === 'business') {
             commerceSubjects.forEach(s => uniqueSubjects.set(s.name, s));
-        } else {
-            // Union of all subjects for the "All Groups" view
+        } else if (group === undefined) {
+            // Explicitly only return union when group is undefined (e.g. for table headers)
             [...scienceSubjects, ...artsSubjects, ...commerceSubjects].forEach(s => {
                 if (!uniqueSubjects.has(s.name)) {
                     uniqueSubjects.set(s.name, s);
                 }
             });
         }
+        // If group is an empty string or null (from a student record), 
+        // we fallback to only common subjects to prevent adding 12 subjects fail.
 
         return Array.from(uniqueSubjects.values());
     }

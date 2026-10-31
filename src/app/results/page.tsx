@@ -341,6 +341,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const practical = sMarks?.practical ?? 0;
                                         const total = written + mcq + practical;
                                         
+                                        const isAnyMarkEntered = sMarks?.written !== undefined || sMarks?.mcq !== undefined || sMarks?.practical !== undefined;
+
                                         const isWrittenFail = storedLimits.written > 0 && sMarks?.written !== undefined && written < (storedLimits.written * 0.33);
                                         const isMcqFail = storedLimits.mcq > 0 && sMarks?.mcq !== undefined && mcq < (storedLimits.mcq * 0.33);
                                         const isPracticalFail = storedLimits.practical > 0 && sMarks?.practical !== undefined && practical < (storedLimits.practical * 0.33);
@@ -353,7 +355,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         return (
                                             <TableRow key={student.id} className="hover:bg-accent/5">
                                                 <TableCell className="font-black text-center border-r">{toBengaliNumber(student.roll)}</TableCell>
-                                                <TableCell className={cn("font-bold border-r transition-colors", isAnyFail ? "text-red-600" : "text-slate-700")}>
+                                                <TableCell className={cn("font-bold border-r transition-colors", isAnyMarkEntered && isAnyFail ? "text-red-600" : "text-slate-700")}>
                                                     {student.studentNameBn}
                                                 </TableCell>
                                                 {storedLimits.written > 0 && (
@@ -393,8 +395,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     {toBengaliNumber(total)}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge className={cn("font-black px-3", isAnyFail ? "bg-rose-600" : "bg-emerald-600")}>
-                                                        {isAnyFail ? 'অকৃতকার্য' : 'কৃতকার্য'}
+                                                    <Badge className={cn("font-black px-3", !isAnyMarkEntered ? "bg-slate-300 text-slate-600" : (isAnyFail ? "bg-rose-600" : "bg-emerald-600"))}>
+                                                        {!isAnyMarkEntered ? 'এন্ট্রি হয়নি' : (isAnyFail ? 'অকৃতকার্য' : 'কৃতকার্য')}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>
@@ -1290,11 +1292,11 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const isEnglish = normalize(subInfo.name).includes('ইংরেজি') || normalize(subInfo.name).includes('english');
                                         const hasPractical = subInfo.practical;
 
-                                        const wVal = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
-                                        const mVal = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
-                                        const pVal = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
+                                        const wLimitVal = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
+                                        const mLimitVal = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
+                                        const pLimitVal = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
                                         
-                                        const autoTotal = (parseInt(wVal, 10) || 0) + (parseInt(mVal, 10) || 0) + (parseInt(pVal, 10) || 0);
+                                        const autoTotal = (parseInt(wLimitVal, 10) || 0) + (parseInt(mLimitVal, 10) || 0) + (parseInt(pLimitVal, 10) || 0);
 
                                         const isPermitted = isSubjectPermitted(selectedClass, subInfo.name);
 
@@ -1307,7 +1309,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center">
                                                     <Input 
                                                         type="number" 
-                                                        value={wVal}
+                                                        value={wLimitVal}
                                                         onChange={(e) => setWrittenLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
                                                         className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
                                                         disabled={!isPermitted} 
@@ -1316,7 +1318,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center">
                                                     <Input 
                                                         type="number" 
-                                                        value={mVal}
+                                                        value={mLimitVal}
                                                         onChange={(e) => setMcqLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
                                                         className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
                                                         disabled={!isPermitted || isEnglish} 
@@ -1326,7 +1328,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center">
                                                     <Input 
                                                         type="number" 
-                                                        value={pVal}
+                                                        value={pLimitVal}
                                                         onChange={(e) => setPracticalLimits(prev => ({ ...prev, [inputKey]: e.target.value }))}
                                                         className="h-10 w-24 text-center font-black bg-white border-2 border-black/20 focus:border-primary text-base mx-auto" 
                                                         disabled={!isPermitted || !hasPractical} 
