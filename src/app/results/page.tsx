@@ -49,7 +49,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 const groupMap: Record<string, string> = { 
     'science': 'science', 'বিজ্ঞান': 'science',
@@ -405,7 +405,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </div>
                         <div className="flex justify-between items-center p-4 border-t bg-muted/10">
                             <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4 text-primary" /> এন্টার চাপলে পরবর্তী শিক্ষার্থীর ইনপুট ঘরে চলে যাবে।</p>
-                            <Button onClick={handleSaveResults} size="lg" className="px-10 font-black shadow-md"><Save className="mr-2 h-5 w-5" /> প্রাপ্ত নম্বর সেভ করুন</Button>
+                            <Button onClick={handleSaveResults} size="lg" className="px-10 font-black shadow-md"><Save className="mr-2 h-4 w-4" /> প্রাপ্ত নম্বর সেভ করুন</Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -1078,7 +1078,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                         <>
                                                             <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>লিখিত</th>
                                                             <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>MCQ</th>
-                                                            {s.practical && <th className={cn("text-[11px] text-center border-r-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>ব্যবহারিক</th>}
+                                                            {s.practical && <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>ব্যবহারিক</th>}
                                                         </>
                                                     )}
                                                     <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-black bg-blue-200 text-blue-950 p-0.5 sticky top-[32px] z-30 w-14 h-[32px] box-border", bgColor)}>প্রাপ্ত</th>
@@ -1290,9 +1290,9 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const isEnglish = normalize(subInfo.name).includes('ইংরেজি') || normalize(subInfo.name).includes('english');
                                         const hasPractical = subInfo.practical;
 
-                                        const wLimit = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
-                                        const mLimit = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
-                                        const pLimit = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
+                                        const wVal = writtenLimits[inputKey] ?? (existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : '35')));
+                                        const mVal = mcqLimits[inputKey] ?? (existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : '15'))));
+                                        const pVal = practicalLimits[inputKey] ?? (existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0')));
                                         
                                         const autoTotal = (parseInt(wVal, 10) || 0) + (parseInt(mVal, 10) || 0) + (parseInt(pVal, 10) || 0);
 
