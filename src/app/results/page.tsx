@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -49,7 +50,7 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 const groupMap: Record<string, string> = { 
     'science': 'science', 'বিজ্ঞান': 'science',
@@ -75,8 +76,6 @@ type Marks = {
     practical?: number;
 }
 
-// --- Sub Tab Components ---
-
 const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -92,7 +91,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
-    const [group, setGroup] = useState('');
+    const [group, setGroup] = useState('all');
     const [subject, setSubject] = useState('');
     const [fullMarks, setFullMarks] = useState<number>(100);
     
@@ -103,7 +102,6 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [marks, setMarks] = useState<Map<string, Marks>>(new Map());
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-    // Stored Limits from DB
     const [storedLimits, setStoredLimits] = useState<{ written: number, mcq: number, practical: number }>({ written: 70, mcq: 30, practical: 0 });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -283,7 +281,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="class">শ্রেণি</Label>
-                    <Select value={className} onValueChange={(v) => { setClassName(v); setGroup(''); setSubject(''); }}>
+                    <Select value={className} onValueChange={(v) => { setClassName(v); setGroup('all'); setSubject(''); }}>
                         <SelectTrigger id="class" className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
                         <SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent>
                     </Select>
@@ -652,7 +650,6 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
     const bulkUploadRef = useRef<HTMLInputElement>(null);
     const [isBulkUploading, setIsBulkUploading] = useState(false);
 
-    // Dynamic ref tracking for scroll syncing
     const tableContainerRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const topScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const scrollingRef = useRef<string | null>(null);
@@ -1153,9 +1150,9 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [exams, setExams] = useState<Exam[]>([]);
     const [examName, setExamName] = useState('');
     const [selectedClass, setSelectedClass] = useState('6');
+    const [selectedGroup, setSelectedGroup] = useState('all');
     const [savedResults, setSavedResults] = useState<ClassResult[]>([]);
     
-    // Separate Limit States for fine-grained control
     const [writtenLimits, setWrittenLimits] = useState<Record<string, string>>({});
     const [mcqLimits, setMcqLimits] = useState<Record<string, string>>({});
     const [practicalLimits, setPracticalLimits] = useState<Record<string, string>>({});
@@ -1203,9 +1200,11 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
 
         setIsSaving(inputKey);
 
+        const effectiveGroup = (parseInt(cls) < 9 || selectedGroup === 'all') ? undefined : selectedGroup;
+
         const dataToSave: ClassResult = currentRecord 
             ? { ...currentRecord, fullMarks: totalFm, writtenLimit: wLimit, mcqLimit: mLimit, practicalLimit: pLimit }
-            : { academicYear: selectedYear, examName: exam, className: cls, subject: sub, fullMarks: totalFm, writtenLimit: wLimit, mcqLimit: mLimit, practicalLimit: pLimit, results: [] };
+            : { academicYear: selectedYear, examName: exam, className: cls, subject: sub, fullMarks: totalFm, writtenLimit: wLimit, mcqLimit: mLimit, practicalLimit: pLimit, results: [], group: effectiveGroup };
 
         saveClassResults(db, dataToSave).finally(() => {
             setIsSaving(null);
@@ -1224,10 +1223,10 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     const classes = ['6', '7', '8', '9', '10'];
     const currentSubjects = useMemo(() => {
-        const subjects = getSubjects(selectedClass).filter(s => s.isExamSubject !== false);
+        const subjects = getSubjects(selectedClass, selectedGroup === 'all' ? undefined : selectedGroup).filter(s => s.isExamSubject !== false);
         return Array.from(new Set(subjects.map(s => s.name)))
             .map(name => subjects.find(s => s.name === name)!);
-    }, [selectedClass]);
+    }, [selectedClass, selectedGroup]);
 
     return (
         <div className="space-y-6">
@@ -1247,7 +1246,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                         {classes.map(cls => (
                             <Button 
                                 key={cls}
-                                onClick={() => setSelectedClass(cls)}
+                                onClick={() => { setSelectedClass(cls); setSelectedGroup('all'); }}
                                 variant={selectedClass === cls ? "default" : "outline"}
                                 className={cn(
                                     "font-black h-11 px-6 rounded-xl transition-all shadow-sm",
@@ -1259,6 +1258,20 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                         ))}
                     </div>
                 </div>
+                {parseInt(selectedClass) >= 9 && (
+                    <div className="w-full md:w-48 space-y-2">
+                        <Label className="font-black text-xs text-primary mb-1 block uppercase tracking-wider">৩. শাখা নির্বাচন</Label>
+                        <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                            <SelectTrigger className="h-11 border-2 font-black"><SelectValue placeholder="শাখা" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">সকল শাখা</SelectItem>
+                                <SelectItem value="science">বিজ্ঞান</SelectItem>
+                                <SelectItem value="arts">মানবিক</SelectItem>
+                                <SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
             </div>
 
             <div className="space-y-6 animate-in fade-in duration-500">
@@ -1291,7 +1304,8 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const matchingRecords = savedResults.filter(r => 
                                             r.className === selectedClass && 
                                             normalize(r.subject) === normalize(subInfo.name) && 
-                                            r.examName === examName
+                                            r.examName === examName &&
+                                            (parseInt(selectedClass) < 9 || (selectedGroup === 'all' ? (!r.group || r.group === 'none') : r.group === selectedGroup))
                                         );
                                         
                                         const existingRecord = matchingRecords.length > 0 ? matchingRecords[0] : null;
@@ -2138,8 +2152,6 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
 const BulkUploadTab = () => {
     return (<Card className="p-12 text-center border-2 border-dashed rounded-3xl opacity-50"><FileUp className="h-16 w-16 mx-auto mb-4 text-muted-foreground" /><CardTitle>Bulk Excel Upload</CardTitle><CardDescription>শীঘ্রই এক্সেলে সরাসরি ডাটা আপলোড করার উন্নত সুবিধা যুক্ত হবে।</CardDescription></Card>);
 };
-
-// --- Main Page Component ---
 
 export default function ResultsPage() {
     const [isClient, setIsClient] = useState(false); 
