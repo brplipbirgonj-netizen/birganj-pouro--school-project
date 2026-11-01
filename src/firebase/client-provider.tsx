@@ -36,12 +36,12 @@ function getFirebaseInstances() {
   if (!window.__FIREBASE_FIRESTORE__) {
     /**
      * Modern Firestore Initialization (SDK v11+)
-     * Using persistentSingleTabManager to prevent INTERNAL ASSERTION FAILED errors
-     * caused by multi-tab sync race conditions during auth state changes.
+     * Using persistentSingleTabManager with forceOwnership: true to prevent 
+     * IndexedDB corruption/lock errors often seen in dev environments.
      */
     window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
       localCache: persistentLocalCache({
-        tabManager: persistentSingleTabManager({}),
+        tabManager: persistentSingleTabManager({ forceOwnership: true }),
       }),
       experimentalForceLongPolling: true, // Required for Cloud Workstations and stability
     });
