@@ -1441,7 +1441,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                 if (!yearMatch || !classMatch) return false;
                 if (parseInt(className) < 9 || groupFilter === 'all') return true;
                 const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
-                const filterGroupNorm = groupMap[groupFilter.toLowerCase().trim()] || group.toLowerCase().trim();
+                const filterGroupNorm = groupMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
                 return sGroupNorm === filterGroupNorm;
             });
             const allRes = await getAllResults(db, selectedYear, examName).catch(() => []);
