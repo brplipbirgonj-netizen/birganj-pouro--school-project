@@ -10,7 +10,7 @@ import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPla
 import { 
     Eye, FilePen, Trash2, LayoutGrid, List, UserRound, Search, 
     GraduationCap, MapPin, Users, Phone, Info, ChevronRight, 
-    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase, FileUp, Download, RefreshCw, XCircle, Save, Calendar, Upload
+    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase, FileUp, Download, RefreshCcw, XCircle, Save, Calendar, Upload
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -386,7 +386,7 @@ function StudentListContent() {
       s.optionalSubject || '',
       s.presentVillage || '',
       s.presentUnion || '',
-      s.presentPostOffice || ''
+      s.presentPostOffice || 'বীরগঞ্জ'
     ]);
 
     if (data.length === 0) {
@@ -414,7 +414,7 @@ function StudentListContent() {
         const data = XLSX.utils.sheet_to_json(ws);
 
         if (data.length === 0) {
-            toast({ variant: 'destructive', title: 'ফাইলটি খালি', description: 'এক্সেল ফাইলে কোনো তথ্য পাওয়া যায়নি।' });
+            toast({ variant: 'destructive', title: 'ফাইলটি খালি', description: 'এক্সেল ফাইলে কোনো তথ্য পাওয়া যায়নি। ' });
             setIsUploading(false);
             return;
         }
@@ -444,7 +444,7 @@ function StudentListContent() {
                 optionalSubject: String(row['Optional Subject'] || row['ঐচ্ছিক বিষয়'] || '').trim(),
                 presentVillage: String(row['Village'] || row['গ্রাম'] || '').trim(),
                 presentUnion: String(row['Union'] || row['ইউনিয়ন'] || '').trim(),
-                presentPostOffice: String(row['Post Office'] || row['ডাকঘর'] || '').trim(),
+                presentPostOffice: String(row['Post Office'] || row['ডাকঘর'] || 'বীরগঞ্জ').trim(),
             };
 
             const dobVal = row['Date of Birth (DD-MM-YYYY)'] || row['Date of Birth (YYYY-MM-DD)'] || row['জন্ম তারিখ'];
@@ -782,28 +782,28 @@ function StudentListContent() {
                                         </div>
                                     ) : (
                                         <div className="table-container shadow-xl border-2 border-black">
-                                            <Table className="min-w-max border-separate border-spacing-0">
+                                            <Table className="min-w-max border-separate border-spacing-0 border-t-2 border-black">
                                                 <TableHeader className="sticky top-0 z-40 bg-muted/95 backdrop-blur-sm shadow-sm border-b-2 border-black">
                                                     <TableRow className="h-14">
-                                                        <TableHead className="font-black text-center w-16 sticky left-0 z-50 bg-muted/95 border-r-2 border-black">রোল</TableHead>
-                                                        <TableHead className="font-black text-center w-20 border-r-2 border-black">ছবি</TableHead>
-                                                        <TableHead className="font-black min-w-[220px] sticky left-[64px] z-50 bg-muted/95 border-r-2 border-black">শিক্ষার্থীর নাম (বাংলা ও ইংরেজি)</TableHead>
-                                                        <TableHead className="font-black min-w-[200px] border-r-2 border-black">পিতা ও মাতার নাম</TableHead>
-                                                        <TableHead className="font-black w-32 border-r-2 border-black">মোবাইল</TableHead>
+                                                        <TableHead className="font-black text-center w-16 sticky left-0 z-50 bg-muted/95 border-r-2 border-b-2 border-black text-black">রোল</TableHead>
+                                                        <TableHead className="font-black text-center w-20 border-r-2 border-b-2 border-black text-black">ছবি</TableHead>
+                                                        <TableHead className="font-black min-w-[220px] sticky left-[64px] z-50 bg-muted/95 border-r-2 border-b-2 border-black text-black">শিক্ষার্থীর নাম (বাংলা ও ইংরেজি)</TableHead>
+                                                        <TableHead className="font-black min-w-[200px] border-r-2 border-b-2 border-black text-black">পিতা ও মাতার নাম</TableHead>
+                                                        <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">মোবাইল</TableHead>
                                                         {isBulkEdit && (
                                                             <>
-                                                                <TableHead className="font-black w-32 border-r-2 border-black">জন্ম তারিখ</TableHead>
-                                                                <TableHead className="font-black w-24 border-r-2 border-black">লিঙ্গ</TableHead>
-                                                                <TableHead className="font-black w-24 border-r-2 border-black">ধর্ম</TableHead>
-                                                                <TableHead className="font-black w-32 border-r-2 border-black">শাখা/বিভাগ</TableHead>
-                                                                <TableHead className="font-black w-32 border-r-2 border-black">ঐচ্ছিক বিষয়</TableHead>
-                                                                <TableHead className="font-black w-32 border-r-2 border-black">পিতার NID</TableHead>
-                                                                <TableHead className="font-black w-32 border-r-2 border-black">মাতার NID</TableHead>
-                                                                <TableHead className="font-black w-40 border-r-2 border-black">বর্তমান গ্রাম</TableHead>
-                                                                <TableHead className="font-black w-32 border-r-2 border-black">ইউনিয়ন</TableHead>
+                                                                <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">জন্ম তারিখ</TableHead>
+                                                                <TableHead className="font-black w-24 border-r-2 border-b-2 border-black text-black">লিঙ্গ</TableHead>
+                                                                <TableHead className="font-black w-24 border-r-2 border-b-2 border-black text-black">ধর্ম</TableHead>
+                                                                <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">শাখা/বিভাগ</TableHead>
+                                                                <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">ঐচ্ছিক বিষয়</TableHead>
+                                                                <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">পিতার NID</TableHead>
+                                                                <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">মাতার NID</TableHead>
+                                                                <TableHead className="font-black w-40 border-r-2 border-b-2 border-black text-black">বর্তমান গ্রাম</TableHead>
+                                                                <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">ইউনিয়ন</TableHead>
                                                             </>
                                                         )}
-                                                        <TableHead className="text-center w-16 sticky right-0 z-50 bg-muted border-l-2 border-black">
+                                                        <TableHead className="text-center w-16 sticky right-0 z-50 bg-muted border-l-2 border-b-2 border-black">
                                                             <Link href="/add-student">
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary text-white hover:bg-primary/90" title="নতুন শিক্ষার্থী যোগ করুন">
                                                                     <Plus className="h-5 w-5" />
@@ -814,8 +814,8 @@ function StudentListContent() {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {getStudentsByClass(activeTab).map((student) => (
-                                                        <TableRow key={student.id} id={`student-row-${student.id}`} className={cn("transition-colors h-16 group border-b-2 border-black", student.id === targetStudentId && "bg-yellow-50", editedData[student.id] && "bg-amber-50")}>
-                                                            <TableCell className="font-black text-center text-lg border-r-2 border-black sticky left-0 z-30 bg-white group-hover:bg-slate-50">
+                                                        <TableRow key={student.id} id={`student-row-${student.id}`} className={cn("transition-colors h-16 group", student.id === targetStudentId && "bg-yellow-50", editedData[student.id] && "bg-amber-50")}>
+                                                            <TableCell className="font-black text-center text-lg border-r-2 border-b-2 border-black sticky left-0 z-30 bg-white group-hover:bg-slate-50">
                                                                 {isBulkEdit ? (
                                                                     <Input 
                                                                         type="number"
@@ -825,7 +825,7 @@ function StudentListContent() {
                                                                     />
                                                                 ) : toBengaliNumber(student.roll)}
                                                             </TableCell>
-                                                            <TableCell className="text-center border-r-2 border-black p-1">
+                                                            <TableCell className="text-center border-r-2 border-b-2 border-black p-1">
                                                                 <div className="relative h-11 w-11 mx-auto rounded-lg overflow-hidden border-2 border-slate-100 group/img">
                                                                     <Avatar className="h-full w-full rounded-none">
                                                                         <AvatarImage src={sanitizePhotoUrl(editedData[student.id]?.photoUrl || student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} className="object-cover" />
@@ -844,7 +844,7 @@ function StudentListContent() {
                                                                     )}
                                                                 </div>
                                                             </TableCell>
-                                                            <TableCell className="border-r-2 border-black sticky left-[64px] z-30 bg-white group-hover:bg-slate-50 px-3">
+                                                            <TableCell className="border-r-2 border-b-2 border-black sticky left-[64px] z-30 bg-white group-hover:bg-slate-50 px-3">
                                                                 {isBulkEdit ? (
                                                                     <div className="space-y-1">
                                                                         <Input 
@@ -867,7 +867,7 @@ function StudentListContent() {
                                                                     </div>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell className="border-r-2 border-black px-3">
+                                                            <TableCell className="border-r-2 border-b-2 border-black px-3">
                                                                 {isBulkEdit ? (
                                                                     <div className="space-y-1">
                                                                         <Input 
@@ -890,7 +890,7 @@ function StudentListContent() {
                                                                     </div>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell className="border-r-2 border-black px-3">
+                                                            <TableCell className="border-r-2 border-b-2 border-black px-3">
                                                                 {isBulkEdit ? (
                                                                     <Input 
                                                                         value={editedData[student.id]?.guardianMobile ?? (student.guardianMobile || '')} 
@@ -904,14 +904,14 @@ function StudentListContent() {
 
                                                             {isBulkEdit && (
                                                                 <>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <DatePicker 
                                                                             value={editedData[student.id]?.dob ? new Date(editedData[student.id]!.dob!) : (student.dob ? new Date(student.dob) : undefined)} 
                                                                             onChange={d => handleBulkInputChange(student.id, 'dob', d)}
                                                                             triggerClassName="h-8 text-[10px] border-slate-200"
                                                                         />
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Select 
                                                                             value={editedData[student.id]?.gender ?? (student.gender || 'male')} 
                                                                             onValueChange={v => handleBulkInputChange(student.id, 'gender', v)}
@@ -923,7 +923,7 @@ function StudentListContent() {
                                                                             </SelectContent>
                                                                         </Select>
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Select 
                                                                             value={editedData[student.id]?.religion ?? (student.religion || 'islam')} 
                                                                             onValueChange={v => handleBulkInputChange(student.id, 'religion', v)}
@@ -938,7 +938,7 @@ function StudentListContent() {
                                                                             </SelectContent>
                                                                         </Select>
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Select 
                                                                             value={editedData[student.id]?.group ?? (student.group || 'general')} 
                                                                             onValueChange={v => handleBulkInputChange(student.id, 'group', v)}
@@ -952,7 +952,7 @@ function StudentListContent() {
                                                                             </SelectContent>
                                                                         </Select>
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Input 
                                                                             value={editedData[student.id]?.optionalSubject ?? (student.optionalSubject || '')} 
                                                                             onChange={e => handleBulkInputChange(student.id, 'optionalSubject', e.target.value)}
@@ -960,28 +960,28 @@ function StudentListContent() {
                                                                             placeholder="ঐচ্ছিক বিষয়"
                                                                         />
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Input 
                                                                             value={editedData[student.id]?.fatherNid ?? (student.fatherNid || '')} 
                                                                             onChange={e => handleBulkInputChange(student.id, 'fatherNid', e.target.value)}
                                                                             className="h-8 text-[10px] font-bold border-slate-200"
                                                                         />
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Input 
                                                                             value={editedData[student.id]?.motherNid ?? (student.motherNid || '')} 
                                                                             onChange={e => handleBulkInputChange(student.id, 'motherNid', e.target.value)}
                                                                             className="h-8 text-[10px] font-bold border-slate-200"
                                                                         />
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Input 
                                                                             value={editedData[student.id]?.presentVillage ?? (student.presentVillage || '')} 
                                                                             onChange={e => handleBulkInputChange(student.id, 'presentVillage', e.target.value)}
                                                                             className="h-8 text-[10px] font-bold border-slate-200"
                                                                         />
                                                                     </TableCell>
-                                                                    <TableCell className="border-r-2 border-black px-1">
+                                                                    <TableCell className="border-r-2 border-b-2 border-black px-1">
                                                                         <Input 
                                                                             value={editedData[student.id]?.presentUnion ?? (student.presentUnion || '')} 
                                                                             onChange={e => handleBulkInputChange(student.id, 'presentUnion', e.target.value)}
@@ -991,7 +991,7 @@ function StudentListContent() {
                                                                 </>
                                                             )}
 
-                                                            <TableCell className="text-right pr-6 sticky right-0 z-30 bg-white/95 border-l-2 border-black group-hover:bg-slate-50">
+                                                            <TableCell className="text-right pr-6 sticky right-0 z-30 bg-white/95 border-l-2 border-b-2 border-black group-hover:bg-slate-50">
                                                                 <div className="flex justify-end gap-1.5">
                                                                     {isBulkEdit ? (
                                                                         <Button 
@@ -1340,3 +1340,4 @@ export default function StudentListPage() {
     </Suspense>
   );
 }
+
