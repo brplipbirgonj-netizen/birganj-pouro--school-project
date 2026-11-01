@@ -10,7 +10,7 @@ import { deleteStudent, Student, studentFromDoc, isMale, isFemale, getStudentPla
 import { 
     Eye, FilePen, Trash2, LayoutGrid, List, UserRound, Search, 
     GraduationCap, MapPin, Users, Phone, Info, ChevronRight, 
-    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase, FileUp, Download, RefreshCw, XCircle, Save
+    Printer, FileText, Loader2, Plus, AlertCircle, BookOpen, Briefcase, FileUp, Download, RefreshCw, XCircle, Save, Calendar
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,6 +51,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
@@ -516,7 +518,7 @@ function StudentListContent() {
   };
 
   // Bulk Edit Functions
-  const handleBulkInputChange = (id: string, field: keyof Student, value: string) => {
+  const handleBulkInputChange = (id: string, field: keyof Student, value: any) => {
     setEditedData(prev => ({
         ...prev,
         [id]: { ...prev[id], [field]: value }
@@ -542,7 +544,11 @@ function StudentListContent() {
     
     Object.entries(editedData).forEach(([id, data]) => {
         const ref = doc(db, 'students', id);
-        batch.update(ref, { ...data, updatedAt: serverTimestamp() });
+        const dataToSave = { ...data };
+        if (dataToSave.dob) {
+            dataToSave.dob = Timestamp.fromDate(new Date(dataToSave.dob));
+        }
+        batch.update(ref, { ...dataToSave, updatedAt: serverTimestamp() });
     });
 
     try {
@@ -764,34 +770,64 @@ function StudentListContent() {
                                         </div>
                                     ) : (
                                         <div className="table-container shadow-xl border-2">
-                                            <Table>
+                                            <Table className="min-w-max">
                                                 <TableHeader className="bg-muted/50 sticky top-0 z-20">
                                                     <TableRow className="h-14">
                                                         <TableHead className="font-black text-center w-16">রোল</TableHead>
                                                         <TableHead className="font-black text-center w-16">ছবি</TableHead>
-                                                        <TableHead className="font-black">নাম ও আইডি</TableHead>
-                                                        <TableHead className="font-black">পিতা-মাতার নাম</TableHead>
-                                                        <TableHead className="font-black">মোবাইল নম্বর</TableHead>
-                                                        <TableHead className="text-right pr-8 font-black">কার্যক্রম</TableHead>
+                                                        <TableHead className="font-black min-w-[200px]">শিক্ষার্থীর নাম (বাংলা ও ইংরেজি)</TableHead>
+                                                        <TableHead className="font-black min-w-[200px]">পিতা ও মাতার নাম</TableHead>
+                                                        <TableHead className="font-black w-32">মোবাইল</TableHead>
+                                                        {isBulkEdit && (
+                                                            <>
+                                                                <TableHead className="font-black w-32">জন্ম তারিখ</TableHead>
+                                                                <TableHead className="font-black w-24">লিঙ্গ</TableHead>
+                                                                <TableHead className="font-black w-24">ধর্ম</TableHead>
+                                                                <TableHead className="font-black w-24">শাখা</TableHead>
+                                                                <TableHead className="font-black w-32">পিতার NID</TableHead>
+                                                                <TableHead className="font-black w-32">মাতার NID</TableHead>
+                                                                <TableHead className="font-black w-40">বর্তমান গ্রাম</TableHead>
+                                                                <TableHead className="font-black w-32">ইউনিয়ন</TableHead>
+                                                            </>
+                                                        )}
+                                                        <TableHead className="text-right pr-8 font-black sticky right-0 bg-muted/90 z-30">কার্যক্রম</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {getStudentsByClass(activeTab).map((student) => (
                                                         <TableRow key={student.id} id={`student-row-${student.id}`} className={cn("transition-colors h-16 hover:bg-primary/5", student.id === targetStudentId && "bg-yellow-50", editedData[student.id] && "bg-amber-50")}>
-                                                            <TableCell className="font-black text-center text-lg">{toBengaliNumber(student.roll)}</TableCell>
-                                                            <TableCell className="text-center">
+                                                            <TableCell className="font-black text-center text-lg border-r">
+                                                                {isBulkEdit ? (
+                                                                    <Input 
+                                                                        type="number"
+                                                                        value={editedData[student.id]?.roll ?? student.roll} 
+                                                                        onChange={e => handleBulkInputChange(student.id, 'roll', parseInt(e.target.value) || 0)}
+                                                                        className="h-8 w-16 font-black text-center"
+                                                                    />
+                                                                ) : toBengaliNumber(student.roll)}
+                                                            </TableCell>
+                                                            <TableCell className="text-center border-r">
                                                                 <Avatar className="h-10 w-10 border shadow-sm mx-auto">
                                                                     <AvatarImage src={sanitizePhotoUrl(student.photoUrl, student.gender) || getStudentPlaceholderImage(student.gender)} className="object-cover" />
                                                                     <AvatarFallback className="font-black text-xs">S</AvatarFallback>
                                                                 </Avatar>
                                                             </TableCell>
-                                                            <TableCell>
+                                                            <TableCell className="border-r">
                                                                 {isBulkEdit ? (
-                                                                    <Input 
-                                                                        value={editedData[student.id]?.studentNameBn ?? student.studentNameBn} 
-                                                                        onChange={e => handleBulkInputChange(student.id, 'studentNameBn', e.target.value)}
-                                                                        className="h-8 font-bold"
-                                                                    />
+                                                                    <div className="space-y-1">
+                                                                        <Input 
+                                                                            value={editedData[student.id]?.studentNameBn ?? student.studentNameBn} 
+                                                                            onChange={e => handleBulkInputChange(student.id, 'studentNameBn', e.target.value)}
+                                                                            className="h-8 font-bold text-xs"
+                                                                            placeholder="নাম (বাংলা)"
+                                                                        />
+                                                                        <Input 
+                                                                            value={editedData[student.id]?.studentNameEn ?? (student.studentNameEn || '')} 
+                                                                            onChange={e => handleBulkInputChange(student.id, 'studentNameEn', e.target.value)}
+                                                                            className="h-8 font-bold text-xs uppercase"
+                                                                            placeholder="Name (English)"
+                                                                        />
+                                                                    </div>
                                                                 ) : (
                                                                     <>
                                                                         <p className="font-black text-slate-800">{student.studentNameBn}</p>
@@ -799,20 +835,20 @@ function StudentListContent() {
                                                                     </>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell>
+                                                            <TableCell className="border-r">
                                                                 {isBulkEdit ? (
                                                                     <div className="space-y-1">
                                                                         <Input 
                                                                             placeholder="পিতার নাম"
                                                                             value={editedData[student.id]?.fatherNameBn ?? student.fatherNameBn} 
                                                                             onChange={e => handleBulkInputChange(student.id, 'fatherNameBn', e.target.value)}
-                                                                            className="h-7 text-xs"
+                                                                            className="h-7 text-[10px]"
                                                                         />
                                                                         <Input 
                                                                             placeholder="মাতার নাম"
                                                                             value={editedData[student.id]?.motherNameBn ?? student.motherNameBn} 
                                                                             onChange={e => handleBulkInputChange(student.id, 'motherNameBn', e.target.value)}
-                                                                            className="h-7 text-xs"
+                                                                            className="h-7 text-[10px]"
                                                                         />
                                                                     </div>
                                                                 ) : (
@@ -822,18 +858,98 @@ function StudentListContent() {
                                                                     </>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell>
+                                                            <TableCell className="border-r">
                                                                 {isBulkEdit ? (
                                                                     <Input 
-                                                                        value={editedData[student.id]?.guardianMobile ?? student.guardianMobile} 
+                                                                        value={editedData[student.id]?.guardianMobile ?? (student.guardianMobile || '')} 
                                                                         onChange={e => handleBulkInputChange(student.id, 'guardianMobile', e.target.value)}
-                                                                        className="h-8 font-black"
+                                                                        className="h-8 font-black text-xs"
                                                                     />
                                                                 ) : (
                                                                     <span className="text-xs font-black text-slate-700">{toBengaliNumber(student.guardianMobile || student.studentMobile || '-') || '-'}</span>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell className="text-right pr-6">
+
+                                                            {isBulkEdit && (
+                                                                <>
+                                                                    <TableCell className="border-r">
+                                                                        <DatePicker 
+                                                                            value={editedData[student.id]?.dob ? new Date(editedData[student.id]!.dob!) : (student.dob ? new Date(student.dob) : undefined)} 
+                                                                            onChange={d => handleBulkInputChange(student.id, 'dob', d)}
+                                                                            triggerClassName="h-8 text-[10px]"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell className="border-r">
+                                                                        <Select 
+                                                                            value={editedData[student.id]?.gender ?? (student.gender || 'male')} 
+                                                                            onValueChange={v => handleBulkInputChange(student.id, 'gender', v)}
+                                                                        >
+                                                                            <SelectTrigger className="h-8 text-[10px]"><SelectValue /></SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="male">পুরুষ</SelectItem>
+                                                                                <SelectItem value="female">মহিলা</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </TableCell>
+                                                                    <TableCell className="border-r">
+                                                                        <Select 
+                                                                            value={editedData[student.id]?.religion ?? (student.religion || 'islam')} 
+                                                                            onValueChange={v => handleBulkInputChange(student.id, 'religion', v)}
+                                                                        >
+                                                                            <SelectTrigger className="h-8 text-[10px]"><SelectValue /></SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="islam">ইসলাম</SelectItem>
+                                                                                <SelectItem value="hinduism">হিন্দু</SelectItem>
+                                                                                <SelectItem value="other">অন্যান্য</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </TableCell>
+                                                                    <TableCell className="border-r">
+                                                                        <Select 
+                                                                            value={editedData[student.id]?.group ?? (student.group || 'general')} 
+                                                                            onValueChange={v => handleBulkInputChange(student.id, 'group', v)}
+                                                                        >
+                                                                            <SelectTrigger className="h-8 text-[10px]"><SelectValue /></SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="general">সাধারণ</SelectItem>
+                                                                                <SelectItem value="science">বিজ্ঞান</SelectItem>
+                                                                                <SelectItem value="arts">মানবিক</SelectItem>
+                                                                                <SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </TableCell>
+                                                                    <TableCell className="border-r">
+                                                                        <Input 
+                                                                            value={editedData[student.id]?.fatherNid ?? (student.fatherNid || '')} 
+                                                                            onChange={e => handleBulkInputChange(student.id, 'fatherNid', e.target.value)}
+                                                                            className="h-8 text-[10px] font-bold"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell className="border-r">
+                                                                        <Input 
+                                                                            value={editedData[student.id]?.motherNid ?? (student.motherNid || '')} 
+                                                                            onChange={e => handleBulkInputChange(student.id, 'motherNid', e.target.value)}
+                                                                            className="h-8 text-[10px] font-bold"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell className="border-r">
+                                                                        <Input 
+                                                                            value={editedData[student.id]?.presentVillage ?? (student.presentVillage || '')} 
+                                                                            onChange={e => handleBulkInputChange(student.id, 'presentVillage', e.target.value)}
+                                                                            className="h-8 text-[10px] font-bold"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell className="border-r">
+                                                                        <Input 
+                                                                            value={editedData[student.id]?.presentUnion ?? (student.presentUnion || '')} 
+                                                                            onChange={e => handleBulkInputChange(student.id, 'presentUnion', e.target.value)}
+                                                                            className="h-8 text-[10px] font-bold"
+                                                                        />
+                                                                    </TableCell>
+                                                                </>
+                                                            )}
+
+                                                            <TableCell className="text-right pr-6 sticky right-0 bg-white/95 group-hover:bg-primary/5 z-20 shadow-[-4px_0_4px_rgba(0,0,0,0.05)]">
                                                                 <div className="flex justify-end gap-1.5">
                                                                     {isBulkEdit ? (
                                                                         <Button 
@@ -879,7 +995,7 @@ function StudentListContent() {
                                                 className="h-16 px-12 text-xl font-black shadow-2xl rounded-full gap-3 ring-8 ring-white"
                                             >
                                                 {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
-                                                সবগুলো একসাথে সেভ করুন ({toBengaliNumber(Object.keys(editedData).length)})
+                                                সকল তথ্য সেভ করুন ({toBengaliNumber(Object.keys(editedData).length)})
                                             </Button>
                                         </div>
                                     )}
