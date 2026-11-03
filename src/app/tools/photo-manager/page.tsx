@@ -14,7 +14,7 @@ import {
     ImageIcon, Upload, Search, UserCheck, X, CheckCircle2, 
     Loader2, Save, Trash2, ImagePlus, ArrowRight, RotateCcw, 
     Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle, Info,
-    FilePen, Users, Scissors, Crop, MousePointer2, Eraser, Palette
+    FilePen, Users, Scissors, Crop, MousePointer2, Eraser, Palette, ScrollText
 } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage } from '@/lib/student-data';
@@ -27,7 +27,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
-const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
@@ -47,7 +47,7 @@ type ProcessingImage = {
     contrast: number;
     bgColor: string;
     isBgRemoved: boolean;
-    cropArea: { x: number, y: number, scale: number };
+    cropBox: { x: number, y: number, size: number };
 };
 
 export default function PhotoManagerPage() {
@@ -63,10 +63,12 @@ export default function PhotoManagerPage() {
     const [isFetchingStudents, setIsFetchingStudents] = useState(true);
 
     const [isDragging, setIsDragging] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [manualClass, setManualClass] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { setIsClient(true); }, []);
 
@@ -116,7 +118,7 @@ export default function PhotoManagerPage() {
                 contrast: 100,
                 bgColor: 'transparent',
                 isBgRemoved: false,
-                cropArea: { x: 0, y: 0, scale: 1 }
+                cropBox: { x: 40, y: 40, size: 240 }
             };
         });
 
@@ -124,35 +126,50 @@ export default function PhotoManagerPage() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    const handleMouseDown = (e: React.MouseEvent) => {
+    const handleBoxMouseDown = (e: React.MouseEvent) => {
         if (!currentImage) return;
+        e.stopPropagation();
         setIsDragging(true);
         setDragStart({ x: e.clientX, y: e.clientY });
     };
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging || !currentImage) return;
-        const dx = e.clientX - dragStart.x;
-        const dy = e.clientY - dragStart.y;
-        
-        setQueue(prev => prev.map(it => it.id === currentImage.id ? {
-            ...it,
-            cropArea: { ...it.cropArea, x: it.cropArea.x + dx, y: it.cropArea.y + dy }
-        } : it));
+    const handleResizeMouseDown = (e: React.MouseEvent) => {
+        if (!currentImage) return;
+        e.stopPropagation();
+        setIsResizing(true);
         setDragStart({ x: e.clientX, y: e.clientY });
     };
 
-    const handleMouseUp = () => setIsDragging(false);
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!currentImage || (!isDragging && !isResizing)) return;
 
-    const handleWheel = (e: React.WheelEvent) => {
-        if (!currentImage) return;
-        const delta = e.deltaY > 0 ? -0.05 : 0.05;
-        const nextScale = Math.max(0.1, Math.min(5, currentImage.cropArea.scale + delta));
-        
-        setQueue(prev => prev.map(it => it.id === currentImage.id ? {
-            ...it,
-            cropArea: { ...it.cropArea, scale: nextScale }
-        } : it));
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+
+        if (isDragging) {
+            const nextX = Math.max(0, Math.min(320 - currentImage.cropBox.size, currentImage.cropBox.x + dx));
+            const nextY = Math.max(0, Math.min(320 - currentImage.cropBox.size, currentImage.cropBox.y + dy));
+            
+            setQueue(prev => prev.map(it => it.id === currentImage.id ? {
+                ...it,
+                cropBox: { ...it.cropBox, x: nextX, y: nextY }
+            } : it));
+        } else if (isResizing) {
+            const sizeDelta = Math.max(dx, dy);
+            const nextSize = Math.max(50, Math.min(Math.min(320 - currentImage.cropBox.x, 320 - currentImage.cropBox.y), currentImage.cropBox.size + sizeDelta));
+            
+            setQueue(prev => prev.map(it => it.id === currentImage.id ? {
+                ...it,
+                cropBox: { ...it.cropBox, size: nextSize }
+            } : it));
+        }
+
+        setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+        setIsResizing(false);
     };
 
     const handleUpdateItem = (fields: Partial<ProcessingImage>) => {
@@ -192,28 +209,31 @@ export default function PhotoManagerPage() {
 
                 ctx.filter = `brightness(${item.brightness}%) contrast(${item.contrast}%)`;
                 
-                const { x, y, scale } = item.cropArea;
+                const containerSize = 320;
+                const { x, y, size } = item.cropBox;
+                
                 const iw = img.width;
                 const ih = img.height;
                 const aspect = iw / ih;
                 
-                let dw, dh;
+                let renderW, renderH;
                 if (aspect > 1) {
-                    dw = targetSize;
-                    dh = targetSize / aspect;
+                    renderW = containerSize;
+                    renderH = containerSize / aspect;
                 } else {
-                    dh = targetSize;
-                    dw = targetSize * aspect;
+                    renderH = containerSize;
+                    renderW = containerSize * aspect;
                 }
 
-                const finalWidth = dw * scale;
-                const finalHeight = dh * scale;
-                
-                const scaleFactor = targetSize / 320; 
-                const cx = (targetSize - finalWidth) / 2 + (x * scaleFactor);
-                const cy = (targetSize - finalHeight) / 2 + (y * scaleFactor);
+                const offX = (containerSize - renderW) / 2;
+                const offY = (containerSize - renderH) / 2;
 
-                ctx.drawImage(img, cx, cy, finalWidth, finalHeight);
+                const srcX = ((x - offX) / renderW) * iw;
+                const srcY = ((y - offY) / renderH) * ih;
+                const srcSizeW = (size / renderW) * iw;
+                const srcSizeH = (size / renderH) * ih;
+
+                ctx.drawImage(img, srcX, srcY, srcSizeW, srcSizeH, 0, 0, targetSize, targetSize);
                 resolve(canvas.toDataURL('image/jpeg', 0.85));
             };
             img.onerror = () => reject('Image load error');
@@ -349,8 +369,8 @@ export default function PhotoManagerPage() {
                                 <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                                 <div className="text-[11px] font-bold text-blue-900 space-y-1">
                                     <p>• ছবির নাম দিন: <strong>[শ্রেণি]_[রোল]</strong> (উদা: 6_01.jpg)</p>
-                                    <p>• ছবির উপর মাউস দিয়ে ড্র্যাগ করে পজিশন ঠিক করুন।</p>
-                                    <p>• <strong>সেভ করার সময়</strong> ছবি ৩০০x৩০০ পিক্সেল মাপে অপ্টিমাইজড হবে।</p>
+                                    <p>• স্কোয়ার বক্সটি ড্র্যাগ করে এবং কোণ টেনে এডজাস্ট করুন।</p>
+                                    <p>• <strong>সেভ করার সময়</strong> বক্সের ভেতরের অংশটুকু ৩০০x৩০০ মাপে সংরক্ষিত হবে।</p>
                                 </div>
                             </div>
                         </div>
@@ -368,53 +388,63 @@ export default function PhotoManagerPage() {
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-primary rounded-xl text-white"><FilePen className="h-5 w-5" /></div>
                                                 <div>
-                                                    <h3 className="font-black text-slate-800">ফটোশপ স্টাইল ক্রপিং (৩০০x৩০০)</h3>
+                                                    <h3 className="font-black text-slate-800">ইন্টারেক্টিভ ফটো ক্রপার</h3>
                                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">{currentImage.fileName}</p>
                                                 </div>
                                             </div>
-                                            <Button variant="ghost" size="sm" className="h-8 font-black" onClick={() => handleUpdateItem({ brightness: 100, contrast: 100, bgColor: 'transparent', cropArea: {x: 0, y: 0, scale: 1} })}>
+                                            <Button variant="ghost" size="sm" className="h-8 font-black" onClick={() => handleUpdateItem({ brightness: 100, contrast: 100, bgColor: 'transparent', cropBox: {x: 40, y: 40, size: 240} })}>
                                                 <RotateCcw className="h-3.5 w-3.5 mr-1" /> রিসেট
                                             </Button>
                                         </div>
                                         <CardContent className="p-8">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-                                                <div className="flex flex-col items-center space-y-4">
+                                                <div className="flex flex-col items-center space-y-6">
                                                     <div 
-                                                        className="relative aspect-square w-full max-w-[320px] rounded-2xl border-4 border-black overflow-hidden bg-slate-100 shadow-xl cursor-move select-none"
-                                                        onMouseDown={handleMouseDown}
+                                                        ref={containerRef}
+                                                        className="relative w-[320px] h-[320px] rounded-2xl border-4 border-black overflow-hidden bg-slate-100 shadow-xl cursor-default select-none"
                                                         onMouseMove={handleMouseMove}
                                                         onMouseUp={handleMouseUp}
                                                         onMouseLeave={handleMouseUp}
-                                                        onWheel={handleWheel}
                                                     >
-                                                        {/* Dark Photoshop Mask Overlay */}
-                                                        <div className="absolute inset-0 z-20 pointer-events-none">
-                                                            <div className="absolute inset-0 bg-black/40" />
-                                                            <div className="absolute inset-4 border-2 border-white/50 bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.3)] flex items-center justify-center">
-                                                                <div className="w-full h-0.5 bg-white/20 absolute" />
-                                                                <div className="h-full w-0.5 bg-white/20 absolute" />
-                                                            </div>
-                                                        </div>
-
+                                                        {/* Preview Image */}
                                                         <img 
                                                             src={currentImage.preview} 
-                                                            className="w-full h-full object-contain pointer-events-none relative z-10" 
+                                                            className="w-full h-full object-contain pointer-events-none absolute inset-0 z-10" 
                                                             style={{
                                                                 filter: `brightness(${currentImage.brightness}%) contrast(${currentImage.contrast}%)`,
-                                                                transform: `translate(${currentImage.cropArea.x}px, ${currentImage.cropArea.y}px) scale(${currentImage.cropArea.scale})`,
-                                                                backgroundColor: currentImage.bgColor === 'transparent' ? 'transparent' : currentImage.bgColor,
-                                                                transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                                                                backgroundColor: currentImage.bgColor === 'transparent' ? 'transparent' : currentImage.bgColor
                                                             }}
                                                             alt="" 
                                                         />
-                                                        
-                                                        <div className="absolute bottom-3 left-3 bg-primary text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg z-30">৩০০x৩০০ ক্রপ মোড</div>
-                                                    </div>
 
-                                                    <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
-                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { ...currentImage.cropArea, scale: Math.max(0.1, currentImage.cropArea.scale - 0.1) }})}><Scissors className="h-3 w-3 mr-1" /> ছোট</Button>
-                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { ...currentImage.cropArea, scale: Math.min(5, currentImage.cropArea.scale + 0.1) }})}><Maximize2 className="h-3 w-3 mr-1" /> বড়</Button>
-                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { x: 0, y: 0, scale: 1 }})}><RotateCcw className="h-3.5 w-3.5 mr-1" /> ফিট</Button>
+                                                        {/* Draggable & Resizable Square Box */}
+                                                        <div 
+                                                            className="absolute border-4 border-emerald-500 bg-transparent cursor-move z-30 shadow-[0_0_0_9999px_rgba(255,255,255,0.4)]"
+                                                            style={{
+                                                                left: `${currentImage.cropBox.x}px`,
+                                                                top: `${currentImage.cropBox.y}px`,
+                                                                width: `${currentImage.cropBox.size}px`,
+                                                                height: `${currentImage.cropBox.size}px`,
+                                                                boxShadow: '0 0 0 9999px rgba(255, 255, 255, 0.4)'
+                                                            }}
+                                                            onMouseDown={handleBoxMouseDown}
+                                                        >
+                                                            {/* Resize Handle (Bottom-Right) */}
+                                                            <div 
+                                                                className="absolute -bottom-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full cursor-nwse-resize border-2 border-white shadow-lg flex items-center justify-center"
+                                                                onMouseDown={handleResizeMouseDown}
+                                                            >
+                                                                <Maximize2 className="h-3 w-3 text-white" />
+                                                            </div>
+                                                            
+                                                            {/* Visual Guidelines */}
+                                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+                                                                <div className="w-full h-0.5 bg-emerald-500 absolute" />
+                                                                <div className="h-full w-0.5 bg-emerald-500 absolute" />
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="absolute bottom-3 left-3 bg-primary text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg z-40">৩০০x৩০০ আউটপুট জোন</div>
                                                     </div>
 
                                                     <div className="w-full max-w-[320px] space-y-4 pt-2">
@@ -431,9 +461,6 @@ export default function PhotoManagerPage() {
                                                                 ))}
                                                             </div>
                                                         </div>
-                                                        <Button variant="secondary" className="w-full h-8 text-[10px] font-black" onClick={() => toast({ title: "সতর্কতা", description: "উন্নত ব্যাকগ্রাউন্ড রিমুভ ফিচারটি লোড হচ্ছে..." })}>
-                                                            <Eraser className="h-3 w-3 mr-1" /> ব্যাকগ্রাউন্ড রিমুভ (AI)
-                                                        </Button>
                                                     </div>
                                                 </div>
 
