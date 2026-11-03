@@ -37,7 +37,6 @@ type ProcessingImage = {
     matchedStudent: Student | null;
     status: 'pending' | 'matched' | 'unmatched' | 'saving' | 'saved' | 'error';
     processedDataUrl?: string;
-    // Independent adjustment state
     brightness: number;
     contrast: number;
     bgColor: string;
@@ -57,10 +56,8 @@ export default function PhotoManagerPage() {
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isFetchingStudents, setIsFetchingStudents] = useState(true);
 
-    // Mouse Interaction States
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-
     const [manualClass, setManualClass] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,69 +119,6 @@ export default function PhotoManagerPage() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    const applyFiltersAndDraw = useCallback(() => {
-        if (!canvasRef.current || !currentImage) return;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const img = new window.Image();
-        img.src = currentImage.preview;
-        img.onload = () => {
-            const targetSize = 512;
-            canvas.width = targetSize;
-            canvas.height = targetSize;
-
-            // Fill background
-            ctx.clearRect(0, 0, targetSize, targetSize);
-            if (currentImage.bgColor !== 'transparent') {
-                ctx.fillStyle = currentImage.bgColor;
-                ctx.fillRect(0, 0, targetSize, targetSize);
-            }
-
-            ctx.filter = `brightness(${currentImage.brightness}%) contrast(${currentImage.contrast}%)`;
-            
-            const { x, y, scale } = currentImage.cropArea;
-            
-            // Central focus logic
-            const iw = img.width;
-            const ih = img.height;
-            const minDim = Math.min(iw, ih);
-            
-            // Calculate base drawing size to cover target
-            let dw, dh;
-            if (iw > ih) {
-                dh = targetSize;
-                dw = (iw / ih) * targetSize;
-            } else {
-                dw = targetSize;
-                dh = (ih / iw) * targetSize;
-            }
-
-            // Apply user scale and translations
-            const finalWidth = dw * scale;
-            const finalHeight = dh * scale;
-            
-            // Center adjustments
-            const cx = (targetSize - finalWidth) / 2 + x;
-            const cy = (targetSize - finalHeight) / 2 + y;
-
-            ctx.drawImage(img, cx, cy, finalWidth, finalHeight);
-            
-            const processed = canvas.toDataURL('image/jpeg', 0.85);
-            setQueue(prev => prev.map(item => 
-                item.id === currentImage.id ? { ...item, processedDataUrl: processed } : item
-            ));
-        };
-    }, [currentImage]);
-
-    useEffect(() => {
-        if (currentImage && currentImage.status !== 'saved') {
-            applyFiltersAndDraw();
-        }
-    }, [currentImage?.id, currentImage?.cropArea, currentImage?.brightness, currentImage?.contrast, currentImage?.bgColor, applyFiltersAndDraw]);
-
-    // Mouse Interaction Handlers
     const handleMouseDown = (e: React.MouseEvent) => {
         if (!currentImage) return;
         setIsDragging(true);
@@ -221,10 +155,60 @@ export default function PhotoManagerPage() {
         setQueue(prev => prev.map(it => it.id === currentImage.id ? { ...it, ...fields } : it));
     };
 
+    const processFinalImage = async (item: ProcessingImage): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { reject('No context'); return; }
+
+            const img = new window.Image();
+            img.src = item.preview;
+            img.onload = () => {
+                const targetSize = 512;
+                canvas.width = targetSize;
+                canvas.height = targetSize;
+
+                if (item.bgColor !== 'transparent') {
+                    ctx.fillStyle = item.bgColor;
+                    ctx.fillRect(0, 0, targetSize, targetSize);
+                }
+
+                ctx.filter = `brightness(${item.brightness}%) contrast(${item.contrast}%)`;
+                
+                const { x, y, scale } = item.cropArea;
+                const iw = img.width;
+                const ih = img.height;
+                const aspect = iw / ih;
+                
+                // Contain logic for base mapping
+                let dw, dh;
+                if (aspect > 1) {
+                    dw = targetSize;
+                    dh = targetSize / aspect;
+                } else {
+                    dh = targetSize;
+                    dw = targetSize * aspect;
+                }
+
+                const finalWidth = dw * scale;
+                const finalHeight = dh * scale;
+                
+                // UI used 320px container, so we scale translation (512 / 320 = 1.6)
+                const scaleFactor = 1.6;
+                const cx = (targetSize - finalWidth) / 2 + (x * scaleFactor);
+                const cy = (targetSize - finalHeight) / 2 + (y * scaleFactor);
+
+                ctx.drawImage(img, cx, cy, finalWidth, finalHeight);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => reject('Image load error');
+        });
+    };
+
     const handleSaveIndividual = async (idx: number) => {
         if (!db) return;
         const item = queue[idx];
-        if (!item.matchedStudent || !item.processedDataUrl) {
+        if (!item.matchedStudent) {
             toast({ variant: 'destructive', title: 'ত্রুটি', description: 'শিক্ষার্থী নির্বাচন করুন।' });
             return;
         }
@@ -232,14 +216,18 @@ export default function PhotoManagerPage() {
         setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'saving' } : it));
 
         try {
+            // Generate processed image exactly when saving
+            const processedUrl = await processFinalImage(item);
+
             await updateDoc(doc(db, 'students', item.matchedStudent.id), {
-                photoUrl: item.processedDataUrl,
+                photoUrl: processedUrl,
                 updatedAt: serverTimestamp()
             });
 
             toast({ title: 'ছবি সেভ হয়েছে', description: `${item.matchedStudent.studentNameBn} এর প্রোফাইল আপডেট করা হয়েছে।` });
-            setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'saved' } : it));
+            setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'saved', processedDataUrl: processedUrl } : it));
         } catch (e) {
+            console.error(e);
             toast({ variant: 'destructive', title: 'ত্রুটি', description: 'সংরক্ষণ ব্যর্থ হয়েছে।' });
             setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'error' } : it));
         }
@@ -249,6 +237,12 @@ export default function PhotoManagerPage() {
         if (!manualClass) return [];
         return allStudents.filter(s => s.className === manualClass).sort((a, b) => a.roll - b.roll);
     }, [allStudents, manualClass]);
+
+    function toBengaliNumber(str: string | number | undefined | null) {
+        if (!str && str !== 0) return '';
+        const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);
+    }
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
@@ -269,7 +263,6 @@ export default function PhotoManagerPage() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                        {/* Sidebar: Queue */}
                         <div className="space-y-6">
                             <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl bg-white">
                                 <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center p-6">
@@ -347,12 +340,11 @@ export default function PhotoManagerPage() {
                                 <div className="text-[11px] font-bold text-blue-900 space-y-1">
                                     <p>• ছবির নাম দিন: <strong>[শ্রেণি]_[রোল]</strong> (উদা: 6_01.jpg)</p>
                                     <p>• ছবির উপর মাউস দিয়ে ড্র্যাগ করে পজিশন ঠিক করুন।</p>
-                                    <p>• প্রতিটি ছবির এডিট সেটিং সম্পূর্ণ আলাদা থাকবে।</p>
+                                    <p>• <strong>সেভ করার সময়</strong> ছবির চূড়ান্ত কোয়ালিটি ও মাপ নির্ধারিত হবে।</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Editor Main Area */}
                         <div className="lg:col-span-2 space-y-6">
                             {!currentImage ? (
                                 <Card className="border-[4px] border-black rounded-[32px] p-20 text-center flex flex-col items-center justify-center bg-white shadow-xl opacity-50">
@@ -385,10 +377,9 @@ export default function PhotoManagerPage() {
                                                         onMouseLeave={handleMouseUp}
                                                         onWheel={handleWheel}
                                                     >
-                                                        <canvas ref={canvasRef} className="hidden" />
                                                         <img 
                                                             src={currentImage.preview} 
-                                                            className="w-full h-full object-none pointer-events-none" 
+                                                            className="w-full h-full object-contain pointer-events-none" 
                                                             style={{
                                                                 filter: `brightness(${currentImage.brightness}%) contrast(${currentImage.contrast}%)`,
                                                                 transform: `translate(${currentImage.cropArea.x}px, ${currentImage.cropArea.y}px) scale(${currentImage.cropArea.scale})`,
@@ -484,7 +475,7 @@ export default function PhotoManagerPage() {
                                         <CardFooter className="p-8 bg-slate-50 border-t-[3px] border-black flex justify-between gap-4">
                                             <Button variant="outline" className="h-14 flex-1 font-black text-lg border-2" onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))} disabled={currentIndex === 0}>পূর্ববর্তী</Button>
                                             <Button className="h-14 flex-[2] font-black text-xl shadow-2xl gap-2 bg-emerald-600 hover:bg-emerald-700" disabled={currentImage.status === 'saving' || !currentImage.matchedStudent} onClick={() => handleSaveIndividual(currentIndex)}>
-                                                {currentImage.status === 'saving' ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />} সংরক্ষণ করুন
+                                                {currentImage.status === 'saving' ? <Loader2 className="h-6 w-6 animate-spin mr-2" /> : <Save className="h-6 w-6 mr-2" />} সংরক্ষণ ও প্রোফাইলে যুক্ত করুন
                                             </Button>
                                             <Button variant="outline" className="h-14 w-14 shrink-0 font-black border-2" onClick={() => setCurrentIdx(prev => Math.min(queue.length - 1, prev + 1))} disabled={currentIndex === queue.length - 1}><ArrowRight className="h-6 w-6" /></Button>
                                         </CardFooter>
@@ -497,10 +488,4 @@ export default function PhotoManagerPage() {
             </main>
         </div>
     );
-}
-
-function toBengaliNumber(str: string | number | undefined | null) {
-    if (!str && str !== 0) return '';
-    const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);
 }
