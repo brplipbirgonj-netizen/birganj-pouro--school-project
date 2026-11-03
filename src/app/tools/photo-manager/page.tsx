@@ -14,7 +14,7 @@ import {
     ImageIcon, Upload, Search, UserCheck, X, CheckCircle2, 
     Loader2, Save, Trash2, ImagePlus, ArrowRight, RotateCcw, 
     Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle, Info,
-    FilePen
+    FilePen, Users
 } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage } from '@/lib/student-data';
@@ -27,7 +27,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
-const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 type ProcessingImage = {
     id: string;
