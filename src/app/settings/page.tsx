@@ -53,7 +53,7 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
 };
 
 const classNamesMap: Record<string, string> = {
-    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম'
 };
 
 // --- Sub Components ---
@@ -70,51 +70,31 @@ function GalleryManagementSettings() {
 
     useEffect(() => {
         if (!db) return;
-        getGalleryConfig(db).then(data => {
-            setConfig(data);
+        const unsub = onSnapshot(doc(db, 'school', 'gallery'), (snap) => {
+            if (snap.exists()) {
+                setConfig(snap.data() as GalleryConfig);
+            }
             setIsLoading(false);
+        }, async (error: FirestoreError) => {
+            if (error.code === 'permission-denied') {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'school/gallery',
+                    operation: 'get',
+                }));
+            }
         });
+        return () => unsub();
     }, [db]);
 
-    const handleSave = async () => {
-        if (!db) return;
-        setIsSaving(true);
-        try {
-            await saveGalleryConfig(db, config);
-            toast({ title: 'গ্যালারি সেটিংস সংরক্ষিত হয়েছে' });
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsSaving(false);
-        }
-    };
+    const activeImages = useMemo(() => config.images.filter(img => img.isActive), [config.images]);
 
-    const handleAddImage = () => {
-        if (!newImgUrl.trim()) {
-            toast({ variant: 'destructive', title: 'ছবির লিংক দিন' });
-            return;
-        }
-        const newImg: GalleryImage = {
-            id: Math.random().toString(36).substr(2, 9),
-            url: newImgUrl,
-            title: newImgTitle || 'নতুন ছবি',
-            isActive: true
-        };
-        setConfig(prev => ({ ...prev, images: [...prev.images, newImg] }));
-        setNewImgUrl('');
-        setNewImgTitle('');
-    };
-
-    const handleRemoveImage = (id: string) => {
-        setConfig(prev => ({ ...prev, images: prev.images.filter(img => img.id !== id) }));
-    };
-
-    const handleToggleActive = (id: string, val: boolean) => {
-        setConfig(prev => ({
-            ...prev,
-            images: prev.images.map(img => img.id === id ? { ...img, isActive: val } : img)
-        }));
-    };
+    useEffect(() => {
+        if (activeImages.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentIdx(prev => (prev + 1) % activeImages.length);
+        }, config.duration * 1000);
+        return () => clearInterval(interval);
+    }, [activeImages, config.duration]);
 
     if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
 
@@ -506,7 +486,7 @@ function HolidaySettings() {
 const permissionGroups = [
     { title: 'ড্যাশবোর্ড', ids: ['view:dashboard'] },
     { title: 'ভর্তি আবেদন', ids: ['manage:admissions'] },
-    { title: 'শিক্ষার্থী ও প্রোফাইল', ids: ['view:students', 'manage:students', 'special:edit-student', 'special:delete-student', 'upload:students', 'view:student-profile'] },
+    { title: 'শিক্ষার্থী ও প্রোফাইল', ids: ['view:students', 'manage:students', 'manage:photo-portal', 'special:edit-student', 'special:delete-student', 'upload:students', 'view:student-profile'] },
     { title: 'শিক্ষক ও কর্মচারী', ids: ['view:staff', 'manage:staff', 'manage:staff-attendance', 'manage:staff-attendance-delete', 'view:staff-attendance-report'] },
     { title: 'হাজিরা ও উপস্থিতি', ids: ['manage:attendance', 'input:quick-roll-attendance', 'view:missed-attendance', 'input:missed-attendance', 'view:absent-student-list'] },
     { title: 'লেসন প্ল্যান ও সিলেবাস', ids: ['manage:lesson-plans', 'view:syllabus-mgmt', 'manage:syllabus', 'view:syllabus-tracker'] },
@@ -733,7 +713,7 @@ function UserManagementSettings() {
             await deleteUserRecord(db, uid);
             toast({ title: 'ব্যবহারকারী মুছে ফেলা হয়েছে' });
         } catch (e) {
-            toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ইউজার মোছা সম্ভব হয়নি।' });
+            toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ইউজার মোছা সম্ভব হয়নি। ' });
         }
     };
 

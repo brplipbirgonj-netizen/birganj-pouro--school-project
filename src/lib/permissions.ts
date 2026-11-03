@@ -1,4 +1,3 @@
-
 'use client';
 
 // This is a list of available permissions in the system.
@@ -11,6 +10,7 @@ export const availablePermissions = [
   { id: 'special:delete-student', label: 'স্পেশাল পারমিশন: শিক্ষার্থী ডিলিট করুন' },
   { id: 'upload:students', label: 'এক্সেল দিয়ে শিক্ষার্থী আপলোড (ভর্তি)' },
   { id: 'view:student-profile', label: 'শিক্ষার্থী প্রোফাইল সার্চ করুন' },
+  { id: 'manage:photo-portal', label: 'স্মার্ট ফটো পোর্টাল (ছবি এডিট ও লিঙ্ক)' },
 
   { id: 'manage:admissions', label: 'অনলাইন ভর্তি আবেদন ম্যানেজ করুন' },
 
@@ -76,6 +76,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:dashboard',
     'view:students',
     'view:student-profile',
+    'manage:photo-portal',
     'manage:admissions',
     'view:staff',
     'manage:staff-attendance',
