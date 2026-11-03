@@ -62,9 +62,9 @@ const normalize = (name: string) => {
 };
 
 const groupMap: Record<string, string> = { 
-    'science': 'science', 'বিজ্ঞান': 'science',
-    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts',
-    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce'
+    'science': 'science', 'বিজ্ঞান': 'science', 'Science': 'science',
+    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'Arts': 'arts',
+    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce', 'Commerce': 'commerce'
 };
 
 export function processStudentResults(

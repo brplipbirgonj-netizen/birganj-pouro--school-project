@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -50,12 +49,12 @@ const BENGALI_MONTHS = [
     'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const groupNamesMap: { [key: string]: string } = { 'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'all': 'সকল শাখা' };
 const groupMap: Record<string, string> = { 
-    'science': 'science', 'বিজ্ঞান': 'science',
-    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts',
-    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce'
+    'science': 'science', 'বিজ্ঞান': 'science', 'Science': 'science',
+    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'Arts': 'arts',
+    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce', 'Commerce': 'commerce'
 };
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
@@ -349,10 +348,35 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         
                                         const isAnyMarkEntered = sMarks?.written !== undefined || sMarks?.mcq !== undefined || sMarks?.practical !== undefined;
 
-                                        const isWrittenFail = storedLimits.written > 0 && sMarks?.written !== undefined && written < (storedLimits.written * 0.33);
-                                        const isMcqFail = storedLimits.mcq > 0 && sMarks?.mcq !== undefined && mcq < (storedLimits.mcq * 0.33);
-                                        const isPracticalFail = storedLimits.practical > 0 && sMarks?.practical !== undefined && practical < (storedLimits.practical * 0.33);
-                                        const isAnyFail = isWrittenFail || isMcqFail || isPracticalFail;
+                                        // Precise fail logic synchronization with results-calculation lib
+                                        const normalizedSubjectName = normalize(subject);
+                                        const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
+                                        const isIct25 = (normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি')) && fullMarks === 25;
+
+                                        let isAnyFail = false;
+                                        const overallPassMark = Math.ceil(fullMarks * 0.33);
+
+                                        if (isAnyMarkEntered) {
+                                            if (total < overallPassMark) {
+                                                isAnyFail = true;
+                                            } else if (!isEnglish) {
+                                                if (isIct25) {
+                                                    if (sMarks?.mcq !== undefined && mcq < 8) isAnyFail = true;
+                                                } else if (fullMarks === 100) {
+                                                    if (storedLimits.practical > 0) {
+                                                        if (sMarks?.written !== undefined && written < 17) isAnyFail = true;
+                                                        if (sMarks?.mcq !== undefined && mcq < 8) isAnyFail = true;
+                                                        if (sMarks?.practical !== undefined && practical < 8) isAnyFail = true;
+                                                    } else {
+                                                        if (sMarks?.written !== undefined && written < 23) isAnyFail = true;
+                                                        if (sMarks?.mcq !== undefined && mcq < 10) isAnyFail = true;
+                                                    }
+                                                } else if (fullMarks === 50) {
+                                                    if (sMarks?.written !== undefined && written < 12) isAnyFail = true;
+                                                    if (sMarks?.mcq !== undefined && mcq < 5) isAnyFail = true;
+                                                }
+                                            }
+                                        }
 
                                         const writtenOver = written > storedLimits.written;
                                         const mcqOver = mcq > storedLimits.mcq;
@@ -2222,6 +2246,8 @@ export default function ResultsPage() {
         return items;
     }, [canViewRes, canManageFullMarks, hasPermission, user]);
 
+    const subBgColors = ['bg-[#f0f9ff]', 'bg-[#ecfdf5]', 'bg-[#fffbeb]', 'bg-[#f5f3ff]', 'bg-[#fff7ed]', 'bg-[#fff1f2]'];
+
     if (isClient && !canViewRes && !hasPermission('view:merit-list') && !hasPermission('promote:students') && !hasPermission('manage:special-results') && user?.role !== 'admin' && !canManageFullMarks) return (
         <div className="flex min-h-screen w-full flex-col bg-violet-50"><Header /><main className="flex flex-1 items-center justify-center p-4"><Card className="p-8 text-center border-2 border-primary/20"><AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" /><h2 className="text-xl font-bold">প্রবেশাধিকার সংরক্ষিত</h2></Card></main></div>
     );
@@ -2348,6 +2374,82 @@ export default function ResultsPage() {
                         </div>
                         <p className="text-[12px] font-bold mt-1">শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}</p>
                     </header>
+                    {Object.keys(fullSheetPrintData.results).map(gk => {
+                        const results = fullSheetPrintData.results[gk];
+                        const subs = getSubjects(fullSheetPrintData.className, gk === 'all' ? undefined : gk).filter(s => {
+                            if (!s.isExamSubject) return false;
+                            const matchingRecord = fullSheetPrintData.classResults.find((r: any) => {
+                                const nameMatch = normalize(r.subject) === normalize(s.name);
+                                if (!nameMatch) return false;
+                                if (parseInt(fullSheetPrintData.className) >= 9) {
+                                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                                    const groupKeyNorm = groupMap[gk.toLowerCase().trim()] || gk.toLowerCase().trim();
+                                    return rGroupNorm === 'none' || rGroupNorm === groupKeyNorm || gk === 'all';
+                                }
+                                return true;
+                            });
+                            return (matchingRecord?.fullMarks ?? s.fullMarks) > 0;
+                        });
+
+                        return (
+                            <div key={gk} className="mb-8">
+                                <div className="mb-2 font-black text-sm uppercase">বিভাগ: {groupNamesMap[gk] || gk}</div>
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="bg-slate-100">
+                                            <th rowSpan={2}>রোল</th>
+                                            <th rowSpan={2} className="min-w-[120px]">নাম</th>
+                                            {subs.map((s, idx) => (
+                                                <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className={subBgColors[idx % subBgColors.length]}>{s.name}</th>
+                                            ))}
+                                            <th rowSpan={2}>মোট</th>
+                                            <th rowSpan={2}>GPA</th>
+                                            <th rowSpan={2}>গ্রেড</th>
+                                            <th rowSpan={2}>মেধা</th>
+                                        </tr>
+                                        <tr className="bg-slate-50">
+                                            {subs.map((s, idx) => {
+                                                const isEng = s.name.includes('ইংরেজি');
+                                                const bg = subBgColors[idx % subBgColors.length];
+                                                return (
+                                                    <React.Fragment key={s.name}>
+                                                        {!isEng && <><th className={bg}>লিখিত</th><th className={bg}>MCQ</th>{s.practical && <th className={bg}>ব্যবহারিক</th>}</>}
+                                                        <th className="bg-blue-100">প্রাপ্ত</th><th className={bg}>গ্রেড</th><th className={bg}>পয়েন্ট</th>
+                                                    </React.Fragment>
+                                                )
+                                            })}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {results.map((res: StudentProcessedResult) => (
+                                            <tr key={res.student.id} className={!res.isPass ? "bg-rose-50" : ""}>
+                                                <td className="text-center font-bold">{toBengaliNumber(res.student.roll)}</td>
+                                                <td className="font-bold pl-1">{res.student.studentNameBn}</td>
+                                                {subs.map((s, idx) => {
+                                                    const sr = res.subjectResults.get(s.name);
+                                                    const isEng = s.name.includes('ইংরেজি');
+                                                    const bg = subBgColors[idx % subBgColors.length];
+                                                    return (
+                                                        <React.Fragment key={s.name}>
+                                                            {!isEng && <><td className={bg}>{sr?.written ?? '-'}</td><td className={bg}>{sr?.mcq ?? '-'}</td>{s.practical && <td className={bg}>{sr?.practical ?? '-'}</td>}</>}
+                                                            <td className="text-center font-black bg-blue-50">{sr?.marks ?? '-'}</td>
+                                                            <td className={cn("text-center", sr && !sr.isPass && "text-rose-700 font-black")}>{sr?.grade ?? '-'}</td>
+                                                            <td className="text-center">{sr?.point?.toFixed(2) ?? '-'}</td>
+                                                        </React.Fragment>
+                                                    )
+                                                })}
+                                                <td className="text-center font-black">{toBengaliNumber(res.totalMarks)}</td>
+                                                <td className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</td>
+                                                <td className={cn("text-center font-black", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`}</td>
+                                                <td className="text-center font-bold">{res.isPass ? toBengaliNumber(res.meritPosition || '-') : 'ফেল'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
@@ -2356,11 +2458,61 @@ export default function ResultsPage() {
                     <style jsx global>{`
                         @media print {
                             @page { size: A4 landscape; margin: 5mm !important; }
-                            .printable-area { width: 100% !important; padding: 0 !important; }
-                            table { border-collapse: collapse !important; border: 1px solid black !important; width: 100% !important; }
-                            th, td { border: 1px solid black !important; padding: 1px !important; font-size: 8px !important; }
+                            .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; width: 100% !important; }
+                            table { border-collapse: collapse !important; border: 1.5px solid black !important; width: 100% !important; }
+                            th, td { border: 1.5px solid black !important; padding: 2px !important; font-size: 9px !important; text-align: center; }
+                            .no-print { display: none !important; }
                         }
                     `}</style>
+                    <header className="text-center border-b-2 border-black pb-2 mb-4 flex flex-col items-center">
+                        {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-12 h-12 object-contain mb-1" />}
+                        <h1 className="text-xl font-black">{schoolInfo.name}</h1>
+                        <p className="text-[12px] font-bold">{schoolInfo.address}</p>
+                        <div className="mt-1 inline-block border border-black px-6 py-0.5 rounded-full font-black text-xs uppercase">বিশেষ পরীক্ষার ফলাফল শিট - {specialPrintData.month} {toBengaliNumber(specialPrintData.year)}</div>
+                        <p className="text-[12px] font-bold mt-1">শ্রেণি: {classNamesMap[specialPrintData.className] || specialPrintData.className}</p>
+                    </header>
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-slate-100">
+                                <th rowSpan={2} className="w-12">রোল</th>
+                                <th rowSpan={2} className="min-w-[150px]">নাম</th>
+                                {specialPrintData.availableSubjects.map((sub: any) => (
+                                    <th key={sub.name} colSpan={3}>{sub.name}</th>
+                                ))}
+                                <th rowSpan={2} className="w-16">মোট</th>
+                            </tr>
+                            <tr className="bg-slate-50">
+                                {specialPrintData.availableSubjects.map((sub: any) => (
+                                    <React.Fragment key={sub.name}><th className="w-8">প-১</th><th className="w-8">প-২</th><th className="w-8">প-৩</th></React.Fragment>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {specialPrintData.students.map((student: any) => {
+                                let total = 0;
+                                return (
+                                    <tr key={student.id}>
+                                        <td className="font-bold">{toBengaliNumber(student.roll)}</td>
+                                        <td className="text-left pl-2 font-bold">{student.studentNameBn}</td>
+                                        {specialPrintData.availableSubjects.map((sub: any) => (
+                                            ['বিশেষ পরীক্ষা-১', 'বিশেষ পরীক্ষা-২', 'বিশেষ পরীক্ষা-৩'].map(type => {
+                                                const match = specialPrintData.allSpecialResults.find((r: any) => {
+                                                    const normSearch = normalize(sub.name);
+                                                    const normRecord = normalize(r.subject);
+                                                    if (sub.isCombined) return sub.subList.some((inner: string) => normalize(inner) === normRecord) && r.examType === type;
+                                                    return normRecord === normSearch && r.examType === type;
+                                                });
+                                                const m = match?.results.find((res: any) => res.studentId === student.id)?.marks;
+                                                if (m !== undefined) total += m;
+                                                return <td key={type}>{m !== undefined ? toBengaliNumber(m) : '-'}</td>;
+                                            })
+                                        ))}
+                                        <td className="font-black bg-slate-50">{toBengaliNumber(total)}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             )}
         </div>
