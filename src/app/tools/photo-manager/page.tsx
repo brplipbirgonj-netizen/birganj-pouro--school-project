@@ -13,7 +13,8 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { 
     ImageIcon, Upload, Search, UserCheck, X, CheckCircle2, 
     Loader2, Save, Trash2, ImagePlus, ArrowRight, RotateCcw, 
-    Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle, Info
+    Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle, Info,
+    FilePen
 } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage } from '@/lib/student-data';
@@ -23,6 +24,8 @@ import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 
@@ -39,7 +42,7 @@ type ProcessingImage = {
 
 export default function PhotoManagerPage() {
     const db = useFirestore();
-    const { user, hasPermission } = useAuth();
+    const { user } = useAuth();
     const { selectedYear } = useAcademicYear();
     const { toast } = useToast();
     
@@ -118,15 +121,13 @@ export default function PhotoManagerPage() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const img = new Image();
+        const img = new window.Image();
         img.src = currentImage.preview;
         img.onload = () => {
-            // Target size for student profiles: 512x512
             const targetSize = 512;
             canvas.width = targetSize;
             canvas.height = targetSize;
 
-            // Crop logic (square centered)
             let sx, sy, sw, sh;
             if (img.width > img.height) {
                 sh = img.height;
@@ -229,7 +230,6 @@ export default function PhotoManagerPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                         
-                        {/* Sidebar: Queue and List */}
                         <div className="space-y-6">
                             <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl bg-white">
                                 <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center p-6">
@@ -299,7 +299,6 @@ export default function PhotoManagerPage() {
                             </div>
                         </div>
 
-                        {/* Editor Column: Main Area */}
                         <div className="lg:col-span-2 space-y-6">
                             {!currentImage ? (
                                 <Card className="border-[4px] border-black rounded-[32px] p-20 text-center flex flex-col items-center justify-center bg-white shadow-xl opacity-50">
