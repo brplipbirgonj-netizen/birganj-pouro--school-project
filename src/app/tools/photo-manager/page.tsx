@@ -61,7 +61,6 @@ export default function PhotoManagerPage() {
     const [manualClass, setManualClass] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => { setIsClient(true); }, []);
 
@@ -176,7 +175,7 @@ export default function PhotoManagerPage() {
             const img = new window.Image();
             img.src = item.preview;
             img.onload = () => {
-                const targetSize = 300; // Final resolution changed from 512 to 300 as per request
+                const targetSize = 300; 
                 canvas.width = targetSize;
                 canvas.height = targetSize;
 
@@ -204,7 +203,6 @@ export default function PhotoManagerPage() {
                 const finalWidth = dw * scale;
                 const finalHeight = dh * scale;
                 
-                // Adjust scale factor based on the preview vs canvas ratio
                 const scaleFactor = targetSize / 320; 
                 const cx = (targetSize - finalWidth) / 2 + (x * scaleFactor);
                 const cy = (targetSize - finalHeight) / 2 + (y * scaleFactor);
@@ -248,11 +246,7 @@ export default function PhotoManagerPage() {
         return allStudents.filter(s => s.className === manualClass).sort((a, b) => a.roll - b.roll);
     }, [allStudents, manualClass]);
 
-    function toBengaliNumber(str: string | number | undefined | null) {
-        if (!str && str !== 0) return '';
-        const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-        return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);
-    }
+    if (!isClient) return null;
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
@@ -368,7 +362,7 @@ export default function PhotoManagerPage() {
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-primary rounded-xl text-white"><FilePen className="h-5 w-5" /></div>
                                                 <div>
-                                                    <h3 className="font-black text-slate-800">ছবি সম্পাদন</h3>
+                                                    <h3 className="font-black text-slate-800">ফটোশপ স্টাইল ক্রপিং (৩০০x৩০০)</h3>
                                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">{currentImage.fileName}</p>
                                                 </div>
                                             </div>
@@ -387,22 +381,28 @@ export default function PhotoManagerPage() {
                                                         onMouseLeave={handleMouseUp}
                                                         onWheel={handleWheel}
                                                     >
+                                                        {/* Dark Photoshop Mask Overlay */}
+                                                        <div className="absolute inset-0 z-20 pointer-events-none">
+                                                            <div className="absolute inset-0 bg-black/40" />
+                                                            <div className="absolute inset-4 border-2 border-white/50 bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.3)] flex items-center justify-center">
+                                                                <div className="w-full h-0.5 bg-white/20 absolute" />
+                                                                <div className="h-full w-0.5 bg-white/20 absolute" />
+                                                            </div>
+                                                        </div>
+
                                                         <img 
                                                             src={currentImage.preview} 
-                                                            className="w-full h-full object-contain pointer-events-none" 
+                                                            className="w-full h-full object-contain pointer-events-none relative z-10" 
                                                             style={{
                                                                 filter: `brightness(${currentImage.brightness}%) contrast(${currentImage.contrast}%)`,
                                                                 transform: `translate(${currentImage.cropArea.x}px, ${currentImage.cropArea.y}px) scale(${currentImage.cropArea.scale})`,
-                                                                backgroundColor: currentImage.bgColor === 'transparent' ? '#f1f5f9' : currentImage.bgColor,
+                                                                backgroundColor: currentImage.bgColor === 'transparent' ? 'transparent' : currentImage.bgColor,
                                                                 transition: isDragging ? 'none' : 'transform 0.1s ease-out'
                                                             }}
                                                             alt="" 
                                                         />
-                                                        <div className="absolute inset-0 border-2 border-primary/30 pointer-events-none flex items-center justify-center">
-                                                            <div className="w-full h-0.5 bg-primary/20 absolute" />
-                                                            <div className="h-full w-0.5 bg-primary/20 absolute" />
-                                                        </div>
-                                                        <div className="absolute bottom-3 left-3 bg-primary text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg">১:১ স্কোয়ার মোড</div>
+                                                        
+                                                        <div className="absolute bottom-3 left-3 bg-primary text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg z-30">৩০০x৩০০ ক্রপ মোড</div>
                                                     </div>
 
                                                     <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
