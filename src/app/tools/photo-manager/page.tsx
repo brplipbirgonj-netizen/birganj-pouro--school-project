@@ -27,7 +27,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
-const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 type ProcessingImage = {
     id: string;
@@ -176,7 +176,7 @@ export default function PhotoManagerPage() {
             const img = new window.Image();
             img.src = item.preview;
             img.onload = () => {
-                const targetSize = 512;
+                const targetSize = 300; // Final resolution changed from 512 to 300 as per request
                 canvas.width = targetSize;
                 canvas.height = targetSize;
 
@@ -204,7 +204,8 @@ export default function PhotoManagerPage() {
                 const finalWidth = dw * scale;
                 const finalHeight = dh * scale;
                 
-                const scaleFactor = 1.6;
+                // Adjust scale factor based on the preview vs canvas ratio
+                const scaleFactor = targetSize / 320; 
                 const cx = (targetSize - finalWidth) / 2 + (x * scaleFactor);
                 const cy = (targetSize - finalHeight) / 2 + (y * scaleFactor);
 
@@ -349,7 +350,7 @@ export default function PhotoManagerPage() {
                                 <div className="text-[11px] font-bold text-blue-900 space-y-1">
                                     <p>• ছবির নাম দিন: <strong>[শ্রেণি]_[রোল]</strong> (উদা: 6_01.jpg)</p>
                                     <p>• ছবির উপর মাউস দিয়ে ড্র্যাগ করে পজিশন ঠিক করুন।</p>
-                                    <p>• <strong>সেভ করার সময়</strong> ছবির চূড়ান্ত কোয়ালিটি ও মাপ নির্ধারিত হবে।</p>
+                                    <p>• <strong>সেভ করার সময়</strong> ছবি ৩০০x৩০০ পিক্সেল মাপে অপ্টিমাইজড হবে।</p>
                                 </div>
                             </div>
                         </div>
