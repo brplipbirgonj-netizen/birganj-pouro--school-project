@@ -63,8 +63,9 @@ const normalize = (name: string) => {
 
 const groupMap: Record<string, string> = { 
     'science': 'science', 'বিজ্ঞান': 'science', 'Science': 'science',
-    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'Arts': 'arts',
-    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce', 'Commerce': 'commerce'
+    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'humanity': 'arts', 'Arts': 'arts',
+    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce', 'Commerce': 'commerce',
+    'none': 'none', 'all': 'none', 'general': 'none'
 };
 
 export function processStudentResults(
@@ -82,22 +83,18 @@ export function processStudentResults(
 
         const groupAllowedSubjects = getSubjects(student.className, studentGroupNormalized);
         
-        // Final subject list for this student
         const subjectsForStudent = groupAllowedSubjects.filter(subInfo => {
             const currentSubNameNormalized = normalize(subInfo.name);
             
-            // For 9-10: Handle mutually exclusive electives (like HM and Agri)
             if (studentClassNum >= 9) {
                 const hmNormalized = normalize('উচ্চতর গণিত');
                 const agriNormalized = normalize('কৃষি শিক্ষা');
                 
                 if (currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) {
-                    // If student has specified an optional in profile, strictly show only that one
                     if (optionalSubjectNameNormalized) {
                         return currentSubNameNormalized === optionalSubjectNameNormalized;
                     }
                     
-                    // If no optional specified in profile, check if marks exist in the database for this subject
                     const classResult = resultsBySubject.find(r => {
                         const nameMatch = normalize(r.subject) === currentSubNameNormalized;
                         if (!nameMatch) return false;
@@ -113,7 +110,6 @@ export function processStudentResults(
                     const studentResult = classResult?.results.find(r => r.studentId === student.id);
                     const hasMarks = studentResult && (studentResult.written !== undefined || studentResult.mcq !== undefined || studentResult.practical !== undefined);
                     
-                    // If student didn't pick an optional and hasn't sat for the exam, hide both
                     return hasMarks;
                 }
             }
@@ -224,7 +220,6 @@ export function processStudentResults(
             }
         });
 
-        // Forced normalization to 11 for 9-10 if calculated count is close
         let effectiveCompulsoryCount = compulsorySubjectsCount;
         if (studentClassNum >= 9 && effectiveCompulsoryCount > 11) {
             effectiveCompulsoryCount = 11;
