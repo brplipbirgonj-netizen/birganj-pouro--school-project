@@ -163,7 +163,11 @@ export function processStudentResults(
                     if (isIct25) {
                         if (mcq !== undefined && mcq < 8) isPassSubject = false;
                     } else if (fullMarks === 100) {
-                        if (subjectInfo.practical) {
+                        const wrLimit = classResult?.writtenLimit ?? (subjectInfo.practical ? 50 : 70);
+                        const mcqLimit = classResult?.mcqLimit ?? (subjectInfo.practical ? 25 : 30);
+                        const prLimit = classResult?.practicalLimit ?? (subjectInfo.practical ? 25 : 0);
+
+                        if (prLimit > 0) {
                             if (written !== undefined && written < 17) isPassSubject = false;
                             if (mcq !== undefined && mcq < 8) isPassSubject = false;
                             if (practical !== undefined && practical < 8) isPassSubject = false;
