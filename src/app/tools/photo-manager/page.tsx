@@ -14,7 +14,7 @@ import {
     ImageIcon, Upload, Search, UserCheck, X, CheckCircle2, 
     Loader2, Save, Trash2, ImagePlus, ArrowRight, RotateCcw, 
     Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle, Info,
-    FilePen, Users
+    FilePen, Users, Scissors, Crop
 } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage } from '@/lib/student-data';
@@ -32,12 +32,12 @@ const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭�
 type ProcessingImage = {
     id: string;
     file: File;
+    fileName: string;
     preview: string;
     matchedStudent: Student | null;
     status: 'pending' | 'matched' | 'unmatched' | 'saving' | 'saved' | 'error';
     processedDataUrl?: string;
-    classId?: string;
-    roll?: number;
+    cropArea: { x: number, y: number, size: number };
 };
 
 export default function PhotoManagerPage() {
@@ -49,15 +49,18 @@ export default function PhotoManagerPage() {
     const [isClient, setIsClient] = useState(false);
     const [queue, setQueue] = useState<ProcessingImage[]>([]);
     const [currentIndex, setCurrentIdx] = useState<number>(0);
-    const [isProcessing, setIsProcessing] = useState(false);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isFetchingStudents, setIsFetchingStudents] = useState(true);
 
     const [brightness, setBrightness] = useState(100);
     const [contrast, setContrast] = useState(100);
     
+    // Filtering states for manual match
+    const [manualClass, setManualClass] = useState<string>('');
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const cropBoxRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { setIsClient(true); }, []);
 
@@ -79,13 +82,15 @@ export default function PhotoManagerPage() {
 
     const currentImage = useMemo(() => queue[currentIndex] || null, [queue, currentIndex]);
 
-    const parseFileName = (name: string): { classId: string | null; roll: number | null } => {
+    const matchStudentByName = (name: string, students: Student[]) => {
         const cleanName = name.replace(/\.[^/.]+$/, "");
         const match = cleanName.match(/(\d+)[_\-\s](\d+)/);
         if (match) {
-            return { classId: match[1], roll: parseInt(match[2], 10) };
+            const cls = match[1];
+            const roll = parseInt(match[2], 10);
+            return students.find(s => s.className === cls && s.roll === roll) || null;
         }
-        return { classId: null, roll: null };
+        return null;
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,26 +98,35 @@ export default function PhotoManagerPage() {
         if (files.length === 0) return;
 
         const newItems: ProcessingImage[] = files.map(file => {
-            const { classId, roll } = parseFileName(file.name);
-            let matchedStudent: Student | null = null;
-            
-            if (classId && roll) {
-                matchedStudent = allStudents.find(s => s.className === classId && s.roll === roll) || null;
-            }
-
+            const matchedStudent = matchStudentByName(file.name, allStudents);
             return {
                 id: Math.random().toString(36).substr(2, 9),
                 file,
+                fileName: file.name,
                 preview: URL.createObjectURL(file),
                 matchedStudent,
                 status: matchedStudent ? 'matched' : 'unmatched',
-                classId: classId || undefined,
-                roll: roll || undefined
+                cropArea: { x: 0, y: 0, size: 100 } // percentage
             };
         });
 
         setQueue(prev => [...prev, ...newItems]);
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleRename = (id: string, newName: string) => {
+        setQueue(prev => prev.map(item => {
+            if (item.id === id) {
+                const matchedStudent = matchStudentByName(newName, allStudents);
+                return { 
+                    ...item, 
+                    fileName: newName, 
+                    matchedStudent, 
+                    status: matchedStudent ? 'matched' : 'unmatched' 
+                };
+            }
+            return item;
+        }));
     };
 
     const applyFiltersAndDraw = useCallback(() => {
@@ -128,18 +142,13 @@ export default function PhotoManagerPage() {
             canvas.width = targetSize;
             canvas.height = targetSize;
 
-            let sx, sy, sw, sh;
-            if (img.width > img.height) {
-                sh = img.height;
-                sw = img.height;
-                sx = (img.width - sw) / 2;
-                sy = 0;
-            } else {
-                sw = img.width;
-                sh = img.width;
-                sx = 0;
-                sy = (img.height - sh) / 2;
-            }
+            const { x, y, size } = currentImage.cropArea;
+            
+            // Calculate source coordinates based on percentage
+            const sx = (x / 100) * img.width;
+            const sy = (y / 100) * img.height;
+            const sw = (size / 100) * img.width;
+            const sh = (size / 100) * img.height;
 
             ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
             ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetSize, targetSize);
@@ -155,51 +164,40 @@ export default function PhotoManagerPage() {
         if (currentImage && currentImage.status !== 'saved') {
             applyFiltersAndDraw();
         }
-    }, [currentImage?.id, brightness, contrast, applyFiltersAndDraw]);
+    }, [currentImage?.id, currentImage?.cropArea, brightness, contrast, applyFiltersAndDraw]);
 
-    const handleSaveAndNext = async () => {
-        if (!db || !currentImage || !currentImage.matchedStudent || !currentImage.processedDataUrl) return;
+    const handleSaveIndividual = async (idx: number) => {
+        if (!db) return;
+        const item = queue[idx];
+        if (!item.matchedStudent || !item.processedDataUrl) {
+            toast({ variant: 'destructive', title: 'ত্রুটি', description: 'শিক্ষার্থী নির্বাচন করুন।' });
+            return;
+        }
 
-        const studentId = currentImage.matchedStudent.id;
-        const dataUrl = currentImage.processedDataUrl;
-
-        setQueue(prev => prev.map(item => item.id === currentImage.id ? { ...item, status: 'saving' } : item));
+        setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'saving' } : it));
 
         try {
-            await updateDoc(doc(db, 'students', studentId), {
-                photoUrl: dataUrl,
+            await updateDoc(doc(db, 'students', item.matchedStudent.id), {
+                photoUrl: item.processedDataUrl,
                 updatedAt: serverTimestamp()
             });
 
-            toast({ title: 'ছবি সেভ হয়েছে', description: `${currentImage.matchedStudent.studentNameBn} এর প্রোফাইল আপডেট করা হয়েছে।` });
-            
-            setQueue(prev => prev.map(item => item.id === currentImage.id ? { ...item, status: 'saved' } : item));
-            
-            if (currentIndex < queue.length - 1) {
-                setCurrentIdx(prev => prev + 1);
-                setBrightness(100);
-                setContrast(100);
-            }
+            toast({ title: 'ছবি সেভ হয়েছে', description: `${item.matchedStudent.studentNameBn} এর প্রোফাইল আপডেট করা হয়েছে।` });
+            setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'saved' } : it));
         } catch (e) {
-            toast({ variant: 'destructive', title: 'ত্রুটি', description: 'ছবি সংরক্ষণ করা যায়নি।' });
-            setQueue(prev => prev.map(item => item.id === currentImage.id ? { ...item, status: 'error' } : item));
+            toast({ variant: 'destructive', title: 'ত্রুটি', description: 'সংরক্ষণ ব্যর্থ হয়েছে।' });
+            setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'error' } : it));
         }
     };
 
     const handleRemoveFromQueue = (id: string) => {
         setQueue(prev => prev.filter(i => i.id !== id));
-        if (currentIndex >= queue.length - 1 && currentIndex > 0) {
-            setCurrentIdx(prev => prev - 1);
-        }
     };
 
-    const handleManualMatch = (studentId: string) => {
-        if (!currentImage) return;
-        const student = allStudents.find(s => s.id === studentId) || null;
-        setQueue(prev => prev.map(item => 
-            item.id === currentImage.id ? { ...item, matchedStudent: student, status: student ? 'matched' : 'unmatched' } : item
-        ));
-    };
+    const studentsFilteredByClass = useMemo(() => {
+        if (!manualClass) return [];
+        return allStudents.filter(s => s.className === manualClass).sort((a, b) => a.roll - b.roll);
+    }, [allStudents, manualClass]);
 
     function toBengaliNumber(str: string | number | undefined | null) {
         if (!str && str !== 0) return '';
@@ -230,16 +228,17 @@ export default function PhotoManagerPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                         
+                        {/* Sidebar: Queue */}
                         <div className="space-y-6">
                             <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl bg-white">
                                 <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center p-6">
                                     <CardTitle className="text-lg font-black flex items-center gap-2 text-primary">
-                                        <Loader2 className={cn("h-5 w-5", isProcessing && "animate-spin")} /> কিউ (Queue)
+                                        <Loader2 className={cn("h-5 w-5", queue.some(i => i.status === 'saving') && "animate-spin")} /> কিউ (Queue)
                                     </CardTitle>
                                     <Badge className="font-black">{toBengaliNumber(queue.length)} টি ছবি</Badge>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <ScrollArea className="h-[600px]">
+                                    <ScrollArea className="h-[500px]">
                                         {queue.length === 0 ? (
                                             <div className="flex flex-col items-center justify-center p-12 text-center opacity-30">
                                                 <ImageIcon className="h-16 w-16 mb-4" />
@@ -252,35 +251,54 @@ export default function PhotoManagerPage() {
                                                     <div 
                                                         key={item.id} 
                                                         className={cn(
-                                                            "p-3 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-50",
+                                                            "p-3 space-y-2 cursor-pointer transition-all hover:bg-slate-50",
                                                             currentIndex === idx ? "bg-primary/5 ring-inset ring-2 ring-primary" : ""
                                                         )}
-                                                        onClick={() => setCurrentIdx(idx)}
+                                                        onClick={() => {
+                                                            setCurrentIdx(idx);
+                                                            if (item.matchedStudent) setManualClass(item.matchedStudent.className);
+                                                        }}
                                                     >
-                                                        <div className="relative h-12 w-12 rounded-lg overflow-hidden border shadow-sm shrink-0">
-                                                            <img src={item.preview} className="object-cover h-full w-full" alt="" />
-                                                            {item.status === 'saved' && (
-                                                                <div className="absolute inset-0 bg-emerald-600/60 flex items-center justify-center">
-                                                                    <Check className="h-6 w-6 text-white" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-[11px] font-black truncate">{item.file.name}</p>
-                                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                                {item.matchedStudent ? (
-                                                                    <Badge className="bg-emerald-600 text-[8px] h-4 py-0 font-black">রোল {toBengaliNumber(item.matchedStudent.roll)} - {item.matchedStudent.studentNameBn}</Badge>
-                                                                ) : (
-                                                                    <Badge variant="destructive" className="text-[8px] h-4 py-0 font-black">মিল নেই</Badge>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="relative h-12 w-12 rounded-lg overflow-hidden border shadow-sm shrink-0">
+                                                                <img src={item.preview} className="object-cover h-full w-full" alt="" />
+                                                                {item.status === 'saved' && (
+                                                                    <div className="absolute inset-0 bg-emerald-600/60 flex items-center justify-center">
+                                                                        <Check className="h-6 w-6 text-white" />
+                                                                    </div>
                                                                 )}
                                                             </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <Input 
+                                                                    value={item.fileName} 
+                                                                    onChange={(e) => handleRename(item.id, e.target.value)}
+                                                                    className="h-7 text-[10px] font-black border-slate-200 bg-white"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                />
+                                                                <div className="flex items-center gap-1.5 mt-1">
+                                                                    {item.matchedStudent ? (
+                                                                        <Badge className="bg-emerald-600 text-[8px] h-4 py-0 font-black">রোল {toBengaliNumber(item.matchedStudent.roll)} - {item.matchedStudent.studentNameBn}</Badge>
+                                                                    ) : (
+                                                                        <Badge variant="destructive" className="text-[8px] h-4 py-0 font-black">মিল নেই</Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <button 
+                                                                className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                onClick={(e) => { e.stopPropagation(); handleRemoveFromQueue(item.id); }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
                                                         </div>
-                                                        <button 
-                                                            className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                                            onClick={(e) => { e.stopPropagation(); handleRemoveFromQueue(item.id); }}
+                                                        <Button 
+                                                            size="sm" 
+                                                            disabled={item.status === 'saved' || item.status === 'saving' || !item.matchedStudent}
+                                                            className="w-full h-7 text-[10px] font-black bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                                                            onClick={(e) => { e.stopPropagation(); handleSaveIndividual(idx); }}
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
+                                                            {item.status === 'saving' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />}
+                                                            এই ছবিটি সেভ করুন
+                                                        </Button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -292,13 +310,14 @@ export default function PhotoManagerPage() {
                             <div className="p-5 bg-blue-50 border-2 border-dashed border-blue-200 rounded-2xl flex items-start gap-3">
                                 <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                                 <div className="text-[11px] font-bold text-blue-900 space-y-1">
-                                    <p>• ছবির নাম দিন: <strong>[শ্রেণি]_[রোল]</strong></p>
-                                    <p>• উদাহরণ: <strong>6_01.jpg</strong> (৬ষ্ঠ শ্রেণি রোল ১)</p>
-                                    <p>• এডিটর থেকে সরাসরি ১:১ (বর্গাকার) ক্রপ হয়ে শিক্ষার্থীর প্রোফাইলে সেভ হবে।</p>
+                                    <p>• ছবির নাম দিন: <strong>[শ্রেণি]_[রোল]</strong> (উদা: 6_01.jpg)</p>
+                                    <p>• সেভ নাম পরিবর্তন করলে সিস্টেম অটো-ম্যাচ করবে।</p>
+                                    <p>• প্রতিটি ছবির জন্য আলাদা <strong>Save</strong> বাটন ব্যবহার করুন।</p>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Editor Main Area */}
                         <div className="lg:col-span-2 space-y-6">
                             {!currentImage ? (
                                 <Card className="border-[4px] border-black rounded-[32px] p-20 text-center flex flex-col items-center justify-center bg-white shadow-xl opacity-50">
@@ -314,82 +333,122 @@ export default function PhotoManagerPage() {
                                                     <FilePen className="h-5 w-5" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-black text-slate-800">ছবি সম্পাদন করুন</h3>
-                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{currentImage.file.name}</p>
+                                                    <h3 className="font-black text-slate-800">ছবি সম্পাদন ও ক্রপিং</h3>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{currentImage.fileName}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Button variant="ghost" size="sm" className="h-8 font-black" onClick={() => { setBrightness(100); setContrast(100); }}><RotateCcw className="h-3.5 w-3.5 mr-1" /> রিসেট</Button>
+                                                <Button variant="ghost" size="sm" className="h-8 font-black" onClick={() => { setBrightness(100); setContrast(100); }}>
+                                                    <RotateCcw className="h-3.5 w-3.5 mr-1" /> রিসেট
+                                                </Button>
                                             </div>
                                         </div>
                                         <CardContent className="p-8">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
                                                 <div className="flex flex-col items-center space-y-4">
-                                                    <div className="relative aspect-square w-full max-w-[320px] rounded-2xl border-4 border-black overflow-hidden bg-slate-100 shadow-xl ring-8 ring-slate-50">
+                                                    <div className="relative aspect-square w-full max-w-[320px] rounded-2xl border-4 border-black overflow-hidden bg-slate-100 shadow-xl ring-8 ring-slate-50 group">
                                                         <canvas ref={canvasRef} className="w-full h-full object-cover hidden" />
-                                                        {currentImage.processedDataUrl ? (
-                                                            <img src={currentImage.processedDataUrl} className="w-full h-full object-cover" alt="Processed" />
-                                                        ) : (
-                                                            <img src={currentImage.preview} className="w-full h-full object-cover" alt="Original" />
-                                                        )}
-                                                        <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md text-white text-[9px] px-2 py-0.5 rounded-full font-black border border-white/20">
-                                                            PREVIEW 512x512
+                                                        <img src={currentImage.preview} className="w-full h-full object-cover opacity-30" alt="" />
+                                                        
+                                                        {/* Simple Manual Cropper UI */}
+                                                        <div 
+                                                            className="absolute border-2 border-primary shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] cursor-move"
+                                                            style={{
+                                                                left: `${currentImage.cropArea.x}%`,
+                                                                top: `${currentImage.cropArea.y}%`,
+                                                                width: `${currentImage.cropArea.size}%`,
+                                                                height: `${currentImage.cropArea.size}%`,
+                                                            }}
+                                                        >
+                                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                                <div className="w-full h-0.5 bg-primary/30" />
+                                                                <div className="h-full w-0.5 bg-primary/30 absolute" />
+                                                            </div>
                                                         </div>
+
+                                                        {currentImage.processedDataUrl && (
+                                                            <div className="absolute bottom-3 left-3 bg-emerald-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg">
+                                                                PROCESSED 1:1
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <Badge className="bg-primary px-3">বর্তমান ছবি</Badge>
-                                                        <span className="text-[10px] font-black text-muted-foreground italic">(বর্গাকার ক্রপ করা হবে)</span>
+
+                                                    <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, size: Math.max(10, it.cropArea.size - 5)}} : it))}><Scissors className="h-3 w-3 mr-1" /> ছোট</Button>
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, size: Math.min(100, it.cropArea.size + 5)}} : it))}><Maximize2 className="h-3 w-3 mr-1" /> বড়</Button>
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {x: 0, y: 0, size: 100}} : it))}><RotateCcw className="h-3 w-3 mr-1" /> ফিট</Button>
+                                                    </div>
+
+                                                    <div className="w-full max-w-[320px] grid grid-cols-2 gap-4 mt-2">
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[9px] font-black uppercase text-slate-500">বামে-ডানে সরাও</Label>
+                                                            <Slider value={[currentImage.cropArea.x]} min={0} max={100 - currentImage.cropArea.size} step={1} onValueChange={([v]) => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, x: v}} : it))} />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-[9px] font-black uppercase text-slate-500">উপরে-নিচে সরাও</Label>
+                                                            <Slider value={[currentImage.cropArea.y]} min={0} max={100 - currentImage.cropArea.size} step={1} onValueChange={([v]) => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, y: v}} : it))} />
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-8">
-                                                    <div className="space-y-6">
-                                                        <div className="space-y-3">
-                                                            <div className="flex justify-between items-center">
-                                                                <Label className="font-black text-xs uppercase text-slate-600">উজ্জ্বলতা (Brightness)</Label>
-                                                                <span className="font-black text-primary text-xs">{toBengaliNumber(brightness)}%</span>
+                                                <div className="space-y-6">
+                                                    <div className="space-y-4">
+                                                        <h4 className="font-black text-sm text-primary flex items-center gap-2 border-b pb-2"><Sliders className="h-4 w-4" /> ছবির অ্যাডজাস্টমেন্ট</h4>
+                                                        <div className="space-y-5">
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between items-center"><Label className="text-xs font-black">উজ্জ্বলতা (Brightness)</Label><span className="text-xs font-black">{toBengaliNumber(brightness)}%</span></div>
+                                                                <Slider value={[brightness]} min={50} max={150} step={1} onValueChange={([v]) => setBrightness(v)} />
                                                             </div>
-                                                            <Slider value={[brightness]} min={50} max={150} step={1} onValueChange={([v]) => setBrightness(v)} />
-                                                        </div>
-                                                        <div className="space-y-3">
-                                                            <div className="flex justify-between items-center">
-                                                                <Label className="font-black text-xs uppercase text-slate-600">কন্ট্রাস্ট (Contrast)</Label>
-                                                                <span className="font-black text-primary text-xs">{toBengaliNumber(contrast)}%</span>
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between items-center"><Label className="text-xs font-black">কন্ট্রাস্ট (Contrast)</Label><span className="text-xs font-black">{toBengaliNumber(contrast)}%</span></div>
+                                                                <Slider value={[contrast]} min={50} max={150} step={1} onValueChange={([v]) => setContrast(v)} />
                                                             </div>
-                                                            <Slider value={[contrast]} min={50} max={150} step={1} onValueChange={([v]) => setContrast(v)} />
                                                         </div>
                                                     </div>
 
                                                     <Separator />
 
                                                     <div className="space-y-4">
-                                                        <Label className="font-black text-sm text-primary flex items-center gap-2"><Users className="h-4 w-4" /> শিক্ষার্থীর সাথে সংযোগ</Label>
+                                                        <h4 className="font-black text-sm text-primary flex items-center gap-2 border-b pb-2"><Users className="h-4 w-4" /> শিক্ষার্থীর সাথে সংযোগ</h4>
+                                                        <div className="space-y-3">
+                                                            <div className="space-y-1.5">
+                                                                <Label className="text-[10px] font-black uppercase text-slate-500">১. শ্রেণি নির্বাচন</Label>
+                                                                <Select value={manualClass} onValueChange={setManualClass}>
+                                                                    <SelectTrigger className="h-9 border-2 font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
+                                                                    <SelectContent className="font-kalpurush">
+                                                                        {Object.entries(classNamesMap).map(([k, v]) => <SelectItem key={k} value={k}>{v} শ্রেণি</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div className="space-y-1.5">
+                                                                <Label className="text-[10px] font-black uppercase text-slate-500">২. শিক্ষার্থী নির্বাচন</Label>
+                                                                <Select 
+                                                                    value={currentImage.matchedStudent?.id || ""} 
+                                                                    onValueChange={(val) => {
+                                                                        const student = allStudents.find(s => s.id === val) || null;
+                                                                        setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, matchedStudent: student, status: student ? 'matched' : 'unmatched'} : it));
+                                                                    }}
+                                                                    disabled={!manualClass}
+                                                                >
+                                                                    <SelectTrigger className="h-9 border-2 font-bold"><SelectValue placeholder="শিক্ষার্থীর নাম" /></SelectTrigger>
+                                                                    <SelectContent className="font-kalpurush max-h-[250px]">
+                                                                        {studentsFilteredByClass.map(s => <SelectItem key={s.id} value={s.id}>রোল {toBengaliNumber(s.roll)} - {s.studentNameBn}</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        </div>
                                                         
-                                                        {currentImage.matchedStudent ? (
-                                                            <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-2xl flex items-center gap-4 animate-in slide-in-from-right-2">
-                                                                <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                                                        {currentImage.matchedStudent && (
+                                                            <div className="p-3 bg-emerald-50 border-2 border-emerald-200 rounded-xl flex items-center gap-3 animate-in slide-in-from-right-2">
+                                                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm shrink-0">
                                                                     <AvatarImage src={currentImage.matchedStudent.photoUrl} />
                                                                     <AvatarFallback>S</AvatarFallback>
                                                                 </Avatar>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="font-black text-slate-900 leading-none">{currentImage.matchedStudent.studentNameBn}</p>
-                                                                    <p className="text-[10px] font-bold text-emerald-700 mt-1">{classNamesMap[currentImage.matchedStudent.className]} শ্রেণি, রোল- {toBengaliNumber(currentImage.matchedStudent.roll)}</p>
+                                                                    <p className="font-black text-slate-900 leading-none text-xs">{currentImage.matchedStudent.studentNameBn}</p>
+                                                                    <p className="text-[9px] font-bold text-emerald-700 mt-1">{classNamesMap[currentImage.matchedStudent.className]} শ্রেণি, রোল- {toBengaliNumber(currentImage.matchedStudent.roll)}</p>
                                                                 </div>
-                                                                <Badge className="bg-emerald-600 font-black">ম্যাচড</Badge>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="p-4 bg-rose-50 border-2 border-rose-100 rounded-2xl space-y-3">
-                                                                <p className="text-xs font-bold text-rose-800 flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> স্বয়ংক্রিয়ভাবে কাউকে পাওয়া যায়নি</p>
-                                                                <Select onValueChange={handleManualMatch}>
-                                                                    <SelectTrigger className="bg-white border-2">
-                                                                        <SelectValue placeholder="শিক্ষার্থী নির্বাচন করুন..." />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent className="max-h-[200px]">
-                                                                        {allStudents.map(s => (
-                                                                            <SelectItem key={s.id} value={s.id} className="font-bold">রোল {s.roll} - {s.studentNameBn}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                <Badge className="bg-emerald-600 text-[8px] font-black">মিল আছে</Badge>
                                                             </div>
                                                         )}
                                                     </div>
@@ -397,14 +456,29 @@ export default function PhotoManagerPage() {
                                             </div>
                                         </CardContent>
                                         <CardFooter className="p-8 bg-slate-50 border-t-[3px] border-black flex justify-between gap-4">
-                                            <Button variant="outline" className="h-14 flex-1 font-black text-lg border-2" onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))} disabled={currentIndex === 0}>পূর্ববর্তী ছবি</Button>
                                             <Button 
-                                                className="h-14 flex-[2] font-black text-xl shadow-2xl gap-2" 
-                                                disabled={currentImage.status === 'saving' || currentImage.status === 'saved' || !currentImage.matchedStudent}
-                                                onClick={handleSaveAndNext}
+                                                variant="outline" 
+                                                className="h-14 flex-1 font-black text-lg border-2" 
+                                                onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))} 
+                                                disabled={currentIndex === 0}
+                                            >
+                                                পূর্ববর্তী ছবি
+                                            </Button>
+                                            <Button 
+                                                className="h-14 flex-[2] font-black text-xl shadow-2xl gap-2 bg-emerald-600 hover:bg-emerald-700" 
+                                                disabled={currentImage.status === 'saving' || !currentImage.matchedStudent}
+                                                onClick={() => handleSaveIndividual(currentIndex)}
                                             >
                                                 {currentImage.status === 'saving' ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
-                                                সেভ করুন ও পরবর্তী
+                                                এই ছবিটি সেভ করুন
+                                            </Button>
+                                            <Button 
+                                                variant="outline"
+                                                className="h-14 w-14 shrink-0 font-black border-2" 
+                                                onClick={() => setCurrentIdx(prev => Math.min(queue.length - 1, prev + 1))} 
+                                                disabled={currentIndex === queue.length - 1}
+                                            >
+                                                <ArrowRight className="h-6 w-6" />
                                             </Button>
                                         </CardFooter>
                                     </Card>
