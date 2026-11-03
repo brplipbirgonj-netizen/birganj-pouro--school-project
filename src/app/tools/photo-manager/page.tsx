@@ -27,7 +27,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
-const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+
+const toBengaliNumber = (str: string | number | undefined | null) => {
+    if (!str && str !== 0) return '';
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
+};
 
 type ProcessingImage = {
     id: string;
@@ -408,7 +414,7 @@ export default function PhotoManagerPage() {
                                                     <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
                                                         <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { ...currentImage.cropArea, scale: Math.max(0.1, currentImage.cropArea.scale - 0.1) }})}><Scissors className="h-3 w-3 mr-1" /> ছোট</Button>
                                                         <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { ...currentImage.cropArea, scale: Math.min(5, currentImage.cropArea.scale + 0.1) }})}><Maximize2 className="h-3 w-3 mr-1" /> বড়</Button>
-                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { x: 0, y: 0, scale: 1 }})}><RotateCcw className="h-3 w-3 mr-1" /> ফিট</Button>
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { x: 0, y: 0, scale: 1 }})}><RotateCcw className="h-3.5 w-3.5 mr-1" /> ফিট</Button>
                                                     </div>
 
                                                     <div className="w-full max-w-[320px] space-y-4 pt-2">
