@@ -1365,7 +1365,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6 items-end p-6 bg-white border-2 border-black/5 rounded-3xl shadow-sm no-print sticky top-0 z-[60] backdrop-blur-md">
+            <div className="flex flex-col md:flex-row gap-6 items-end p-6 bg-white border-2 border-black/5 rounded-3xl shadow-sm no-print">
                 <div className="w-full md:w-64 space-y-2">
                     <Label className="font-black text-xs text-primary mb-1 block uppercase tracking-wider">১. পরীক্ষা নির্বাচন</Label>
                     <Select value={examName} onValueChange={setExamName}>
@@ -1897,3 +1897,409 @@ export default function ResultsPage() {
         </div>
     );
 }
+
+function MeritListTab({ allStudents }: { allStudents: Student[] }) {
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user } = useAuth();
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
+    const [className, setClassName] = useState('');
+    const [groupFilter, setGroupFilter] = useState('all');
+    const [isLoading, setIsLoading] = useState(false);
+    const [meritResults, setMeritResults] = useState<StudentProcessedResult[]>([]);
+
+    useEffect(() => { 
+        if (db && user) getExams(db, selectedYear).then(setExams); 
+    }, [db, selectedYear, user]);
+
+    const handleViewMeritList = async () => {
+        if (!examName || !className || !db) return;
+        setIsLoading(true);
+        try {
+            const students = allStudents.filter(s => {
+                const yearMatch = s.academicYear === selectedYear;
+                const classMatch = s.className === className;
+                if (!yearMatch || !classMatch) return false;
+                if (parseInt(className) < 9 || groupFilter === 'all') return true;
+                
+                const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                const filterGroupNorm = groupMap[groupFilter.toLowerCase().trim()] || groupFilter.toLowerCase().trim();
+                return sGroupNorm === filterGroupNorm;
+            });
+
+            if (students.length === 0) { setMeritResults([]); setIsLoading(false); return; }
+
+            const allRes = await getAllResults(db, selectedYear, examName);
+            const classRes = allRes.filter(r => r.className === className);
+            const subs = getSubjects(className, groupFilter === 'all' ? undefined : groupFilter).filter(s => s.isExamSubject !== false);
+            setMeritResults(processStudentResults(students, classRes, subs));
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
+                <div className="space-y-2">
+                    <Label className="text-xs font-bold">পরীক্ষা</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold text-xs">শ্রেণি</Label>
+                    <Select value={className} onValueChange={setClassName}>
+                        <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                        <SelectContent>{Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                {parseInt(className) >= 9 && (
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold">শাখা</Label>
+                        <Select value={groupFilter} onValueChange={setGroupFilter}>
+                            <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সকল শাখা" /></SelectTrigger>
+                            <SelectContent><SelectItem value="all">সকল শাখা</SelectItem><SelectItem value="science">বিজ্ঞান</SelectItem><SelectItem value="arts">মানবিক</SelectItem><SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem></SelectContent>
+                        </Select>
+                    </div>
+                )}
+                <Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="h-9 text-xs font-black">মেধা তালিকা দেখুন</Button>
+                <Link href={`/results/merit-list?academicYear=${selectedYear}&examName=${encodeURIComponent(examName)}&className=${className}&group=${groupFilter}`} target="_blank">
+                    <Button variant="outline" disabled={meritResults.length === 0} className="w-full h-9 text-xs font-black border-primary text-primary"><Printer className="h-3.5 w-3.5 mr-1" /> প্রিন্ট তালিকা</Button>
+                </Link>
+            </div>
+
+            {meritResults.length > 0 && (
+                <Card className="border-2 shadow-lg rounded-2xl overflow-hidden bg-white">
+                    <CardHeader className="bg-primary/5 p-4 border-b flex flex-row justify-between items-center">
+                        <CardTitle className="text-lg font-black text-primary">মেধা তালিকা - {examName}</CardTitle>
+                        <Badge className="bg-primary font-black px-4">{toBengaliNumber(meritResults.length)} জন</Badge>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader className="bg-muted/50">
+                                <TableRow>
+                                    <TableHead className="w-16 text-center font-black">মেধা</TableHead>
+                                    <TableHead className="w-16 text-center font-black">রোল</TableHead>
+                                    <TableHead className="font-black">নাম</TableHead>
+                                    <TableHead className="text-center font-black">মোট নম্বর</TableHead>
+                                    <TableHead className="text-center font-black">GPA</TableHead>
+                                    <TableHead className="text-center font-black">গ্রেড</TableHead>
+                                    <TableHead className="text-center font-black">অবস্থা</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {meritResults.map((res, idx) => (
+                                    <TableRow key={res.student.id} className={cn("h-11", !res.isPass && "bg-rose-50/50")}>
+                                        <TableCell className="text-center font-black text-lg">{res.isPass ? toBengaliNumber(res.meritPosition || idx + 1) : '-'}</TableCell>
+                                        <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
+                                        <TableCell className="font-bold text-slate-700">{res.student.studentNameBn}</TableCell>
+                                        <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
+                                        <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
+                                        <TableCell className={cn("text-center font-black", !res.isPass && "text-rose-600")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</TableCell>
+                                        <TableCell className="text-center"><Badge className={cn("font-black px-3", res.isPass ? "bg-emerald-600" : "bg-rose-600")}>{res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}</Badge></TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+    );
+}
+
+const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
+    return (<Card className="p-20 text-center border-2 border-dashed rounded-3xl opacity-50"><Star className="h-16 w-16 mx-auto mb-4 text-muted-foreground" /><CardTitle>Promotion Management</CardTitle><CardDescription>শীঘ্রই মেধাক্রম অনুযায়ী পরবর্তী শ্রেণিতে প্রমোশন দেওয়ার সুবিধা যুক্ত হবে।</CardDescription></Card>);
+}
+
+const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const db = useFirestore();
+    const { selectedYear, availableYears } = useAcademicYear();
+    const { toast } = useToast();
+    const [searchYear, setSearchYear] = useState(selectedYear);
+    const [searchClass, setSearchClass] = useState('');
+    const [searchExam, setSearchExam] = useState('');
+    const [searchRoll, setSearchRoll] = useState('');
+    const [searchStudentId, setSearchStudentId] = useState('');
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResult, setSearchResult] = useState<StudentProcessedResult | null>(null);
+
+    useEffect(() => { if (db && searchYear) getExams(db, searchYear).then(setExams); }, [db, searchYear]);
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
+        if (!db || !searchYear || !searchClass || !searchExam || !searchRoll || !searchStudentId) {
+            toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'সবগুলো ঘর পূরণ করুন।' });
+            return;
+        }
+        setIsSearching(true);
+        try {
+            const cleanRoll = parseInt(bnToEn(searchRoll).trim(), 10);
+            const cleanStudentId = bnToEn(searchStudentId).trim().toUpperCase().replace(/\s/g, '');
+            
+            const studentQuery = query(
+                collection(db, 'students'), 
+                where('academicYear', '==', searchYear), 
+                where('className', '==', searchClass), 
+                where('roll', '==', cleanRoll), 
+                limit(1)
+            );
+            const studentSnap = await getDocs(studentQuery);
+            
+            if (studentSnap.empty) {
+                toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি' });
+                setIsSearching(false); return;
+            }
+            
+            const foundStudent = studentFromDoc(studentSnap.docs[0]);
+            const dbStudentId = bnToEn(foundStudent.generatedId || '').trim().toUpperCase().replace(/\s/g, '');
+            
+            if (dbStudentId !== cleanStudentId && foundStudent.generatedId !== cleanStudentId) {
+                 toast({ variant: 'destructive', title: 'আইডি মেলেনি', description: 'অনুগ্রহ করে সঠিক আইডি নম্বরটি পুনরায় লিখুন।' });
+                 setIsSearching(false); return;
+            }
+            
+            const allResults = await getAllResults(db, searchYear, searchExam);
+            const classRes = allResults.filter(r => r.className === searchClass);
+            if (classRes.length === 0) {
+                toast({ variant: 'destructive', title: 'ফলাফল প্রকাশিত হয়নি' });
+                setIsSearching(false); return;
+            }
+            const classStudentsSnap = await getDocs(query(collection(db, 'students'), where('academicYear', '==', searchYear), where('className', '==', searchClass)));
+            const classStudents = classStudentsSnap.docs.map(studentFromDoc);
+            const subs = getSubjects(searchClass, foundStudent.group).filter(s => s.isExamSubject !== false);
+            const processedResultsList = processStudentResults(classStudents, classRes, subs);
+            const studentProcessed = processedResultsList.find(r => r.student.id === foundStudent.id);
+            if (studentProcessed) setSearchResult(studentProcessed);
+            else toast({ variant: 'destructive', title: 'ফলাফল পাওয়া যায়নি' });
+        } catch (error: any) {
+            console.error("Result Search Error:", error);
+            toast({ variant: 'destructive', title: 'সার্ভার ত্রুটি' });
+        } finally { setIsSearching(false); }
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {!searchResult ? (
+                <Card className="max-w-xl mx-auto border-none shadow-xl rounded-[32px] overflow-hidden">
+                    <CardHeader className="bg-primary text-white p-8">
+                        <CardTitle className="text-2xl font-black flex items-center gap-3"><Search className="h-8 w-8" /> ফলাফল অনুসন্ধান</CardTitle>
+                        <CardDescription className="text-white/80 font-bold">সঠিক তথ্য দিয়ে ড্রাফট রেজাল্ট সামারি দেখুন</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8 bg-white space-y-6">
+                        <form onSubmit={handleSearch} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="font-black text-xs uppercase text-muted-foreground">শিক্ষাবর্ষ</Label>
+                                    <Select value={searchYear} onValueChange={setSearchYear}>
+                                        <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue /></SelectTrigger>
+                                        <SelectContent>{availableYears.map(y => <SelectItem key={y} value={y} className="font-bold">{toBengaliNumber(y)}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-black text-xs uppercase text-muted-foreground">শ্রেণি</Label>
+                                    <Select value={searchClass} onValueChange={setSearchClass}>
+                                        <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
+                                        <SelectContent>{Object.entries(classNamesMap).map(([id, label]) => <SelectItem key={id} value={id} className="font-bold">{label} শ্রেণি</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-black text-xs uppercase text-muted-foreground">পরীক্ষার নাম</Label>
+                                <Select value={searchExam} onValueChange={setSearchExam}>
+                                    <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                                    <SelectContent>
+                                        {exams.map(e => <SelectItem key={e.id} value={e.name} className="font-bold">{e.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="font-black text-xs uppercase text-muted-foreground">রোল নম্বর</Label>
+                                    <Input value={searchRoll} onChange={e => setSearchRoll(e.target.value)} placeholder="উদা: ১" className="font-black text-xl h-12 border-2" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-black text-xs uppercase text-muted-foreground">শিক্ষার্থী আইডি (ID)</Label>
+                                    <Input value={searchStudentId} onChange={e => setSearchStudentId(e.target.value)} placeholder="ID লিখুন" className="font-black text-xl h-12 uppercase border-2" required />
+                                </div>
+                            </div>
+                            <Button type="submit" className="w-full h-14 text-xl font-black shadow-xl" disabled={isSearching}>
+                                {isSearching ? <Loader2 className="animate-spin mr-2 h-6 w-6" /> : <Search className="mr-2 h-6 w-6" />}
+                                ফলাফল দেখুন
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="max-w-4xl mx-auto space-y-6 animate-in zoom-in-95 duration-500">
+                    <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl bg-white">
+                        <CardHeader className="p-8 bg-primary text-white flex flex-row items-center gap-8 border-b-0">
+                            <Avatar className="h-28 w-28 border-4 border-white shadow-xl">
+                                <AvatarImage src={sanitizePhotoUrl(searchResult.student.photoUrl, searchResult.student.gender) || getStudentPlaceholderImage(searchResult.student.gender)} />
+                                <AvatarFallback className="bg-white/20 text-3xl font-black">S</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                                <CardTitle className="text-3xl font-black mb-1">{searchResult.student.studentNameBn}</CardTitle>
+                                <CardDescription className="text-white/90 text-lg font-bold">
+                                    রোল: {toBengaliNumber(searchResult.student.roll)} | {classNamesMap[searchResult.student.className]} শ্রেণি | {searchExam}
+                                </CardDescription>
+                            </div>
+                            <Button variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20 font-black h-12 px-6" onClick={() => setSearchResult(null)}><RotateCcw className="mr-2 h-5 w-5" /> পুনরায় খুঁজুন</Button>
+                        </CardHeader>
+                        <CardContent className="p-8 space-y-8 bg-slate-50/50">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                                <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">মোট নম্বর</p><p className="text-4xl font-black text-primary group-hover:scale-110 transition-transform">{toBengaliNumber(searchResult.totalMarks)}</p></Card>
+                                <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">GPA</p><p className="text-4xl font-black text-primary group-hover:scale-110 transition-transform">{toBengaliNumber(searchResult.gpa.toFixed(2))}</p></Card>
+                                <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">গ্রেড</p><p className={cn("text-4xl font-black group-hover:scale-110 transition-transform", searchResult.isPass ? "text-emerald-600" : "text-rose-600")}>{searchResult.isPass ? searchResult.finalGrade : 'F'}</p></Card>
+                                <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">মেধাস্থান</p><p className="text-4xl font-black text-amber-600 group-hover:scale-110 transition-transform">{searchResult.isPass ? toBengaliNumber(searchResult.meritPosition || '-') : '-'}</p></Card>
+                            </div>
+                            <div className="border-[3px] border-black rounded-[32px] overflow-hidden bg-white shadow-xl">
+                                <Table>
+                                    <TableHeader className="bg-primary/5 h-14">
+                                        <TableRow className="border-b-[3px] border-black">
+                                            <TableHead className="font-black text-slate-800 text-sm pl-10">বিষয়ের নাম</TableHead>
+                                            <TableHead className="text-center font-black text-slate-800 text-sm">প্রাপ্ত নম্বর</TableHead>
+                                            <TableHead className="text-center font-black text-slate-800 text-sm">গ্রেড</TableHead>
+                                            <TableHead className="text-right pr-10 font-black text-slate-800 text-sm">পয়েন্ট</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {Array.from(searchResult.subjectResults.entries()).map(([name, res]) => (
+                                            <TableRow key={name} className="h-12 border-b-2 border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                                                <TableCell className="font-bold text-slate-700 pl-10">{name}</TableCell>
+                                                <TableCell className="text-center font-black text-blue-900 text-xl">{toBengaliNumber(res.marks)}</TableCell>
+                                                <TableCell className={cn("text-center font-black text-base", res.isPass ? "text-emerald-700" : "text-rose-600")}>{res.grade}</TableCell>
+                                                <TableCell className="text-right pr-10 font-bold text-base">{toBengaliNumber(res.point.toFixed(2))}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <div className="flex justify-center no-print">
+                        <Button className="h-16 px-16 text-2xl font-black shadow-2xl bg-emerald-600 hover:bg-emerald-700 rounded-full" onClick={() => window.print()}><Printer className="mr-3 h-8 w-8" /> মার্কশিট প্রিন্ট করুন</Button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Student[], onPrintRequested: (data: any) => void }) => {
+    const { toast } = useToast();
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user } = useAuth();
+    
+    const [selectedMonth, setSelectedMonth] = useState<string>(BENGALI_MONTHS[new Date().getMonth()]);
+    const [className, setClassName] = useState<string>('6');
+    const [examType, setExamType] = useState<string>('বিশেষ পরীক্ষা-১');
+    const [subject, setSubject] = useState<string>('');
+    const [fullMarks, setFullMarks] = useState<number>(20);
+    const [isLoading, setIsLoading] = useState(false);
+    const [marks, setMarks] = useState<Map<string, number>>(new Map());
+    
+    const [allSpecialResults, setAllSpecialResults] = useState<SpecialClassResult[]>([]);
+
+    const students = useMemo(() => allStudents.filter(s => s.academicYear === selectedYear && s.className === className).sort((a,b) => a.roll - b.roll), [allStudents, selectedYear, className]);
+    const availableSubjects = useMemo(() => {
+        const base = getSubjects(className).filter(s => s.isExamSubject !== false);
+        const unique = new Map<string, SubjectType>();
+        base.forEach(s => unique.set(s.name, s));
+        return Array.from(unique.values());
+    }, [className]);
+
+    const fetchData = useCallback(async () => {
+        if (!db || !selectedMonth || !className) return;
+        setIsLoading(true);
+        const data = await getSpecialResultsForClass(db, selectedYear, className, selectedMonth);
+        setAllSpecialResults(data);
+        
+        if (subject && examType) {
+            const match = data.find(r => normalize(r.subject) === normalize(subject) && r.examType === examType);
+            const m = new Map<string, number>();
+            if (match) {
+                match.results.forEach(res => { if (res.marks !== undefined) m.set(res.studentId, res.marks); });
+                setFullMarks(match.fullMarks);
+            } else {
+                setFullMarks(20);
+            }
+            setMarks(m);
+        }
+        setIsLoading(false);
+    }, [db, selectedMonth, className, subject, examType, selectedYear]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const handleSave = async () => {
+        if (!db || !user || !subject || !examType) return;
+        setIsLoading(true);
+        const results = students.map(s => ({ studentId: s.id, marks: marks.get(s.id) }));
+        await saveSpecialResults(db, { academicYear: selectedYear, className, subject, examType, month: selectedMonth, fullMarks, results });
+        toast({ title: 'বিশেষ পরীক্ষার নম্বর সংরক্ষিত হয়েছে' });
+        fetchData();
+        setIsLoading(false);
+    };
+
+    const handlePrint = () => {
+        const sortedSubList = [
+            { name: 'বাংলা', isCombined: true, subList: ['বাংলা প্রথম', 'বাংলা দ্বিতীয়'] },
+            { name: 'ইংরেজি', isCombined: true, subList: ['ইংরেজি প্রথম', 'ইংরেজি দ্বিতীয়'] },
+            { name: 'গণিত' }, { name: 'সাধারণ বিজ্ঞান' }, { name: 'বাংলাদেশ ও বিশ্ব পরিচয়' },
+            { name: 'ধর্ম ও নৈতিক শিক্ষা' }, { name: 'তথ্য ও যোগাযোগ প্রযুক্তি' }, { name: 'কৃষি শিক্ষা' },
+            { name: 'পদার্থ' }, { name: 'রসায়ন' }, { name: 'জীব বিজ্ঞান' }, { name: 'উচ্চতর গণিত' },
+            { name: 'বাংলাদেশের ইতিহাস ও বিশ্বসভ্যতা' }, { name: 'ভূগোল ও পরিবেশ' }, { name: 'পৌরনীতি ও নাগরিকতা' }
+        ].filter(s => {
+            if (s.isCombined) return s.subList.some(inner => availableSubjects.some(as => normalize(as.name) === normalize(inner)));
+            return availableSubjects.some(as => normalize(as.name) === normalize(s.name));
+        });
+
+        onPrintRequested({ students, allSpecialResults, availableSubjects: sortedSubList, month: selectedMonth, year: selectedYear, className });
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm no-print">
+                <div className="space-y-2"><Label>মাস</Label><Select value={selectedMonth} onValueChange={setSelectedMonth}><SelectTrigger className="bg-white"><SelectValue /></SelectTrigger><SelectContent>{BENGALI_MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>শ্রেণি</Label><Select value={className} onValueChange={(v) => { setClassName(v); setSubject(''); }}><SelectTrigger className="bg-white"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(classNamesMap).map(([id, label]) => <SelectItem key={id} value={id}>{label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>পরীক্ষার নাম</Label><Select value={examType} onValueChange={setExamType}><SelectTrigger className="bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="বিশেষ পরীক্ষা-১">বিশেষ পরীক্ষা-১</SelectItem><SelectItem value="বিশেষ পরীক্ষা-২">বিশেষ পরীক্ষা-২</SelectItem><SelectItem value="বিশেষ পরীক্ষা-৩">বিশেষ পরীক্ষা-৩</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>বিষয়</Label><Select value={subject} onValueChange={setSubject} disabled={!className}><SelectTrigger className="bg-white"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>পূর্ণমান</Label><Input type="number" value={fullMarks} onChange={e => setFullMarks(parseInt(e.target.value) || 0)} className="bg-white font-black" /></div>
+            </div>
+
+            {subject ? (
+                <Card className="border-2 shadow-xl rounded-2xl overflow-hidden animate-in zoom-in-95">
+                    <CardHeader className="bg-primary/5 p-4 border-b flex flex-row justify-between items-center">
+                        <div><CardTitle className="text-base font-black text-primary">{subject} - {examType} ({selectedMonth})</CardTitle><CardDescription className="font-bold text-[10px]">পূর্ণমান: {toBengaliNumber(fullMarks)} | শিক্ষার্থী: {toBengaliNumber(students.length)} জন</CardDescription></div>
+                        <Button variant="outline" className="font-black border-primary text-primary" onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> মাসিক রিপোর্ট প্রিন্ট</Button>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="max-h-[500px] overflow-auto">
+                            <Table>
+                                <TableHeader className="sticky top-0 bg-white z-10 border-b-2 border-black"><TableRow><TableHead className="w-20 text-center font-black">রোল</TableHead><TableHead className="font-black">নাম</TableHead><TableHead className="w-40 text-center font-black">প্রাপ্ত নম্বর</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {students.map(s => (
+                                        <TableRow key={s.id} className="hover:bg-slate-50">
+                                            <TableCell className="text-center font-black border-r">{toBengaliNumber(s.roll)}</TableCell>
+                                            <TableCell className="font-bold border-r">{s.studentNameBn}</TableCell>
+                                            <TableCell className="text-center flex justify-center"><Input type="number" value={marks.get(s.id) ?? ''} onChange={e => setMarks(prev => new Map(prev).set(s.id, parseInt(e.target.value) || 0))} className="w-24 text-center font-black text-blue-900 border-2 border-black/20 h-9" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); const inputs = Array.from(document.querySelectorAll('input[type="number"]')) as HTMLInputElement[]; const idx = inputs.indexOf(e.currentTarget as HTMLInputElement); if (idx < inputs.length - 1) inputs[idx + 1].focus(); } }} /></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                    <CardFooter className="bg-slate-50 p-6 border-t flex justify-end"><Button onClick={handleSave} disabled={isLoading} className="px-12 h-12 font-black shadow-lg">{isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} নম্বর সেভ করুন</Button></CardFooter>
+                </Card>
+            ) : <div className="p-20 text-center border-4 border-dashed rounded-3xl opacity-20"><Sparkles className="h-16 w-16 mx-auto mb-4" /><p className="text-xl font-black">একটি বিষয় নির্বাচন করুন</p></div>}
+        </div>
+    );
+};
+
