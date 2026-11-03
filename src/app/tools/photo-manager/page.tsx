@@ -13,7 +13,7 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { 
     ImageIcon, Upload, Search, UserCheck, X, CheckCircle2, 
     Loader2, Save, Trash2, ImagePlus, ArrowRight, RotateCcw, 
-    Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle
+    Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle, Info
 } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage } from '@/lib/student-data';
