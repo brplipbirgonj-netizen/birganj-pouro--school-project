@@ -14,7 +14,7 @@ import {
     ImageIcon, Upload, Search, UserCheck, X, CheckCircle2, 
     Loader2, Save, Trash2, ImagePlus, ArrowRight, RotateCcw, 
     Maximize2, Sliders, Check, FileImage, ShieldCheck, AlertCircle, Info,
-    FilePen, Users, Scissors, Crop
+    FilePen, Users, Scissors, Crop, MousePointer2, Eraser, Palette
 } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Student, studentFromDoc, sanitizePhotoUrl, getStudentPlaceholderImage } from '@/lib/student-data';
@@ -27,7 +27,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
-const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
+const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 
 type ProcessingImage = {
     id: string;
@@ -37,7 +37,12 @@ type ProcessingImage = {
     matchedStudent: Student | null;
     status: 'pending' | 'matched' | 'unmatched' | 'saving' | 'saved' | 'error';
     processedDataUrl?: string;
-    cropArea: { x: number, y: number, size: number };
+    // Independent adjustment state
+    brightness: number;
+    contrast: number;
+    bgColor: string;
+    isBgRemoved: boolean;
+    cropArea: { x: number, y: number, scale: number };
 };
 
 export default function PhotoManagerPage() {
@@ -52,15 +57,14 @@ export default function PhotoManagerPage() {
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [isFetchingStudents, setIsFetchingStudents] = useState(true);
 
-    const [brightness, setBrightness] = useState(100);
-    const [contrast, setContrast] = useState(100);
-    
-    // Filtering states for manual match
+    // Mouse Interaction States
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
     const [manualClass, setManualClass] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const cropBoxRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { setIsClient(true); }, []);
 
@@ -106,27 +110,16 @@ export default function PhotoManagerPage() {
                 preview: URL.createObjectURL(file),
                 matchedStudent,
                 status: matchedStudent ? 'matched' : 'unmatched',
-                cropArea: { x: 0, y: 0, size: 100 } // percentage
+                brightness: 100,
+                contrast: 100,
+                bgColor: 'transparent',
+                isBgRemoved: false,
+                cropArea: { x: 0, y: 0, scale: 1 }
             };
         });
 
         setQueue(prev => [...prev, ...newItems]);
         if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    const handleRename = (id: string, newName: string) => {
-        setQueue(prev => prev.map(item => {
-            if (item.id === id) {
-                const matchedStudent = matchStudentByName(newName, allStudents);
-                return { 
-                    ...item, 
-                    fileName: newName, 
-                    matchedStudent, 
-                    status: matchedStudent ? 'matched' : 'unmatched' 
-                };
-            }
-            return item;
-        }));
     };
 
     const applyFiltersAndDraw = useCallback(() => {
@@ -142,29 +135,91 @@ export default function PhotoManagerPage() {
             canvas.width = targetSize;
             canvas.height = targetSize;
 
-            const { x, y, size } = currentImage.cropArea;
-            
-            // Calculate source coordinates based on percentage
-            const sx = (x / 100) * img.width;
-            const sy = (y / 100) * img.height;
-            const sw = (size / 100) * img.width;
-            const sh = (size / 100) * img.height;
+            // Fill background
+            ctx.clearRect(0, 0, targetSize, targetSize);
+            if (currentImage.bgColor !== 'transparent') {
+                ctx.fillStyle = currentImage.bgColor;
+                ctx.fillRect(0, 0, targetSize, targetSize);
+            }
 
-            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
-            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetSize, targetSize);
+            ctx.filter = `brightness(${currentImage.brightness}%) contrast(${currentImage.contrast}%)`;
+            
+            const { x, y, scale } = currentImage.cropArea;
+            
+            // Central focus logic
+            const iw = img.width;
+            const ih = img.height;
+            const minDim = Math.min(iw, ih);
+            
+            // Calculate base drawing size to cover target
+            let dw, dh;
+            if (iw > ih) {
+                dh = targetSize;
+                dw = (iw / ih) * targetSize;
+            } else {
+                dw = targetSize;
+                dh = (ih / iw) * targetSize;
+            }
+
+            // Apply user scale and translations
+            const finalWidth = dw * scale;
+            const finalHeight = dh * scale;
+            
+            // Center adjustments
+            const cx = (targetSize - finalWidth) / 2 + x;
+            const cy = (targetSize - finalHeight) / 2 + y;
+
+            ctx.drawImage(img, cx, cy, finalWidth, finalHeight);
             
             const processed = canvas.toDataURL('image/jpeg', 0.85);
             setQueue(prev => prev.map(item => 
                 item.id === currentImage.id ? { ...item, processedDataUrl: processed } : item
             ));
         };
-    }, [currentImage, brightness, contrast]);
+    }, [currentImage]);
 
     useEffect(() => {
         if (currentImage && currentImage.status !== 'saved') {
             applyFiltersAndDraw();
         }
-    }, [currentImage?.id, currentImage?.cropArea, brightness, contrast, applyFiltersAndDraw]);
+    }, [currentImage?.id, currentImage?.cropArea, currentImage?.brightness, currentImage?.contrast, currentImage?.bgColor, applyFiltersAndDraw]);
+
+    // Mouse Interaction Handlers
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (!currentImage) return;
+        setIsDragging(true);
+        setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging || !currentImage) return;
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+        
+        setQueue(prev => prev.map(it => it.id === currentImage.id ? {
+            ...it,
+            cropArea: { ...it.cropArea, x: it.cropArea.x + dx, y: it.cropArea.y + dy }
+        } : it));
+        setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
+
+    const handleWheel = (e: React.WheelEvent) => {
+        if (!currentImage) return;
+        const delta = e.deltaY > 0 ? -0.05 : 0.05;
+        const nextScale = Math.max(0.1, Math.min(5, currentImage.cropArea.scale + delta));
+        
+        setQueue(prev => prev.map(it => it.id === currentImage.id ? {
+            ...it,
+            cropArea: { ...it.cropArea, scale: nextScale }
+        } : it));
+    };
+
+    const handleUpdateItem = (fields: Partial<ProcessingImage>) => {
+        if (!currentImage) return;
+        setQueue(prev => prev.map(it => it.id === currentImage.id ? { ...it, ...fields } : it));
+    };
 
     const handleSaveIndividual = async (idx: number) => {
         if (!db) return;
@@ -190,29 +245,16 @@ export default function PhotoManagerPage() {
         }
     };
 
-    const handleRemoveFromQueue = (id: string) => {
-        setQueue(prev => prev.filter(i => i.id !== id));
-    };
-
     const studentsFilteredByClass = useMemo(() => {
         if (!manualClass) return [];
         return allStudents.filter(s => s.className === manualClass).sort((a, b) => a.roll - b.roll);
     }, [allStudents, manualClass]);
-
-    function toBengaliNumber(str: string | number | undefined | null) {
-        if (!str && str !== 0) return '';
-        const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-        return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);
-    }
-
-    if (!isClient) return null;
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
             <main className="flex-1 p-4 md:p-10 pb-40">
                 <div className="max-w-[1400px] mx-auto space-y-8">
-                    
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-3xl font-black text-slate-900 tracking-tight">স্মার্ট ফটো পোর্টাল (Auto-Linker)</h1>
@@ -227,7 +269,6 @@ export default function PhotoManagerPage() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                        
                         {/* Sidebar: Queue */}
                         <div className="space-y-6">
                             <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl bg-white">
@@ -269,12 +310,7 @@ export default function PhotoManagerPage() {
                                                                 )}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <Input 
-                                                                    value={item.fileName} 
-                                                                    onChange={(e) => handleRename(item.id, e.target.value)}
-                                                                    className="h-7 text-[10px] font-black border-slate-200 bg-white"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                />
+                                                                <p className="text-[10px] font-black text-slate-700 truncate">{item.fileName}</p>
                                                                 <div className="flex items-center gap-1.5 mt-1">
                                                                     {item.matchedStudent ? (
                                                                         <Badge className="bg-emerald-600 text-[8px] h-4 py-0 font-black">রোল {toBengaliNumber(item.matchedStudent.roll)} - {item.matchedStudent.studentNameBn}</Badge>
@@ -285,7 +321,7 @@ export default function PhotoManagerPage() {
                                                             </div>
                                                             <button 
                                                                 className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                                                onClick={(e) => { e.stopPropagation(); handleRemoveFromQueue(item.id); }}
+                                                                onClick={(e) => { e.stopPropagation(); setQueue(prev => prev.filter(it => it.id !== item.id)); }}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </button>
@@ -306,13 +342,12 @@ export default function PhotoManagerPage() {
                                     </ScrollArea>
                                 </CardContent>
                             </Card>
-
                             <div className="p-5 bg-blue-50 border-2 border-dashed border-blue-200 rounded-2xl flex items-start gap-3">
                                 <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                                 <div className="text-[11px] font-bold text-blue-900 space-y-1">
                                     <p>• ছবির নাম দিন: <strong>[শ্রেণি]_[রোল]</strong> (উদা: 6_01.jpg)</p>
-                                    <p>• সেভ নাম পরিবর্তন করলে সিস্টেম অটো-ম্যাচ করবে।</p>
-                                    <p>• প্রতিটি ছবির জন্য আলাদা <strong>Save</strong> বাটন ব্যবহার করুন।</p>
+                                    <p>• ছবির উপর মাউস দিয়ে ড্র্যাগ করে পজিশন ঠিক করুন।</p>
+                                    <p>• প্রতিটি ছবির এডিট সেটিং সম্পূর্ণ আলাদা থাকবে।</p>
                                 </div>
                             </div>
                         </div>
@@ -329,85 +364,87 @@ export default function PhotoManagerPage() {
                                     <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl bg-white">
                                         <div className="bg-primary/5 p-4 border-b-[3px] border-black flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-primary rounded-xl text-white">
-                                                    <FilePen className="h-5 w-5" />
-                                                </div>
+                                                <div className="p-2 bg-primary rounded-xl text-white"><FilePen className="h-5 w-5" /></div>
                                                 <div>
-                                                    <h3 className="font-black text-slate-800">ছবি সম্পাদন ও ক্রপিং</h3>
+                                                    <h3 className="font-black text-slate-800">ছবি সম্পাদন</h3>
                                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">{currentImage.fileName}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Button variant="ghost" size="sm" className="h-8 font-black" onClick={() => { setBrightness(100); setContrast(100); }}>
-                                                    <RotateCcw className="h-3.5 w-3.5 mr-1" /> রিসেট
-                                                </Button>
-                                            </div>
+                                            <Button variant="ghost" size="sm" className="h-8 font-black" onClick={() => handleUpdateItem({ brightness: 100, contrast: 100, bgColor: 'transparent', cropArea: {x: 0, y: 0, scale: 1} })}>
+                                                <RotateCcw className="h-3.5 w-3.5 mr-1" /> রিসেট
+                                            </Button>
                                         </div>
                                         <CardContent className="p-8">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
                                                 <div className="flex flex-col items-center space-y-4">
-                                                    <div className="relative aspect-square w-full max-w-[320px] rounded-2xl border-4 border-black overflow-hidden bg-slate-100 shadow-xl ring-8 ring-slate-50 group">
-                                                        <canvas ref={canvasRef} className="w-full h-full object-cover hidden" />
-                                                        <img src={currentImage.preview} className="w-full h-full object-cover opacity-30" alt="" />
-                                                        
-                                                        {/* Simple Manual Cropper UI */}
-                                                        <div 
-                                                            className="absolute border-2 border-primary shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] cursor-move"
+                                                    <div 
+                                                        className="relative aspect-square w-full max-w-[320px] rounded-2xl border-4 border-black overflow-hidden bg-slate-100 shadow-xl cursor-move select-none"
+                                                        onMouseDown={handleMouseDown}
+                                                        onMouseMove={handleMouseMove}
+                                                        onMouseUp={handleMouseUp}
+                                                        onMouseLeave={handleMouseUp}
+                                                        onWheel={handleWheel}
+                                                    >
+                                                        <canvas ref={canvasRef} className="hidden" />
+                                                        <img 
+                                                            src={currentImage.preview} 
+                                                            className="w-full h-full object-none pointer-events-none" 
                                                             style={{
-                                                                left: `${currentImage.cropArea.x}%`,
-                                                                top: `${currentImage.cropArea.y}%`,
-                                                                width: `${currentImage.cropArea.size}%`,
-                                                                height: `${currentImage.cropArea.size}%`,
+                                                                filter: `brightness(${currentImage.brightness}%) contrast(${currentImage.contrast}%)`,
+                                                                transform: `translate(${currentImage.cropArea.x}px, ${currentImage.cropArea.y}px) scale(${currentImage.cropArea.scale})`,
+                                                                backgroundColor: currentImage.bgColor === 'transparent' ? '#f1f5f9' : currentImage.bgColor,
+                                                                transition: isDragging ? 'none' : 'transform 0.1s ease-out'
                                                             }}
-                                                        >
-                                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                                <div className="w-full h-0.5 bg-primary/30" />
-                                                                <div className="h-full w-0.5 bg-primary/30 absolute" />
-                                                            </div>
+                                                            alt="" 
+                                                        />
+                                                        <div className="absolute inset-0 border-2 border-primary/30 pointer-events-none flex items-center justify-center">
+                                                            <div className="w-full h-0.5 bg-primary/20 absolute" />
+                                                            <div className="h-full w-0.5 bg-primary/20 absolute" />
                                                         </div>
-
-                                                        {currentImage.processedDataUrl && (
-                                                            <div className="absolute bottom-3 left-3 bg-emerald-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg">
-                                                                PROCESSED 1:1
-                                                            </div>
-                                                        )}
+                                                        <div className="absolute bottom-3 left-3 bg-primary text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg">১:১ স্কোয়ার মোড</div>
                                                     </div>
 
                                                     <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
-                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, size: Math.max(10, it.cropArea.size - 5)}} : it))}><Scissors className="h-3 w-3 mr-1" /> ছোট</Button>
-                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, size: Math.min(100, it.cropArea.size + 5)}} : it))}><Maximize2 className="h-3 w-3 mr-1" /> বড়</Button>
-                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {x: 0, y: 0, size: 100}} : it))}><RotateCcw className="h-3 w-3 mr-1" /> ফিট</Button>
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { ...currentImage.cropArea, scale: Math.max(0.1, currentImage.cropArea.scale - 0.1) }})}><Scissors className="h-3 w-3 mr-1" /> ছোট</Button>
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { ...currentImage.cropArea, scale: Math.min(5, currentImage.cropArea.scale + 0.1) }})}><Maximize2 className="h-3 w-3 mr-1" /> বড়</Button>
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handleUpdateItem({ cropArea: { x: 0, y: 0, scale: 1 }})}><RotateCcw className="h-3 w-3 mr-1" /> ফিট</Button>
                                                     </div>
 
-                                                    <div className="w-full max-w-[320px] grid grid-cols-2 gap-4 mt-2">
-                                                        <div className="space-y-1">
-                                                            <Label className="text-[9px] font-black uppercase text-slate-500">বামে-ডানে সরাও</Label>
-                                                            <Slider value={[currentImage.cropArea.x]} min={0} max={100 - currentImage.cropArea.size} step={1} onValueChange={([v]) => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, x: v}} : it))} />
+                                                    <div className="w-full max-w-[320px] space-y-4 pt-2">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-slate-500 flex items-center gap-1"><Palette className="h-3 w-3" /> ব্যাকগ্রাউন্ড কালার</Label>
+                                                            <div className="flex gap-2 justify-between bg-slate-50 p-2 rounded-lg border">
+                                                                {['transparent', '#ffffff', '#3b82f6', '#1e40af', '#dc2626'].map(color => (
+                                                                    <button 
+                                                                        key={color} 
+                                                                        className={cn("h-6 w-6 rounded-full border-2 transition-all", currentImage.bgColor === color ? "border-primary scale-110 shadow-md" : "border-slate-300")} 
+                                                                        style={{ backgroundColor: color === 'transparent' ? '#f1f5f9' : color }}
+                                                                        onClick={() => handleUpdateItem({ bgColor: color })}
+                                                                    />
+                                                                ))}
+                                                            </div>
                                                         </div>
-                                                        <div className="space-y-1">
-                                                            <Label className="text-[9px] font-black uppercase text-slate-500">উপরে-নিচে সরাও</Label>
-                                                            <Slider value={[currentImage.cropArea.y]} min={0} max={100 - currentImage.cropArea.size} step={1} onValueChange={([v]) => setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, cropArea: {...it.cropArea, y: v}} : it))} />
-                                                        </div>
+                                                        <Button variant="secondary" className="w-full h-8 text-[10px] font-black" onClick={() => toast({ title: "সতর্কতা", description: "উন্নত ব্যাকগ্রাউন্ড রিমুভ ফিচারটি লোড হচ্ছে..." })}>
+                                                            <Eraser className="h-3 w-3 mr-1" /> ব্যাকগ্রাউন্ড রিমুভ (AI)
+                                                        </Button>
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-6">
                                                     <div className="space-y-4">
-                                                        <h4 className="font-black text-sm text-primary flex items-center gap-2 border-b pb-2"><Sliders className="h-4 w-4" /> ছবির অ্যাডজাস্টমেন্ট</h4>
+                                                        <h4 className="font-black text-sm text-primary flex items-center gap-2 border-b pb-2"><Sliders className="h-4 w-4" /> এডজাস্টমেন্ট</h4>
                                                         <div className="space-y-5">
                                                             <div className="space-y-2">
-                                                                <div className="flex justify-between items-center"><Label className="text-xs font-black">উজ্জ্বলতা (Brightness)</Label><span className="text-xs font-black">{toBengaliNumber(brightness)}%</span></div>
-                                                                <Slider value={[brightness]} min={50} max={150} step={1} onValueChange={([v]) => setBrightness(v)} />
+                                                                <div className="flex justify-between items-center"><Label className="text-xs font-black">উজ্জ্বলতা</Label><span className="text-xs font-black">{toBengaliNumber(currentImage.brightness)}%</span></div>
+                                                                <Slider value={[currentImage.brightness]} min={50} max={150} step={1} onValueChange={([v]) => handleUpdateItem({ brightness: v })} />
                                                             </div>
                                                             <div className="space-y-2">
-                                                                <div className="flex justify-between items-center"><Label className="text-xs font-black">কন্ট্রাস্ট (Contrast)</Label><span className="text-xs font-black">{toBengaliNumber(contrast)}%</span></div>
-                                                                <Slider value={[contrast]} min={50} max={150} step={1} onValueChange={([v]) => setContrast(v)} />
+                                                                <div className="flex justify-between items-center"><Label className="text-xs font-black">কন্ট্রাস্ট</Label><span className="text-xs font-black">{toBengaliNumber(currentImage.contrast)}%</span></div>
+                                                                <Slider value={[currentImage.contrast]} min={50} max={150} step={1} onValueChange={([v]) => handleUpdateItem({ contrast: v })} />
                                                             </div>
                                                         </div>
                                                     </div>
-
                                                     <Separator />
-
                                                     <div className="space-y-4">
                                                         <h4 className="font-black text-sm text-primary flex items-center gap-2 border-b pb-2"><Users className="h-4 w-4" /> শিক্ষার্থীর সাথে সংযোগ</h4>
                                                         <div className="space-y-3">
@@ -415,35 +452,24 @@ export default function PhotoManagerPage() {
                                                                 <Label className="text-[10px] font-black uppercase text-slate-500">১. শ্রেণি নির্বাচন</Label>
                                                                 <Select value={manualClass} onValueChange={setManualClass}>
                                                                     <SelectTrigger className="h-9 border-2 font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
-                                                                    <SelectContent className="font-kalpurush">
-                                                                        {Object.entries(classNamesMap).map(([k, v]) => <SelectItem key={k} value={k}>{v} শ্রেণি</SelectItem>)}
-                                                                    </SelectContent>
+                                                                    <SelectContent className="font-kalpurush">{Object.entries(classNamesMap).map(([k, v]) => <SelectItem key={k} value={k}>{v} শ্রেণি</SelectItem>)}</SelectContent>
                                                                 </Select>
                                                             </div>
                                                             <div className="space-y-1.5">
                                                                 <Label className="text-[10px] font-black uppercase text-slate-500">২. শিক্ষার্থী নির্বাচন</Label>
                                                                 <Select 
                                                                     value={currentImage.matchedStudent?.id || ""} 
-                                                                    onValueChange={(val) => {
-                                                                        const student = allStudents.find(s => s.id === val) || null;
-                                                                        setQueue(prev => prev.map(it => it.id === currentImage.id ? {...it, matchedStudent: student, status: student ? 'matched' : 'unmatched'} : it));
-                                                                    }}
+                                                                    onValueChange={(val) => handleUpdateItem({ matchedStudent: allStudents.find(s => s.id === val) || null, status: 'matched' })}
                                                                     disabled={!manualClass}
                                                                 >
-                                                                    <SelectTrigger className="h-9 border-2 font-bold"><SelectValue placeholder="শিক্ষার্থীর নাম" /></SelectTrigger>
-                                                                    <SelectContent className="font-kalpurush max-h-[250px]">
-                                                                        {studentsFilteredByClass.map(s => <SelectItem key={s.id} value={s.id}>রোল {toBengaliNumber(s.roll)} - {s.studentNameBn}</SelectItem>)}
-                                                                    </SelectContent>
+                                                                    <SelectTrigger className="h-9 border-2 font-bold"><SelectValue placeholder="শিক্ষার্থী" /></SelectTrigger>
+                                                                    <SelectContent className="font-kalpurush max-h-[250px]">{studentsFilteredByClass.map(s => <SelectItem key={s.id} value={s.id}>রোল {toBengaliNumber(s.roll)} - {s.studentNameBn}</SelectItem>)}</SelectContent>
                                                                 </Select>
                                                             </div>
                                                         </div>
-                                                        
                                                         {currentImage.matchedStudent && (
                                                             <div className="p-3 bg-emerald-50 border-2 border-emerald-200 rounded-xl flex items-center gap-3 animate-in slide-in-from-right-2">
-                                                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm shrink-0">
-                                                                    <AvatarImage src={currentImage.matchedStudent.photoUrl} />
-                                                                    <AvatarFallback>S</AvatarFallback>
-                                                                </Avatar>
+                                                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm shrink-0"><AvatarImage src={currentImage.matchedStudent.photoUrl} /><AvatarFallback>S</AvatarFallback></Avatar>
                                                                 <div className="flex-1 min-w-0">
                                                                     <p className="font-black text-slate-900 leading-none text-xs">{currentImage.matchedStudent.studentNameBn}</p>
                                                                     <p className="text-[9px] font-bold text-emerald-700 mt-1">{classNamesMap[currentImage.matchedStudent.className]} শ্রেণি, রোল- {toBengaliNumber(currentImage.matchedStudent.roll)}</p>
@@ -456,39 +482,25 @@ export default function PhotoManagerPage() {
                                             </div>
                                         </CardContent>
                                         <CardFooter className="p-8 bg-slate-50 border-t-[3px] border-black flex justify-between gap-4">
-                                            <Button 
-                                                variant="outline" 
-                                                className="h-14 flex-1 font-black text-lg border-2" 
-                                                onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))} 
-                                                disabled={currentIndex === 0}
-                                            >
-                                                পূর্ববর্তী ছবি
+                                            <Button variant="outline" className="h-14 flex-1 font-black text-lg border-2" onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))} disabled={currentIndex === 0}>পূর্ববর্তী</Button>
+                                            <Button className="h-14 flex-[2] font-black text-xl shadow-2xl gap-2 bg-emerald-600 hover:bg-emerald-700" disabled={currentImage.status === 'saving' || !currentImage.matchedStudent} onClick={() => handleSaveIndividual(currentIndex)}>
+                                                {currentImage.status === 'saving' ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />} সংরক্ষণ করুন
                                             </Button>
-                                            <Button 
-                                                className="h-14 flex-[2] font-black text-xl shadow-2xl gap-2 bg-emerald-600 hover:bg-emerald-700" 
-                                                disabled={currentImage.status === 'saving' || !currentImage.matchedStudent}
-                                                onClick={() => handleSaveIndividual(currentIndex)}
-                                            >
-                                                {currentImage.status === 'saving' ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
-                                                এই ছবিটি সেভ করুন
-                                            </Button>
-                                            <Button 
-                                                variant="outline"
-                                                className="h-14 w-14 shrink-0 font-black border-2" 
-                                                onClick={() => setCurrentIdx(prev => Math.min(queue.length - 1, prev + 1))} 
-                                                disabled={currentIndex === queue.length - 1}
-                                            >
-                                                <ArrowRight className="h-6 w-6" />
-                                            </Button>
+                                            <Button variant="outline" className="h-14 w-14 shrink-0 font-black border-2" onClick={() => setCurrentIdx(prev => Math.min(queue.length - 1, prev + 1))} disabled={currentIndex === queue.length - 1}><ArrowRight className="h-6 w-6" /></Button>
                                         </CardFooter>
                                     </Card>
                                 </div>
                             )}
                         </div>
-
                     </div>
                 </div>
             </main>
         </div>
     );
+}
+
+function toBengaliNumber(str: string | number | undefined | null) {
+    if (!str && str !== 0) return '';
+    const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(str).replace(/[0-9]/g, (w) => digits[parseInt(w, 10)]);
 }
