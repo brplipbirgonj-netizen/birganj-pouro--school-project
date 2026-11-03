@@ -31,7 +31,9 @@ import {
   WifiOff,
   ArrowLeft,
   Award,
-  FolderSearch
+  FolderSearch,
+  ImageIcon,
+  ImagePlus
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -99,6 +101,7 @@ const mainMenuItems = [
   { id: 'profile-search', label: 'শিক্ষার্থী প্রোফাইল', icon: UserSearch, href: '/student-profile', permission: 'view:student-profile', color: 'bg-blue-50 text-blue-700 border-blue-100' },
   { id: 'add-student', label: 'নতুন শিক্ষার্থী যোগ', icon: UserPlus, href: '/add-student', permission: 'manage:students', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
   { id: 'student-list', label: 'শিক্ষার্থী তালিকা', icon: Users, href: '/student-list', permission: 'view:students', color: 'bg-rose-50 text-rose-700 border-rose-100' },
+  { id: 'photo-portal', label: 'স্মার্ট ফটো পোর্টাল', icon: ImagePlus, href: '/tools/photo-manager', permission: 'manage:students', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
   { id: 'attendance', label: 'হাজিরা', icon: CalendarCheck, href: '/attendance', permission: 'manage:attendance', color: 'bg-amber-50 text-amber-700 border-amber-100' },
   { id: 'lesson-planner', label: 'লেসন প্ল্যান ও সিলেবাস', icon: ListTodo, href: '/lesson-planner', permission: 'manage:lesson-plans', color: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
   { id: 'results', label: 'ফলাফল', icon: BookMarked, href: '/results', permission: ['manage:results', 'input:results'], color: 'bg-violet-50 text-violet-700 border-violet-100' },
