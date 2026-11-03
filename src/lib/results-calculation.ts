@@ -52,9 +52,6 @@ const getFinalGrade = (gpa: number): string => {
     return 'F';
 }
 
-/**
- * Normalizes a subject name for comparison
- */
 const normalize = (name: string) => {
     if (!name) return "";
     const trimmed = name.trim();
@@ -62,10 +59,10 @@ const normalize = (name: string) => {
 };
 
 const groupMap: Record<string, string> = { 
-    'science': 'science', 'বিজ্ঞান': 'science', 'Science': 'science',
-    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'humanity': 'arts', 'Arts': 'arts',
-    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce', 'Commerce': 'commerce',
-    'none': 'none', 'all': 'none', 'general': 'none'
+    'science': 'science', 'বিজ্ঞান': 'science', 'Science': 'science', 'বিজ্ঞান শাখা': 'science',
+    'arts': 'arts', 'মানবিক': 'arts', 'humanities': 'arts', 'humanity': 'arts', 'Arts': 'arts', 'মানবিক শাখা': 'arts',
+    'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce', 'Commerce': 'commerce', 'ব্যবসায় শিক্ষা শাখা': 'commerce',
+    'none': 'none', 'all': 'none', 'general': 'none', '': 'none'
 };
 
 export function processStudentResults(
@@ -75,7 +72,7 @@ export function processStudentResults(
 ): StudentProcessedResult[] {
 
     return students.map(student => {
-        const rawGroup = (student.group || '').toLowerCase().trim();
+        const rawGroup = (student.group || 'none').toLowerCase().trim();
         const studentGroupNormalized = groupMap[rawGroup] || rawGroup;
         
         let optionalSubjectNameNormalized = normalize(student.optionalSubject || '');
@@ -95,22 +92,15 @@ export function processStudentResults(
                         return currentSubNameNormalized === optionalSubjectNameNormalized;
                     }
                     
-                    const classResult = resultsBySubject.find(r => {
+                    // If no optional subject is set, only show if marks exist for this specific student
+                    const studentHasMarks = resultsBySubject.some(r => {
                         const nameMatch = normalize(r.subject) === currentSubNameNormalized;
                         if (!nameMatch) return false;
-                        
-                        if (studentClassNum >= 9) {
-                            const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                            const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                            return rGroupNorm === 'none' || rGroupNorm === studentGroupNormalized;
-                        }
-                        return true;
+                        const studentResult = r.results.find(res => res.studentId === student.id);
+                        return studentResult && (studentResult.written !== undefined || studentResult.mcq !== undefined || studentResult.practical !== undefined);
                     });
                     
-                    const studentResult = classResult?.results.find(r => r.studentId === student.id);
-                    const hasMarks = studentResult && (studentResult.written !== undefined || studentResult.mcq !== undefined || studentResult.practical !== undefined);
-                    
-                    return hasMarks;
+                    return studentHasMarks;
                 }
             }
             return true;
@@ -123,6 +113,7 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const normalizedSubjectName = normalize(subjectInfo.name);
             
+            // CRITICAL FIX: Find the specific record that contains this student's result
             const classResult = resultsBySubject.find(r => {
                 const nameMatch = normalize(r.subject) === normalizedSubjectName;
                 if (!nameMatch) return false;
@@ -130,13 +121,16 @@ export function processStudentResults(
                 const classMatch = String(r.className) === String(student.className);
                 if (!classMatch) return false;
 
-                if (studentClassNum >= 9) {
-                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                    return rGroupNorm === 'none' || rGroupNorm === studentGroupNormalized;
-                }
-                return true;
-            });
+                // Priority: Specific group match or 'none' group match
+                const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                
+                const groupMatch = rGroupNorm === 'none' || rGroupNorm === studentGroupNormalized;
+                if (!groupMatch) return false;
+
+                // Final confirmation: This record must contain the student's ID
+                return r.results.some(res => res.studentId === student.id);
+            }) || resultsBySubject.find(r => normalize(r.subject) === normalizedSubjectName && String(r.className) === String(student.className));
 
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;

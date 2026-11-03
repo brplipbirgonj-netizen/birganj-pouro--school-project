@@ -99,8 +99,14 @@ function MarksheetContent() {
                 const fetchedResultsBySubject = allResults.filter(r => r.className === studentData.className);
                 setResultsBySubject(fetchedResultsBySubject);
 
+                // FIX: Robust group identification for getSubjects
+                const rawGroup = (studentData.group || '').toLowerCase().trim();
+                const groupKey = rawGroup === 'science' || rawGroup === 'বিজ্ঞান' ? 'science' : 
+                                 rawGroup === 'arts' || rawGroup === 'মানবিক' ? 'arts' :
+                                 rawGroup === 'commerce' || rawGroup === 'ব্যবসায় শিক্ষা' ? 'commerce' : undefined;
+
                 // Get allowed subjects for this class/group
-                const allSubjectsForGroup = getSubjects(studentData.className, studentData.group || undefined).filter(s => s.isExamSubject !== false);
+                const allSubjectsForGroup = getSubjects(studentData.className, groupKey).filter(s => s.isExamSubject !== false);
                 
                 // Process results
                 const allFinalResults = processStudentResults(studentsList, fetchedResultsBySubject, allSubjectsForGroup);
