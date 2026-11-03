@@ -155,6 +155,18 @@ export default function PhotoManagerPage() {
         setQueue(prev => prev.map(it => it.id === currentImage.id ? { ...it, ...fields } : it));
     };
 
+    const handleNameChange = (newName: string) => {
+        if (!currentImage) return;
+        const matchedStudent = matchStudentByName(newName, allStudents);
+        setQueue(prev => prev.map(it => it.id === currentImage.id ? { 
+            ...it, 
+            fileName: newName,
+            matchedStudent,
+            status: matchedStudent ? 'matched' : 'unmatched'
+        } : it));
+        if (matchedStudent) setManualClass(matchedStudent.className);
+    };
+
     const processFinalImage = async (item: ProcessingImage): Promise<string> => {
         return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
@@ -180,7 +192,6 @@ export default function PhotoManagerPage() {
                 const ih = img.height;
                 const aspect = iw / ih;
                 
-                // Contain logic for base mapping
                 let dw, dh;
                 if (aspect > 1) {
                     dw = targetSize;
@@ -193,7 +204,6 @@ export default function PhotoManagerPage() {
                 const finalWidth = dw * scale;
                 const finalHeight = dh * scale;
                 
-                // UI used 320px container, so we scale translation (512 / 320 = 1.6)
                 const scaleFactor = 1.6;
                 const cx = (targetSize - finalWidth) / 2 + (x * scaleFactor);
                 const cy = (targetSize - finalHeight) / 2 + (y * scaleFactor);
@@ -216,7 +226,6 @@ export default function PhotoManagerPage() {
         setQueue(prev => prev.map((it, i) => i === idx ? { ...it, status: 'saving' } : it));
 
         try {
-            // Generate processed image exactly when saving
             const processedUrl = await processFinalImage(item);
 
             await updateDoc(doc(db, 'students', item.matchedStudent.id), {
@@ -439,6 +448,15 @@ export default function PhotoManagerPage() {
                                                     <div className="space-y-4">
                                                         <h4 className="font-black text-sm text-primary flex items-center gap-2 border-b pb-2"><Users className="h-4 w-4" /> শিক্ষার্থীর সাথে সংযোগ</h4>
                                                         <div className="space-y-3">
+                                                            <div className="space-y-1.5">
+                                                                <Label className="text-[10px] font-black uppercase text-slate-500">সেভ নাম (শ্রেণি_রোল)</Label>
+                                                                <Input 
+                                                                    value={currentImage.fileName} 
+                                                                    onChange={e => handleNameChange(e.target.value)}
+                                                                    className="h-9 border-2 font-black text-xs"
+                                                                    placeholder="উদা: 6_01"
+                                                                />
+                                                            </div>
                                                             <div className="space-y-1.5">
                                                                 <Label className="text-[10px] font-black uppercase text-slate-500">১. শ্রেণি নির্বাচন</Label>
                                                                 <Select value={manualClass} onValueChange={setManualClass}>
