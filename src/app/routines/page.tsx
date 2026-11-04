@@ -1627,7 +1627,7 @@ interface ExamRoutineRow {
     id: string;
     date: string;
     day: string;
-    subjects: Record<string, ExamSubjectEntry>;
+    subjects: Record<string, ExamSubjectEntry[] | ExamSubjectEntry>;
 }
 
 function ExamRoutineTab() {
@@ -1658,6 +1658,19 @@ function ExamRoutineTab() {
 
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState<boolean>(false);
+
+    // Helper: Normalize cell subjects to array (supports both single object & multiple subjects array)
+    const getCellSubjects = (row: ExamRoutineRow, colId: string): ExamSubjectEntry[] => {
+        const val = row.subjects?.[colId];
+        if (!val) return [];
+        if (Array.isArray(val)) {
+            return val.filter(s => s && s.subjectName && s.subjectName !== 'none');
+        }
+        if (typeof val === 'object' && (val as any).subjectName && (val as any).subjectName !== 'none') {
+            return [val as ExamSubjectEntry];
+        }
+        return [];
+    };
 
     // Calculate day of week in Bengali from date string (YYYY-MM-DD)
     const getBengaliDayFromDate = (dateStr: string): string => {
@@ -1691,7 +1704,7 @@ function ExamRoutineTab() {
         }).catch(() => {});
     }, [db, selectedYear]);
 
-    // Load exam routine data from Firestore (supports both classRoutines and exams collection)
+    // Load exam routine data from Firestore
     const loadRoutine = useCallback(async () => {
         if (!db || !selectedYear || !selectedExam) return;
         setIsLoading(true);
@@ -1703,7 +1716,6 @@ function ExamRoutineTab() {
 
             let data: any = null;
 
-            // 1. Try classRoutines
             try {
                 const snap1 = await getDoc(doc(db, 'classRoutines', classRoutineDocId));
                 if (snap1.exists()) {
@@ -1713,7 +1725,6 @@ function ExamRoutineTab() {
                 console.warn('classRoutines read notice:', err);
             }
 
-            // 2. Fallback to exams collection
             if (!data) {
                 try {
                     const snap2 = await getDoc(doc(db, 'exams', examDocId));
@@ -1744,7 +1755,7 @@ function ExamRoutineTab() {
         loadRoutine();
     }, [loadRoutine]);
 
-    // Save exam routine to Firestore (saves to both classRoutines and exams for guaranteed persistence)
+    // Save exam routine to Firestore
     const handleSave = async () => {
         if (!db) {
             toast({ title: 'ডাটাবেজ সংযোগ পাওয়া যায়নি', variant: 'destructive' });
@@ -1790,32 +1801,67 @@ function ExamRoutineTab() {
         setRows(prev => prev.map(r => r.id === rowId ? { ...r, date: newDate, day: computedDay } : r));
     };
 
-    // Subject select handler - automatically fetches and populates subject code
-    const handleSubjectChange = (rowId: string, colId: string, className: string, subjectName: string) => {
-        if (subjectName === 'none' || !subjectName) {
-            setRows(prev => prev.map(r => {
-                if (r.id !== rowId) return r;
-                const nextSubs = { ...r.subjects };
-                delete nextSubs[colId];
-                return { ...r, subjects: nextSubs };
-            }));
-            return;
-        }
-
-        const subjects = getSubjects(className);
-        const match = subjects.find(s => s.name === subjectName);
-        const code = match ? match.code : '';
-
+    // Subject select or change handler
+    const handleSubjectChange = (rowId: string, colId: string, className: string, index: number, subjectName: string) => {
         setRows(prev => prev.map(r => {
             if (r.id !== rowId) return r;
+            const currentList = [...getCellSubjects(r, colId)];
+
+            if (subjectName === 'none' || !subjectName) {
+                currentList.splice(index, 1);
+            } else {
+                const subjects = getSubjects(className);
+                const match = subjects.find(s => s.name === subjectName);
+                const code = match ? match.code : '';
+                if (index < currentList.length) {
+                    currentList[index] = { subjectName, subjectCode: code };
+                } else {
+                    currentList.push({ subjectName, subjectCode: code });
+                }
+            }
+
             return {
                 ...r,
                 subjects: {
                     ...r.subjects,
-                    [colId]: {
-                        subjectName,
-                        subjectCode: code
-                    }
+                    [colId]: currentList
+                }
+            };
+        }));
+    };
+
+    // Add another subject slot in the same class on the same day
+    const handleAddSubjectSlot = (rowId: string, colId: string, className: string) => {
+        const subList = getSubjects(className);
+        setRows(prev => prev.map(r => {
+            if (r.id !== rowId) return r;
+            const currentList = [...getCellSubjects(r, colId)];
+            const existingNames = currentList.map(s => s.subjectName);
+            const availableSub = subList.find(s => !existingNames.includes(s.name)) || subList[0];
+            if (availableSub) {
+                currentList.push({ subjectName: availableSub.name, subjectCode: availableSub.code });
+            }
+            return {
+                ...r,
+                subjects: {
+                    ...r.subjects,
+                    [colId]: currentList
+                }
+            };
+        }));
+    };
+
+    // Remove a subject slot
+    const handleRemoveSubjectSlot = (rowId: string, colId: string, index: number) => {
+        setRows(prev => prev.map(r => {
+            if (r.id !== rowId) return r;
+            const currentList = [...getCellSubjects(r, colId)];
+            currentList.splice(index, 1);
+            return {
+                ...r,
+                subjects: {
+                    ...r.subjects,
+                    [colId]: currentList
                 }
             };
         }));
@@ -1847,17 +1893,20 @@ function ExamRoutineTab() {
     const handleColumnClassChange = (colId: string, newClassName: string) => {
         setColumns(prev => prev.map(c => c.id === colId ? { ...c, className: newClassName } : c));
         setRows(prev => prev.map(r => {
-            const cur = r.subjects[colId];
-            if (!cur) return r;
+            const currentList = getCellSubjects(r, colId);
+            if (currentList.length === 0) return r;
             const newSubs = getSubjects(newClassName);
-            const match = newSubs.find(s => s.name === cur.subjectName);
+            const updatedList = currentList.map(entry => {
+                const match = newSubs.find(s => s.name === entry.subjectName);
+                return match 
+                    ? { subjectName: match.name, subjectCode: match.code }
+                    : { subjectName: entry.subjectName, subjectCode: '' };
+            });
             return {
                 ...r,
                 subjects: {
                     ...r.subjects,
-                    [colId]: match 
-                        ? { subjectName: match.name, subjectCode: match.code }
-                        : { subjectName: cur.subjectName, subjectCode: '' }
+                    [colId]: updatedList
                 }
             };
         }));
@@ -1893,7 +1942,7 @@ function ExamRoutineTab() {
                                 <List className="h-6 w-6 text-primary" /> পরীক্ষার রুটিন
                             </CardTitle>
                             <CardDescription className="font-bold text-slate-600 mt-1">
-                                শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)} | পরীক্ষার সময়সূচি তৈরি ও পরিবর্তন করুন
+                                শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)} | একই দিনে একাধিক বিষয়সহ পরীক্ষার সময়সূচি তৈরি ও পরিবর্তন করুন
                             </CardDescription>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1988,7 +2037,7 @@ function ExamRoutineTab() {
                             </Button>
                         </div>
                         <span className="text-xs font-bold text-muted-foreground italic">
-                            * প্রয়োজন মতো কলাম ও রো বাড়ানো ও কমানো যাবে
+                            * একই দিনে একই শ্রেণিতে একাধিক বিষয় যোগ করতে "+ বিষয় যোগ" চাপুন
                         </span>
                     </div>
 
@@ -2011,7 +2060,7 @@ function ExamRoutineTab() {
 
                                     {/* Col 3..N Class Dropdown Headers */}
                                     {columns.map((col) => (
-                                        <TableHead key={col.id} className="min-w-[190px] border-r-2 border-slate-800 last:border-r-0 text-center font-black text-slate-900 p-2 bg-slate-200/50">
+                                        <TableHead key={col.id} className="min-w-[210px] border-r-2 border-slate-800 last:border-r-0 text-center font-black text-slate-900 p-2 bg-slate-200/50">
                                             <div className="flex items-center justify-between gap-1 bg-white p-1 rounded-xl border border-slate-400 shadow-sm">
                                                 <Select value={col.className} onValueChange={(val) => handleColumnClassChange(col.id, val)}>
                                                     <SelectTrigger className="h-8 font-black text-xs border-0 focus:ring-0">
@@ -2053,8 +2102,8 @@ function ExamRoutineTab() {
                                 ) : rows.map((row) => (
                                     <TableRow key={row.id} className="border-b border-slate-300 hover:bg-slate-50/50 transition-colors">
                                         {/* Date Input Cell */}
-                                        <TableCell className="border-r-2 border-slate-800 p-2 text-center align-middle bg-slate-50/30">
-                                            <div className="flex items-center justify-center gap-1">
+                                        <TableCell className="border-r-2 border-slate-800 p-2 text-center align-top bg-slate-50/30">
+                                            <div className="flex items-center justify-center gap-1 mt-1">
                                                 <Input 
                                                     type="date" 
                                                     value={row.date} 
@@ -2076,7 +2125,7 @@ function ExamRoutineTab() {
                                         </TableCell>
 
                                         {/* Bengali Day (Auto) Cell */}
-                                        <TableCell className="border-r-2 border-slate-800 p-2 text-center align-middle font-black text-slate-800">
+                                        <TableCell className="border-r-2 border-slate-800 p-2 text-center align-top font-black text-slate-800 pt-3">
                                             {row.day ? (
                                                 <Badge variant="outline" className="font-black text-xs bg-blue-50 border-blue-300 text-blue-900 px-2 py-0.5 shadow-sm">
                                                     {row.day}
@@ -2086,38 +2135,85 @@ function ExamRoutineTab() {
                                             )}
                                         </TableCell>
 
-                                        {/* Class Subject Dropdown Cells */}
+                                        {/* Class Subject Cells (Supports multiple subjects per class) */}
                                         {columns.map((col) => {
-                                            const entry = row.subjects[col.id];
+                                            const cellSubs = getCellSubjects(row, col.id);
                                             const subList = getSubjects(col.className);
                                             return (
-                                                <TableCell key={col.id} className="border-r-2 border-slate-800 last:border-r-0 p-2 text-center align-middle">
-                                                    <div className="space-y-1">
-                                                        <Select 
-                                                            value={entry?.subjectName || 'none'} 
-                                                            onValueChange={(val) => handleSubjectChange(row.id, col.id, col.className, val)}
-                                                        >
-                                                            <SelectTrigger className="h-9 text-xs font-bold bg-white border-2 border-slate-300 hover:border-primary transition-colors">
-                                                                <SelectValue placeholder="বিষয় সিলেক্ট করুন" />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="max-h-[300px]">
-                                                                <SelectItem value="none" className="text-muted-foreground font-semibold text-xs">
-                                                                    -- পরীক্ষা নেই / বন্ধ --
-                                                                </SelectItem>
-                                                                {subList.map((sub) => (
-                                                                    <SelectItem key={sub.name} value={sub.name} className="font-bold text-xs">
-                                                                        {sub.name} ({toBengaliNumber(sub.code)})
+                                                <TableCell key={col.id} className="border-r-2 border-slate-800 last:border-r-0 p-2 text-center align-top min-w-[210px]">
+                                                    <div className="space-y-2">
+                                                        {cellSubs.length === 0 ? (
+                                                            <Select 
+                                                                value="none" 
+                                                                onValueChange={(val) => handleSubjectChange(row.id, col.id, col.className, 0, val)}
+                                                            >
+                                                                <SelectTrigger className="h-9 text-xs font-bold bg-white border-2 border-slate-300 hover:border-primary transition-colors">
+                                                                    <SelectValue placeholder="বিষয় সিলেক্ট করুন" />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="max-h-[300px]">
+                                                                    <SelectItem value="none" className="text-muted-foreground font-semibold text-xs">
+                                                                        -- পরীক্ষা নেই / বন্ধ --
                                                                     </SelectItem>
+                                                                    {subList.map((sub) => (
+                                                                        <SelectItem key={sub.name} value={sub.name} className="font-bold text-xs">
+                                                                            {sub.name} ({toBengaliNumber(sub.code)})
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        ) : (
+                                                            <div className="space-y-2">
+                                                                {cellSubs.map((entry, sIdx) => (
+                                                                    <div key={sIdx} className="p-1.5 bg-slate-50 border border-slate-300 rounded-lg space-y-1 relative shadow-sm">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-[11px] font-black text-slate-500 w-4 text-center shrink-0">
+                                                                                {toBengaliNumber(sIdx + 1)}.
+                                                                            </span>
+                                                                            <Select 
+                                                                                value={entry.subjectName} 
+                                                                                onValueChange={(val) => handleSubjectChange(row.id, col.id, col.className, sIdx, val)}
+                                                                            >
+                                                                                <SelectTrigger className="h-8 text-xs font-bold bg-white border border-slate-300 flex-1">
+                                                                                    <SelectValue placeholder="বিষয় সিলেক্ট করুন" />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent className="max-h-[300px]">
+                                                                                    <SelectItem value="none" className="text-rose-500 font-semibold text-xs">
+                                                                                        -- এই বিষয়টি মুছুন --
+                                                                                    </SelectItem>
+                                                                                    {subList.map((sub) => (
+                                                                                        <SelectItem key={sub.name} value={sub.name} className="font-bold text-xs">
+                                                                                            {sub.name} ({toBengaliNumber(sub.code)})
+                                                                                        </SelectItem>
+                                                                                    ))}
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                            <Button 
+                                                                                variant="ghost" 
+                                                                                size="icon" 
+                                                                                className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded shrink-0" 
+                                                                                onClick={() => handleRemoveSubjectSlot(row.id, col.id, sIdx)}
+                                                                                title="বিষয় মুছুন"
+                                                                            >
+                                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                            </Button>
+                                                                        </div>
+                                                                        <div className="text-center">
+                                                                            <span className="text-[10px] font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full inline-block">
+                                                                                কোড: {toBengaliNumber(entry.subjectCode) || '-'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
                                                                 ))}
-                                                            </SelectContent>
-                                                        </Select>
 
-                                                        {/* Automatically shown subject code badge */}
-                                                        {entry?.subjectName && entry.subjectName !== 'none' && (
-                                                            <div className="flex flex-col items-center pt-0.5">
-                                                                <span className="text-[11px] font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full inline-block">
-                                                                    বিষয় কোড: {toBengaliNumber(entry.subjectCode) || '-'}
-                                                                </span>
+                                                                {/* Button to add another subject in the same class on the same day */}
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    onClick={() => handleAddSubjectSlot(row.id, col.id, col.className)} 
+                                                                    className="w-full h-7 text-[11px] font-black border-dashed border-primary/40 text-primary hover:bg-primary/5 hover:border-primary shadow-xs"
+                                                                >
+                                                                    <Plus className="h-3 w-3 mr-1" /> + বিষয় যোগ
+                                                                </Button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -2162,7 +2258,7 @@ function ExamRoutineTab() {
                 </CardFooter>
             </Card>
 
-                        {/* Single Copy Renderer for Double Printing (2 copies per A4 page) */}
+            {/* Single Copy Renderer for Double Printing (2 copies per A4 page) */}
             {(() => {
                 const renderRoutineCopy = (keyPrefix: string) => (
                     <div key={keyPrefix} className="flex-1 flex flex-col justify-between py-2">
@@ -2209,17 +2305,21 @@ function ExamRoutineTab() {
                                                 {row.day || '-'}
                                             </td>
                                             {columns.map(col => {
-                                                const entry = row.subjects[col.id];
+                                                const cellSubs = getCellSubjects(row, col.id);
                                                 return (
                                                     <td key={`${keyPrefix}-${col.id}`} className="border border-black p-1 text-center font-bold align-middle">
-                                                        {entry?.subjectName && entry.subjectName !== 'none' ? (
-                                                            <div>
-                                                                <div className="text-slate-900 font-black">{entry.subjectName}</div>
-                                                                {entry.subjectCode && (
-                                                                    <div className="text-[10px] font-black text-slate-700 leading-none mt-0.5">
-                                                                        (কোড: {toBengaliNumber(entry.subjectCode)})
+                                                        {cellSubs.length > 0 ? (
+                                                            <div className="space-y-1">
+                                                                {cellSubs.map((entry, sIdx) => (
+                                                                    <div key={sIdx} className={cn(sIdx > 0 && "pt-1 border-t border-slate-300")}>
+                                                                        <div className="text-slate-900 font-black leading-tight">{entry.subjectName}</div>
+                                                                        {entry.subjectCode && (
+                                                                            <div className="text-[10px] font-black text-slate-700 leading-none mt-0.5">
+                                                                                (কোড: {toBengaliNumber(entry.subjectCode)})
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                )}
+                                                                ))}
                                                             </div>
                                                         ) : (
                                                             <span className="text-slate-400 font-normal">-</span>
@@ -2263,12 +2363,9 @@ function ExamRoutineTab() {
                                     {/* 1st Student Copy */}
                                     {renderRoutineCopy("preview-copy-1")}
 
-                                    {/* Dotted Cut Line */}
-                                    <div className="py-2 relative flex items-center justify-center">
-                                        <div className="w-full border-b-2 border-dashed border-slate-500"></div>
-                                        <span className="bg-white px-3 text-[11px] font-black text-slate-600 uppercase tracking-wider absolute flex items-center gap-1 shadow-sm border border-slate-200 rounded-full">
-                                            ✂ কাঁচি দিয়ে কেটে আলাদা করুন (২ জন শিক্ষার্থীর জন্য)
-                                        </span>
+                                    {/* Clean Dotted Divider (Without extra text) */}
+                                    <div className="py-2 flex items-center justify-center">
+                                        <div className="w-full border-b-2 border-dashed border-slate-400"></div>
                                     </div>
 
                                     {/* 2nd Student Copy */}
@@ -2308,12 +2405,9 @@ function ExamRoutineTab() {
                             {/* 1st Student Copy */}
                             {renderRoutineCopy("print-copy-1")}
 
-                            {/* Cut Line */}
-                            <div className="my-2 relative flex items-center justify-center">
+                            {/* Clean Divider Line */}
+                            <div className="my-2 flex items-center justify-center">
                                 <div className="w-full border-b-2 border-dashed border-black"></div>
-                                <span className="bg-white px-3 text-[10px] font-black text-black absolute">
-                                    ✂ কাঁচি দিয়ে কেটে আলাদা করুন
-                                </span>
                             </div>
 
                             {/* 2nd Student Copy */}
@@ -2325,7 +2419,6 @@ function ExamRoutineTab() {
         </div>
     );
 }
-
 function CopyRoutineTab({ onCopy, targetYear, setTargetYear, availableYears, selectedYear, isProcessing }: any) {
     return (
         <Card className="border-2 border-amber-100 bg-amber-50/20 rounded-3xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-500">
