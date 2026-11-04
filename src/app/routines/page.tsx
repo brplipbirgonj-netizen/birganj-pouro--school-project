@@ -2162,44 +2162,38 @@ function ExamRoutineTab() {
                 </CardFooter>
             </Card>
 
-            {/* Live Print Preview Card (Visible directly below on screen) */}
-            <Card className="border-2 shadow-2xl rounded-3xl overflow-hidden bg-white no-print">
-                <CardHeader className="bg-slate-50 border-b-2 p-6 flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
-                            <Printer className="h-5 w-5 text-primary" /> পরীক্ষার রুটিন - প্রিন্ট ভিউ (Print Preview)
-                        </CardTitle>
-                        <CardDescription className="font-bold text-slate-600 mt-0.5">
-                            নিচে প্রিন্ট ফরম্যাটটি সরাসরি দেখা যাচ্ছে। এখান থেকে সরাসরি প্রিন্ট করতে পারেন।
-                        </CardDescription>
-                    </div>
-                    <Button onClick={handlePrint} size="lg" className="font-black h-11 px-8 shadow-md">
-                        <Printer className="mr-2 h-4 w-4" /> প্রিন্ট করুন
-                    </Button>
-                </CardHeader>
-                <CardContent className="p-6 md:p-10 bg-slate-100 flex justify-center overflow-x-auto">
-                    {/* Official Document Sheet Preview */}
-                    <div className="bg-white p-8 md:p-12 border-2 border-slate-300 rounded-xl shadow-2xl max-w-4xl w-full text-black font-kalpurush">
-                        <header className="text-center border-b-2 border-black pb-4 mb-6 flex flex-col items-center">
-                            {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain mb-2" />}
-                            <h1 className="text-2xl md:text-3xl font-black text-slate-900">{schoolInfo.name}</h1>
-                            <p className="text-xs md:text-sm font-bold text-slate-700">{schoolInfo.address}</p>
-                            <div className="mt-3 inline-block border-2 border-black px-8 py-1 rounded-full font-black text-sm md:text-base uppercase bg-slate-50 shadow-sm">
-                                {selectedExam} - {toBengaliNumber(selectedYear)}
+                        {/* Single Copy Renderer for Double Printing (2 copies per A4 page) */}
+            {(() => {
+                const renderRoutineCopy = (keyPrefix: string) => (
+                    <div key={keyPrefix} className="flex-1 flex flex-col justify-between py-2">
+                        {/* Header */}
+                        <header className="text-center border-b border-black pb-2 mb-2 flex flex-col items-center">
+                            <div className="flex items-center justify-center gap-3">
+                                {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-10 h-10 object-contain" />}
+                                <div>
+                                    <h1 className="text-lg md:text-xl font-black text-slate-900 leading-tight">{schoolInfo.name}</h1>
+                                    <p className="text-[11px] font-bold text-slate-700 leading-tight">{schoolInfo.address}</p>
+                                </div>
                             </div>
-                            <p className="text-xs md:text-sm font-black text-slate-800 mt-2">
-                                পরীক্ষার সময়: {toBengaliNumber(startTime)} হতে {toBengaliNumber(endTime)}
-                            </p>
+                            <div className="mt-1.5 flex flex-wrap items-center justify-center gap-3">
+                                <span className="border border-black px-4 py-0.5 rounded-full font-black text-xs uppercase bg-slate-100">
+                                    {selectedExam} - {toBengaliNumber(selectedYear)}
+                                </span>
+                                <span className="text-xs font-black text-slate-800">
+                                    পরীক্ষার সময়: {toBengaliNumber(startTime)} হতে {toBengaliNumber(endTime)}
+                                </span>
+                            </div>
                         </header>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs md:text-sm border-collapse border-2 border-black">
+                        {/* Table */}
+                        <div className="overflow-x-auto my-1">
+                            <table className="w-full text-xs border-collapse border border-black">
                                 <thead>
                                     <tr className="bg-slate-100 font-black">
-                                        <th className="border-2 border-black p-2.5 w-32 text-center">তারিখ</th>
-                                        <th className="border-2 border-black p-2.5 w-28 text-center">বার</th>
+                                        <th className="border border-black p-1.5 w-24 text-center">তারিখ</th>
+                                        <th className="border border-black p-1.5 w-20 text-center">বার</th>
                                         {columns.map(col => (
-                                            <th key={col.id} className="border-2 border-black p-2.5 text-center">
+                                            <th key={`${keyPrefix}-${col.id}`} className="border border-black p-1.5 text-center">
                                                 {classNamesMap[col.className] || col.className} শ্রেণি
                                             </th>
                                         ))}
@@ -2207,22 +2201,22 @@ function ExamRoutineTab() {
                                 </thead>
                                 <tbody>
                                     {rows.map(row => (
-                                        <tr key={row.id} className="hover:bg-slate-50/50">
-                                            <td className="border-2 border-black p-2 text-center font-bold">
+                                        <tr key={`${keyPrefix}-${row.id}`} className="hover:bg-slate-50/50">
+                                            <td className="border border-black p-1 text-center font-bold">
                                                 {formatBengaliDate(row.date) || '-'}
                                             </td>
-                                            <td className="border-2 border-black p-2 text-center font-black">
+                                            <td className="border border-black p-1 text-center font-black">
                                                 {row.day || '-'}
                                             </td>
                                             {columns.map(col => {
                                                 const entry = row.subjects[col.id];
                                                 return (
-                                                    <td key={col.id} className="border-2 border-black p-2 text-center font-bold align-middle">
+                                                    <td key={`${keyPrefix}-${col.id}`} className="border border-black p-1 text-center font-bold align-middle">
                                                         {entry?.subjectName && entry.subjectName !== 'none' ? (
                                                             <div>
                                                                 <div className="text-slate-900 font-black">{entry.subjectName}</div>
                                                                 {entry.subjectCode && (
-                                                                    <div className="text-[11px] font-black text-slate-700 mt-0.5">
+                                                                    <div className="text-[10px] font-black text-slate-700 leading-none mt-0.5">
                                                                         (কোড: {toBengaliNumber(entry.subjectCode)})
                                                                     </div>
                                                                 )}
@@ -2239,86 +2233,95 @@ function ExamRoutineTab() {
                             </table>
                         </div>
 
-                        <footer className="mt-16 md:mt-24 flex justify-between px-6 pt-4">
-                            <div className="w-48 border-t-2 border-black text-center font-black text-xs md:text-sm pt-1.5">পরীক্ষা নিয়ন্ত্রক</div>
-                            <div className="w-48 border-t-2 border-black text-center font-black text-xs md:text-sm pt-1.5">প্রধান শিক্ষক</div>
+                        {/* Signatures */}
+                        <footer className="mt-4 flex justify-between px-6 pt-2">
+                            <div className="w-36 border-t border-black text-center font-black text-[11px] pt-1">পরীক্ষা নিয়ন্ত্রক</div>
+                            <div className="w-36 border-t border-black text-center font-black text-[11px] pt-1">প্রধান শিক্ষক</div>
                         </footer>
                     </div>
-                </CardContent>
-                <CardFooter className="bg-slate-50 border-t-2 p-6 flex justify-end">
-                    <Button onClick={handlePrint} size="lg" className="font-black h-12 px-10 shadow-lg text-base">
-                        <Printer className="mr-2 h-5 w-5" /> পরীক্ষার রুটিন প্রিন্ট করুন
-                    </Button>
-                </CardFooter>
-            </Card>
+                );
 
-            {/* Official Clean Print Area - Has printable-area class so globals.css makes it visible on print */}
-            <div className="printable-area exam-routine-print-area text-black bg-white p-6 font-kalpurush w-full box-border hidden print:block">
-                <style jsx global>{`
-                    @media print {
-                        @page { size: A4 portrait; margin: 8mm !important; }
-                        .exam-routine-print-area { padding: 0 !important; margin: 0 !important; border: none !important; width: 100% !important; display: block !important; }
-                        table { border-collapse: collapse !important; border: 1.5px solid black !important; width: 100% !important; }
-                        th, td { border: 1.5px solid black !important; padding: 6px !important; text-align: center; }
-                        .no-print { display: none !important; }
-                    }
-                `}</style>
-                <header className="text-center border-b-2 border-black pb-3 mb-4 flex flex-col items-center">
-                    {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-14 h-14 object-contain mb-1" />}
-                    <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
-                    <p className="text-xs font-bold">{schoolInfo.address}</p>
-                    <div className="mt-2 inline-block border-2 border-black px-6 py-1 rounded-full font-black text-sm uppercase bg-slate-100">
-                        {selectedExam} - {toBengaliNumber(selectedYear)}
-                    </div>
-                    <p className="text-xs font-bold mt-2">
-                        পরীক্ষার সময়: {toBengaliNumber(startTime)} হতে {toBengaliNumber(endTime)}
-                    </p>
-                </header>
+                return (
+                    <>
+                        {/* Live Print Preview Card (Visible below on screen) */}
+                        <Card className="border-2 shadow-2xl rounded-3xl overflow-hidden bg-white no-print">
+                            <CardHeader className="bg-slate-50 border-b-2 p-6 flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                        <Printer className="h-5 w-5 text-primary" /> পরীক্ষার রুটিন - ডবল প্রিন্ট প্রিভিউ (এক পাতায় ২ কপি)
+                                    </CardTitle>
+                                    <CardDescription className="font-bold text-slate-600 mt-0.5">
+                                        ১টি এ-৪ পাতায় ২টি কপি প্রিন্ট হবে, যা মাঝখান দিয়ে কেটে ২ জন শিক্ষার্থীকে দেওয়া যাবে।
+                                    </CardDescription>
+                                </div>
+                                <Button onClick={handlePrint} size="lg" className="font-black h-11 px-8 shadow-md">
+                                    <Printer className="mr-2 h-4 w-4" /> প্রিন্ট করুন
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="p-6 md:p-10 bg-slate-100 flex justify-center overflow-x-auto">
+                                <div className="bg-white p-6 md:p-8 border-2 border-slate-300 rounded-xl shadow-2xl max-w-4xl w-full text-black font-kalpurush space-y-4">
+                                    {/* 1st Student Copy */}
+                                    {renderRoutineCopy("preview-copy-1")}
 
-                <table className="w-full text-xs">
-                    <thead>
-                        <tr className="bg-slate-100 font-black">
-                            <th className="w-28">তারিখ</th>
-                            <th className="w-24">বার</th>
-                            {columns.map(col => (
-                                <th key={col.id}>{classNamesMap[col.className] || col.className} শ্রেণি</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map(row => (
-                            <tr key={row.id}>
-                                <td className="font-bold">{formatBengaliDate(row.date)}</td>
-                                <td className="font-bold">{row.day || '-'}</td>
-                                {columns.map(col => {
-                                    const entry = row.subjects[col.id];
-                                    return (
-                                        <td key={col.id} className="font-bold">
-                                            {entry?.subjectName && entry.subjectName !== 'none' ? (
-                                                <div>
-                                                    <div>{entry.subjectName}</div>
-                                                    {entry.subjectCode && (
-                                                        <div className="text-[10px] text-slate-700 font-black mt-0.5">
-                                                            (কোড: {toBengaliNumber(entry.subjectCode)})
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-slate-400">-</span>
-                                            )}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                    {/* Dotted Cut Line */}
+                                    <div className="py-2 relative flex items-center justify-center">
+                                        <div className="w-full border-b-2 border-dashed border-slate-500"></div>
+                                        <span className="bg-white px-3 text-[11px] font-black text-slate-600 uppercase tracking-wider absolute flex items-center gap-1 shadow-sm border border-slate-200 rounded-full">
+                                            ✂ কাঁচি দিয়ে কেটে আলাদা করুন (২ জন শিক্ষার্থীর জন্য)
+                                        </span>
+                                    </div>
 
-                <footer className="mt-16 flex justify-between px-6 pt-4">
-                    <div className="w-44 border-t-2 border-black text-center font-bold text-xs pt-1">পরীক্ষা নিয়ন্ত্রক</div>
-                    <div className="w-44 border-t-2 border-black text-center font-bold text-xs pt-1">প্রধান শিক্ষক</div>
-                </footer>
-            </div>
+                                    {/* 2nd Student Copy */}
+                                    {renderRoutineCopy("preview-copy-2")}
+                                </div>
+                            </CardContent>
+                            <CardFooter className="bg-slate-50 border-t-2 p-6 flex justify-end">
+                                <Button onClick={handlePrint} size="lg" className="font-black h-12 px-10 shadow-lg text-base">
+                                    <Printer className="mr-2 h-5 w-5" /> পরীক্ষার রুটিন প্রিন্ট করুন (২ কপি / পাতা)
+                                </Button>
+                            </CardFooter>
+                        </Card>
+
+                        {/* Official Clean Print Area - Prints 2 copies on a single A4 page */}
+                        <div className="printable-area exam-routine-print-area text-black bg-white font-kalpurush w-full box-border hidden print:flex flex-col justify-between">
+                            <style jsx global>{`
+                                @media print {
+                                    @page { size: A4 portrait; margin: 6mm !important; }
+                                    .exam-routine-print-area {
+                                        padding: 0 !important;
+                                        margin: 0 !important;
+                                        border: none !important;
+                                        width: 100% !important;
+                                        height: 98vh !important;
+                                        display: flex !important;
+                                        flex-direction: column !important;
+                                        justify-content: space-between !important;
+                                        page-break-after: avoid !important;
+                                        page-break-inside: avoid !important;
+                                    }
+                                    table { border-collapse: collapse !important; border: 1px solid black !important; width: 100% !important; }
+                                    th, td { border: 1px solid black !important; padding: 3px !important; text-align: center; }
+                                    .no-print { display: none !important; }
+                                }
+                            `}</style>
+
+                            {/* 1st Student Copy */}
+                            {renderRoutineCopy("print-copy-1")}
+
+                            {/* Cut Line */}
+                            <div className="my-2 relative flex items-center justify-center">
+                                <div className="w-full border-b-2 border-dashed border-black"></div>
+                                <span className="bg-white px-3 text-[10px] font-black text-black absolute">
+                                    ✂ কাঁচি দিয়ে কেটে আলাদা করুন
+                                </span>
+                            </div>
+
+                            {/* 2nd Student Copy */}
+                            {renderRoutineCopy("print-copy-2")}
+                        </div>
+                    </>
+                );
+            })()}
         </div>
     );
 }
