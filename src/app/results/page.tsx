@@ -18,7 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { 
     Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, 
     FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText, 
-    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCcw, Plus, AlertTriangle, Info, History
+    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCcw, RotateCcw, Plus, AlertTriangle, Info, History
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";

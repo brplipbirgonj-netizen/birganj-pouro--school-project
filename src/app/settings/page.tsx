@@ -12,7 +12,7 @@ import {
     Calendar, Users, HardDriveDownload, Monitor, ShieldAlert,
     FileSpreadsheet, FileJson, Download, ImageIcon, Plus, CheckCircle2, Save, Eye, EyeOff, Bell, FilePen, Sparkles, Printer, FileText, ExternalLink
 } from 'lucide-react';
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { bn } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import { addHoliday, getHolidays, deleteHoliday, Holiday, NewHolidayData, createInitialHolidays } from '@/lib/holiday-data';
@@ -67,6 +67,36 @@ function GalleryManagementSettings() {
     
     const [newImgUrl, setNewImgUrl] = useState('');
     const [newImgTitle, setNewImgTitle] = useState('');
+    const [currentIdx, setCurrentIdx] = useState(0);
+
+    const handleAddImage = () => {
+        if (!newImgUrl.trim()) { toast({ title: 'ছবির লিংক দিন', variant: 'destructive' }); return; }
+        const newImg: GalleryImage = { id: Date.now().toString(), url: newImgUrl.trim(), title: newImgTitle.trim() || 'নতুন ছবি', isActive: true };
+        setConfig(prev => ({ ...prev, images: [...prev.images, newImg] }));
+        setNewImgUrl('');
+        setNewImgTitle('');
+    };
+
+    const handleRemoveImage = (id: string) => {
+        setConfig(prev => ({ ...prev, images: prev.images.filter(img => img.id !== id) }));
+    };
+
+    const handleToggleActive = (id: string, value: boolean) => {
+        setConfig(prev => ({ ...prev, images: prev.images.map(img => img.id === id ? { ...img, isActive: value } : img) }));
+    };
+
+    const handleSave = async () => {
+        if (!db) return;
+        setIsSaving(true);
+        try {
+            await saveGalleryConfig(db, config);
+            toast({ title: 'গ্যালারি সেটিংস সেভ হয়েছে' });
+        } catch (e) {
+            toast({ title: 'সেভ করতে সমস্যা হয়েছে', variant: 'destructive' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     useEffect(() => {
         if (!db) return;
@@ -766,9 +796,12 @@ function UserManagementSettings() {
                                             {u.isOnline ? <Badge className="bg-green-500 h-5 text-[10px]">অনলাইন</Badge> : <span className="text-[10px] text-muted-foreground">অফলাইন</span>}
                                         </TableCell>
                                         <TableCell>
-                                            <p className="text-[10px] font-medium">
-                                                {u.lastLoginAt ? format(u.lastLoginAt, 'PP p', { locale: bn }) : 'কখনো নয়'}
-                                            </p>
+                                            {u.lastLoginAt ? (
+                                                <div>
+                                                    <p className="text-[10px] font-bold">{format(u.lastLoginAt, 'd MMM yyyy', { locale: bn })}</p>
+                                                    <p className="text-[9px] text-muted-foreground">{formatDistanceToNow(u.lastLoginAt, { locale: bn, addSuffix: true })}</p>
+                                                </div>
+                                            ) : <span className="text-[10px] text-muted-foreground">কখনো নয়</span>}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">

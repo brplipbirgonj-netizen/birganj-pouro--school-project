@@ -556,9 +556,10 @@ function StudentListContent() {
     
     Object.entries(editedData).forEach(([id, data]) => {
         const ref = doc(db, 'students', id);
-        const dataToSave = { ...data };
-        if (dataToSave.dob) {
-            dataToSave.dob = Timestamp.fromDate(new Date(dataToSave.dob));
+        const { dob, ...restData } = data;
+        const dataToSave: Record<string, unknown> = { ...restData };
+        if (dob) {
+            dataToSave.dob = Timestamp.fromDate(new Date(dob));
         }
         batch.update(ref, { ...dataToSave, updatedAt: serverTimestamp() });
     });
@@ -753,7 +754,7 @@ function StudentListContent() {
                                                         setSearchQuery('');
                                                     }}
                                                 >
-                                                    <RefreshCw className="h-4 w-4 mr-1.5" /> সকল ফিল্টার পরিষ্কার করুন
+                                                    <RefreshCcw className="h-4 w-4 mr-1.5" /> সকল ফিল্টার পরিষ্কার করুন
                                                 </Button>
                                             )}
                                         </div>
