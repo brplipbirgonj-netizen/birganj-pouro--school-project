@@ -1698,11 +1698,16 @@ function ExamRoutineTab() {
         if (!db || !selectedYear) return;
         getExams(db, selectedYear).then(exams => {
             if (exams && exams.length > 0) {
-                const names = exams.map(e => e.name);
-                setExamsList(prev => Array.from(new Set([...prev, ...names])));
+                const names = exams.map(e => (typeof e?.name === 'string' ? e.name.trim() : '')).filter(Boolean);
+                setExamsList(prev => Array.from(new Set([...prev.map(p => p.trim()), ...names])));
             }
         }).catch(() => {});
     }, [db, selectedYear]);
+
+    // Deduplicated exam names for select dropdown
+    const cleanExamsList = useMemo(() => {
+        return Array.from(new Set(examsList.map(n => (typeof n === 'string' ? n.trim() : '')).filter(Boolean)));
+    }, [examsList]);
 
     // Load exam routine data from Firestore
     const loadRoutine = useCallback(async () => {
@@ -1978,8 +1983,8 @@ function ExamRoutineTab() {
                                     <SelectValue placeholder="পরীক্ষা নির্বাচন করুন" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {examsList.map((name) => (
-                                        <SelectItem key={name} value={name} className="font-bold text-sm">
+                                    {cleanExamsList.map((name, idx) => (
+                                        <SelectItem key={`exam-opt-${idx}-${name}`} value={name} className="font-bold text-sm">
                                             {name}
                                         </SelectItem>
                                     ))}
@@ -2154,8 +2159,8 @@ function ExamRoutineTab() {
                                                                     <SelectItem value="none" className="text-muted-foreground font-semibold text-xs">
                                                                         -- পরীক্ষা নেই / বন্ধ --
                                                                     </SelectItem>
-                                                                    {subList.map((sub) => (
-                                                                        <SelectItem key={sub.name} value={sub.name} className="font-bold text-xs">
+                                                                    {subList.map((sub, sIdx) => (
+                                                                        <SelectItem key={`sub-${sub.name}-${sub.code}-${sIdx}`} value={sub.name} className="font-bold text-xs">
                                                                             {sub.name} ({toBengaliNumber(sub.code)})
                                                                         </SelectItem>
                                                                     ))}
@@ -2260,36 +2265,50 @@ function ExamRoutineTab() {
 
             {/* Single Copy Renderer for Double Printing (2 copies per A4 page) */}
             {(() => {
-                const renderRoutineCopy = (keyPrefix: string) => (
-                    <div key={keyPrefix} className="flex-1 flex flex-col justify-between py-2">
+                const renderRoutineCopy = (keyPrefix: string, isPrint: boolean = false) => (
+                    <div key={keyPrefix} className={cn("flex flex-col justify-between print-copy-container", isPrint ? "py-1" : "py-2")}>
                         {/* Header */}
-                        <header className="text-center border-b border-black pb-2 mb-2 flex flex-col items-center">
-                            <div className="flex items-center justify-center gap-3">
-                                {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-10 h-10 object-contain" />}
+                        <header className={cn("text-center border-b border-black flex flex-col items-center", isPrint ? "pb-1 mb-1" : "pb-2 mb-2")}>
+                            <div className="flex items-center justify-center gap-2">
+                                {schoolInfo.logoUrl && (
+                                    <img 
+                                        src={schoolInfo.logoUrl} 
+                                        alt="Logo" 
+                                        className={isPrint ? "w-7 h-7 object-contain" : "w-10 h-10 object-contain"} 
+                                    />
+                                )}
                                 <div>
-                                    <h1 className="text-lg md:text-xl font-black text-slate-900 leading-tight">{schoolInfo.name}</h1>
-                                    <p className="text-[11px] font-bold text-slate-700 leading-tight">{schoolInfo.address}</p>
+                                    <h1 className={cn("font-black text-slate-900 leading-tight", isPrint ? "text-sm" : "text-lg md:text-xl")}>
+                                        {schoolInfo.name}
+                                    </h1>
+                                    <p className={cn("font-bold text-slate-700 leading-tight", isPrint ? "text-[9px]" : "text-[11px]")}>
+                                        {schoolInfo.address}
+                                    </p>
                                 </div>
                             </div>
-                            <div className="mt-1.5 flex flex-wrap items-center justify-center gap-3">
-                                <span className="border border-black px-4 py-0.5 rounded-full font-black text-xs uppercase bg-slate-100">
+                            <div className={cn("flex flex-wrap items-center justify-center gap-2", isPrint ? "mt-0.5 text-[9px]" : "mt-1.5 text-xs")}>
+                                <span className={cn("border border-black rounded-full font-black uppercase bg-slate-100", isPrint ? "px-2.5 py-0 text-[9px]" : "px-4 py-0.5 text-xs")}>
                                     {selectedExam} - {toBengaliNumber(selectedYear)}
                                 </span>
-                                <span className="text-xs font-black text-slate-800">
+                                <span className={cn("font-black text-slate-800", isPrint ? "text-[9px]" : "text-xs")}>
                                     পরীক্ষার সময়: {toBengaliNumber(startTime)} হতে {toBengaliNumber(endTime)}
                                 </span>
                             </div>
                         </header>
 
                         {/* Table */}
-                        <div className="overflow-x-auto my-1">
-                            <table className="w-full text-xs border-collapse border border-black">
+                        <div className="overflow-x-auto my-0.5">
+                            <table className={cn("w-full border-collapse border border-black", isPrint ? "text-[9px]" : "text-xs")}>
                                 <thead>
                                     <tr className="bg-slate-100 font-black">
-                                        <th className="border border-black p-1.5 w-24 text-center">তারিখ</th>
-                                        <th className="border border-black p-1.5 w-20 text-center">বার</th>
+                                        <th className={cn("border border-black text-center", isPrint ? "p-0.5 w-20 text-[9px]" : "p-1.5 w-24 text-xs")}>
+                                            তারিখ
+                                        </th>
+                                        <th className={cn("border border-black text-center", isPrint ? "p-0.5 w-16 text-[9px]" : "p-1.5 w-20 text-xs")}>
+                                            বার
+                                        </th>
                                         {columns.map(col => (
-                                            <th key={`${keyPrefix}-${col.id}`} className="border border-black p-1.5 text-center">
+                                            <th key={`${keyPrefix}-${col.id}`} className={cn("border border-black text-center", isPrint ? "p-0.5 text-[9px]" : "p-1.5 text-xs")}>
                                                 {classNamesMap[col.className] || col.className} শ্রেণি
                                             </th>
                                         ))}
@@ -2298,23 +2317,25 @@ function ExamRoutineTab() {
                                 <tbody>
                                     {rows.map(row => (
                                         <tr key={`${keyPrefix}-${row.id}`} className="hover:bg-slate-50/50">
-                                            <td className="border border-black p-1 text-center font-bold">
+                                            <td className={cn("border border-black text-center font-bold", isPrint ? "p-0.5 text-[9px] leading-tight" : "p-1")}>
                                                 {formatBengaliDate(row.date) || '-'}
                                             </td>
-                                            <td className="border border-black p-1 text-center font-black">
+                                            <td className={cn("border border-black text-center font-black", isPrint ? "p-0.5 text-[9px] leading-tight" : "p-1")}>
                                                 {row.day || '-'}
                                             </td>
                                             {columns.map(col => {
                                                 const cellSubs = getCellSubjects(row, col.id);
                                                 return (
-                                                    <td key={`${keyPrefix}-${col.id}`} className="border border-black p-1 text-center font-bold align-middle">
+                                                    <td key={`${keyPrefix}-${col.id}`} className={cn("border border-black text-center font-bold align-middle", isPrint ? "p-0.5 text-[9px] leading-tight" : "p-1")}>
                                                         {cellSubs.length > 0 ? (
-                                                            <div className="space-y-1">
+                                                            <div className={isPrint ? "space-y-0.5" : "space-y-1"}>
                                                                 {cellSubs.map((entry, sIdx) => (
-                                                                    <div key={sIdx} className={cn(sIdx > 0 && "pt-1 border-t border-slate-300")}>
-                                                                        <div className="text-slate-900 font-black leading-tight">{entry.subjectName}</div>
+                                                                    <div key={sIdx} className={cn(sIdx > 0 && (isPrint ? "pt-0.5 border-t border-slate-300" : "pt-1 border-t border-slate-300"))}>
+                                                                        <div className={cn("text-slate-900 font-black leading-tight", isPrint ? "text-[9px]" : "text-xs")}>
+                                                                            {entry.subjectName}
+                                                                        </div>
                                                                         {entry.subjectCode && (
-                                                                            <div className="text-[10px] font-black text-slate-700 leading-none mt-0.5">
+                                                                            <div className={cn("font-black text-slate-700 leading-none", isPrint ? "text-[7.5px] mt-0.5" : "text-[10px] mt-0.5")}>
                                                                                 (কোড: {toBengaliNumber(entry.subjectCode)})
                                                                             </div>
                                                                         )}
@@ -2334,9 +2355,13 @@ function ExamRoutineTab() {
                         </div>
 
                         {/* Signatures */}
-                        <footer className="mt-4 flex justify-between px-6 pt-2">
-                            <div className="w-36 border-t border-black text-center font-black text-[11px] pt-1">পরীক্ষা নিয়ন্ত্রক</div>
-                            <div className="w-36 border-t border-black text-center font-black text-[11px] pt-1">প্রধান শিক্ষক</div>
+                        <footer className={cn("flex justify-between px-6", isPrint ? "mt-1.5 pt-1" : "mt-4 pt-2")}>
+                            <div className={cn("border-t border-black text-center font-black", isPrint ? "w-28 text-[9px] pt-0.5" : "w-36 text-[11px] pt-1")}>
+                                পরীক্ষা নিয়ন্ত্রক
+                            </div>
+                            <div className={cn("border-t border-black text-center font-black", isPrint ? "w-28 text-[9px] pt-0.5" : "w-36 text-[11px] pt-1")}>
+                                প্রধান শিক্ষক
+                            </div>
                         </footer>
                     </div>
                 );
@@ -2361,7 +2386,7 @@ function ExamRoutineTab() {
                             <CardContent className="p-6 md:p-10 bg-slate-100 flex justify-center overflow-x-auto">
                                 <div className="bg-white p-6 md:p-8 border-2 border-slate-300 rounded-xl shadow-2xl max-w-4xl w-full text-black font-kalpurush space-y-4">
                                     {/* 1st Student Copy */}
-                                    {renderRoutineCopy("preview-copy-1")}
+                                    {renderRoutineCopy("preview-copy-1", false)}
 
                                     {/* Clean Dotted Divider (Without extra text) */}
                                     <div className="py-2 flex items-center justify-center">
@@ -2369,7 +2394,7 @@ function ExamRoutineTab() {
                                     </div>
 
                                     {/* 2nd Student Copy */}
-                                    {renderRoutineCopy("preview-copy-2")}
+                                    {renderRoutineCopy("preview-copy-2", false)}
                                 </div>
                             </CardContent>
                             <CardFooter className="bg-slate-50 border-t-2 p-6 flex justify-end">
@@ -2379,39 +2404,72 @@ function ExamRoutineTab() {
                             </CardFooter>
                         </Card>
 
-                        {/* Official Clean Print Area - Prints 2 copies on a single A4 page */}
+                        {/* Official Clean Print Area - Strictly fits 2 copies on a single A4 page */}
                         <div className="printable-area exam-routine-print-area text-black bg-white font-kalpurush w-full box-border hidden print:flex flex-col justify-between">
                             <style jsx global>{`
                                 @media print {
-                                    @page { size: A4 portrait; margin: 6mm !important; }
-                                    .exam-routine-print-area {
+                                    @page { 
+                                        size: A4 portrait; 
+                                        margin: 4mm 5mm !important; 
+                                    }
+                                    html, body {
+                                        height: 100% !important;
+                                        margin: 0 !important;
+                                        padding: 0 !important;
+                                        overflow: hidden !important;
+                                    }
+                                    .printable-area.exam-routine-print-area {
+                                        position: absolute !important;
+                                        top: 0 !important;
+                                        left: 0 !important;
+                                        width: 100% !important;
+                                        max-width: 100% !important;
+                                        height: 100% !important;
+                                        max-height: 288mm !important;
                                         padding: 0 !important;
                                         margin: 0 !important;
-                                        border: none !important;
-                                        width: 100% !important;
-                                        height: 98vh !important;
                                         display: flex !important;
                                         flex-direction: column !important;
                                         justify-content: space-between !important;
+                                        box-sizing: border-box !important;
+                                        overflow: hidden !important;
                                         page-break-after: avoid !important;
                                         page-break-inside: avoid !important;
+                                        break-inside: avoid !important;
                                     }
-                                    table { border-collapse: collapse !important; border: 1px solid black !important; width: 100% !important; }
-                                    th, td { border: 1px solid black !important; padding: 3px !important; text-align: center; }
-                                    .no-print { display: none !important; }
+                                    .print-copy-container {
+                                        page-break-inside: avoid !important;
+                                        break-inside: avoid !important;
+                                    }
+                                    table { 
+                                        border-collapse: collapse !important; 
+                                        border: 1px solid black !important; 
+                                        width: 100% !important; 
+                                        page-break-inside: avoid !important;
+                                        break-inside: avoid !important;
+                                    }
+                                    th, td { 
+                                        border: 1px solid black !important; 
+                                        padding: 1.5px 2px !important; 
+                                        text-align: center !important; 
+                                        line-height: 1.15 !important;
+                                    }
+                                    .no-print { 
+                                        display: none !important; 
+                                    }
                                 }
                             `}</style>
 
                             {/* 1st Student Copy */}
-                            {renderRoutineCopy("print-copy-1")}
+                            {renderRoutineCopy("print-copy-1", true)}
 
                             {/* Clean Divider Line */}
-                            <div className="my-2 flex items-center justify-center">
-                                <div className="w-full border-b-2 border-dashed border-black"></div>
+                            <div className="my-1 flex items-center justify-center">
+                                <div className="w-full border-b border-dashed border-black"></div>
                             </div>
 
                             {/* 2nd Student Copy */}
-                            {renderRoutineCopy("print-copy-2")}
+                            {renderRoutineCopy("print-copy-2", true)}
                         </div>
                     </>
                 );
