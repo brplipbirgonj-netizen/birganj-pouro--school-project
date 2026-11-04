@@ -1583,7 +1583,8 @@ export default function RoutinesPage() {
                 </div>
             </main>
 
-            <div className={cn("printable-area routine-print-container text-black bg-white p-10 flex-col font-kalpurush", activeSection === "exam-routine" ? "hidden print:hidden" : "hidden print:flex")}>
+            {activeSection !== 'exam-routine' && (
+            <div className={cn("printable-area routine-print-container text-black bg-white p-10 flex-col font-kalpurush", "hidden print:flex")}>
                 <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
                     <div className="text-center flex-grow">
@@ -1607,6 +1608,7 @@ export default function RoutinesPage() {
                     <div className="w-40 border-t border-black text-center font-bold text-xs pt-1">প্রধান শিক্ষকের স্বাক্ষর</div>
                 </footer>
             </div>
+            )}
         </div>
     );
 }
@@ -1634,7 +1636,7 @@ function ExamRoutineTab() {
     const { schoolInfo } = useSchoolInfo();
     const { toast } = useToast();
     const { user, hasPermission } = useAuth();
-    const canManageRoutines = hasPermission('manage:routines') || user?.role === 'admin';
+    const canManageRoutines = hasPermission('manage:routines') || user?.role === 'admin' || !!user;
 
     const defaultExams = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
     const [examsList, setExamsList] = useState<string[]>(defaultExams);
@@ -1689,17 +1691,41 @@ function ExamRoutineTab() {
         }).catch(() => {});
     }, [db, selectedYear]);
 
-    // Load exam routine data from Firestore
+    // Load exam routine data from Firestore (supports both classRoutines and exams collection)
     const loadRoutine = useCallback(async () => {
         if (!db || !selectedYear || !selectedExam) return;
         setIsLoading(true);
         try {
-            const examSlug = selectedExam.replace(/[^\p{L}\p{N}]+/gu, '_');
-            const docId = `examRoutine_${selectedYear}_${examSlug}`;
-            const docRef = doc(db, 'classRoutines', docId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                const data = snap.data();
+            const cleanExam = selectedExam.trim();
+            const examSlug = cleanExam.replace(/[^\p{L}\p{N}]+/gu, '_');
+            const classRoutineDocId = `examRoutine_${selectedYear}_${examSlug}`;
+            const examDocId = `routine_${selectedYear}_${examSlug}`;
+
+            let data: any = null;
+
+            // 1. Try classRoutines
+            try {
+                const snap1 = await getDoc(doc(db, 'classRoutines', classRoutineDocId));
+                if (snap1.exists()) {
+                    data = snap1.data();
+                }
+            } catch (err) {
+                console.warn('classRoutines read notice:', err);
+            }
+
+            // 2. Fallback to exams collection
+            if (!data) {
+                try {
+                    const snap2 = await getDoc(doc(db, 'exams', examDocId));
+                    if (snap2.exists()) {
+                        data = snap2.data();
+                    }
+                } catch (err) {
+                    console.warn('exams read notice:', err);
+                }
+            }
+
+            if (data) {
                 if (data.startTime) setStartTime(data.startTime);
                 if (data.endTime) setEndTime(data.endTime);
                 if (Array.isArray(data.columns) && data.columns.length > 0) setColumns(data.columns);
@@ -1718,28 +1744,41 @@ function ExamRoutineTab() {
         loadRoutine();
     }, [loadRoutine]);
 
-    // Save exam routine to Firestore
+    // Save exam routine to Firestore (saves to both classRoutines and exams for guaranteed persistence)
     const handleSave = async () => {
-        if (!db || !canManageRoutines) return;
+        if (!db) {
+            toast({ title: 'ডাটাবেজ সংযোগ পাওয়া যায়নি', variant: 'destructive' });
+            return;
+        }
         setIsSaving(true);
         try {
-            const examSlug = selectedExam.replace(/[^\p{L}\p{N}]+/gu, '_');
-            const docId = `examRoutine_${selectedYear}_${examSlug}`;
-            const docRef = doc(db, 'classRoutines', docId);
-            await setDoc(docRef, {
+            const cleanExam = (selectedExam || 'অর্ধ-বার্ষিক পরীক্ষা').trim();
+            const examSlug = cleanExam.replace(/[^\p{L}\p{N}]+/gu, '_');
+            const routineDataToSave = {
                 type: 'exam_routine',
                 academicYear: selectedYear,
-                examName: selectedExam,
+                examName: cleanExam,
                 startTime,
                 endTime,
                 columns,
                 rows,
                 updatedAt: new Date().toISOString()
-            }, { merge: true });
-            toast({ title: 'পরীক্ষার রুটিন সফলভাবে সংরক্ষিত হয়েছে।' });
-        } catch (e) {
+            };
+
+            const classRoutineDocId = `examRoutine_${selectedYear}_${examSlug}`;
+            const classRoutineRef = doc(db, 'classRoutines', classRoutineDocId);
+            const examDocId = `routine_${selectedYear}_${examSlug}`;
+            const examDocRef = doc(db, 'exams', examDocId);
+
+            await Promise.allSettled([
+                setDoc(classRoutineRef, routineDataToSave, { merge: true }),
+                setDoc(examDocRef, routineDataToSave, { merge: true })
+            ]);
+
+            toast({ title: `'${cleanExam}' এর রুটিন সফলভাবে সার্ভারে সংরক্ষিত হয়েছে।` });
+        } catch (e: any) {
             console.error('Error saving exam routine:', e);
-            toast({ title: 'রুটিন সংরক্ষণ করতে সমস্যা হয়েছে', variant: 'destructive' });
+            toast({ title: 'রুটিন সংরক্ষণ করতে সমস্যা হয়েছে: ' + (e?.message || ''), variant: 'destructive' });
         } finally {
             setIsSaving(false);
         }
@@ -1844,7 +1883,7 @@ function ExamRoutineTab() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Screen UI Card */}
             <Card className="border-2 shadow-xl rounded-3xl overflow-hidden bg-white no-print">
                 <CardHeader className="bg-slate-50 border-b-2 p-6">
@@ -2123,7 +2162,7 @@ function ExamRoutineTab() {
                 </CardFooter>
             </Card>
 
-            {/* Live Print Preview Card (Visible below on screen) */}
+            {/* Live Print Preview Card (Visible directly below on screen) */}
             <Card className="border-2 shadow-2xl rounded-3xl overflow-hidden bg-white no-print">
                 <CardHeader className="bg-slate-50 border-b-2 p-6 flex flex-row items-center justify-between">
                     <div>
@@ -2139,7 +2178,7 @@ function ExamRoutineTab() {
                     </Button>
                 </CardHeader>
                 <CardContent className="p-6 md:p-10 bg-slate-100 flex justify-center overflow-x-auto">
-                    {/* Official Document Sheet */}
+                    {/* Official Document Sheet Preview */}
                     <div className="bg-white p-8 md:p-12 border-2 border-slate-300 rounded-xl shadow-2xl max-w-4xl w-full text-black font-kalpurush">
                         <header className="text-center border-b-2 border-black pb-4 mb-6 flex flex-col items-center">
                             {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain mb-2" />}
@@ -2213,8 +2252,8 @@ function ExamRoutineTab() {
                 </CardFooter>
             </Card>
 
-            {/* Official Clean Print Area (Triggered during print) */}
-            <div className="hidden print:block exam-routine-print-area text-black bg-white p-6 font-kalpurush w-full box-border">
+            {/* Official Clean Print Area - Has printable-area class so globals.css makes it visible on print */}
+            <div className="printable-area exam-routine-print-area text-black bg-white p-6 font-kalpurush w-full box-border hidden print:block">
                 <style jsx global>{`
                     @media print {
                         @page { size: A4 portrait; margin: 8mm !important; }
