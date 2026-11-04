@@ -34,8 +34,9 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { getProxyClasses, saveProxyClass, deleteProxyClass, ProxyClass, NewProxyData } from '@/lib/proxy-data';
 import { getStaff, Staff } from '@/lib/staff-data';
 import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
-import { collection, query, where, onSnapshot, writeBatch, doc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, writeBatch, doc, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { TeacherAllocationRecord, SubjectAllocation, saveTeacherAllocation, getTeacherAllocations } from '@/lib/teacher-allocation-data';
+import { getExams, Exam } from '@/lib/exam-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
@@ -1582,7 +1583,7 @@ export default function RoutinesPage() {
                 </div>
             </main>
 
-            <div className="printable-area routine-print-container text-black bg-white hidden print:flex p-10 flex-col font-kalpurush">
+            <div className={cn("printable-area routine-print-container text-black bg-white p-10 flex-col font-kalpurush", activeSection === "exam-routine" ? "hidden print:hidden" : "hidden print:flex")}>
                 <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
                     <div className="text-center flex-grow">
@@ -1610,13 +1611,586 @@ export default function RoutinesPage() {
     );
 }
 
+interface ExamColumn {
+    id: string;
+    className: string;
+}
+
+interface ExamSubjectEntry {
+    subjectName: string;
+    subjectCode: string;
+}
+
+interface ExamRoutineRow {
+    id: string;
+    date: string;
+    day: string;
+    subjects: Record<string, ExamSubjectEntry>;
+}
+
 function ExamRoutineTab() {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const { schoolInfo } = useSchoolInfo();
+    const { toast } = useToast();
+    const { user, hasPermission } = useAuth();
+    const canManageRoutines = hasPermission('manage:routines') || user?.role === 'admin';
+
+    const defaultExams = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
+    const [examsList, setExamsList] = useState<string[]>(defaultExams);
+    const [selectedExam, setSelectedExam] = useState<string>('অর্ধ-বার্ষিক পরীক্ষা');
+    const [startTime, setStartTime] = useState<string>('১০:০০ ঘটিকা');
+    const [endTime, setEndTime] = useState<string>('০১:০০ ঘটিকা');
+
+    const [columns, setColumns] = useState<ExamColumn[]>([
+        { id: 'col-6', className: '6' },
+        { id: 'col-7', className: '7' },
+        { id: 'col-8', className: '8' },
+        { id: 'col-9', className: '9' },
+        { id: 'col-10', className: '10' },
+    ]);
+
+    const [rows, setRows] = useState<ExamRoutineRow[]>([
+        { id: 'row-1', date: '', day: '', subjects: {} }
+    ]);
+
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
+
+    // Calculate day of week in Bengali from date string (YYYY-MM-DD)
+    const getBengaliDayFromDate = (dateStr: string): string => {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return '';
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        if (isNaN(d.getTime())) return '';
+        const days = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+        return days[d.getDay()];
+    };
+
+    // Format date in Bengali for display & print
+    const formatBengaliDate = (dateStr: string) => {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return `${toBengaliNumber(parts[2])}/${toBengaliNumber(parts[1])}/${toBengaliNumber(parts[0])}`;
+        }
+        return toBengaliNumber(dateStr);
+    };
+
+    // Load available exams from database
+    useEffect(() => {
+        if (!db || !selectedYear) return;
+        getExams(db, selectedYear).then(exams => {
+            if (exams && exams.length > 0) {
+                const names = exams.map(e => e.name);
+                setExamsList(prev => Array.from(new Set([...prev, ...names])));
+            }
+        }).catch(() => {});
+    }, [db, selectedYear]);
+
+    // Load exam routine data from Firestore
+    const loadRoutine = useCallback(async () => {
+        if (!db || !selectedYear || !selectedExam) return;
+        setIsLoading(true);
+        try {
+            const examSlug = selectedExam.replace(/[^\p{L}\p{N}]+/gu, '_');
+            const docId = `examRoutine_${selectedYear}_${examSlug}`;
+            const docRef = doc(db, 'classRoutines', docId);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.startTime) setStartTime(data.startTime);
+                if (data.endTime) setEndTime(data.endTime);
+                if (Array.isArray(data.columns) && data.columns.length > 0) setColumns(data.columns);
+                if (Array.isArray(data.rows) && data.rows.length > 0) setRows(data.rows);
+            } else {
+                setRows([{ id: 'row-1', date: '', day: '', subjects: {} }]);
+            }
+        } catch (e) {
+            console.error('Error loading exam routine:', e);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [db, selectedYear, selectedExam]);
+
+    useEffect(() => {
+        loadRoutine();
+    }, [loadRoutine]);
+
+    // Save exam routine to Firestore
+    const handleSave = async () => {
+        if (!db || !canManageRoutines) return;
+        setIsSaving(true);
+        try {
+            const examSlug = selectedExam.replace(/[^\p{L}\p{N}]+/gu, '_');
+            const docId = `examRoutine_${selectedYear}_${examSlug}`;
+            const docRef = doc(db, 'classRoutines', docId);
+            await setDoc(docRef, {
+                type: 'exam_routine',
+                academicYear: selectedYear,
+                examName: selectedExam,
+                startTime,
+                endTime,
+                columns,
+                rows,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            toast({ title: 'পরীক্ষার রুটিন সফলভাবে সংরক্ষিত হয়েছে।' });
+        } catch (e) {
+            console.error('Error saving exam routine:', e);
+            toast({ title: 'রুটিন সংরক্ষণ করতে সমস্যা হয়েছে', variant: 'destructive' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Date change handler
+    const handleDateChange = (rowId: string, newDate: string) => {
+        const computedDay = getBengaliDayFromDate(newDate);
+        setRows(prev => prev.map(r => r.id === rowId ? { ...r, date: newDate, day: computedDay } : r));
+    };
+
+    // Subject select handler - automatically fetches and populates subject code
+    const handleSubjectChange = (rowId: string, colId: string, className: string, subjectName: string) => {
+        if (subjectName === 'none' || !subjectName) {
+            setRows(prev => prev.map(r => {
+                if (r.id !== rowId) return r;
+                const nextSubs = { ...r.subjects };
+                delete nextSubs[colId];
+                return { ...r, subjects: nextSubs };
+            }));
+            return;
+        }
+
+        const subjects = getSubjects(className);
+        const match = subjects.find(s => s.name === subjectName);
+        const code = match ? match.code : '';
+
+        setRows(prev => prev.map(r => {
+            if (r.id !== rowId) return r;
+            return {
+                ...r,
+                subjects: {
+                    ...r.subjects,
+                    [colId]: {
+                        subjectName,
+                        subjectCode: code
+                    }
+                }
+            };
+        }));
+    };
+
+    // Add Column
+    const handleAddColumn = () => {
+        const nextColId = `col-${Date.now()}`;
+        const existingClasses = columns.map(c => c.className);
+        const available = ['6', '7', '8', '9', '10'].find(c => !existingClasses.includes(c)) || '6';
+        setColumns(prev => [...prev, { id: nextColId, className: available }]);
+    };
+
+    // Remove Column
+    const handleRemoveColumn = (colId: string) => {
+        if (columns.length <= 1) {
+            toast({ title: 'কমপক্ষে একটি শ্রেণির কলাম থাকতে হবে', variant: 'destructive' });
+            return;
+        }
+        setColumns(prev => prev.filter(c => c.id !== colId));
+        setRows(prev => prev.map(r => {
+            const nextSubs = { ...r.subjects };
+            delete nextSubs[colId];
+            return { ...r, subjects: nextSubs };
+        }));
+    };
+
+    // Change Class of Column
+    const handleColumnClassChange = (colId: string, newClassName: string) => {
+        setColumns(prev => prev.map(c => c.id === colId ? { ...c, className: newClassName } : c));
+        setRows(prev => prev.map(r => {
+            const cur = r.subjects[colId];
+            if (!cur) return r;
+            const newSubs = getSubjects(newClassName);
+            const match = newSubs.find(s => s.name === cur.subjectName);
+            return {
+                ...r,
+                subjects: {
+                    ...r.subjects,
+                    [colId]: match 
+                        ? { subjectName: match.name, subjectCode: match.code }
+                        : { subjectName: cur.subjectName, subjectCode: '' }
+                }
+            };
+        }));
+    };
+
+    // Add Row
+    const handleAddRow = () => {
+        const newRowId = `row-${Date.now()}`;
+        setRows(prev => [...prev, { id: newRowId, date: '', day: '', subjects: {} }]);
+    };
+
+    // Remove Row
+    const handleRemoveRow = (rowId: string) => {
+        if (rows.length <= 1) {
+            toast({ title: 'কমপক্ষে একটি তারিখের রো থাকতে হবে', variant: 'destructive' });
+            return;
+        }
+        setRows(prev => prev.filter(r => r.id !== rowId));
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
+
     return (
-        <Card className="border-2 border-dashed rounded-3xl p-20 flex flex-col items-center justify-center text-center opacity-60">
-            <LayoutGrid className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-black text-slate-800">পরীক্ষার রুটিন মডিউল</h3>
-            <p className="font-bold text-muted-foreground">এই ফিচারটি নির্মাণাধীন আছে। শীঘ্রই এটি ব্যবহারের জন্য উন্মুক্ত হবে।</p>
-        </Card>
+        <div className="space-y-6">
+            {/* Screen UI Card */}
+            <Card className="border-2 shadow-xl rounded-3xl overflow-hidden bg-white no-print">
+                <CardHeader className="bg-slate-50 border-b-2 p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <CardTitle className="text-2xl font-black text-slate-800 flex items-center gap-2">
+                                <List className="h-6 w-6 text-primary" /> পরীক্ষার রুটিন
+                            </CardTitle>
+                            <CardDescription className="font-bold text-slate-600 mt-1">
+                                শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)} | পরীক্ষার সময়সূচি তৈরি ও পরিবর্তন করুন
+                            </CardDescription>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button 
+                                onClick={handlePrint} 
+                                variant="outline" 
+                                className="font-black h-11 border-2 border-primary text-primary hover:bg-primary/5 shadow-sm"
+                            >
+                                <Printer className="mr-2 h-4 w-4" /> প্রিন্ট করুন
+                            </Button>
+                            {canManageRoutines && (
+                                <Button 
+                                    onClick={handleSave} 
+                                    disabled={isSaving} 
+                                    className="font-black h-11 px-6 shadow-md"
+                                >
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    রুটিন সেভ করুন
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Top Controls: Exam Dropdown, Start Time Box, End Time Box */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-slate-200">
+                        {/* 1. পরীক্ষা নির্বাচন ড্রপডাউন বাটন */}
+                        <div className="space-y-2">
+                            <Label className="font-black text-xs text-primary flex items-center gap-1">
+                                পরীক্ষা নির্বাচন ড্রপডাউন বাটন
+                            </Label>
+                            <Select value={selectedExam} onValueChange={setSelectedExam}>
+                                <SelectTrigger className="h-11 bg-white border-2 font-black text-base shadow-sm">
+                                    <SelectValue placeholder="পরীক্ষা নির্বাচন করুন" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {examsList.map((name) => (
+                                        <SelectItem key={name} value={name} className="font-bold text-sm">
+                                            {name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* 2. পরীক্ষা শুরুর সময়ঃ সময় লেখার বক্স */}
+                        <div className="space-y-2">
+                            <Label className="font-black text-xs text-primary flex items-center gap-1">
+                                পরীক্ষা শুরুর সময়ঃ সময় লেখার বক্স থাকবে
+                            </Label>
+                            <Input 
+                                value={startTime} 
+                                onChange={(e) => setStartTime(e.target.value)} 
+                                placeholder="উদা: ১০:০০ ঘটিকা" 
+                                className="h-11 bg-white border-2 font-black text-base shadow-sm"
+                            />
+                        </div>
+
+                        {/* 3. পরীক্ষা শেষের সময়ঃ সময় লেখার বক্স */}
+                        <div className="space-y-2">
+                            <Label className="font-black text-xs text-primary flex items-center gap-1">
+                                পরীক্ষা শেষের সময়ঃ সময় লেখার বক্স থাকবে
+                            </Label>
+                            <Input 
+                                value={endTime} 
+                                onChange={(e) => setEndTime(e.target.value)} 
+                                placeholder="উদা: ০১:০০ ঘটিকা" 
+                                className="h-11 bg-white border-2 font-black text-base shadow-sm"
+                            />
+                        </div>
+                    </div>
+                </CardHeader>
+
+                <CardContent className="p-6 space-y-4">
+                    {/* Add Column and Add Row Actions Toolbar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                onClick={handleAddRow} 
+                                size="sm" 
+                                variant="outline" 
+                                className="font-black h-9 border-2 border-slate-800 text-slate-800 hover:bg-slate-50"
+                            >
+                                <Plus className="mr-1.5 h-4 w-4" /> তারিখ যোগ করুন (+)
+                            </Button>
+                            <Button 
+                                onClick={handleAddColumn} 
+                                size="sm" 
+                                variant="outline" 
+                                className="font-black h-9 border-2 border-primary text-primary hover:bg-primary/5"
+                            >
+                                <Plus className="mr-1.5 h-4 w-4" /> শ্রেণি কলাম যোগ করুন (+)
+                            </Button>
+                        </div>
+                        <span className="text-xs font-bold text-muted-foreground italic">
+                            * প্রয়োজন মতো কলাম ও রো বাড়ানো ও কমানো যাবে
+                        </span>
+                    </div>
+
+                    {/* Table View */}
+                    <div className="border-2 border-slate-800 rounded-2xl overflow-x-auto shadow-inner bg-white">
+                        <Table className="w-full border-collapse">
+                            <TableHeader className="bg-slate-100 border-b-2 border-slate-800">
+                                <TableRow className="border-b-2 border-slate-800">
+                                    {/* Col 1 Header */}
+                                    <TableHead className="w-[190px] border-r-2 border-slate-800 text-center font-black text-slate-900 p-3">
+                                        <div className="flex items-center justify-center gap-1">
+                                            <span>তারিখ যোগ করুন(+)</span>
+                                        </div>
+                                    </TableHead>
+
+                                    {/* Col 2 Header */}
+                                    <TableHead className="w-[130px] border-r-2 border-slate-800 text-center font-black text-slate-900 p-3">
+                                        বার অটো আসবে
+                                    </TableHead>
+
+                                    {/* Col 3..N Class Dropdown Headers */}
+                                    {columns.map((col) => (
+                                        <TableHead key={col.id} className="min-w-[190px] border-r-2 border-slate-800 last:border-r-0 text-center font-black text-slate-900 p-2 bg-slate-200/50">
+                                            <div className="flex items-center justify-between gap-1 bg-white p-1 rounded-xl border border-slate-400 shadow-sm">
+                                                <Select value={col.className} onValueChange={(val) => handleColumnClassChange(col.id, val)}>
+                                                    <SelectTrigger className="h-8 font-black text-xs border-0 focus:ring-0">
+                                                        <SelectValue placeholder="শ্রেণি ড্রপডাউন বাটন" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {Object.entries(classNamesMap).map(([cId, cName]) => (
+                                                            <SelectItem key={cId} value={cId} className="font-bold text-xs">
+                                                                {cName} শ্রেণি
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {columns.length > 1 && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-6 w-6 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg shrink-0" 
+                                                        onClick={() => handleRemoveColumn(col.id)} 
+                                                        title="কলাম মুছুন"
+                                                    >
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableHead>
+                                    ))}
+                                </TableRow>
+                            </TableHeader>
+
+                            <TableBody>
+                                {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={columns.length + 2} className="py-16 text-center">
+                                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />
+                                            <p className="font-bold text-slate-600">রুটিন তথ্য লোড হচ্ছে...</p>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : rows.map((row) => (
+                                    <TableRow key={row.id} className="border-b border-slate-300 hover:bg-slate-50/50 transition-colors">
+                                        {/* Date Input Cell */}
+                                        <TableCell className="border-r-2 border-slate-800 p-2 text-center align-middle bg-slate-50/30">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Input 
+                                                    type="date" 
+                                                    value={row.date} 
+                                                    onChange={(e) => handleDateChange(row.id, e.target.value)} 
+                                                    className="h-9 w-36 text-center font-bold text-xs bg-white border-2 border-slate-300" 
+                                                />
+                                                {rows.length > 1 && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 shrink-0" 
+                                                        onClick={() => handleRemoveRow(row.id)} 
+                                                        title="রো মুছুন"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Bengali Day (Auto) Cell */}
+                                        <TableCell className="border-r-2 border-slate-800 p-2 text-center align-middle font-black text-slate-800">
+                                            {row.day ? (
+                                                <Badge variant="outline" className="font-black text-xs bg-blue-50 border-blue-300 text-blue-900 px-2 py-0.5 shadow-sm">
+                                                    {row.day}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-[11px] text-muted-foreground italic">তারিখ দিন</span>
+                                            )}
+                                        </TableCell>
+
+                                        {/* Class Subject Dropdown Cells */}
+                                        {columns.map((col) => {
+                                            const entry = row.subjects[col.id];
+                                            const subList = getSubjects(col.className);
+                                            return (
+                                                <TableCell key={col.id} className="border-r-2 border-slate-800 last:border-r-0 p-2 text-center align-middle">
+                                                    <div className="space-y-1">
+                                                        <Select 
+                                                            value={entry?.subjectName || 'none'} 
+                                                            onValueChange={(val) => handleSubjectChange(row.id, col.id, col.className, val)}
+                                                        >
+                                                            <SelectTrigger className="h-9 text-xs font-bold bg-white border-2 border-slate-300 hover:border-primary transition-colors">
+                                                                <SelectValue placeholder="বিষয় সিলেক্ট করুন" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="max-h-[300px]">
+                                                                <SelectItem value="none" className="text-muted-foreground font-semibold text-xs">
+                                                                    -- পরীক্ষা নেই / বন্ধ --
+                                                                </SelectItem>
+                                                                {subList.map((sub) => (
+                                                                    <SelectItem key={sub.name} value={sub.name} className="font-bold text-xs">
+                                                                        {sub.name} ({toBengaliNumber(sub.code)})
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+
+                                                        {/* Automatically shown subject code badge */}
+                                                        {entry?.subjectName && entry.subjectName !== 'none' && (
+                                                            <div className="flex flex-col items-center pt-0.5">
+                                                                <span className="text-[11px] font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full inline-block">
+                                                                    বিষয় কোড: {toBengaliNumber(entry.subjectCode) || '-'}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            );
+                                        })}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+
+                <CardFooter className="bg-slate-50 border-t-2 p-6 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            onClick={handleAddRow} 
+                            variant="outline" 
+                            className="font-black h-10 border-2 shadow-sm"
+                        >
+                            <Plus className="mr-1.5 h-4 w-4" /> নতুন তারিখ যোগ করুন
+                        </Button>
+                        <Button 
+                            onClick={handleAddColumn} 
+                            variant="outline" 
+                            className="font-black h-10 border-2 shadow-sm"
+                        >
+                            <Plus className="mr-1.5 h-4 w-4" /> নতুন শ্রেণি কলাম যোগ করুন
+                        </Button>
+                    </div>
+                    {canManageRoutines && (
+                        <Button 
+                            onClick={handleSave} 
+                            disabled={isSaving} 
+                            size="lg" 
+                            className="font-black h-11 px-8 shadow-md"
+                        >
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            রুটিন সংরক্ষণ করুন
+                        </Button>
+                    )}
+                </CardFooter>
+            </Card>
+
+            {/* Official Clean Print Area */}
+            <div className="hidden print:block exam-routine-print-area text-black bg-white p-6 font-kalpurush w-full box-border">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 8mm !important; }
+                        .exam-routine-print-area { padding: 0 !important; margin: 0 !important; border: none !important; width: 100% !important; display: block !important; }
+                        table { border-collapse: collapse !important; border: 1.5px solid black !important; width: 100% !important; }
+                        th, td { border: 1.5px solid black !important; padding: 6px !important; text-align: center; }
+                        .no-print { display: none !important; }
+                    }
+                `}</style>
+                <header className="text-center border-b-2 border-black pb-3 mb-4 flex flex-col items-center">
+                    {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-14 h-14 object-contain mb-1" />}
+                    <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
+                    <p className="text-xs font-bold">{schoolInfo.address}</p>
+                    <div className="mt-2 inline-block border-2 border-black px-6 py-1 rounded-full font-black text-sm uppercase bg-slate-100">
+                        {selectedExam} - {toBengaliNumber(selectedYear)}
+                    </div>
+                    <p className="text-xs font-bold mt-2">
+                        পরীক্ষার সময়: {toBengaliNumber(startTime)} হতে {toBengaliNumber(endTime)}
+                    </p>
+                </header>
+
+                <table className="w-full text-xs">
+                    <thead>
+                        <tr className="bg-slate-100 font-black">
+                            <th className="w-28">তারিখ</th>
+                            <th className="w-24">বার</th>
+                            {columns.map(col => (
+                                <th key={col.id}>{classNamesMap[col.className] || col.className} শ্রেণি</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map(row => (
+                            <tr key={row.id}>
+                                <td className="font-bold">{formatBengaliDate(row.date)}</td>
+                                <td className="font-bold">{row.day || '-'}</td>
+                                {columns.map(col => {
+                                    const entry = row.subjects[col.id];
+                                    return (
+                                        <td key={col.id} className="font-bold">
+                                            {entry?.subjectName && entry.subjectName !== 'none' ? (
+                                                <div>
+                                                    <div>{entry.subjectName}</div>
+                                                    {entry.subjectCode && (
+                                                        <div className="text-[10px] text-slate-700 font-black mt-0.5">
+                                                            (কোড: {toBengaliNumber(entry.subjectCode)})
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-400">-</span>
+                                            )}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                <footer className="mt-16 flex justify-between px-6 pt-4">
+                    <div className="w-44 border-t-2 border-black text-center font-bold text-xs pt-1">পরীক্ষা নিয়ন্ত্রক</div>
+                    <div className="w-44 border-t-2 border-black text-center font-bold text-xs pt-1">প্রধান শিক্ষক</div>
+                </footer>
+            </div>
+        </div>
     );
 }
 
