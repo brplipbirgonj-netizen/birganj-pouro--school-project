@@ -322,7 +322,7 @@ function StudentProfileSearchContent() {
             const classStudents = classStudentsSnap.docs.map(studentFromDoc);
 
             for (const exam of exams) {
-                if (!exam.classes.includes(foundStudent.className)) continue;
+                if (exam.classes && Array.isArray(exam.classes) && !exam.classes.includes(foundStudent.className)) continue;
                 
                 const allResults = await getAllResults(db, selectedYear, exam.name);
                 const classRes = allResults.filter(r => r.className === foundStudent.className);

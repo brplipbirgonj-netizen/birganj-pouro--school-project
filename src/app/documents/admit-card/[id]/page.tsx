@@ -96,7 +96,7 @@ export default function IndividualAdmitCardPage() {
                                             <SelectValue placeholder="পরীক্ষা নির্বাচন করুন" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {exams.filter(e => e.classes.includes(student.className)).map(exam => (
+                                            {exams.filter(e => !e.classes || !Array.isArray(e.classes) || e.classes.includes(student.className)).map(exam => (
                                                 <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>
                                             ))}
                                         </SelectContent>

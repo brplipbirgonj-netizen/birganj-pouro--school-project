@@ -58,15 +58,27 @@ export const getExams = async (db: Firestore, academicYear: string): Promise<Exa
         if (querySnapshot.empty) {
             exams = await createInitialExams(db, academicYear);
         } else {
-            exams = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Exam));
+            exams = querySnapshot.docs
+                .filter(doc => !doc.id.startsWith('routine_'))
+                .map(doc => {
+                    const data = doc.data();
+                    const trimmedName = typeof data.name === 'string' ? data.name.trim() : '';
+                    return {
+                        id: doc.id,
+                        ...data,
+                        name: trimmedName,
+                        classes: Array.isArray(data.classes) ? data.classes : ['6', '7', '8', '9', '10']
+                    } as Exam;
+                })
+                .filter(exam => Boolean(exam.name));
         }
         
         // Deduplicate based on name
-        const seen = new Set();
+        const seen = new Set<string>();
         return exams.filter(exam => {
-            const duplicate = seen.has(exam.name);
+            if (!exam.name || seen.has(exam.name)) return false;
             seen.add(exam.name);
-            return !duplicate;
+            return true;
         });
     } catch(e) {
         console.error("Error getting exams:", e);

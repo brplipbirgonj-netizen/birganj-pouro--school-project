@@ -290,7 +290,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <Label>পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
                         <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
-                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-opt-${e.id || idx}-${e.name}`} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
@@ -631,7 +631,7 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                     <Label className="text-xs font-bold">পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
                         <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
-                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-opt-${e.id || idx}-${e.name}`} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
@@ -1054,7 +1054,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                     <Label className="font-bold text-xs">পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
                         <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
-                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-opt-${e.id || idx}-${e.name}`} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
@@ -1371,7 +1371,7 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                     <Select value={examName} onValueChange={setExamName}>
                         <SelectTrigger className="h-11 border-2 font-black"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                         <SelectContent>
-                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                            {exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-opt-${e.id || idx}-${e.name}`} value={e.name}>{e.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -1947,7 +1947,7 @@ function MeritListTab({ allStudents }: { allStudents: Student[] }) {
                     <Label className="text-xs font-bold">পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
                         <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
-                        <SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-opt-${e.id || idx}-${e.name}`} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
@@ -2408,7 +2408,7 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <Select value={searchExam} onValueChange={setSearchExam}>
                                     <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                                     <SelectContent>
-                                        {exams.map(e => <SelectItem key={e.id} value={e.name} className="font-bold">{e.name}</SelectItem>)}
+                                        {exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-srch-${e.id || idx}-${e.name}`} value={e.name} className="font-bold">{e.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
