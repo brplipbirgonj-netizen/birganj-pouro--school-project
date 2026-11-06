@@ -2807,37 +2807,35 @@ function ExamAttendanceSheetTab() {
     const renderSingleSheet = (pageRows: typeof displayStudents, pageIdx: number, totalPages: number) => (
         <div key={pageIdx} className="w-full text-black font-kalpurush bg-white p-2 attendance-page-sheet">
             {/* Header Section */}
-            <header className="flex items-center justify-between pb-2 mb-2 border-b-2 border-black">
-                <div className="w-20 shrink-0 flex items-center justify-start">
+            <header className="flex items-center justify-between pb-1.5 mb-1 border-b-2 border-black">
+                <div className="w-16 shrink-0 flex items-center justify-start">
                     {schoolInfo.logoUrl ? (
-                        <img src={schoolInfo.logoUrl} alt="Logo" className="w-14 h-14 object-contain" />
+                        <img src={schoolInfo.logoUrl} alt="Logo" className="w-12 h-12 object-contain" />
                     ) : (
-                        <div className="w-12 h-12 rounded-full border-2 border-black flex items-center justify-center font-black text-xs">
+                        <div className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center font-black text-[10px]">
                             লোগো
                         </div>
                     )}
                 </div>
 
-                <div className="text-center flex-1 px-2">
-                    <h1 className="text-2xl md:text-3xl font-black text-black leading-tight tracking-wide">
+                <div className="text-center flex-1 px-1">
+                    <h1 className="text-xl md:text-2xl font-black text-black leading-tight tracking-wide">
                         {schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'}
                     </h1>
-                    <p className="text-xs md:text-sm font-black text-black mt-0.5">
-                        শিক্ষাবর্ষ : {toBengaliNumber(selectedYear)} খ্রি.
-                    </p>
-                    <p className="text-sm md:text-base font-black text-black mt-0.5">
-                        {selectedExam} - {toBengaliNumber(selectedYear)} খ্রি.
-                    </p>
-                    <div className="mt-1 inline-block">
-                        <h2 className="text-sm md:text-base font-black text-black underline underline-offset-4 tracking-wider pb-0.5">
+                    <div className="flex items-center justify-center gap-3 text-xs font-black text-black mt-0.5">
+                        <span>শিক্ষাবর্ষ : {toBengaliNumber(selectedYear)} খ্রি.</span>
+                        <span>{selectedExam} - {toBengaliNumber(selectedYear)} খ্রি.</span>
+                    </div>
+                    <div className="mt-0.5 inline-block">
+                        <h2 className="text-xs md:text-sm font-black text-black underline underline-offset-4 tracking-wider">
                             পরীক্ষায় অংশগ্রহণকারী শিক্ষার্থীর নাম ও স্বাক্ষর
                         </h2>
                     </div>
                 </div>
 
-                <div className="w-20 shrink-0 text-right">
+                <div className="w-16 shrink-0 text-right">
                     {totalPages > 1 && (
-                        <span className="text-xs font-black text-slate-800 border border-slate-400 px-2 py-0.5 rounded">
+                        <span className="text-[11px] font-black text-slate-800 border border-slate-400 px-1.5 py-0.5 rounded">
                             পৃষ্ঠা : {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(totalPages)}
                         </span>
                     )}
@@ -2845,7 +2843,7 @@ function ExamAttendanceSheetTab() {
             </header>
 
             {/* Class & Section Sub-header */}
-            <div className="flex justify-between items-center text-xs md:text-sm font-black text-black px-1 mb-1.5">
+            <div className="flex justify-between items-center text-xs font-black text-black px-1 mb-1">
                 <div>
                     শ্রেণি : {classNamesMap[selectedClass] || selectedClass} শ্রেণি
                 </div>
@@ -2859,7 +2857,7 @@ function ExamAttendanceSheetTab() {
                 <table className="w-full border-collapse border-2 border-black text-black table-fixed">
                     <thead>
                         {/* Row 1: বিষয়ের নাম */}
-                        <tr className="h-8">
+                        <tr className="h-6 print:h-[22px]">
                             <th colSpan={2} style={{ width: '24%' }} className="border border-black p-1 text-center font-black text-xs bg-slate-50">
                                 বিষয়ের নাম
                             </th>
@@ -2875,7 +2873,7 @@ function ExamAttendanceSheetTab() {
                         </tr>
 
                         {/* Row 2: তারিখ */}
-                        <tr className="h-7">
+                        <tr className="h-5 print:h-[18px]">
                             <th colSpan={2} style={{ width: '24%' }} className="border border-black p-0.5 text-center font-black text-xs bg-slate-50">
                                 তারিখ
                             </th>
@@ -2891,7 +2889,7 @@ function ExamAttendanceSheetTab() {
                         </tr>
 
                         {/* Row 3: ক্লাস রোল, শিক্ষার্থীর নাম, স্বাক্ষর */}
-                        <tr className="h-7 bg-slate-50 font-black text-xs">
+                        <tr className="h-5 print:h-[18px] bg-slate-50 font-black text-xs">
                             <th style={{ width: '4%' }} className="border border-black p-0.5 text-center font-black text-xs">
                                 ক্লাস রোল
                             </th>
@@ -2913,7 +2911,7 @@ function ExamAttendanceSheetTab() {
                     <tbody>
                         {/* Student Rows - FULL name completely displayed (no truncation, no dots), guaranteed room */}
                         {pageRows.map((st, sIdx) => (
-                            <tr key={`row-${st.id || sIdx}`} className={cn("hover:bg-slate-50/50", rowsPerPage <= 10 ? "h-12 print:h-[46px]" : rowsPerPage <= 15 ? "h-10 print:h-[38px]" : "h-8 print:h-[29px]")}>
+                            <tr key={`row-${st.id || sIdx}`} className={cn("hover:bg-slate-50/50", rowsPerPage <= 10 ? "h-10 print:h-[35px]" : rowsPerPage <= 15 ? "h-9 print:h-[30px]" : "h-8 print:h-[25px]")}>
                                 <td style={{ width: '4%' }} className="border border-black p-0.5 text-center font-bold text-xs align-middle">
                                     {st.roll ? toBengaliNumber(st.roll) : ''}
                                 </td>
@@ -2933,7 +2931,7 @@ function ExamAttendanceSheetTab() {
                         ))}
 
                         {/* Last Row: কক্ষ পরিদর্শকের স্বাক্ষর */}
-                        <tr className={cn("font-black text-xs bg-slate-50/30", rowsPerPage <= 10 ? "h-12 print:h-[46px]" : "h-9 print:h-9")}>
+                        <tr className={cn("font-black text-xs bg-slate-50/30", rowsPerPage <= 10 ? "h-10 print:h-[35px]" : "h-8 print:h-[28px]")}>
                             <td colSpan={2} style={{ width: '24%' }} className="border border-black p-1 text-center font-black text-xs align-middle">
                                 কক্ষ পরিদর্শকের স্বাক্ষর
                             </td>
@@ -3137,9 +3135,12 @@ function ExamAttendanceSheetTab() {
                         .attendance-page-sheet {
                             page-break-after: always !important;
                             break-after: page !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
                             display: block !important;
                             box-sizing: border-box !important;
-                            padding: 2mm 0 !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
                             width: 100% !important;
                         }
                         .attendance-page-sheet:last-child {
@@ -3151,6 +3152,8 @@ function ExamAttendanceSheetTab() {
                             border: 2px solid black !important; 
                             width: 100% !important; 
                             table-layout: fixed !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
                         }
                         th, td { 
                             border: 1px solid black !important; 
