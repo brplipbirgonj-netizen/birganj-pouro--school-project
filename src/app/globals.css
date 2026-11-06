@@ -68,7 +68,6 @@
   @media print {
     @page {
       margin: 5mm;
-      size: auto;
     }
     
     html, body {
