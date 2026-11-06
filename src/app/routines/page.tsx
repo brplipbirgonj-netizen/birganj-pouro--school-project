@@ -2601,6 +2601,7 @@ function ExamAttendanceSheetTab() {
     const [selectedClass, setSelectedClass] = useState<string>('6');
     const [selectedGroup, setSelectedGroup] = useState<string>('all');
     const [extraBlankRows, setExtraBlankRows] = useState<number>(0);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(24);
 
     const [subjectsWithDates, setSubjectsWithDates] = useState<Array<{ subjectName: string; date: string }>>([]);
     const [students, setStudents] = useState<Student[]>([]);
@@ -2665,7 +2666,6 @@ function ExamAttendanceSheetTab() {
             }
 
             if (data && Array.isArray(data.rows) && Array.isArray(data.columns)) {
-                // Find all columns matching this class
                 const targetCols = data.columns.filter((c: any) => c.className === selectedClass);
                 const colIds = targetCols.map((c: any) => c.id);
 
@@ -2756,14 +2756,13 @@ function ExamAttendanceSheetTab() {
         return subjectsWithDates.filter(s => Boolean(s.subjectName && s.subjectName !== 'none'));
     }, [subjectsWithDates]);
 
-    // Proportional column widths ensuring all columns fit 100% within one single page:
-    // Roll takes 4%, Name takes 20%, and remaining 76% is evenly distributed across subjects
+    // Proportional column widths ensuring all columns fit within 100% width
     const subColWidth = useMemo(() => {
         if (displayColumns.length === 0) return '76%';
         return (76 / displayColumns.length).toFixed(3) + '%';
     }, [displayColumns.length]);
 
-    // Students list with optional extra blank rows
+    // Full students list with optional extra blank rows
     const displayStudents = useMemo(() => {
         const rows: Array<{ id: string; roll: number | string; studentNameBn: string }> = students.map(s => ({
             id: s.id,
@@ -2771,31 +2770,49 @@ function ExamAttendanceSheetTab() {
             studentNameBn: s.studentNameBn || (s as any).name || ''
         }));
 
-        const countToAdd = rows.length === 0 ? 15 : extraBlankRows;
-        for (let i = 0; i < countToAdd; i++) {
+        for (let i = 0; i < extraBlankRows; i++) {
             rows.push({
                 id: `extra-${i}`,
-                roll: rows.length === 0 ? (i + 1) : '',
+                roll: '',
                 studentNameBn: ''
             });
         }
+
+        if (rows.length === 0) {
+            for (let i = 0; i < 15; i++) {
+                rows.push({
+                    id: `blank-${i}`,
+                    roll: (i + 1),
+                    studentNameBn: ''
+                });
+            }
+        }
         return rows;
     }, [students, extraBlankRows]);
+
+    // Chunk students into paginated sheets of rowsPerPage (default 24 students per page)
+    const studentPages = useMemo(() => {
+        const pages: typeof displayStudents[] = [];
+        for (let i = 0; i < displayStudents.length; i += rowsPerPage) {
+            pages.push(displayStudents.slice(i, i + rowsPerPage));
+        }
+        return pages.length > 0 ? pages : [[]];
+    }, [displayStudents, rowsPerPage]);
 
     const handlePrint = () => {
         window.print();
     };
 
-    // Render the attendance sheet table and clean header
-    const renderAttendanceSheet = () => (
-        <div className="w-full text-black font-kalpurush bg-white p-2">
+    // Render an individual page sheet with header, students, and invigilator footer
+    const renderSingleSheet = (pageRows: typeof displayStudents, pageIdx: number, totalPages: number) => (
+        <div key={pageIdx} className="w-full text-black font-kalpurush bg-white p-2 attendance-page-sheet">
             {/* Header Section */}
             <header className="flex items-center justify-between pb-2 mb-2 border-b-2 border-black">
                 <div className="w-20 shrink-0 flex items-center justify-start">
                     {schoolInfo.logoUrl ? (
-                        <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain" />
+                        <img src={schoolInfo.logoUrl} alt="Logo" className="w-14 h-14 object-contain" />
                     ) : (
-                        <div className="w-14 h-14 rounded-full border-2 border-black flex items-center justify-center font-black text-xs">
+                        <div className="w-12 h-12 rounded-full border-2 border-black flex items-center justify-center font-black text-xs">
                             লোগো
                         </div>
                     )}
@@ -2818,8 +2835,12 @@ function ExamAttendanceSheetTab() {
                     </div>
                 </div>
 
-                <div className="w-20 shrink-0">
-                    {/* Balanced spacer for centered header alignment */}
+                <div className="w-20 shrink-0 text-right">
+                    {totalPages > 1 && (
+                        <span className="text-xs font-black text-slate-800 border border-slate-400 px-2 py-0.5 rounded">
+                            পৃষ্ঠা : {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(totalPages)}
+                        </span>
+                    )}
                 </div>
             </header>
 
@@ -2833,12 +2854,12 @@ function ExamAttendanceSheetTab() {
                 </div>
             </div>
 
-            {/* Attendance Table - table-fixed with exact 100% width prevents horizontal overflow, while allowing vertical page breaking */}
-            <div className="w-full overflow-x-auto print:overflow-visible">
+            {/* Attendance Table */}
+            <div className="w-full">
                 <table className="w-full border-collapse border-2 border-black text-black table-fixed">
-                    <thead className="print:table-header-group">
+                    <thead>
                         {/* Row 1: বিষয়ের নাম */}
-                        <tr className="h-9">
+                        <tr className="h-8">
                             <th colSpan={2} style={{ width: '24%' }} className="border border-black p-1 text-center font-black text-xs bg-slate-50">
                                 বিষয়ের নাম
                             </th>
@@ -2846,7 +2867,7 @@ function ExamAttendanceSheetTab() {
                                 <th 
                                     key={`head-sub-${idx}`} 
                                     style={{ width: subColWidth }} 
-                                    className="border border-black p-1 text-center font-black text-[11px] leading-tight break-words"
+                                    className="border border-black p-0.5 text-center font-black text-[11px] leading-tight break-words"
                                 >
                                     {col.subjectName || ''}
                                 </th>
@@ -2890,9 +2911,9 @@ function ExamAttendanceSheetTab() {
                     </thead>
 
                     <tbody>
-                        {/* Student Rows - Full name visibility (no truncation or ellipses), plenty of vertical height */}
-                        {displayStudents.map((st, sIdx) => (
-                            <tr key={`row-${st.id || sIdx}`} className="h-10 hover:bg-slate-50/50 print:h-10">
+                        {/* Student Rows - FULL name completely displayed (no truncation, no dots), guaranteed room */}
+                        {pageRows.map((st, sIdx) => (
+                            <tr key={`row-${st.id || sIdx}`} className="h-8 hover:bg-slate-50/50 print:h-[29px]">
                                 <td style={{ width: '4%' }} className="border border-black p-0.5 text-center font-bold text-xs align-middle">
                                     {st.roll ? toBengaliNumber(st.roll) : ''}
                                 </td>
@@ -2903,16 +2924,16 @@ function ExamAttendanceSheetTab() {
                                     <td 
                                         key={`cell-${sIdx}-${cIdx}`} 
                                         style={{ width: subColWidth }} 
-                                        className="border border-black p-0.5 text-center"
+                                        className="border border-black p-0.5 text-center align-middle"
                                     >
-                                        {/* Blank signature cell */}
+                                        {/* Blank signature box */}
                                     </td>
                                 ))}
                             </tr>
                         ))}
 
                         {/* Last Row: কক্ষ পরিদর্শকের স্বাক্ষর */}
-                        <tr className="h-10 font-black text-xs bg-slate-50/30 print:h-10">
+                        <tr className="h-9 font-black text-xs bg-slate-50/30 print:h-9">
                             <td colSpan={2} style={{ width: '24%' }} className="border border-black p-1 text-center font-black text-xs align-middle">
                                 কক্ষ পরিদর্শকের স্বাক্ষর
                             </td>
@@ -2920,7 +2941,7 @@ function ExamAttendanceSheetTab() {
                                 <td 
                                     key={`invig-${cIdx}`} 
                                     style={{ width: subColWidth }} 
-                                    className="border border-black p-0.5 text-center"
+                                    className="border border-black p-0.5 text-center align-middle"
                                 >
                                     {/* Invigilator signature box */}
                                 </td>
@@ -2943,7 +2964,7 @@ function ExamAttendanceSheetTab() {
                                 <ClipboardCheck className="h-6 w-6 text-teal-700" /> পরীক্ষার হাজিরা শিট (Exam Attendance Sheet)
                             </CardTitle>
                             <CardDescription className="text-xs font-bold text-slate-600 mt-1">
-                                রুটিনের বিষয়ের সংখ্যা অনুযায়ী সর্বোচ্চ ১৪টি কলামসহ এক পাতায় সুন্দরভাবে সমন্বিত হবে।
+                                শেষ রোল পর্যন্ত সকল শিক্ষার্থীর নাম সম্পূর্ণভাবে পাতায় পাতায় নির্ভুলভাবে সমন্বিত হবে।
                             </CardDescription>
                         </div>
                         <Button onClick={handlePrint} size="lg" className="font-black h-11 px-8 shadow-md bg-teal-700 hover:bg-teal-800 text-white">
@@ -2952,7 +2973,7 @@ function ExamAttendanceSheetTab() {
                     </div>
 
                     {/* Filter Dropdowns */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-4 border-t">
                         {/* Exam Select */}
                         <div className="space-y-1.5">
                             <Label className="font-black text-xs text-teal-900">পরীক্ষা নির্বাচন:</Label>
@@ -3005,23 +3026,39 @@ function ExamAttendanceSheetTab() {
                             </div>
                         ) : (
                             <div className="space-y-1.5">
-                                <Label className="font-black text-xs text-teal-900">অতিরিক্ত খালি রো (শিক্ষার্থী):</Label>
-                                <Input 
-                                    type="number" 
-                                    min="0" 
-                                    max="50" 
-                                    value={extraBlankRows} 
-                                    onChange={(e) => setExtraBlankRows(parseInt(e.target.value, 10) || 0)} 
-                                    className="h-10 bg-white border-2 font-bold text-sm" 
-                                    placeholder="০"
-                                />
+                                <Label className="font-black text-xs text-teal-900">প্রতি পাতায় শিক্ষার্থী সংখ্যা:</Label>
+                                <Select value={String(rowsPerPage)} onValueChange={(v) => setRowsPerPage(Number(v))}>
+                                    <SelectTrigger className="h-10 bg-white border-2 font-bold text-sm">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="20">২০ জন করে পাতা</SelectItem>
+                                        <SelectItem value="22">২২ জন করে পাতা</SelectItem>
+                                        <SelectItem value="24">২৪ জন করে পাতা (আদর্শ)</SelectItem>
+                                        <SelectItem value="26">২৬ জন করে পাতা</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         )}
+
+                        {/* Extra Blank Rows */}
+                        <div className="space-y-1.5">
+                            <Label className="font-black text-xs text-teal-900">অতিরিক্ত খালি রো:</Label>
+                            <Input 
+                                type="number" 
+                                min="0" 
+                                max="50" 
+                                value={extraBlankRows} 
+                                onChange={(e) => setExtraBlankRows(parseInt(e.target.value, 10) || 0)} 
+                                className="h-10 bg-white border-2 font-bold text-sm" 
+                                placeholder="০"
+                            />
+                        </div>
 
                         {/* Summary Badges */}
                         <div className="flex flex-col justify-end">
                             <div className="bg-teal-50 border border-teal-200 rounded-xl p-2.5 flex items-center justify-between text-xs font-bold text-teal-900">
-                                <span>মোট কলাম: {toBengaliNumber(displayColumns.length + 2)}টি</span>
+                                <span>মোট পাতা: {toBengaliNumber(studentPages.length)}টি</span>
                                 <span>শিক্ষার্থী: {toBengaliNumber(students.length)} জন</span>
                             </div>
                         </div>
@@ -3042,7 +3079,7 @@ function ExamAttendanceSheetTab() {
                                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                     <span>
                                         {displayColumns.length > 0 
-                                            ? `পরীক্ষার রুটিন থেকে বিষয় (${toBengaliNumber(displayColumns.length)}টি) ও তারিখ অনুযায়ী মোট ${toBengaliNumber(displayColumns.length + 2)}টি কলাম এক পাতায় সাজানো হয়েছে।` 
+                                            ? `মোট ${toBengaliNumber(students.length)} জন শিক্ষার্থীর জন্য ${toBengaliNumber(studentPages.length)} পাতায় হাজিরা শিট তৈরি হয়েছে (১ম রোল থেকে ${toBengaliNumber(displayStudents.length)} পর্যন্ত সকলের নাম সম্পূর্ণ দৃশ্যমান)।` 
                                             : 'রুটিনে কোনো বিষয় পাওয়া যায়নি।'}
                                     </span>
                                 </>
@@ -3052,24 +3089,28 @@ function ExamAttendanceSheetTab() {
                 </CardContent>
             </Card>
 
-            {/* Screen Preview Container */}
-            <Card className="border-2 shadow-xl bg-white no-print overflow-hidden">
-                <CardHeader className="bg-slate-100/70 border-b p-4 flex flex-row items-center justify-between">
-                    <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
-                        <Printer className="h-4 w-4 text-primary" /> লাইভ প্রিন্ট প্রিভিউ (ল্যান্ডস্কেপ ফরম্যাট)
-                    </CardTitle>
-                    <Button onClick={handlePrint} size="sm" className="font-black h-9 bg-teal-700 hover:bg-teal-800 text-white">
-                        <Printer className="mr-1.5 h-3.5 w-3.5" /> প্রিন্ট করুন
-                    </Button>
-                </CardHeader>
-                <CardContent className="p-4 md:p-6 bg-slate-200/50 overflow-x-auto flex justify-center">
-                    <div className="bg-white p-4 md:p-6 border-2 border-slate-300 rounded-xl shadow-xl w-full min-w-[950px] max-w-[1400px]">
-                        {renderAttendanceSheet()}
-                    </div>
-                </CardContent>
-            </Card>
+            {/* Screen Preview Container (Shows all pages) */}
+            <div className="space-y-6 no-print">
+                {studentPages.map((pageRows, pIdx) => (
+                    <Card key={pIdx} className="border-2 shadow-xl bg-white overflow-hidden">
+                        <CardHeader className="bg-slate-100/70 border-b p-3 flex flex-row items-center justify-between">
+                            <CardTitle className="text-sm font-black text-slate-800 flex items-center gap-2">
+                                <Printer className="h-4 w-4 text-primary" /> পৃষ্ঠা {toBengaliNumber(pIdx + 1)} এর প্রিভিউ ({toBengaliNumber(pageRows.length)} জন শিক্ষার্থী)
+                            </CardTitle>
+                            <Button onClick={handlePrint} size="sm" className="font-black h-8 bg-teal-700 hover:bg-teal-800 text-white">
+                                <Printer className="mr-1.5 h-3.5 w-3.5" /> প্রিন্ট করুন
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="p-4 md:p-6 bg-slate-200/50 overflow-x-auto flex justify-center">
+                            <div className="bg-white p-4 md:p-6 border-2 border-slate-300 rounded-xl shadow-xl w-full min-w-[950px] max-w-[1400px]">
+                                {renderSingleSheet(pageRows, pIdx, studentPages.length)}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
 
-            {/* Official Clean Print Area (Strict Landscape) */}
+            {/* Official Clean Print Area (Strict Landscape, Clean Page Breaks) */}
             <div className="printable-area exam-attendance-print-area text-black bg-white font-kalpurush w-full box-border hidden print:block">
                 <style jsx global>{`
                     @media print {
@@ -3083,8 +3124,6 @@ function ExamAttendanceSheetTab() {
                             background: white !important;
                             color: black !important;
                             width: 100% !important;
-                            height: auto !important;
-                            overflow: visible !important;
                         }
                         .printable-area.exam-attendance-print-area {
                             position: static !important;
@@ -3093,32 +3132,30 @@ function ExamAttendanceSheetTab() {
                             padding: 0 !important;
                             margin: 0 !important;
                             display: block !important;
-                            overflow: visible !important;
                         }
-                        .printable-area.exam-attendance-print-area div {
-                            overflow: visible !important;
+                        .attendance-page-sheet {
+                            page-break-after: always !important;
+                            break-after: page !important;
+                            display: block !important;
+                            box-sizing: border-box !important;
+                            padding: 2mm 0 !important;
+                            width: 100% !important;
                         }
-                        .printable-area.exam-attendance-print-area table { 
+                        .attendance-page-sheet:last-child {
+                            page-break-after: avoid !important;
+                            break-after: avoid !important;
+                        }
+                        table { 
                             border-collapse: collapse !important; 
                             border: 2px solid black !important; 
                             width: 100% !important; 
                             table-layout: fixed !important;
-                            page-break-inside: auto !important;
                         }
-                        .printable-area.exam-attendance-print-area thead {
-                            display: table-header-group !important;
-                        }
-                        .printable-area.exam-attendance-print-area tr {
-                            page-break-inside: avoid !important;
-                            break-inside: avoid !important;
-                        }
-                        .printable-area.exam-attendance-print-area th, 
-                        .printable-area.exam-attendance-print-area td { 
+                        th, td { 
                             border: 1px solid black !important; 
                             text-align: center !important; 
                             color: black !important;
-                            padding: 2px 1px !important;
-                            word-break: break-word !important;
+                            padding: 1.5px 1px !important;
                         }
                         .no-print { 
                             display: none !important; 
@@ -3126,7 +3163,7 @@ function ExamAttendanceSheetTab() {
                     }
                 `}</style>
 
-                {renderAttendanceSheet()}
+                {studentPages.map((pageRows, pIdx) => renderSingleSheet(pageRows, pIdx, studentPages.length))}
             </div>
         </div>
     );
