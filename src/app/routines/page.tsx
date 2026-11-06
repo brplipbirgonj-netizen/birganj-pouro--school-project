@@ -17,7 +17,7 @@ import { getFullRoutine, saveRoutinesBatch, ClassRoutine, ROUTINE_COLLECTION } f
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
-    Copy, Printer, FilePen, FilePlus, Users, Info, User, 
+    Copy, Printer, ClipboardCheck, FileCheck, FilePen, FilePlus, Users, Info, User, 
     FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX, Briefcase, BookOpen, GraduationCap
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,7 @@ import { getStaffAttendanceByDate } from '@/lib/staff-attendance-data';
 import { collection, query, where, onSnapshot, writeBatch, doc, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { TeacherAllocationRecord, SubjectAllocation, saveTeacherAllocation, getTeacherAllocations } from '@/lib/teacher-allocation-data';
 import { getExams, Exam } from '@/lib/exam-data';
+import { Student, studentFromDoc } from '@/lib/student-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
@@ -1469,6 +1470,7 @@ export default function RoutinesPage() {
             items.push({ id: 'allocation', label: 'শিক্ষক-বিষয় বণ্টন', icon: Briefcase, color: 'text-emerald-600 bg-emerald-50' });
         }
         items.push({ id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' });
+        items.push({ id: 'exam-attendance', label: 'পরীক্ষার হাজিরা শিট', icon: ClipboardCheck, color: 'text-teal-600 bg-teal-50' });
         
         if (isAdmin) {
             items.push({ id: 'copy-routine', label: 'রুটিন কপি করুন', icon: Copy, color: 'text-amber-600 bg-amber-50' });
@@ -1557,6 +1559,9 @@ export default function RoutinesPage() {
                                     {activeSection === 'exam-routine' && (
                                         <ExamRoutineTab />
                                     )}
+                                    {activeSection === 'exam-attendance' && (
+                                        <ExamAttendanceSheetTab />
+                                    )}
                                     {activeSection === 'copy-routine' && (
                                         <CopyRoutineTab 
                                             onCopy={handleCopyRoutine} 
@@ -1583,7 +1588,7 @@ export default function RoutinesPage() {
                 </div>
             </main>
 
-            {activeSection !== 'exam-routine' && (
+            {activeSection !== 'exam-routine' && activeSection !== 'exam-attendance' && (
             <div className={cn("printable-area routine-print-container text-black bg-white p-10 flex-col font-kalpurush", "hidden print:flex")}>
                 <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
@@ -2577,5 +2582,523 @@ function BulkRoutineUploadTab({ onRoutineParsed }: { onRoutineParsed: (data: Rec
                 <Button className="font-black"><FileUp className="mr-2 h-4 w-4" /> ফাইল সিলেক্ট করুন</Button>
             </div>
         </Card>
+    );
+}
+
+
+// ==========================================
+// পরীক্ষার হাজিরা শিট (Exam Attendance Sheet)
+// ==========================================
+function ExamAttendanceSheetTab() {
+    const db = useFirestore();
+    const { selectedYear } = useAcademicYear();
+    const { schoolInfo } = useSchoolInfo();
+    const { toast } = useToast();
+
+    const defaultExams = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
+    const [examsList, setExamsList] = useState<string[]>(defaultExams);
+    const [selectedExam, setSelectedExam] = useState<string>('অর্ধ-বার্ষিক পরীক্ষা');
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [selectedGroup, setSelectedGroup] = useState<string>('all');
+    const [extraBlankRows, setExtraBlankRows] = useState<number>(0);
+
+    const [subjectsWithDates, setSubjectsWithDates] = useState<Array<{ subjectName: string; date: string }>>([]);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [isLoadingRoutine, setIsLoadingRoutine] = useState<boolean>(false);
+    const [isLoadingStudents, setIsLoadingStudents] = useState<boolean>(false);
+
+    const groupNamesMap: Record<string, string> = {
+        'all': 'সকল শাখা',
+        'science': 'বিজ্ঞান',
+        'arts': 'মানবিক',
+        'humanities': 'মানবিক',
+        'commerce': 'ব্যবসায় শিক্ষা',
+        'business': 'ব্যবসায় শিক্ষা'
+    };
+
+    // Calculate day of week in Bengali from date string (YYYY-MM-DD)
+    const formatBengaliDate = (dateStr: string): string => {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return `${toBengaliNumber(parts[2])}/${toBengaliNumber(parts[1])}/${toBengaliNumber(parts[0])}`;
+        }
+        return toBengaliNumber(dateStr);
+    };
+
+    // Load available exams from database
+    useEffect(() => {
+        if (!db || !selectedYear) return;
+        getExams(db, selectedYear).then(exams => {
+            if (exams && exams.length > 0) {
+                const names = exams.map(e => (typeof e?.name === 'string' ? e.name.trim() : '')).filter(Boolean);
+                setExamsList(prev => Array.from(new Set([...prev.map(p => p.trim()), ...names])));
+            }
+        }).catch(() => {});
+    }, [db, selectedYear]);
+
+    const cleanExamsList = useMemo(() => {
+        return Array.from(new Set(examsList.map(n => (typeof n === 'string' ? n.trim() : '')).filter(Boolean)));
+    }, [examsList]);
+
+    // Load routine subjects and dates automatically for selected exam and class
+    const loadRoutineSubjects = useCallback(async () => {
+        if (!db || !selectedYear || !selectedExam || !selectedClass) return;
+        setIsLoadingRoutine(true);
+        try {
+            const cleanExam = selectedExam.trim();
+            const examSlug = cleanExam.replace(/[^\p{L}\p{N}]+/gu, '_');
+            const classRoutineDocId = `examRoutine_${selectedYear}_${examSlug}`;
+            const examDocId = `routine_${selectedYear}_${examSlug}`;
+
+            let data: any = null;
+            try {
+                const snap1 = await getDoc(doc(db, 'classRoutines', classRoutineDocId));
+                if (snap1.exists()) data = snap1.data();
+            } catch (err) {}
+
+            if (!data) {
+                try {
+                    const snap2 = await getDoc(doc(db, 'exams', examDocId));
+                    if (snap2.exists()) data = snap2.data();
+                } catch (err) {}
+            }
+
+            if (data && Array.isArray(data.rows) && Array.isArray(data.columns)) {
+                // Find all columns matching this class
+                const targetCols = data.columns.filter((c: any) => c.className === selectedClass);
+                const colIds = targetCols.map((c: any) => c.id);
+
+                const extracted: Array<{ subjectName: string; date: string }> = [];
+
+                data.rows.forEach((row: any) => {
+                    if (!row.date) return;
+                    colIds.forEach((colId: string) => {
+                        const val = row.subjects?.[colId];
+                        let entries: any[] = [];
+                        if (Array.isArray(val)) {
+                            entries = val.filter(s => s && s.subjectName && s.subjectName !== 'none');
+                        } else if (typeof val === 'object' && val?.subjectName && val.subjectName !== 'none') {
+                            entries = [val];
+                        }
+
+                        entries.forEach(entry => {
+                            if (entry.subjectName && entry.subjectName !== 'none') {
+                                extracted.push({
+                                    subjectName: entry.subjectName,
+                                    date: formatBengaliDate(row.date)
+                                });
+                            }
+                        });
+                    });
+                });
+
+                if (extracted.length > 0) {
+                    setSubjectsWithDates(extracted);
+                } else {
+                    // Fallback to subjects from syllabus
+                    const defaultSubs = getSubjects(selectedClass, selectedGroup === 'all' ? undefined : selectedGroup);
+                    setSubjectsWithDates(defaultSubs.map(s => ({ subjectName: s.name, date: '' })));
+                }
+            } else {
+                // Fallback to subjects from syllabus
+                const defaultSubs = getSubjects(selectedClass, selectedGroup === 'all' ? undefined : selectedGroup);
+                setSubjectsWithDates(defaultSubs.map(s => ({ subjectName: s.name, date: '' })));
+            }
+        } catch (err) {
+            console.error('Error loading routine for attendance:', err);
+        } finally {
+            setIsLoadingRoutine(false);
+        }
+    }, [db, selectedYear, selectedExam, selectedClass, selectedGroup]);
+
+    useEffect(() => {
+        loadRoutineSubjects();
+    }, [loadRoutineSubjects]);
+
+    // Load students automatically for selected class, year, and group
+    const loadStudents = useCallback(async () => {
+        if (!db || !selectedYear || !selectedClass) return;
+        setIsLoadingStudents(true);
+        try {
+            const q = query(
+                collection(db, 'students'),
+                where('academicYear', '==', selectedYear),
+                where('className', '==', selectedClass)
+            );
+            const snap = await getDocs(q);
+            let list = snap.docs.map(studentFromDoc);
+
+            if (parseInt(selectedClass, 10) >= 9 && selectedGroup && selectedGroup !== 'all') {
+                const groupNorm = (g: string = '') => {
+                    const map: Record<string, string> = {
+                        'science': 'বিজ্ঞান', 'arts': 'মানবিক', 'humanities': 'মানবিক', 'commerce': 'ব্যবসায় শিক্ষা', 'business': 'ব্যবসায় শিক্ষা'
+                    };
+                    return map[g.toLowerCase().trim()] || g.trim();
+                };
+                const targetGroup = groupNorm(selectedGroup);
+                list = list.filter(s => groupNorm(s.group) === targetGroup);
+            }
+
+            list.sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+            setStudents(list);
+        } catch (err) {
+            console.error('Error loading students for attendance:', err);
+        } finally {
+            setIsLoadingStudents(false);
+        }
+    }, [db, selectedYear, selectedClass, selectedGroup]);
+
+    useEffect(() => {
+        loadStudents();
+    }, [loadStudents]);
+
+    // Ensure at least 14 columns matching template layout, or use loaded subjects
+    const displayColumns = useMemo(() => {
+        const cols = [...subjectsWithDates];
+        const minCols = Math.max(14, cols.length);
+        while (cols.length < minCols) {
+            cols.push({ subjectName: '', date: '' });
+        }
+        return cols;
+    }, [subjectsWithDates]);
+
+    // Ensure list has students or fallback empty rows
+    const displayStudents = useMemo(() => {
+        const rows: Array<{ id: string; roll: number | string; studentNameBn: string }> = students.map(s => ({
+            id: s.id,
+            roll: s.roll,
+            studentNameBn: s.studentNameBn || (s as any).name || ''
+        }));
+
+        // Add extra blank rows if requested or if no students found
+        const countToAdd = rows.length === 0 ? 15 : extraBlankRows;
+        for (let i = 0; i < countToAdd; i++) {
+            rows.push({
+                id: `extra-${i}`,
+                roll: rows.length === 0 ? (i + 1) : '',
+                studentNameBn: ''
+            });
+        }
+        return rows;
+    }, [students, extraBlankRows]);
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    // Render the attendance sheet table and header
+    const renderAttendanceSheet = () => (
+        <div className="w-full text-black font-kalpurush bg-white p-2">
+            {/* Header Section */}
+            <header className="relative flex items-center justify-between pb-2 mb-2 border-b border-black">
+                <div className="w-24 shrink-0 flex items-center justify-start">
+                    {schoolInfo.logoUrl ? (
+                        <img src={schoolInfo.logoUrl} alt="Logo" className="w-20 h-20 object-contain" />
+                    ) : (
+                        <div className="w-16 h-16 rounded-full border-2 border-black flex items-center justify-center font-black text-xs">
+                            লোগো
+                        </div>
+                    )}
+                </div>
+
+                <div className="text-center flex-1 px-4">
+                    <h1 className="text-3xl md:text-4xl font-black text-black leading-tight tracking-wide">
+                        {schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়'}
+                    </h1>
+                    <p className="text-sm font-black text-black mt-0.5">
+                        শিক্ষাবর্ষ ঃ {toBengaliNumber(selectedYear)} ইং
+                    </p>
+                    <p className="text-xs md:text-sm font-black text-black mt-0.5">
+                        .............../ অর্ধ বার্ষিক/ বার্ষিক/ প্রাক- নির্বাচনী ও নির্বাচনী পরীক্ষা- {toBengaliNumber(selectedYear)}
+                    </p>
+                    <div className="mt-1 inline-block">
+                        <h2 className="text-sm md:text-base font-black text-black underline underline-offset-4 tracking-wider pb-0.5">
+                            পরীক্ষায় অংশগ্রহণকারী শিক্ষার্থীর নাম ও স্বাক্ষর ঃ
+                        </h2>
+                    </div>
+                </div>
+
+                <div className="w-24 shrink-0 text-right">
+                    <span className="text-[10px] font-black border border-black px-2 py-0.5 rounded uppercase">
+                        {selectedExam}
+                    </span>
+                </div>
+            </header>
+
+            {/* Class & Section Sub-header */}
+            <div className="flex justify-between items-center text-xs md:text-sm font-black text-black px-1 mb-1 mt-1">
+                <div>
+                    শ্রেণি ঃ {classNamesMap[selectedClass] || selectedClass} শ্রেণি
+                </div>
+                <div>
+                    শাখা ঃ {selectedGroup && selectedGroup !== 'all' ? (groupNamesMap[selectedGroup] || selectedGroup) : '............................'}
+                </div>
+            </div>
+
+            {/* Attendance Table */}
+            <div className="overflow-x-auto w-full">
+                <table className="w-full border-collapse border-2 border-black text-black table-fixed">
+                    <thead>
+                        {/* Row 1: বিষয়ের নাম */}
+                        <tr>
+                            <th colSpan={2} className="border border-black p-1 text-center font-black text-xs bg-slate-50 w-[200px]">
+                                বিষয়ের নাম
+                            </th>
+                            {displayColumns.map((col, idx) => (
+                                <th key={`head-sub-${idx}`} className="border border-black p-1 text-center font-black text-[11px] leading-tight break-words">
+                                    {col.subjectName || ''}
+                                </th>
+                            ))}
+                        </tr>
+
+                        {/* Row 2: তারিখ */}
+                        <tr>
+                            <th colSpan={2} className="border border-black p-1 text-center font-black text-xs bg-slate-50 w-[200px]">
+                                তারিখ
+                            </th>
+                            {displayColumns.map((col, idx) => (
+                                <th key={`head-dt-${idx}`} className="border border-black p-1 text-center font-bold text-[10px]">
+                                    {col.date || ''}
+                                </th>
+                            ))}
+                        </tr>
+
+                        {/* Row 3: ক্লাস রোল, শিক্ষার্থীর নাম, স্বাক্ষর */}
+                        <tr className="bg-slate-50">
+                            <th className="border border-black p-1 text-center font-black text-xs w-[55px]">
+                                ক্লাস রোল
+                            </th>
+                            <th className="border border-black p-1 text-center font-black text-xs w-[145px]">
+                                শিক্ষার্থীর নাম
+                            </th>
+                            {displayColumns.map((_, idx) => (
+                                <th key={`head-sig-${idx}`} className="border border-black p-1 text-center font-black text-xs">
+                                    স্বাক্ষর
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {displayStudents.map((st, sIdx) => (
+                            <tr key={`row-${st.id || sIdx}`} className="h-7 hover:bg-slate-50/50">
+                                <td className="border border-black p-1 text-center font-bold text-xs">
+                                    {st.roll ? toBengaliNumber(st.roll) : ''}
+                                </td>
+                                <td className="border border-black p-1 text-left pl-2 font-bold text-xs whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {st.studentNameBn || ''}
+                                </td>
+                                {displayColumns.map((_, cIdx) => (
+                                    <td key={`cell-${sIdx}-${cIdx}`} className="border border-black p-1 text-center">
+                                        {/* Blank space for student signature */}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+
+                        {/* Last Row: কক্ষ পরিদর্শকের স্বাক্ষর */}
+                        <tr className="h-9 font-black text-xs bg-slate-50/30">
+                            <td colSpan={2} className="border border-black p-1 text-center font-black text-xs">
+                                কক্ষ পরিদর্শকের স্বাক্ষর
+                            </td>
+                            {displayColumns.map((_, cIdx) => (
+                                <td key={`invig-${cIdx}`} className="border border-black p-1 text-center">
+                                    {/* Blank space for invigilator signature */}
+                                </td>
+                            ))}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="space-y-6">
+            {/* Screen Controls Toolbar (Hidden in Print) */}
+            <Card className="border-2 shadow-sm bg-white no-print">
+                <CardHeader className="bg-teal-50/50 border-b p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <CardTitle className="text-xl font-black text-teal-950 flex items-center gap-2">
+                                <ClipboardCheck className="h-6 w-6 text-teal-700" /> পরীক্ষার হাজিরা শিট (Exam Attendance Sheet)
+                            </CardTitle>
+                            <CardDescription className="text-xs font-bold text-slate-600 mt-1">
+                                পরীক্ষার রুটিন থেকে স্বয়ংক্রিয়ভাবে বিষয় ও তারিখ এবং ডাটাবেজ থেকে শিক্ষার্থীর রোল ও নাম লোড হবে।
+                            </CardDescription>
+                        </div>
+                        <Button onClick={handlePrint} size="lg" className="font-black h-11 px-8 shadow-md bg-teal-700 hover:bg-teal-800 text-white">
+                            <Printer className="mr-2 h-4 w-4" /> প্রিন্ট করুন (A4 Landscape)
+                        </Button>
+                    </div>
+
+                    {/* Filter Dropdowns */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t">
+                        {/* Exam Select */}
+                        <div className="space-y-1.5">
+                            <Label className="font-black text-xs text-teal-900">পরীক্ষা নির্বাচন:</Label>
+                            <Select value={selectedExam} onValueChange={setSelectedExam}>
+                                <SelectTrigger className="h-10 bg-white border-2 font-bold text-sm">
+                                    <SelectValue placeholder="পরীক্ষা" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {cleanExamsList.map((exam, idx) => (
+                                        <SelectItem key={`exam-att-${idx}-${exam}`} value={exam} className="font-bold text-sm">
+                                            {exam}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Class Select */}
+                        <div className="space-y-1.5">
+                            <Label className="font-black text-xs text-teal-900">শ্রেণি নির্বাচন:</Label>
+                            <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                <SelectTrigger className="h-10 bg-white border-2 font-bold text-sm">
+                                    <SelectValue placeholder="শ্রেণি" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(classNamesMap).map(([cId, cName]) => (
+                                        <SelectItem key={cId} value={cId} className="font-bold text-sm">
+                                            {cName} শ্রেণি
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Group Select (if class 9 or 10) */}
+                        {parseInt(selectedClass, 10) >= 9 ? (
+                            <div className="space-y-1.5">
+                                <Label className="font-black text-xs text-teal-900">শাখা / বিভাগ:</Label>
+                                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                                    <SelectTrigger className="h-10 bg-white border-2 font-bold text-sm">
+                                        <SelectValue placeholder="শাখা" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all" className="font-bold text-sm">সকল শাখা</SelectItem>
+                                        <SelectItem value="science" className="font-bold text-sm">বিজ্ঞান</SelectItem>
+                                        <SelectItem value="arts" className="font-bold text-sm">মানবিক</SelectItem>
+                                        <SelectItem value="commerce" className="font-bold text-sm">ব্যবসায় শিক্ষা</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        ) : (
+                            <div className="space-y-1.5">
+                                <Label className="font-black text-xs text-teal-900">অতিরিক্ত ফাঁকা রো:</Label>
+                                <Input 
+                                    type="number" 
+                                    min="0" 
+                                    max="50" 
+                                    value={extraBlankRows} 
+                                    onChange={(e) => setExtraBlankRows(parseInt(e.target.value, 10) || 0)} 
+                                    className="h-10 bg-white border-2 font-bold text-sm" 
+                                    placeholder="০"
+                                />
+                            </div>
+                        )}
+
+                        {/* Summary Badges */}
+                        <div className="flex flex-col justify-end">
+                            <div className="bg-teal-50 border border-teal-200 rounded-xl p-2.5 flex items-center justify-between text-xs font-bold text-teal-900">
+                                <span>বিষয় সংখ্যা: {toBengaliNumber(subjectsWithDates.length)}</span>
+                                <span>শিক্ষার্থী: {toBengaliNumber(students.length)} জন</span>
+                            </div>
+                        </div>
+                    </div>
+                </CardHeader>
+
+                {/* Status Notice */}
+                <CardContent className="p-4 bg-slate-50/50">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-slate-700">
+                        <div className="flex items-center gap-2">
+                            {isLoadingRoutine || isLoadingStudents ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin text-teal-600" />
+                                    <span>তথ্য লোড হচ্ছে...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                    <span>
+                                        পরীক্ষার রুটিন হতে বিষয় ও তারিখ এবং ডাটাবেজ হতে শিক্ষার্থীর নাম ও রোল স্বয়ংক্রিয়ভাবে সংযুক্ত হয়েছে।
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                        {subjectsWithDates.length === 0 && !isLoadingRoutine && (
+                            <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                সতর্কবার্তা: এই শ্রেণির জন্য এখনও পরীক্ষার রুটিন তৈরি বা সেভ করা হয়নি।
+                            </span>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Screen Preview Container */}
+            <Card className="border-2 shadow-xl bg-white no-print overflow-hidden">
+                <CardHeader className="bg-slate-100/70 border-b p-4 flex flex-row items-center justify-between">
+                    <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
+                        <Printer className="h-4 w-4 text-primary" /> লাইভ প্রিন্ট প্রিভিউ (ল্যান্ডস্কেপ ফরম্যাট)
+                    </CardTitle>
+                    <Button onClick={handlePrint} size="sm" className="font-black h-9 bg-teal-700 hover:bg-teal-800 text-white">
+                        <Printer className="mr-1.5 h-3.5 w-3.5" /> প্রিন্ট করুন
+                    </Button>
+                </CardHeader>
+                <CardContent className="p-4 md:p-8 bg-slate-200/50 overflow-x-auto flex justify-center">
+                    <div className="bg-white p-6 md:p-8 border-2 border-slate-300 rounded-xl shadow-xl w-full min-w-[950px] max-w-[1300px]">
+                        {renderAttendanceSheet()}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Official Clean Print Area (Triggered during window.print()) */}
+            <div className="printable-area exam-attendance-print-area text-black bg-white font-kalpurush w-full box-border hidden print:block">
+                <style jsx global>{`
+                    @media print {
+                        @page { 
+                            size: A4 landscape; 
+                            margin: 5mm 6mm !important; 
+                        }
+                        html, body {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                            color: black !important;
+                            overflow: visible !important;
+                        }
+                        .printable-area.exam-attendance-print-area {
+                            position: static !important;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            display: block !important;
+                            page-break-after: auto !important;
+                            page-break-inside: auto !important;
+                        }
+                        table { 
+                            border-collapse: collapse !important; 
+                            border: 1.5px solid black !important; 
+                            width: 100% !important; 
+                            table-layout: auto !important;
+                        }
+                        th, td { 
+                            border: 1px solid black !important; 
+                            padding: 2.5px 3px !important; 
+                            text-align: center !important; 
+                            color: black !important;
+                        }
+                        .no-print { 
+                            display: none !important; 
+                        }
+                    }
+                `}</style>
+
+                {renderAttendanceSheet()}
+            </div>
+        </div>
     );
 }
