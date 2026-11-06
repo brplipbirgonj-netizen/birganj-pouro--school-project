@@ -2757,10 +2757,10 @@ function ExamAttendanceSheetTab() {
     }, [subjectsWithDates]);
 
     // Proportional column widths ensuring all columns fit 100% within one single page:
-    // Roll takes 5%, Name takes 15%, and remaining 80% is evenly distributed across subjects
+    // Roll takes 4%, Name takes 20%, and remaining 76% is evenly distributed across subjects
     const subColWidth = useMemo(() => {
-        if (displayColumns.length === 0) return '80%';
-        return (80 / displayColumns.length).toFixed(3) + '%';
+        if (displayColumns.length === 0) return '76%';
+        return (76 / displayColumns.length).toFixed(3) + '%';
     }, [displayColumns.length]);
 
     // Students list with optional extra blank rows
@@ -2833,13 +2833,13 @@ function ExamAttendanceSheetTab() {
                 </div>
             </div>
 
-            {/* Attendance Table - table-fixed with exact 100% width prevents horizontal overflow */}
-            <div className="w-full overflow-hidden">
+            {/* Attendance Table - table-fixed with exact 100% width prevents horizontal overflow, while allowing vertical page breaking */}
+            <div className="w-full overflow-x-auto print:overflow-visible">
                 <table className="w-full border-collapse border-2 border-black text-black table-fixed">
-                    <thead>
+                    <thead className="print:table-header-group">
                         {/* Row 1: বিষয়ের নাম */}
                         <tr className="h-9">
-                            <th colSpan={2} style={{ width: '20%' }} className="border border-black p-1 text-center font-black text-xs bg-slate-50">
+                            <th colSpan={2} style={{ width: '24%' }} className="border border-black p-1 text-center font-black text-xs bg-slate-50">
                                 বিষয়ের নাম
                             </th>
                             {displayColumns.map((col, idx) => (
@@ -2855,7 +2855,7 @@ function ExamAttendanceSheetTab() {
 
                         {/* Row 2: তারিখ */}
                         <tr className="h-7">
-                            <th colSpan={2} style={{ width: '20%' }} className="border border-black p-0.5 text-center font-black text-xs bg-slate-50">
+                            <th colSpan={2} style={{ width: '24%' }} className="border border-black p-0.5 text-center font-black text-xs bg-slate-50">
                                 তারিখ
                             </th>
                             {displayColumns.map((col, idx) => (
@@ -2871,10 +2871,10 @@ function ExamAttendanceSheetTab() {
 
                         {/* Row 3: ক্লাস রোল, শিক্ষার্থীর নাম, স্বাক্ষর */}
                         <tr className="h-7 bg-slate-50 font-black text-xs">
-                            <th style={{ width: '5%' }} className="border border-black p-0.5 text-center font-black text-xs">
+                            <th style={{ width: '4%' }} className="border border-black p-0.5 text-center font-black text-xs">
                                 ক্লাস রোল
                             </th>
-                            <th style={{ width: '15%' }} className="border border-black p-0.5 text-center font-black text-xs">
+                            <th style={{ width: '20%' }} className="border border-black p-0.5 text-center font-black text-xs">
                                 শিক্ষার্থীর নাম
                             </th>
                             {displayColumns.map((_, idx) => (
@@ -2890,13 +2890,13 @@ function ExamAttendanceSheetTab() {
                     </thead>
 
                     <tbody>
-                        {/* Student Rows - Roomy height for signatures */}
+                        {/* Student Rows - Full name visibility (no truncation or ellipses), plenty of vertical height */}
                         {displayStudents.map((st, sIdx) => (
                             <tr key={`row-${st.id || sIdx}`} className="h-10 hover:bg-slate-50/50 print:h-10">
-                                <td style={{ width: '5%' }} className="border border-black p-0.5 text-center font-bold text-xs">
+                                <td style={{ width: '4%' }} className="border border-black p-0.5 text-center font-bold text-xs align-middle">
                                     {st.roll ? toBengaliNumber(st.roll) : ''}
                                 </td>
-                                <td style={{ width: '15%' }} className="border border-black p-1 text-left pl-2 font-bold text-xs whitespace-nowrap overflow-hidden text-ellipsis">
+                                <td style={{ width: '20%' }} className="border border-black p-1 text-left pl-2 font-bold text-xs leading-tight break-words align-middle">
                                     {st.studentNameBn || ''}
                                 </td>
                                 {displayColumns.map((_, cIdx) => (
@@ -2913,7 +2913,7 @@ function ExamAttendanceSheetTab() {
 
                         {/* Last Row: কক্ষ পরিদর্শকের স্বাক্ষর */}
                         <tr className="h-10 font-black text-xs bg-slate-50/30 print:h-10">
-                            <td colSpan={2} style={{ width: '20%' }} className="border border-black p-1 text-center font-black text-xs">
+                            <td colSpan={2} style={{ width: '24%' }} className="border border-black p-1 text-center font-black text-xs align-middle">
                                 কক্ষ পরিদর্শকের স্বাক্ষর
                             </td>
                             {displayColumns.map((_, cIdx) => (
@@ -3042,7 +3042,7 @@ function ExamAttendanceSheetTab() {
                                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                     <span>
                                         {displayColumns.length > 0 
-                                            ? `পরীক্ষার রুটিন থেকে বিষয় (${toBengaliNumber(displayColumns.length)}টি) ও তারিখ অনুযায়ী মোট ${toBengaliNumber(displayColumns.length + 2)}টি কলাম এক পাতায় সুন্দরভাবে সাজানো হয়েছে।` 
+                                            ? `পরীক্ষার রুটিন থেকে বিষয় (${toBengaliNumber(displayColumns.length)}টি) ও তারিখ অনুযায়ী মোট ${toBengaliNumber(displayColumns.length + 2)}টি কলাম এক পাতায় সাজানো হয়েছে।` 
                                             : 'রুটিনে কোনো বিষয় পাওয়া যায়নি।'}
                                     </span>
                                 </>
@@ -3083,6 +3083,8 @@ function ExamAttendanceSheetTab() {
                             background: white !important;
                             color: black !important;
                             width: 100% !important;
+                            height: auto !important;
+                            overflow: visible !important;
                         }
                         .printable-area.exam-attendance-print-area {
                             position: static !important;
@@ -3091,14 +3093,24 @@ function ExamAttendanceSheetTab() {
                             padding: 0 !important;
                             margin: 0 !important;
                             display: block !important;
-                            page-break-after: auto !important;
-                            page-break-inside: auto !important;
+                            overflow: visible !important;
+                        }
+                        .printable-area.exam-attendance-print-area div {
+                            overflow: visible !important;
                         }
                         .printable-area.exam-attendance-print-area table { 
                             border-collapse: collapse !important; 
                             border: 2px solid black !important; 
                             width: 100% !important; 
                             table-layout: fixed !important;
+                            page-break-inside: auto !important;
+                        }
+                        .printable-area.exam-attendance-print-area thead {
+                            display: table-header-group !important;
+                        }
+                        .printable-area.exam-attendance-print-area tr {
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
                         }
                         .printable-area.exam-attendance-print-area th, 
                         .printable-area.exam-attendance-print-area td { 
