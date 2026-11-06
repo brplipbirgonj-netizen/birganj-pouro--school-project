@@ -1671,10 +1671,10 @@ export default function ResultsPage() {
             </main>
 
             {printingReport && (
-                <div className="hidden print:block printable-area bg-white text-black p-10 font-kalpurush border-2">
+                <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
                     <style jsx global>{`
                         @media print {
-                            @page { size: A4; margin: 0.4in !important; }
+                            @page { size: A4 portrait; margin: 15mm !important; }
                             .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
                             .printable-area table tr { height: auto !important; }
                             .printable-area table td, .printable-area table th { padding: 2px 8px !important; font-size: 11px !important; border: 1px solid black !important; }

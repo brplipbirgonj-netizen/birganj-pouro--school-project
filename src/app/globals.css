@@ -29,6 +29,11 @@
     --input: 176 30% 85%;
     --ring: 246 80% 50%;
     --radius: 0.5rem;
+
+    /* Specific fix: exam and subject print areas override */
+    .exam-routine-print-area {
+      padding: 0 !important;
+    }
   }
 }
 
@@ -88,15 +93,13 @@
     }
 
     .printable-area {
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
+      position: static !important;
       width: 100% !important;
       max-width: 100% !important;
       height: auto !important;
       min-height: auto !important;
       margin: 0 !important;
-      padding: 5mm !important;
+      padding: 10mm !important;
       background: white !important;
       overflow: visible !important;
       display: block !important;
