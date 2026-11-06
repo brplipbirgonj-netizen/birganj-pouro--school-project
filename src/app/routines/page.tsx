@@ -2601,7 +2601,7 @@ function ExamAttendanceSheetTab() {
     const [selectedClass, setSelectedClass] = useState<string>('6');
     const [selectedGroup, setSelectedGroup] = useState<string>('all');
     const [extraBlankRows, setExtraBlankRows] = useState<number>(0);
-    const [rowsPerPage, setRowsPerPage] = useState<number>(24);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 
     const [subjectsWithDates, setSubjectsWithDates] = useState<Array<{ subjectName: string; date: string }>>([]);
     const [students, setStudents] = useState<Student[]>([]);
@@ -2790,7 +2790,7 @@ function ExamAttendanceSheetTab() {
         return rows;
     }, [students, extraBlankRows]);
 
-    // Chunk students into paginated sheets of rowsPerPage (default 24 students per page)
+    // Chunk students into paginated sheets of rowsPerPage (default 10 students per page)
     const studentPages = useMemo(() => {
         const pages: typeof displayStudents[] = [];
         for (let i = 0; i < displayStudents.length; i += rowsPerPage) {
@@ -2913,7 +2913,7 @@ function ExamAttendanceSheetTab() {
                     <tbody>
                         {/* Student Rows - FULL name completely displayed (no truncation, no dots), guaranteed room */}
                         {pageRows.map((st, sIdx) => (
-                            <tr key={`row-${st.id || sIdx}`} className="h-8 hover:bg-slate-50/50 print:h-[29px]">
+                            <tr key={`row-${st.id || sIdx}`} className={cn("hover:bg-slate-50/50", rowsPerPage <= 10 ? "h-12 print:h-[46px]" : rowsPerPage <= 15 ? "h-10 print:h-[38px]" : "h-8 print:h-[29px]")}>
                                 <td style={{ width: '4%' }} className="border border-black p-0.5 text-center font-bold text-xs align-middle">
                                     {st.roll ? toBengaliNumber(st.roll) : ''}
                                 </td>
@@ -2933,7 +2933,7 @@ function ExamAttendanceSheetTab() {
                         ))}
 
                         {/* Last Row: কক্ষ পরিদর্শকের স্বাক্ষর */}
-                        <tr className="h-9 font-black text-xs bg-slate-50/30 print:h-9">
+                        <tr className={cn("font-black text-xs bg-slate-50/30", rowsPerPage <= 10 ? "h-12 print:h-[46px]" : "h-9 print:h-9")}>
                             <td colSpan={2} style={{ width: '24%' }} className="border border-black p-1 text-center font-black text-xs align-middle">
                                 কক্ষ পরিদর্শকের স্বাক্ষর
                             </td>
@@ -3032,10 +3032,11 @@ function ExamAttendanceSheetTab() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="10">১০ জন করে পাতা (ডিফল্ট)</SelectItem>
+                                        <SelectItem value="12">১২ জন করে পাতা</SelectItem>
+                                        <SelectItem value="15">১৫ জন করে পাতা</SelectItem>
                                         <SelectItem value="20">২০ জন করে পাতা</SelectItem>
-                                        <SelectItem value="22">২২ জন করে পাতা</SelectItem>
-                                        <SelectItem value="24">২৪ জন করে পাতা (আদর্শ)</SelectItem>
-                                        <SelectItem value="26">২৬ জন করে পাতা</SelectItem>
+                                        <SelectItem value="24">২৪ জন করে পাতা</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
