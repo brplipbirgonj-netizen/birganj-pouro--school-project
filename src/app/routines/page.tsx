@@ -2418,10 +2418,8 @@ function ExamRoutineTab() {
                                         margin: 4mm 5mm !important; 
                                     }
                                     html, body {
-                                        height: 100% !important;
                                         margin: 0 !important;
                                         padding: 0 !important;
-                                        overflow: hidden !important;
                                     }
                                     .printable-area.exam-routine-print-area {
                                         position: absolute !important;
@@ -2804,11 +2802,26 @@ function ExamAttendanceSheetTab() {
     };
 
     // Render an individual page sheet with header, students, and invigilator footer
-    const renderSingleSheet = (pageRows: typeof displayStudents, pageIdx: number, totalPages: number) => (
-        <div key={pageIdx} className="w-full text-black font-kalpurush bg-white p-2 attendance-page-sheet">
+    const renderSingleSheet = (pageRows: typeof displayStudents, pageIdx: number, totalPages: number) => {
+        const isFirst = pageIdx === 0;
+        const isLast = pageIdx === totalPages - 1;
+
+        return (
+        <div 
+            key={pageIdx} 
+            className="w-full text-black font-kalpurush bg-white p-2 attendance-page-sheet"
+            style={{
+                pageBreakBefore: isFirst ? 'avoid' : 'always',
+                breakBefore: isFirst ? 'avoid' : 'page',
+                pageBreakAfter: isLast ? 'avoid' : 'always',
+                breakAfter: isLast ? 'avoid' : 'page',
+                pageBreakInside: 'avoid',
+                breakInside: 'avoid',
+            }}
+        >
             {/* Header Section */}
-            <header className="flex items-center justify-between pb-1.5 mb-1 border-b-2 border-black">
-                <div className="w-16 shrink-0 flex items-center justify-start">
+            <header className="flex items-center justify-between pb-1.5 mb-1 border-b-2 border-black" style={{ breakInside: 'avoid' }}>
+                <div className="w-28 shrink-0 flex items-center justify-start pl-1">
                     {schoolInfo.logoUrl ? (
                         <img src={schoolInfo.logoUrl} alt="Logo" className="w-12 h-12 object-contain" />
                     ) : (
@@ -2833,9 +2846,9 @@ function ExamAttendanceSheetTab() {
                     </div>
                 </div>
 
-                <div className="w-16 shrink-0 text-right">
+                <div className="w-28 shrink-0 flex items-center justify-end pr-1 text-right">
                     {totalPages > 1 && (
-                        <span className="text-[11px] font-black text-slate-800 border border-slate-400 px-1.5 py-0.5 rounded">
+                        <span className="text-[11px] font-black text-black border border-black px-2 py-0.5 rounded whitespace-nowrap bg-white shadow-none">
                             পৃষ্ঠা : {toBengaliNumber(pageIdx + 1)} / {toBengaliNumber(totalPages)}
                         </span>
                     )}
@@ -2950,6 +2963,7 @@ function ExamAttendanceSheetTab() {
             </div>
         </div>
     );
+    };
 
     return (
         <div className="space-y-6">
@@ -3114,7 +3128,7 @@ function ExamAttendanceSheetTab() {
                 <style jsx global>{`
                     @media print {
                         @page { 
-                            size: landscape; 
+                            size: A4 landscape; 
                             margin: 5mm 6mm; 
                         }
                         html, body {
@@ -3123,6 +3137,16 @@ function ExamAttendanceSheetTab() {
                             background: white !important;
                             color: black !important;
                             width: 100% !important;
+                            height: auto !important;
+                            min-height: 0 !important;
+                            overflow: visible !important;
+                        }
+                        /* Reset ancestor flex and overflow to guarantee multi-page breaks */
+                        div, main, section {
+                            overflow: visible !important;
+                        }
+                        .overflow-hidden {
+                            overflow: visible !important;
                         }
                         .printable-area.exam-attendance-print-area {
                             position: static !important;
@@ -3131,10 +3155,9 @@ function ExamAttendanceSheetTab() {
                             padding: 0 !important;
                             margin: 0 !important;
                             display: block !important;
+                            overflow: visible !important;
                         }
                         .attendance-page-sheet {
-                            page-break-after: always !important;
-                            break-after: page !important;
                             page-break-inside: avoid !important;
                             break-inside: avoid !important;
                             display: block !important;
@@ -3142,6 +3165,15 @@ function ExamAttendanceSheetTab() {
                             padding: 0 !important;
                             margin: 0 !important;
                             width: 100% !important;
+                            overflow: visible !important;
+                        }
+                        .attendance-page-sheet + .attendance-page-sheet {
+                            page-break-before: always !important;
+                            break-before: page !important;
+                        }
+                        .attendance-page-sheet:not(:last-child) {
+                            page-break-after: always !important;
+                            break-after: page !important;
                         }
                         .attendance-page-sheet:last-child {
                             page-break-after: avoid !important;
