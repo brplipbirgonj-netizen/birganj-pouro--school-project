@@ -1064,6 +1064,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
 
         examDates.forEach((date, dIdx) => {
             const daySlots: string[][] = [];
+            const assignedToday = new Set<string>(); // Keep track of teachers assigned for this date
             
             for (let rIdx = 0; rIdx < roomCount; rIdx++) {
                 const roomTeachers: string[] = [];
@@ -1090,6 +1091,11 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                             }
                         }
 
+                        // NEW Rule 3: No duplicate duty on the same day in different rooms
+                        if (isValid && assignedToday.has(candidate.id)) {
+                            isValid = false;
+                        }
+
                         if (isValid) {
                             foundCandidate = candidate;
                             break;
@@ -1102,6 +1108,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                     if (!foundCandidate) foundCandidate = pool[poolIndex];
 
                     roomTeachers.push(foundCandidate.name);
+                    assignedToday.add(foundCandidate.id); // Mark as assigned for today
                     poolIndex = (poolIndex + 1) % pool.length;
                 }
                 
