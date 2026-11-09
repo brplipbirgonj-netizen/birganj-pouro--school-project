@@ -17,7 +17,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, ClipboardCheck, FileCheck, FilePen, FilePlus, Users, Info, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX, Briefcase, BookOpen, GraduationCap, ShieldCheck
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX, Briefcase, BookOpen, GraduationCap, ShieldCheck, Target, Maximize2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -41,7 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
+const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const periodLabels = ["১ম", "২য়", "৩য়", "৪র্থ", "৫ম", "৬ষ্ঠ"];
@@ -954,9 +954,6 @@ const TeacherAllocationTab = ({ staffList, routineData, academicYear }: { staffL
     );
 };
 
-// ==========================================
-// কক্ষ পরিদর্শকের তালিকা (Invigilator Roster)
-// ==========================================
 function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[], academicYear: string }) {
     const db = useFirestore();
     const { toast } = useToast();
@@ -1057,8 +1054,9 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
 
         setIsGenerating(true);
         
-        // Shuffle for fairness
-        const pool = [...selectedTeachers].sort(() => Math.random() - 0.5);
+        // Track local duty counts to ensure perfect balance
+        const localDutyCounts = new Map<string, number>();
+        selectedTeachers.forEach(t => localDutyCounts.set(t.id, 0));
 
         const newRoster: Record<string, string[][]> = {};
         const prevAssignments = new Map<string, { roomIdx: number, dayIdx: number }>();
@@ -1066,8 +1064,6 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
 
         const getPairKey = (t1: string, t2: string) => [t1, t2].sort().join('|');
         
-        let poolIndex = 0;
-
         examDates.forEach((date, dIdx) => {
             const daySlots: string[][] = [];
             const assignedToday = new Set<string>(); // Keep track of teachers assigned for this date
@@ -1076,65 +1072,68 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                 const roomTeachers: string[] = [];
                 
                 for (let pIdx = 0; pIdx < perRoom; pIdx++) {
-                    let attempts = 0;
-                    let foundCandidate = null;
-
-                    while (attempts < pool.length) {
-                        const candidate = pool[poolIndex];
-                        const last = prevAssignments.get(candidate.id);
-                        
-                        let isValid = true;
-                        
+                    // Filter candidates based on constraints
+                    const validCandidates = selectedTeachers.filter(candidate => {
                         // Rule 1: No multiple duties on the same day
-                        if (assignedToday.has(candidate.id)) {
-                            isValid = false;
-                        }
+                        if (assignedToday.has(candidate.id)) return false;
                         
                         // Rule 2: No same room 2 days in a row
-                        if (isValid && last && last.dayIdx === dIdx - 1 && last.roomIdx === rIdx) {
-                            isValid = false;
-                        }
+                        const last = prevAssignments.get(candidate.id);
+                        if (last && last.dayIdx === dIdx - 1 && last.roomIdx === rIdx) return false;
                         
                         // Rule 3: Forbidden pair check (Ariful and Nila)
-                        if (isValid && roomTeachers.length > 0) {
+                        if (roomTeachers.length > 0) {
                            const isForbidden = roomTeachers.some(name => 
                                 (candidate.name === NAME_ARIFUL && name === NAME_NILA) ||
                                 (candidate.name === NAME_NILA && name === NAME_ARIFUL)
                            );
-                           if (isForbidden) isValid = false;
+                           if (isForbidden) return false;
                         }
 
                         // Rule 4: Partnership limits (max 3 days together)
-                        if (isValid && roomTeachers.length > 0) {
+                        if (roomTeachers.length > 0) {
                             const isLimitReached = roomTeachers.some(name => (partnershipCount.get(getPairKey(candidate.name, name)) || 0) >= 3);
-                            if (isLimitReached) isValid = false;
+                            if (isLimitReached) return false;
                         }
 
-                        if (isValid) {
-                            foundCandidate = candidate;
-                            break;
-                        }
-
-                        poolIndex = (poolIndex + 1) % pool.length;
-                        attempts++;
-                    }
-
-                    // Fallback to pool index if no perfect match found after one full rotation
-                    if (!foundCandidate) foundCandidate = pool[poolIndex];
-
-                    roomTeachers.push(foundCandidate.name);
-                    assignedToday.add(foundCandidate.id); 
-                    prevAssignments.set(foundCandidate.id, { roomIdx: rIdx, dayIdx: dIdx });
-                    
-                    // Track partnerships
-                    roomTeachers.forEach(otherName => {
-                        if (otherName !== foundCandidate!.name) {
-                            const pKey = getPairKey(foundCandidate!.name, otherName);
-                            partnershipCount.set(pKey, (partnershipCount.get(pKey) || 0) + 1);
-                        }
+                        return true;
                     });
 
-                    poolIndex = (poolIndex + 1) % pool.length;
+                    // Priority selection to ensure balanced counts (max 1 day difference)
+                    // We sort by current duty count and then randomize ties
+                    const sortedCandidates = validCandidates.sort((a, b) => {
+                        const countA = localDutyCounts.get(a.id) || 0;
+                        const countB = localDutyCounts.get(b.id) || 0;
+                        if (countA !== countB) return countA - countB;
+                        return Math.random() - 0.5;
+                    });
+
+                    let foundCandidate = sortedCandidates[0];
+
+                    // Critical Fallback: If no candidate satisfies all local room constraints, 
+                    // we must still satisfy the same-day rule and balance rule.
+                    if (!foundCandidate) {
+                        foundCandidate = selectedTeachers
+                            .filter(t => !assignedToday.has(t.id))
+                            .sort((a, b) => (localDutyCounts.get(a.id) || 0) - (localDutyCounts.get(b.id) || 0))[0];
+                    }
+
+                    if (foundCandidate) {
+                        roomTeachers.push(foundCandidate.name);
+                        assignedToday.add(foundCandidate.id); 
+                        localDutyCounts.set(foundCandidate.id, (localDutyCounts.get(foundCandidate.id) || 0) + 1);
+                        prevAssignments.set(foundCandidate.id, { roomIdx: rIdx, dayIdx: dIdx });
+                        
+                        // Track partnerships
+                        roomTeachers.forEach(otherName => {
+                            if (otherName !== foundCandidate!.name) {
+                                const pKey = getPairKey(foundCandidate!.name, otherName);
+                                partnershipCount.set(pKey, (partnershipCount.get(pKey) || 0) + 1);
+                            }
+                        });
+                    } else {
+                        roomTeachers.push("-");
+                    }
                 }
                 
                 daySlots.push(roomTeachers);
@@ -3044,11 +3043,11 @@ function BlankRoutineTab({ onReset, selectedYear, isProcessing }: any) {
                     <AlertDialogContent className="font-kalpurush">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="text-2xl font-black text-rose-700">আপনি কি নিশ্চিত?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-base font-bold">
+                            <AlertDialogDescription className="font-bold text-base">
                                 এটি {toBengaliNumber(selectedYear)} সালের সম্পূর্ণ রুটিন ডাটা ডিলিট করে দিবে। আপনি কি রুটিনটি রিসেট করতে চান?
                             </AlertDialogDescription>
                         </AlertDialogHeader>
-                        <AlertDialogFooter className="gap-2">
+                        <AlertDialogFooter>
                             <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
                             <AlertDialogAction onClick={onReset} className="bg-rose-600 hover:bg-rose-700 font-black">হ্যাঁ, মুছুন</AlertDialogAction>
                         </AlertDialogFooter>
