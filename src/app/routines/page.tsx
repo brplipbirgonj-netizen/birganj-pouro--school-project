@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -1184,8 +1183,24 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
             <style jsx global>{`
                 @media print {
                     @page { size: A4 landscape; margin: 10mm !important; }
-                    .roster-print th, .roster-print td { border: 1.5px solid black !important; padding: 4px !important; font-size: 11px !important; color: black !important; }
+                    .printable-area { 
+                        visibility: visible !important; 
+                        display: block !important; 
+                        position: absolute !important; 
+                        top: 0 !important; 
+                        left: 0 !important; 
+                        width: 100% !important; 
+                    }
+                    .printable-area * { visibility: visible !important; }
+                    .roster-print th, .roster-print td { 
+                        border: 1.5px solid black !important; 
+                        padding: 4px !important; 
+                        font-size: 11px !important; 
+                        color: black !important; 
+                        text-align: center !important;
+                    }
                     .roster-print th { background: #f1f5f9 !important; font-weight: 900 !important; }
+                    .no-print { display: none !important; }
                 }
             `}</style>
 
@@ -1280,6 +1295,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
 
             {Object.keys(roster).length > 0 && (
                 <div className="space-y-6">
+                    {/* Screen View */}
                     <div className="flex justify-between items-center px-2 no-print">
                         <div className="flex items-center gap-3">
                             <h3 className="font-black text-slate-800 flex items-center gap-2"><CheckCircle2 className="text-emerald-600" /> ডিউটি পরিসংখ্যান:</h3>
@@ -1296,17 +1312,8 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                         </Button>
                     </div>
 
-                    <div className="printable-area bg-white text-black p-0 sm:p-4">
-                        <div className="hidden print:block text-center mb-6 border-b-4 border-emerald-800 pb-4">
-                            <h1 className="text-3xl font-black">{schoolInfo.name}</h1>
-                            <p className="font-bold text-slate-700">{schoolInfo.address}</p>
-                            <div className="mt-2 inline-block border-2 border-emerald-800 bg-emerald-50 px-8 py-1 rounded-full font-black text-xl uppercase text-emerald-900 shadow-sm">
-                                {selectedExam} - কক্ষ পরিদর্শকের ডিউটি তালিকা
-                            </div>
-                            <p className="mt-2 font-black text-sm uppercase tracking-widest">শিক্ষাবর্ষ: {toBengaliNumber(academicYear)}</p>
-                        </div>
-
-                        <div className="table-container roster-print !max-h-none border-2 border-black rounded-xl overflow-hidden shadow-2xl">
+                    <div className="no-print border-2 border-black rounded-xl overflow-hidden shadow-2xl bg-white">
+                         <div className="table-container !max-h-[500px]">
                             <Table className="border-collapse w-full">
                                 <TableHeader className="bg-slate-100 border-b-2 border-black">
                                     <TableRow className="h-14">
@@ -1318,19 +1325,18 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                                 </TableHeader>
                                 <TableBody>
                                     {examDates.map(date => (
-                                        <TableRow key={date} className="h-16 border-b border-black hover:bg-slate-50 transition-colors">
+                                        <TableRow key={date} className="h-16 border-b border-slate-200 hover:bg-slate-50 transition-colors">
                                             <TableCell className="border-r-2 border-black text-center bg-slate-50/50 p-2">
                                                 <p className="font-black text-base leading-none text-slate-800">{formatBengaliDate(date)}</p>
                                                 <p className="text-[10px] font-bold text-muted-foreground mt-1.5 uppercase">{getBengaliDay(date)}</p>
                                             </TableCell>
                                             {roster[date]?.map((teachersInRoom, rIdx) => (
-                                                <TableCell key={rIdx} className="border-r-2 border-black p-2 text-center align-middle">
+                                                <TableCell key={rIdx} className="border-r border-slate-200 p-2 text-center align-middle">
                                                     <div className="flex flex-col gap-1.5 justify-center h-full">
                                                         {teachersInRoom.map((name, pIdx) => (
                                                             <div key={pIdx} className={cn(
-                                                                "p-1.5 rounded-lg border font-black text-[13px] leading-tight shadow-sm transition-all",
-                                                                pIdx === 0 ? "bg-indigo-50 border-indigo-200 text-indigo-900" : 
-                                                                pIdx === 1 ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-amber-50 border-amber-200 text-amber-900"
+                                                                "p-1.5 rounded-lg border font-black text-[11px] shadow-sm",
+                                                                pIdx === 0 ? "bg-indigo-50 border-indigo-200 text-indigo-900" : "bg-emerald-50 border-emerald-200 text-emerald-900"
                                                             )}>
                                                                 {name}
                                                             </div>
@@ -1343,22 +1349,75 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                                 </TableBody>
                             </Table>
                         </div>
+                    </div>
 
-                        <div className="mt-8 hidden print:block">
-                            <h4 className="font-black text-lg border-b-2 border-black pb-1 mb-3">ডিউটি পরিসংখ্যান (পুরো পরীক্ষা):</h4>
+                    {/* Official Print Layout (Hidden on Screen) */}
+                    <div className="printable-area hidden print:block bg-white text-black p-0">
+                        <div className="text-center mb-6 border-b-4 border-emerald-800 pb-4">
+                            <div className="flex items-center justify-center gap-4 mb-2">
+                                {schoolInfo.logoUrl && (
+                                    <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain" />
+                                )}
+                                <div className="text-left">
+                                    <h1 className="text-3xl font-black uppercase text-emerald-950">{schoolInfo.name}</h1>
+                                    <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                                </div>
+                            </div>
+                            <div className="mt-2 inline-block border-2 border-emerald-800 bg-emerald-50 px-10 py-1 rounded-full font-black text-xl uppercase text-emerald-900 shadow-sm">
+                                {selectedExam} - কক্ষ পরিদর্শকের ডিউটি তালিকা
+                            </div>
+                            <p className="mt-2 font-black text-sm uppercase tracking-widest">শিক্ষাবর্ষ: {toBengaliNumber(academicYear)}</p>
+                        </div>
+
+                        <div className="roster-print border-[1.5px] border-black overflow-visible">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-100">
+                                        <th className="font-black text-black border border-black text-center w-32 py-2">তারিখ ও বার</th>
+                                        {[...Array(roomCount)].map((_, i) => (
+                                            <th key={i} className="font-black text-black border border-black text-center">কক্ষ- {toBengaliNumber(i + 1)}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {examDates.map(date => (
+                                        <TableRow key={date} className="h-14">
+                                            <TableCell className="border border-black text-center bg-slate-50/30 p-1">
+                                                <p className="font-black text-xs leading-none">{formatBengaliDate(date)}</p>
+                                                <p className="text-[8px] font-bold text-slate-600 mt-1 uppercase">{getBengaliDay(date)}</p>
+                                            </TableCell>
+                                            {roster[date]?.map((teachersInRoom, rIdx) => (
+                                                <TableCell key={rIdx} className="border border-black p-1 text-center align-middle">
+                                                    <div className="flex flex-col gap-1 justify-center h-full">
+                                                        {teachersInRoom.map((name, pIdx) => (
+                                                            <div key={pIdx} className="font-black text-[11px] leading-tight">
+                                                                {toBengaliNumber(pIdx + 1)}. {name}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-8">
+                            <h4 className="font-black text-base border-b-2 border-black pb-1 mb-3">ডিউটি পরিসংখ্যান (পুরো পরীক্ষা):</h4>
                             <div className="grid grid-cols-4 gap-4">
                                 {Object.entries(teacherDutyStats).map(([name, count]) => (
-                                    <div key={name} className="flex justify-between border-b border-dashed border-slate-300 pb-1">
-                                        <span className="font-bold text-sm">{name}</span>
-                                        <span className="font-black text-sm">{toBengaliNumber(count)} দিন</span>
+                                    <div key={name} className="flex justify-between border-b border-dashed border-slate-300 pb-0.5">
+                                        <span className="font-bold text-xs">{name}</span>
+                                        <span className="font-black text-xs">{toBengaliNumber(count)} বার</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <footer className="mt-20 hidden print:flex justify-between px-10">
-                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-base">পরীক্ষা নিয়ন্ত্রক</div>
-                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-base">প্রধান শিক্ষক</div>
+                        <footer className="mt-20 flex justify-between px-10">
+                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-sm">পরীক্ষা নিয়ন্ত্রক</div>
+                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-sm">প্রধান শিক্ষক</div>
                         </footer>
                     </div>
                 </div>
@@ -1427,7 +1486,7 @@ const RoutineStatistics = ({ stats }: { stats: any }) => {
     return (
         <Accordion type="multiple" className="w-full space-y-4">
             <AccordionItem value="teacher-schedule-view" className="border-2 rounded-xl bg-white overflow-hidden shadow-sm">
-                <AccordionTrigger className="text-lg font-black bg-muted/20 px-6 py-4 hover:no-underline">শিক্ষকের ব্যক্তিগত রুটিন (পিরিয়ড অনুযায়ী)</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-black bg-muted/20 px-6 py-4 hover:no-underline">রুটিন বিশ্লেষণ: শিক্ষকের ব্যক্তিগত সময়সূচী</AccordionTrigger>
                 <AccordionContent className="p-6 space-y-6">
                     <div className="max-w-md space-y-2">
                         <Label className="font-bold text-primary">শিক্ষক নির্বাচন করুন</Label>
