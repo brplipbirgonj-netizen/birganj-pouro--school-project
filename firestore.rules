@@ -164,5 +164,10 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow write: if isAuthed() && (hasPermission('manage:documents') || hasPermission('manage:archive') || isAdmin());
     }
+
+    match /examRosters/{id} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && (hasPermission('manage:routines') || isAdmin());
+    }
   }
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -38,6 +39,8 @@ import { TeacherAllocationRecord, SubjectAllocation, saveTeacherAllocation, getT
 import { getExams, Exam } from '@/lib/exam-data';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const classNamesMap: { [key: string]: string } = { '6': 'ষষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 
@@ -99,7 +102,7 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
         'সাধারণ বিজ্ঞান': ['6', '7', '8', '9', '10'],
         'জীব বিজ্ঞান': ['9', '10']
     },
-    'আনিছুর': {
+    'আরিফুল': {
         'বাংলাদেশ ও বিশ্ব পরিচয়': ['6', '7', '8', '9', '10'],
         'কৃষি শিক্ষা': ['6'],
         'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10']
@@ -115,7 +118,7 @@ const teacherAllocations: Record<string, Record<string, string[]>> = {
     },
     'নীলা': {
         'ধর্ম ও নৈতিক শিক্ষা': ['6', '7', '8', '9', '10'],
-        'হিন্দু ধর্ম': ['6', '7', '8', '9', '10'],
+        'হিন্দুর ধর্ম': ['6', '7', '8', '9', '10'],
         'শারীরিক শিক্ষা': ['6', '7', '8', '9', '10']
     }
 };
@@ -959,7 +962,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
     const db = useFirestore();
     const { toast } = useToast();
     const { schoolInfo } = useSchoolInfo();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
 
     const [exams, setExams] = useState<Exam[]>([]);
     const [selectedExam, setSelectedExam] = useState<string>('');
@@ -971,6 +974,22 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
     const [roster, setRoster] = useState<Record<string, string[][]>>({});
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Filter active teachers for selection list
+    const teacherPool = useMemo(() => {
+        return staffList
+            .filter(s => s.staffType === 'teacher' && s.isActive && s.nameBn && s.nameBn !== 'No Data')
+            .map(s => ({ id: s.id, name: s.nameBn }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'bn'));
+    }, [staffList]);
+
+    const [selectedTeacherIds, setSelectedTeacherIds] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        if (teacherPool.length > 0 && selectedTeacherIds.size === 0) {
+            setSelectedTeacherIds(new Set(teacherPool.map(t => t.id)));
+        }
+    }, [teacherPool]);
 
     useEffect(() => {
         if (!db || !user) return;
@@ -1027,19 +1046,16 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
             return;
         }
 
-        setIsGenerating(true);
-        
-        // Filter active teachers
-        const teachers = staffList
-            .filter(s => s.staffType === 'teacher' && s.isActive && s.nameBn && s.nameBn !== 'No Data')
-            .map(s => ({ id: s.id, name: s.nameBn }))
-            .sort(() => Math.random() - 0.5); // Initial shuffle for fairness
-
-        if (teachers.length === 0) {
-            toast({ variant: 'destructive', title: 'শিক্ষক পাওয়া যায়নি' });
-            setIsGenerating(false);
+        const selectedTeachers = teacherPool.filter(t => selectedTeacherIds.has(t.id));
+        if (selectedTeachers.length === 0) {
+            toast({ variant: 'destructive', title: 'শিক্ষক নির্বাচন করুন' });
             return;
         }
+
+        setIsGenerating(true);
+        
+        // Shuffle for fairness
+        const pool = [...selectedTeachers].sort(() => Math.random() - 0.5);
 
         const newRoster: Record<string, string[][]> = {};
         const prevAssignments = new Map<string, { roomIdx: number, partners: Set<string>, dayIdx: number }>();
@@ -1056,8 +1072,8 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                     let attempts = 0;
                     let foundCandidate = null;
 
-                    while (attempts < teachers.length) {
-                        const candidate = teachers[poolIndex];
+                    while (attempts < pool.length) {
+                        const candidate = pool[poolIndex];
                         const last = prevAssignments.get(candidate.id);
                         
                         let isValid = true;
@@ -1079,24 +1095,22 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                             break;
                         }
 
-                        poolIndex = (poolIndex + 1) % teachers.length;
+                        poolIndex = (poolIndex + 1) % pool.length;
                         attempts++;
                     }
 
-                    // Fallback if constraints can't be met perfectly
-                    if (!foundCandidate) foundCandidate = teachers[poolIndex];
+                    if (!foundCandidate) foundCandidate = pool[poolIndex];
 
                     roomTeachers.push(foundCandidate.name);
-                    poolIndex = (poolIndex + 1) % teachers.length;
+                    poolIndex = (poolIndex + 1) % pool.length;
                 }
                 
                 daySlots.push(roomTeachers);
             }
 
-            // Update history for tomorrow's check
             daySlots.forEach((roomNames, rIdx) => {
                 roomNames.forEach(name => {
-                    const teacher = teachers.find(t => t.name === name);
+                    const teacher = pool.find(t => t.name === name);
                     if (teacher) {
                         const partners = new Set(roomNames.filter(n => n !== name));
                         prevAssignments.set(teacher.id, { roomIdx: rIdx, partners, dayIdx: dIdx });
@@ -1145,6 +1159,19 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
         return dayMap[d.getDay()];
     };
 
+    // Calculate Statistics
+    const teacherDutyStats = useMemo(() => {
+        const counts: Record<string, number> = {};
+        Object.values(roster).forEach(dayRooms => {
+            dayRooms.forEach(roomTeachers => {
+                roomTeachers.forEach(name => {
+                    counts[name] = (counts[name] || 0) + 1;
+                });
+            });
+        });
+        return counts;
+    }, [roster]);
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <style jsx global>{`
@@ -1155,43 +1182,108 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                 }
             `}</style>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm no-print">
-                <div className="space-y-2">
-                    <Label className="font-black text-primary text-xs uppercase">পরীক্ষা নির্বাচন</Label>
-                    <Select value={selectedExam} onValueChange={setSelectedExam}>
-                        <SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label className="font-black text-primary text-xs uppercase">মোট পরীক্ষার কক্ষ</Label>
-                    <Input type="number" min={1} max={20} value={roomCount} onChange={e => setRoomCount(parseInt(e.target.value) || 1)} className="font-black border-2" />
-                </div>
-                <div className="space-y-2">
-                    <Label className="font-black text-primary text-xs uppercase">প্রতি কক্ষে শিক্ষক সংখ্যা</Label>
-                    <Select value={String(perRoom)} onValueChange={v => setPerRoom(parseInt(v))}>
-                        <SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="1">১ জন করে</SelectItem>
-                            <SelectItem value="2">২ জন করে</SelectItem>
-                            <SelectItem value="3">৩ জন করে</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex gap-2">
-                    <Button onClick={handleGenerate} disabled={isGenerating || examDates.length === 0} className="flex-1 font-black shadow-lg">
-                        {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />} তৈরি করুন
-                    </Button>
-                    <Button variant="outline" onClick={() => window.print()} disabled={Object.keys(roster).length === 0} className="border-2 border-primary text-primary font-black"><Printer className="h-4 w-4" /></Button>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 no-print">
+                <Card className="lg:col-span-1 border-2 border-primary/10 shadow-sm overflow-hidden flex flex-col h-full bg-white">
+                    <CardHeader className="bg-primary/5 p-4 border-b">
+                        <CardTitle className="text-sm font-black flex items-center gap-2">
+                            <Users className="h-4 w-4 text-primary" /> শিক্ষক নির্বাচন ({toBengaliNumber(selectedTeacherIds.size)})
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 flex-1 overflow-hidden">
+                        <ScrollArea className="h-[400px]">
+                            <div className="p-2 space-y-1">
+                                {teacherPool.map(t => (
+                                    <div 
+                                        key={t.id} 
+                                        className={cn(
+                                            "flex items-center gap-3 p-2 rounded-lg border-2 transition-all cursor-pointer",
+                                            selectedTeacherIds.has(t.id) ? "border-primary bg-primary/5" : "border-transparent hover:bg-slate-50"
+                                        )}
+                                        onClick={() => {
+                                            const next = new Set(selectedTeacherIds);
+                                            if (next.has(t.id)) next.delete(t.id); else next.add(t.id);
+                                            setSelectedTeacherIds(next);
+                                        }}
+                                    >
+                                        <Checkbox checked={selectedTeacherIds.has(t.id)} onCheckedChange={() => {}} />
+                                        <div className="flex-1">
+                                            <p className="text-[13px] font-black text-slate-800 leading-none">{t.name}</p>
+                                            {teacherDutyStats[t.name] && (
+                                                <Badge className="bg-emerald-600 text-[9px] h-4 py-0 font-black mt-1">
+                                                    ডিউটি: {toBengaliNumber(teacherDutyStats[t.name])} বার
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                    <CardFooter className="p-3 border-t bg-slate-50">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full font-bold h-8 text-[10px]"
+                            onClick={() => setSelectedTeacherIds(new Set(teacherPool.map(t => t.id)))}
+                        >
+                            সবাইকে নির্বাচন করুন
+                        </Button>
+                    </CardFooter>
+                </Card>
+
+                <div className="lg:col-span-3 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
+                        <div className="space-y-2">
+                            <Label className="font-black text-primary text-xs uppercase">পরীক্ষা নির্বাচন</Label>
+                            <Select value={selectedExam} onValueChange={setSelectedExam}>
+                                <SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-black text-primary text-xs uppercase">মোট পরীক্ষার কক্ষ</Label>
+                            <Input type="number" min={1} max={20} value={roomCount} onChange={e => setRoomCount(parseInt(e.target.value) || 1)} className="font-black border-2" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-black text-primary text-xs uppercase">প্রতি কক্ষে শিক্ষক</Label>
+                            <Select value={String(perRoom)} onValueChange={v => setPerRoom(parseInt(v))}>
+                                <SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">১ জন করে</SelectItem>
+                                    <SelectItem value="2">২ জন করে</SelectItem>
+                                    <SelectItem value="3">৩ জন করে</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                        <Button onClick={handleGenerate} disabled={isGenerating || examDates.length === 0} size="lg" className="flex-1 font-black shadow-xl h-14 text-lg">
+                            {isGenerating ? <Loader2 className="h-6 w-6 animate-spin mr-2" /> : <Plus className="h-6 w-6 mr-2" />} 
+                            স্বয়ংক্রিয় ডিউটি তালিকা তৈরি করুন
+                        </Button>
+                        <Button variant="outline" size="lg" onClick={() => window.print()} disabled={Object.keys(roster).length === 0} className="h-14 w-14 border-2 border-primary text-primary font-black shadow-lg">
+                            <Printer className="h-6 w-6" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             {Object.keys(roster).length > 0 && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center px-2 no-print">
-                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5"><Info className="h-4 w-4 text-primary" /> তালিকাটি অটো-জেনারেটেড। কোনো অসঙ্গতি থাকলে পুনরায় জেনারেট বাটনে চাপুন।</p>
+                        <div className="flex items-center gap-3">
+                            <h3 className="font-black text-slate-800 flex items-center gap-2"><CheckCircle2 className="text-emerald-600" /> ডিউটি পরিসংখ্যান:</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(teacherDutyStats).map(([name, count]) => (
+                                    <Badge key={name} variant="secondary" className="font-black bg-white border-2 border-slate-200">
+                                        {name}: {toBengaliNumber(count)}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
                         <Button onClick={handleSaveRoster} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 font-black h-10 px-8 shadow-md">
                             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} সার্ভারে সেভ করুন
                         </Button>
@@ -1243,6 +1335,18 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                                     ))}
                                 </TableBody>
                             </Table>
+                        </div>
+
+                        <div className="mt-8 hidden print:block">
+                            <h4 className="font-black text-lg border-b-2 border-black pb-1 mb-3">ডিউটি পরিসংখ্যান (পুরো পরীক্ষা):</h4>
+                            <div className="grid grid-cols-4 gap-4">
+                                {Object.entries(teacherDutyStats).map(([name, count]) => (
+                                    <div key={name} className="flex justify-between border-b border-dashed border-slate-300 pb-1">
+                                        <span className="font-bold text-sm">{name}</span>
+                                        <span className="font-black text-sm">{toBengaliNumber(count)} দিন</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         <footer className="mt-20 hidden print:flex justify-between px-10">
@@ -1774,7 +1878,6 @@ export default function RoutinesPage() {
         }
         items.push({ id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' });
         items.push({ id: 'invigilator-roster', label: 'কক্ষ পরিদর্শকের তালিকা', icon: ShieldCheck, color: 'text-rose-600 bg-rose-50' });
-        items.push({ id: 'exam-attendance', label: 'পরীক্ষার হাজিরা শিট', icon: ClipboardCheck, color: 'text-teal-600 bg-teal-50' });
         
         if (isAdmin) {
             items.push({ id: 'copy-routine', label: 'রুটিন কপি করুন', icon: Copy, color: 'text-amber-600 bg-amber-50' });
@@ -1866,9 +1969,6 @@ export default function RoutinesPage() {
                                     {activeSection === 'invigilator-roster' && (
                                         <InvigilatorRosterTab staffList={allStaff} academicYear={selectedYear} />
                                     )}
-                                    {activeSection === 'exam-attendance' && (
-                                        <ExamAttendanceSheetTab />
-                                    )}
                                     {activeSection === 'copy-routine' && (
                                         <CopyRoutineTab 
                                             onCopy={handleCopyRoutine} 
@@ -1895,7 +1995,7 @@ export default function RoutinesPage() {
                 </div>
             </main>
 
-            {activeSection !== 'exam-routine' && activeSection !== 'exam-attendance' && activeSection !== 'invigilator-roster' && (
+            {activeSection !== 'exam-routine' && activeSection !== 'invigilator-roster' && (
             <div className={cn("printable-area routine-print-container text-black bg-white p-10 flex-col font-kalpurush", "hidden print:flex")}>
                 <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
@@ -2711,7 +2811,7 @@ function ExamRoutineTab() {
                             </CardContent>
                             <CardFooter className="bg-slate-50 border-t-2 p-6 flex justify-end">
                                 <Button onClick={handlePrint} size="lg" className="font-black h-12 px-10 shadow-lg text-base">
-                                    <Printer className="mr-2 h-5 w-5" /> পরীক্ষার রুটিন প্রিন্ট করুন (২ কপি / পাতা)
+                                    <Printer className="mr-2 h-4 w-4" /> পরীক্ষার রুটিন প্রিন্ট করুন (২ কপি / পাতা)
                                 </Button>
                             </CardFooter>
                         </Card>
