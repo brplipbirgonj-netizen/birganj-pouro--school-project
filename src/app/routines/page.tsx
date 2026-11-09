@@ -18,7 +18,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, ClipboardCheck, FileCheck, FilePen, FilePlus, Users, Info, User, 
-    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX, Briefcase, BookOpen, GraduationCap
+    FileUp, Download, CalendarClock, UserMinus, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, List, AlertTriangle, UserX, Briefcase, BookOpen, GraduationCap, ShieldCheck
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -953,6 +953,310 @@ const TeacherAllocationTab = ({ staffList, routineData, academicYear }: { staffL
     );
 };
 
+// ==========================================
+// কক্ষ পরিদর্শকের তালিকা (Invigilator Roster)
+// ==========================================
+function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[], academicYear: string }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const { schoolInfo } = useSchoolInfo();
+    const { user } = useAuth();
+
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [selectedExam, setSelectedExam] = useState<string>('');
+    const [examDates, setExamDates] = useState<string[]>([]);
+    
+    const [roomCount, setRoomCount] = useState<number>(5);
+    const [perRoom, setPerRoom] = useState<number>(1);
+    
+    const [roster, setRoster] = useState<Record<string, string[][]>>({});
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, academicYear).then(data => {
+            setExams(data);
+            if (data.length > 0) setSelectedExam(data[0].name);
+        });
+    }, [db, academicYear, user]);
+
+    // Load exam routine to get dates
+    const loadDatesFromRoutine = useCallback(async () => {
+        if (!db || !selectedExam || !academicYear) return;
+        setIsLoading(true);
+        try {
+            const examSlug = selectedExam.trim().replace(/[^\p{L}\p{N}]+/gu, '_');
+            const examDocId = `routine_${academicYear}_${examSlug}`;
+            const snap = await getDoc(doc(db, 'exams', examDocId));
+            
+            if (snap.exists()) {
+                const data = snap.data();
+                if (Array.isArray(data.rows)) {
+                    const dates = data.rows.map((r: any) => r.date).filter(Boolean);
+                    setExamDates(Array.from(new Set(dates)).sort() as string[]);
+                }
+            } else {
+                setExamDates([]);
+            }
+
+            // Load existing roster if any
+            const rosterId = `roster_${academicYear}_${examSlug}`;
+            const rosterSnap = await getDoc(doc(db, 'examRosters', rosterId));
+            if (rosterSnap.exists()) {
+                const rData = rosterSnap.data();
+                setRoster(rData.roster || {});
+                setRoomCount(rData.roomCount || 5);
+                setPerRoom(rData.perRoom || 1);
+            } else {
+                setRoster({});
+            }
+
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    }, [db, selectedExam, academicYear]);
+
+    useEffect(() => {
+        loadDatesFromRoutine();
+    }, [loadDatesFromRoutine]);
+
+    const handleGenerate = () => {
+        if (examDates.length === 0) {
+            toast({ variant: 'destructive', title: 'রুটিন পাওয়া যায়নি', description: 'আগে পরীক্ষার রুটিন সেট করুন।' });
+            return;
+        }
+
+        setIsGenerating(true);
+        
+        // Filter active teachers
+        const teachers = staffList
+            .filter(s => s.staffType === 'teacher' && s.isActive && s.nameBn && s.nameBn !== 'No Data')
+            .map(s => ({ id: s.id, name: s.nameBn }))
+            .sort(() => Math.random() - 0.5); // Initial shuffle for fairness
+
+        if (teachers.length === 0) {
+            toast({ variant: 'destructive', title: 'শিক্ষক পাওয়া যায়নি' });
+            setIsGenerating(false);
+            return;
+        }
+
+        const newRoster: Record<string, string[][]> = {};
+        const prevAssignments = new Map<string, { roomIdx: number, partners: Set<string>, dayIdx: number }>();
+        
+        let poolIndex = 0;
+
+        examDates.forEach((date, dIdx) => {
+            const daySlots: string[][] = [];
+            
+            for (let rIdx = 0; rIdx < roomCount; rIdx++) {
+                const roomTeachers: string[] = [];
+                
+                for (let pIdx = 0; pIdx < perRoom; pIdx++) {
+                    let attempts = 0;
+                    let foundCandidate = null;
+
+                    while (attempts < teachers.length) {
+                        const candidate = teachers[poolIndex];
+                        const last = prevAssignments.get(candidate.id);
+                        
+                        let isValid = true;
+                        
+                        // Rule 1: No same room 2 days in a row
+                        if (last && last.dayIdx === dIdx - 1 && last.roomIdx === rIdx) {
+                            isValid = false;
+                        }
+                        
+                        // Rule 2: No same partner 2 days in a row
+                        if (isValid && last && last.dayIdx === dIdx - 1 && perRoom > 1) {
+                            if (roomTeachers.some(partnerName => last.partners.has(partnerName))) {
+                                isValid = false;
+                            }
+                        }
+
+                        if (isValid) {
+                            foundCandidate = candidate;
+                            break;
+                        }
+
+                        poolIndex = (poolIndex + 1) % teachers.length;
+                        attempts++;
+                    }
+
+                    // Fallback if constraints can't be met perfectly
+                    if (!foundCandidate) foundCandidate = teachers[poolIndex];
+
+                    roomTeachers.push(foundCandidate.name);
+                    poolIndex = (poolIndex + 1) % teachers.length;
+                }
+                
+                daySlots.push(roomTeachers);
+            }
+
+            // Update history for tomorrow's check
+            daySlots.forEach((roomNames, rIdx) => {
+                roomNames.forEach(name => {
+                    const teacher = teachers.find(t => t.name === name);
+                    if (teacher) {
+                        const partners = new Set(roomNames.filter(n => n !== name));
+                        prevAssignments.set(teacher.id, { roomIdx: rIdx, partners, dayIdx: dIdx });
+                    }
+                });
+            });
+
+            newRoster[date] = daySlots;
+        });
+
+        setRoster(newRoster);
+        setIsGenerating(false);
+        toast({ title: 'ডিউটি তালিকা তৈরি হয়েছে' });
+    };
+
+    const handleSaveRoster = async () => {
+        if (!db || Object.keys(roster).length === 0) return;
+        setIsLoading(true);
+        try {
+            const examSlug = selectedExam.trim().replace(/[^\p{L}\p{N}]+/gu, '_');
+            const rosterId = `roster_${academicYear}_${examSlug}`;
+            await setDoc(doc(db, 'examRosters', rosterId), {
+                examName: selectedExam,
+                academicYear,
+                roomCount,
+                perRoom,
+                roster,
+                updatedAt: serverTimestamp()
+            });
+            toast({ title: 'তালিকা সার্ভারে সংরক্ষিত হয়েছে' });
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    };
+
+    const formatBengaliDate = (dateStr: string) => {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        return `${toBengaliNumber(parts[2])}/${toBengaliNumber(parts[1])}/${toBengaliNumber(parts[0])}`;
+    };
+
+    const getBengaliDay = (dateStr: string) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr.replace(/-/g, '/'));
+        return dayMap[d.getDay()];
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4 landscape; margin: 10mm !important; }
+                    .roster-print th, .roster-print td { border: 1.5px solid black !important; padding: 4px !important; font-size: 11px !important; color: black !important; }
+                    .roster-print th { background: #f1f5f9 !important; font-weight: 900 !important; }
+                }
+            `}</style>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm no-print">
+                <div className="space-y-2">
+                    <Label className="font-black text-primary text-xs uppercase">পরীক্ষা নির্বাচন</Label>
+                    <Select value={selectedExam} onValueChange={setSelectedExam}>
+                        <SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-black text-primary text-xs uppercase">মোট পরীক্ষার কক্ষ</Label>
+                    <Input type="number" min={1} max={20} value={roomCount} onChange={e => setRoomCount(parseInt(e.target.value) || 1)} className="font-black border-2" />
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-black text-primary text-xs uppercase">প্রতি কক্ষে শিক্ষক সংখ্যা</Label>
+                    <Select value={String(perRoom)} onValueChange={v => setPerRoom(parseInt(v))}>
+                        <SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="1">১ জন করে</SelectItem>
+                            <SelectItem value="2">২ জন করে</SelectItem>
+                            <SelectItem value="3">৩ জন করে</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={handleGenerate} disabled={isGenerating || examDates.length === 0} className="flex-1 font-black shadow-lg">
+                        {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />} তৈরি করুন
+                    </Button>
+                    <Button variant="outline" onClick={() => window.print()} disabled={Object.keys(roster).length === 0} className="border-2 border-primary text-primary font-black"><Printer className="h-4 w-4" /></Button>
+                </div>
+            </div>
+
+            {Object.keys(roster).length > 0 && (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center px-2 no-print">
+                        <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5"><Info className="h-4 w-4 text-primary" /> তালিকাটি অটো-জেনারেটেড। কোনো অসঙ্গতি থাকলে পুনরায় জেনারেট বাটনে চাপুন।</p>
+                        <Button onClick={handleSaveRoster} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 font-black h-10 px-8 shadow-md">
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} সার্ভারে সেভ করুন
+                        </Button>
+                    </div>
+
+                    <div className="printable-area bg-white text-black p-0 sm:p-4">
+                        <div className="hidden print:block text-center mb-6 border-b-4 border-emerald-800 pb-4">
+                            <h1 className="text-3xl font-black">{schoolInfo.name}</h1>
+                            <p className="font-bold text-slate-700">{schoolInfo.address}</p>
+                            <div className="mt-2 inline-block border-2 border-emerald-800 bg-emerald-50 px-8 py-1 rounded-full font-black text-xl uppercase text-emerald-900 shadow-sm">
+                                {selectedExam} - কক্ষ পরিদর্শকের ডিউটি তালিকা
+                            </div>
+                            <p className="mt-2 font-black text-sm uppercase tracking-widest">শিক্ষাবর্ষ: {toBengaliNumber(academicYear)}</p>
+                        </div>
+
+                        <div className="table-container roster-print !max-h-none border-2 border-black rounded-xl overflow-hidden shadow-2xl">
+                            <Table className="border-collapse w-full">
+                                <TableHeader className="bg-slate-100 border-b-2 border-black">
+                                    <TableRow className="h-14">
+                                        <TableHead className="font-black text-black border-r-2 border-black text-center w-36">তারিখ ও বার</TableHead>
+                                        {[...Array(roomCount)].map((_, i) => (
+                                            <TableHead key={i} className="font-black text-black border-r-2 border-black text-center">কক্ষ- {toBengaliNumber(i + 1)}</TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {examDates.map(date => (
+                                        <TableRow key={date} className="h-16 border-b border-black hover:bg-slate-50 transition-colors">
+                                            <TableCell className="border-r-2 border-black text-center bg-slate-50/50 p-2">
+                                                <p className="font-black text-base leading-none text-slate-800">{formatBengaliDate(date)}</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground mt-1.5 uppercase">{getBengaliDay(date)}</p>
+                                            </TableCell>
+                                            {roster[date]?.map((teachersInRoom, rIdx) => (
+                                                <TableCell key={rIdx} className="border-r-2 border-black p-2 text-center align-middle">
+                                                    <div className="flex flex-col gap-1.5 justify-center h-full">
+                                                        {teachersInRoom.map((name, pIdx) => (
+                                                            <div key={pIdx} className={cn(
+                                                                "p-1.5 rounded-lg border font-black text-[13px] leading-tight shadow-sm transition-all",
+                                                                pIdx === 0 ? "bg-indigo-50 border-indigo-200 text-indigo-900" : 
+                                                                pIdx === 1 ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-amber-50 border-amber-200 text-amber-900"
+                                                            )}>
+                                                                {name}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        <footer className="mt-20 hidden print:flex justify-between px-10">
+                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-base">পরীক্ষা নিয়ন্ত্রক</div>
+                            <div className="text-center w-48 border-t-2 border-black pt-1 font-black text-base">প্রধান শিক্ষক</div>
+                        </footer>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 const RoutineStatistics = ({ stats }: { stats: any }) => {
     const { teacherStats, classStats } = stats;
     const teachers = Object.keys(teacherStats).sort();
@@ -1470,6 +1774,7 @@ export default function RoutinesPage() {
             items.push({ id: 'allocation', label: 'শিক্ষক-বিষয় বণ্টন', icon: Briefcase, color: 'text-emerald-600 bg-emerald-50' });
         }
         items.push({ id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' });
+        items.push({ id: 'invigilator-roster', label: 'কক্ষ পরিদর্শকের তালিকা', icon: ShieldCheck, color: 'text-rose-600 bg-rose-50' });
         items.push({ id: 'exam-attendance', label: 'পরীক্ষার হাজিরা শিট', icon: ClipboardCheck, color: 'text-teal-600 bg-teal-50' });
         
         if (isAdmin) {
@@ -1559,6 +1864,9 @@ export default function RoutinesPage() {
                                     {activeSection === 'exam-routine' && (
                                         <ExamRoutineTab />
                                     )}
+                                    {activeSection === 'invigilator-roster' && (
+                                        <InvigilatorRosterTab staffList={allStaff} academicYear={selectedYear} />
+                                    )}
                                     {activeSection === 'exam-attendance' && (
                                         <ExamAttendanceSheetTab />
                                     )}
@@ -1588,7 +1896,7 @@ export default function RoutinesPage() {
                 </div>
             </main>
 
-            {activeSection !== 'exam-routine' && activeSection !== 'exam-attendance' && (
+            {activeSection !== 'exam-routine' && activeSection !== 'exam-attendance' && activeSection !== 'invigilator-roster' && (
             <div className={cn("printable-area routine-print-container text-black bg-white p-10 flex-col font-kalpurush", "hidden print:flex")}>
                 <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
@@ -3202,5 +3510,108 @@ function ExamAttendanceSheetTab() {
                 {studentPages.map((pageRows, pIdx) => renderSingleSheet(pageRows, pIdx, studentPages.length))}
             </div>
         </div>
+    );
+}
+
+function CopyRoutineTab({ onCopy, targetYear, setTargetYear, availableYears, selectedYear, isProcessing }: any) {
+    return (
+        <Card className="border-2 border-amber-100 bg-amber-50/20 rounded-3xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-500">
+            <CardHeader className="bg-amber-100/50 pb-6">
+                <CardTitle className="text-xl font-black text-amber-900 flex items-center gap-2">
+                    <Copy className="h-6 w-6" /> রুটিন কপি করুন
+                </CardTitle>
+                <CardDescription className="text-amber-800 font-bold">এক বছরের রুটিন অন্য বছরের জন্য হুবহু কপি করার সুবিধা</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+                <div className="bg-white p-6 rounded-2xl border-2 border-amber-200 shadow-sm space-y-4">
+                    <div className="space-y-2">
+                        <Label className="font-black text-primary">কোন বছর থেকে কপি করবেন?</Label>
+                        <div className="p-3 bg-muted/30 rounded-lg border font-black text-lg text-center">{toBengaliNumber(selectedYear)}</div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="font-black text-primary">কোন বছরে কপি করবেন?</Label>
+                        <Select value={targetYear} onValueChange={setTargetYear}>
+                            <SelectTrigger className="h-12 text-lg font-black bg-white border-2 border-amber-200"><SelectValue placeholder="বছর নির্বাচন করুন" /></SelectTrigger>
+                            <SelectContent>
+                                {availableYears.map((y: string) => (
+                                    <SelectItem key={y} value={y} disabled={y === selectedYear}>{toBengaliNumber(y)}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                
+                <div className="p-4 bg-white/80 rounded-xl border border-dashed border-amber-300 flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                    <p className="text-xs font-bold text-amber-900 leading-relaxed">
+                        সতর্কতা: কপি করার ফলে টার্গেট বছরের বর্তমান রুটিন (যদি থাকে) তা সম্পূর্ণভাবে মুছে যাবে এবং নতুন ডাটা দিয়ে প্রতিস্থাপিত হবে।
+                    </p>
+                </div>
+
+                <Button onClick={onCopy} disabled={!targetYear || isProcessing} className="w-full h-14 text-lg font-black shadow-xl bg-amber-600 hover:bg-amber-700">
+                    {isProcessing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                    কপি নিশ্চিত করুন
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+function BlankRoutineTab({ onReset, selectedYear, isProcessing }: any) {
+    return (
+        <Card className="border-2 border-rose-100 bg-rose-50/20 rounded-3xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-500">
+            <CardHeader className="bg-rose-100/50 pb-6">
+                <CardTitle className="text-xl font-black text-rose-900 flex items-center gap-2">
+                    <FilePlus className="h-6 w-6" /> ফাঁকা রুটিন (Reset)
+                </CardTitle>
+                <CardDescription className="text-rose-800 font-bold">বর্তমান বছরের রুটিন পুরোপুরি পরিষ্কার করার সুবিধা</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6 text-center">
+                <div className="bg-white p-10 rounded-2xl border-2 border-rose-200 shadow-sm flex flex-col items-center gap-4">
+                    <div className="p-4 bg-rose-100 rounded-full">
+                        <AlertTriangle className="h-12 w-12 text-rose-600 animate-pulse" />
+                    </div>
+                    <h4 className="text-xl font-black text-rose-950">{toBengaliNumber(selectedYear)} সালের রুটিন মুছতে চান?</h4>
+                    <p className="text-sm font-bold text-muted-foreground max-sm">
+                        এটি এই বছরের সকল শ্রেণির সকল দিনের রুটিন ডাটা মুছে ফেলবে। এই কাজটি আর ফিরিয়ে আনা যাবে না।
+                    </p>
+                </div>
+
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button disabled={isProcessing} variant="destructive" className="w-full h-14 text-lg font-black shadow-xl">
+                            {isProcessing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Trash2 className="mr-2" />}
+                            রুটিন পুরোপুরি মুছুন
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="font-kalpurush">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-2xl font-black text-rose-700">আপনি কি নিশ্চিত?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-base font-bold">
+                                এটি {toBengaliNumber(selectedYear)} সালের সম্পূর্ণ রুটিন ডাটা ডিলিট করে দিবে। আপনি কি রুটিনটি রিসেট করতে চান?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="gap-2">
+                            <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
+                            <AlertDialogAction onClick={onReset} className="bg-rose-600 hover:bg-rose-700 font-black">হ্যাঁ, মুছুন</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </CardContent>
+        </Card>
+    );
+}
+
+function BulkRoutineUploadTab({ onRoutineParsed }: { onRoutineParsed: (data: Record<string, Record<string, string[]>>) => void }) {
+    return (
+        <Card className="border-2 border-dashed border-rose-200 bg-rose-50/20 p-12 text-center rounded-3xl">
+            <FileUp className="h-16 w-16 text-rose-500 mx-auto mb-4" />
+            <h3 className="text-xl font-black mb-2">Excel রুটিন আপলোড</h3>
+            <p className="text-sm font-bold text-muted-foreground mb-6">নির্ধারিত ফরম্যাটের এক্সেল ফাইল আপলোড করে এক ক্লিকে রুটিন আপডেট করুন।</p>
+            <div className="flex justify-center gap-4">
+                <Button variant="outline" className="font-bold"><Download className="mr-2 h-4 w-4" /> ফরম্যাট ডাউনলোড</Button>
+                <Button className="font-black"><FileUp className="mr-2 h-4 w-4" /> ফাইল সিলেক্ট করুন</Button>
+            </div>
+        </Card>
     );
 }
