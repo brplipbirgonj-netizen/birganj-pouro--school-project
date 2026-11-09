@@ -974,6 +974,10 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Forbidden names
+    const NAME_ARIFUL = "মো: আরিফুর রহমান";
+    const NAME_NILA = "নীলা রায়";
+
     // Filter active teachers for selection list
     const teacherPool = useMemo(() => {
         return staffList
@@ -1057,7 +1061,10 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
         const pool = [...selectedTeachers].sort(() => Math.random() - 0.5);
 
         const newRoster: Record<string, string[][]> = {};
-        const prevAssignments = new Map<string, { roomIdx: number, partners: Set<string>, dayIdx: number }>();
+        const prevAssignments = new Map<string, { roomIdx: number, dayIdx: number }>();
+        const partnershipCount = new Map<string, number>();
+
+        const getPairKey = (t1: string, t2: string) => [t1, t2].sort().join('|');
         
         let poolIndex = 0;
 
@@ -1078,21 +1085,29 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                         
                         let isValid = true;
                         
-                        // Rule 1: No same room 2 days in a row
-                        if (last && last.dayIdx === dIdx - 1 && last.roomIdx === rIdx) {
+                        // Rule 1: No multiple duties on the same day
+                        if (assignedToday.has(candidate.id)) {
                             isValid = false;
                         }
                         
-                        // Rule 2: No same partner 2 days in a row
-                        if (isValid && last && last.dayIdx === dIdx - 1 && perRoom > 1) {
-                            if (roomTeachers.some(partnerName => last.partners.has(partnerName))) {
-                                isValid = false;
-                            }
+                        // Rule 2: No same room 2 days in a row
+                        if (isValid && last && last.dayIdx === dIdx - 1 && last.roomIdx === rIdx) {
+                            isValid = false;
+                        }
+                        
+                        // Rule 3: Forbidden pair check (Ariful and Nila)
+                        if (isValid && roomTeachers.length > 0) {
+                           const isForbidden = roomTeachers.some(name => 
+                                (candidate.name === NAME_ARIFUL && name === NAME_NILA) ||
+                                (candidate.name === NAME_NILA && name === NAME_ARIFUL)
+                           );
+                           if (isForbidden) isValid = false;
                         }
 
-                        // NEW Rule 3: No duplicate duty on the same day in different rooms
-                        if (isValid && assignedToday.has(candidate.id)) {
-                            isValid = false;
+                        // Rule 4: Partnership limits (max 3 days together)
+                        if (isValid && roomTeachers.length > 0) {
+                            const isLimitReached = roomTeachers.some(name => (partnershipCount.get(getPairKey(candidate.name, name)) || 0) >= 3);
+                            if (isLimitReached) isValid = false;
                         }
 
                         if (isValid) {
@@ -1104,25 +1119,26 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                         attempts++;
                     }
 
+                    // Fallback to pool index if no perfect match found after one full rotation
                     if (!foundCandidate) foundCandidate = pool[poolIndex];
 
                     roomTeachers.push(foundCandidate.name);
-                    assignedToday.add(foundCandidate.id); // Mark as assigned for today
+                    assignedToday.add(foundCandidate.id); 
+                    prevAssignments.set(foundCandidate.id, { roomIdx: rIdx, dayIdx: dIdx });
+                    
+                    // Track partnerships
+                    roomTeachers.forEach(otherName => {
+                        if (otherName !== foundCandidate!.name) {
+                            const pKey = getPairKey(foundCandidate!.name, otherName);
+                            partnershipCount.set(pKey, (partnershipCount.get(pKey) || 0) + 1);
+                        }
+                    });
+
                     poolIndex = (poolIndex + 1) % pool.length;
                 }
                 
                 daySlots.push(roomTeachers);
             }
-
-            daySlots.forEach((roomNames, rIdx) => {
-                roomNames.forEach(name => {
-                    const teacher = pool.find(t => t.name === name);
-                    if (teacher) {
-                        const partners = new Set(roomNames.filter(n => n !== name));
-                        prevAssignments.set(teacher.id, { roomIdx: rIdx, partners, dayIdx: dIdx });
-                    }
-                });
-            });
 
             newRoster[date] = daySlots;
         });
@@ -1232,7 +1248,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                                             <p className="text-[13px] font-black text-slate-800 leading-none">{t.name}</p>
                                             {teacherDutyStats[t.name] && (
                                                 <Badge className="bg-emerald-600 text-[9px] h-4 py-0 font-black mt-1">
-                                                    ডিউটি: {toBengaliNumber(teacherDutyStats[t.name])} বার
+                                                    ডিউটি: {toBengaliNumber(teacherDutyStats[t.name])} দিন
                                                 </Badge>
                                             )}
                                         </div>
@@ -1302,7 +1318,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                             <div className="flex flex-wrap gap-2">
                                 {Object.entries(teacherDutyStats).map(([name, count]) => (
                                     <Badge key={name} variant="secondary" className="font-black bg-white border-2 border-slate-200">
-                                        {name}: {toBengaliNumber(count)}
+                                        {name}: {toBengaliNumber(count)} দিন
                                     </Badge>
                                 ))}
                             </div>
@@ -1409,7 +1425,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                                 {Object.entries(teacherDutyStats).map(([name, count]) => (
                                     <div key={name} className="flex justify-between border-b border-dashed border-slate-300 pb-0.5">
                                         <span className="font-bold text-xs">{name}</span>
-                                        <span className="font-black text-xs">{toBengaliNumber(count)} বার</span>
+                                        <span className="font-black text-xs">{toBengaliNumber(count)} দিন</span>
                                     </div>
                                 ))}
                             </div>
@@ -2597,7 +2613,7 @@ function ExamRoutineTab() {
                                                     <Button 
                                                         variant="ghost" 
                                                         size="icon" 
-                                                        className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 shrink-0" 
+                                                        className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-100 shrink-0" 
                                                         onClick={() => handleRemoveRow(row.id)} 
                                                         title="রো মুছুন"
                                                     >
