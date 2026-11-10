@@ -826,21 +826,74 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                 </div>
             </div>
             {Object.keys(roster).length > 0 && (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center px-2 no-print">
-                        <h3 className="font-black text-slate-800 flex items-center gap-2"><CheckCircle2 className="text-emerald-600" /> ডিউটি পরিসংখ্যান:</h3>
-                        <Button onClick={handleSaveRoster} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 font-black h-10 px-8 shadow-md">সেভ করুন</Button>
-                    </div>
-                    <div className="no-print border-2 border-black rounded-xl overflow-hidden shadow-2xl bg-white">
-                         <div className="table-container !max-h-[500px]">
-                            <Table className="border-collapse w-full">
-                                <TableHeader className="bg-slate-100 border-b-2 border-black"><TableRow className="h-14"><TableHead className="font-black text-black border-r-2 border-black text-center w-36">তারিখ ও বার</TableHead>{[...Array(roomCount)].map((_, i) => (<TableHead key={i} className="font-black text-black border-r-2 border-black text-center">কক্ষ- {toBengaliNumber(i + 1)}</TableHead>))}</TableRow></TableHeader>
-                                <TableBody>{examDates.map(date => (<TableRow key={date} className="h-16 border-b border-slate-200"><TableCell className="border-r-2 border-black text-center bg-slate-50/50 p-2"><p className="font-black text-base">{toBengaliNumber(date)}</p></TableCell>{roster[date]?.map((teachersInRoom, rIdx) => (<TableCell key={rIdx} className="border-r border-slate-200 p-2 text-center align-middle"><div className="flex flex-col gap-1">{teachersInRoom.map((name, pIdx) => (<div key={pIdx} className="p-1 rounded-lg border font-black text-[11px] bg-slate-50">{name}</div>))}</div></TableCell>))}</TableRow>))}</TableBody>
-                            </Table>
+                <>
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center px-2 no-print">
+                            <h3 className="font-black text-slate-800 flex items-center gap-2"><CheckCircle2 className="text-emerald-600" /> ডিউটি পরিসংখ্যান:</h3>
+                            <Button onClick={handleSaveRoster} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 font-black h-10 px-8 shadow-md">সেভ করুন</Button>
+                        </div>
+                        <div className="no-print border-2 border-black rounded-xl overflow-hidden shadow-2xl bg-white">
+                             <div className="table-container !max-h-[500px]">
+                                <Table className="border-collapse w-full">
+                                    <TableHeader className="bg-slate-100 border-b-2 border-black"><TableRow className="h-14"><TableHead className="font-black text-black border-r-2 border-black text-center w-36">তারিখ ও বার</TableHead>{[...Array(roomCount)].map((_, i) => (<TableHead key={i} className="font-black text-black border-r-2 border-black text-center">কক্ষ- {toBengaliNumber(i + 1)}</TableHead>))}</TableRow></TableHeader>
+                                    <TableBody>{examDates.map(date => (<TableRow key={date} className="h-16 border-b border-slate-200"><TableCell className="border-r-2 border-black text-center bg-slate-50/50 p-2"><p className="font-black text-base">{toBengaliNumber(date)}</p></TableCell>{roster[date]?.map((teachersInRoom, rIdx) => (<TableCell key={rIdx} className="border-r border-slate-200 p-2 text-center align-middle"><div className="flex flex-col gap-1">{teachersInRoom.map((name, pIdx) => (<div key={pIdx} className="p-1 rounded-lg border font-black text-[11px] bg-slate-50">{name}</div>))}</div></TableCell>))}</TableRow>))}</TableBody>
+                                </Table>
+                            </div>
                         </div>
                     </div>
-                </div>
+
+                    <div className="hidden print:block printable-area bg-white text-black p-0">
+                        <header className="text-center border-b-4 border-black pb-2 mb-4 flex flex-col items-center">
+                            {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain mb-1" />}
+                            <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
+                            <p className="text-sm font-bold">{schoolInfo.address}</p>
+                            <div className="mt-1 inline-block border-2 border-black px-10 py-1 rounded-full font-black text-lg uppercase bg-slate-50">
+                                কক্ষ পরিদর্শকের তালিকা - {selectedExam} ({toBengaliNumber(academicYear)})
+                            </div>
+                        </header>
+
+                        <table className="w-full border-collapse border-2 border-black roster-print">
+                            <thead>
+                                <tr className="bg-slate-100">
+                                    <th className="border-r-2 border-b-2 border-black font-black text-center w-36">তারিখ ও বার</th>
+                                    {[...Array(roomCount)].map((_, i) => (
+                                        <th key={i} className="border-r-2 border-b-2 border-black font-black text-center">কক্ষ- {toBengaliNumber(i + 1)}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {examDates.map(date => {
+                                    const dObj = new Date(date);
+                                    const dayName = dayMap[dObj.getDay()] || '';
+                                    return (
+                                        <tr key={date} className="border-b border-black">
+                                            <td className="border-r-2 border-black text-center p-2 bg-slate-50/50">
+                                                <p className="font-black text-base">{toBengaliNumber(format(new Date(date), 'dd-MM-yyyy'))}</p>
+                                                <p className="text-xs font-bold">({dayName})</p>
+                                            </td>
+                                            {roster[date]?.map((teachersInRoom, rIdx) => (
+                                                <td key={rIdx} className="border-r-2 border-black p-2 text-center align-middle">
+                                                    <div className="flex flex-col gap-1">
+                                                        {teachersInRoom.map((name, pIdx) => (
+                                                            <div key={pIdx} className="p-1 rounded-lg border font-black text-[11px] bg-slate-50">{name}</div>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        <footer className="mt-10 flex justify-between px-10 pt-8 border-t-2 border-black">
+                            <div className="text-center w-56 border-t-2 border-black pt-1 font-black text-lg">পরীক্ষা নিয়ন্ত্রক</div>
+                            <div className="text-center w-56 border-t-2 border-black pt-1 font-black text-lg">প্রধান শিক্ষক</div>
+                        </footer>
+                    </div>
+                </>
             )}
         </div>
     );
 }
+
