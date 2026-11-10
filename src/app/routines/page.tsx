@@ -17,7 +17,8 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
     Copy, Printer, ClipboardCheck, FilePen, FilePlus, Users, Info, User, 
-    FileUp, Download, CalendarClock, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, Briefcase, BookOpen
+    FileUp, Download, CalendarClock, Plus, LayoutGrid, CheckCircle2, Trash2, Loader2, Save, ChevronRight, BarChart3, Briefcase, BookOpen,
+    UserX, AlertTriangle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { subjectNameNormalization as baseSubjectNameNormalization, getSubjects } from '@/lib/subjects';
@@ -546,7 +547,7 @@ const ProxyManagementTab = ({ routineData, academicYear }: { routineData: Record
                         {leaveTeachers.length > 0 && (
                             <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg space-y-2">
                                 <p className="text-[10px] font-black text-rose-700 uppercase tracking-wider flex items-center gap-1">
-                                    <Info className="h-3 w-3" /> হাজিরা অনুযায়ী ছুটিতে আছেন:
+                                    <Info className="h-3 w-3" /> হাশরা অনুযায়ী ছুটিতে আছেন:
                                 </p>
                                 <div className="flex flex-wrap gap-2">
                                     {leaveTeachers.map(t => (
@@ -1369,7 +1370,7 @@ export default function RoutinesPage() {
     const handleSaveChanges = () => {
         if (!db) return;
         if (!canManageRoutines) {
-            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+            toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই। ' });
             return;
         }
         
