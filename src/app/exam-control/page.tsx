@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -11,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
-    Printer, Save, Loader2, List, ShieldCheck, Plus, Trash2, Info, CheckCircle2, ChevronRight, GraduationCap, Target, Award, Users, BookOpen
+    Printer, Save, Loader2, List, ShieldCheck, Plus, Trash2, Info, CheckCircle2, ChevronRight, GraduationCap, Target, Award, Users, BookOpen, UserCheck
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -20,13 +21,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { getStaff, Staff } from '@/lib/staff-data';
+import { Staff } from '@/lib/staff-data';
 import { getExams, Exam } from '@/lib/exam-data';
-import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getSubjects } from '@/lib/subjects';
+import { studentFromDoc, Student } from '@/lib/student-data';
 
 const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
@@ -90,6 +92,7 @@ export default function ExamControlPage() {
     const sidebarItems = [
         { id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' },
         { id: 'invigilator-roster', label: 'কক্ষ পরিদর্শকের তালিকা', icon: ShieldCheck, color: 'text-rose-600 bg-rose-50' },
+        { id: 'exam-attendance-sheet', label: 'শিক্ষার্থী হাজিরা', icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' },
     ];
 
     if (isLoading && allStaff.length === 0) {
@@ -142,11 +145,226 @@ export default function ExamControlPage() {
                             <div className="animate-in fade-in duration-500">
                                 {activeSection === 'exam-routine' && <ExamRoutineTab />}
                                 {activeSection === 'invigilator-roster' && <InvigilatorRosterTab staffList={allStaff} academicYear={selectedYear} />}
+                                {activeSection === 'exam-attendance-sheet' && <ExamAttendanceSheetTab academicYear={selectedYear} />}
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
+        </div>
+    );
+}
+
+function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const { schoolInfo } = useSchoolInfo();
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [selectedExam, setSelectedExam] = useState<string>('');
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [students, setStudents] = useState<Student[]>([]);
+    const [routineData, setRoutineData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!db) return;
+        getExams(db, academicYear).then(setExams);
+    }, [db, academicYear]);
+
+    const fetchSheetData = async () => {
+        if (!db || !selectedExam || !selectedClass) return;
+        setIsLoading(true);
+        try {
+            // 1. Fetch Students
+            const sQuery = query(collection(db, 'students'), where('academicYear', '==', academicYear), where('className', '==', selectedClass));
+            const sSnap = await getDocs(sQuery);
+            const studentList = sSnap.docs.map(studentFromDoc).sort((a, b) => a.roll - b.roll);
+            setStudents(studentList);
+
+            // 2. Fetch Exam Routine to get Dates and Subjects
+            const examSlug = selectedExam.trim().replace(/[^\p{L}\p{N}]+/gu, '_');
+            const docId = `examRoutine_${academicYear}_${examSlug}`;
+            const routineSnap = await getDoc(doc(db, 'classRoutines', docId));
+            
+            if (routineSnap.exists()) {
+                const data = routineSnap.data();
+                const columns = data.columns || [];
+                const classCol = columns.find((c: any) => c.className === selectedClass);
+                
+                if (classCol && data.rows) {
+                    const extracted = data.rows.map((row: any) => {
+                        const cell = row.subjects?.[classCol.id];
+                        let subjectsStr = '';
+                        if (Array.isArray(cell)) {
+                            subjectsStr = cell.map((s: any) => s?.subjectName).filter(Boolean).join(' / ');
+                        } else if (cell?.subjectName) {
+                            subjectsStr = cell.subjectName;
+                        }
+                        return { date: row.date, subject: subjectsStr };
+                    }).filter((r: any) => !!r.subject);
+                    setRoutineData(extracted);
+                } else {
+                    setRoutineData([]);
+                    toast({ variant: 'destructive', title: 'রুটিন তথ্য পাওয়া যায়নি', description: 'এই শ্রেণির জন্য রুটিন সেট করা হয়নি।' });
+                }
+            } else {
+                setRoutineData([]);
+                toast({ variant: 'destructive', title: 'রুটিন পাওয়া যায়নি', description: 'আগে পরীক্ষার রুটিন সেকশনে গিয়ে রুটিন তৈরি করুন।' });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setIsLoading(false);
+    };
+
+    const handlePrint = () => { window.print(); };
+
+    return (
+        <div className="space-y-6">
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4 landscape; margin: 10mm !important; }
+                    .printable-area.attendance-sheet-print { 
+                        visibility: visible !important; 
+                        display: block !important; 
+                        position: absolute !important; 
+                        top: 0 !important; 
+                        left: 0 !important; 
+                        width: 100% !important; 
+                        padding: 0 !important; 
+                        margin: 0 !important; 
+                    }
+                    .attendance-sheet-print table { border-collapse: collapse !important; width: 100% !important; border: 1.5px solid black !important; }
+                    .attendance-sheet-print th, .attendance-sheet-print td { border: 1.5px solid black !important; padding: 2px 4px !important; font-size: 10px !important; text-align: center !important; height: 26px !important; }
+                    .attendance-sheet-print th { background: #f8fafc !important; font-weight: 900 !important; }
+                    .no-print { display: none !important; }
+                }
+            `}</style>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm no-print">
+                <div className="space-y-2">
+                    <Label className="font-bold text-primary">পরীক্ষা নির্বাচন</Label>
+                    <Select value={selectedExam} onValueChange={setSelectedExam}>
+                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger>
+                        <SelectContent className="font-kalpurush">
+                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="font-bold text-primary">শ্রেণি</Label>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
+                        <SelectContent className="font-kalpurush">
+                            {Object.entries(classNamesMap).map(([v, l]) => <SelectItem key={v} value={v}>{l} শ্রেণি</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={fetchSheetData} disabled={isLoading || !selectedExam} className="flex-1 font-black h-11 shadow-md">
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />} তথ্য লোড করুন
+                    </Button>
+                    <Button variant="outline" onClick={handlePrint} disabled={students.length === 0} className="h-11 border-2 border-primary text-primary font-black shadow-sm">
+                        <Printer className="h-5 w-5" />
+                    </Button>
+                </div>
+            </div>
+
+            {students.length > 0 && routineData.length > 0 && (
+                <div className="space-y-6">
+                    <div className="bg-white border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl no-print">
+                        <CardHeader className="bg-primary/5 border-b-[3px] border-black flex flex-row justify-between items-center">
+                            <div>
+                                <CardTitle className="text-xl font-black text-primary">হাজিরা শিট প্রিভিউ</CardTitle>
+                                <CardDescription className="font-bold">{selectedExam} | শ্রেণি: {classNamesMap[selectedClass]}</CardDescription>
+                            </div>
+                            <Button onClick={handlePrint} className="font-black shadow-lg"><Printer className="mr-2 h-4 w-4" /> ডাউনলোড ও প্রিন্ট</Button>
+                        </CardHeader>
+                        <CardContent className="p-0 overflow-x-auto">
+                            <Table className="min-w-max border-collapse">
+                                <TableHeader className="bg-slate-100 sticky top-0">
+                                    <TableRow className="border-b-2 border-black">
+                                        <TableHead rowSpan={2} className="border-r-2 border-black text-center font-black w-14 text-black">রোল</TableHead>
+                                        <TableHead rowSpan={2} className="border-r-2 border-black font-black w-48 text-black">শিক্ষার্থীর নাম</TableHead>
+                                        {routineData.map((r, i) => (
+                                            <TableHead key={i} className="border-r border-black text-center font-black py-1 bg-slate-50 text-[10px] text-black">
+                                                {toBengaliNumber(r.date)}
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                    <TableRow className="border-b-2 border-black">
+                                        {routineData.map((r, i) => (
+                                            <TableHead key={i} className="border-r border-black text-center font-bold py-1 bg-white text-[9px] leading-tight text-blue-900 w-24">
+                                                {r.subject}
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {students.map(s => (
+                                        <TableRow key={s.id} className="border-b border-slate-300 h-10">
+                                            <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(s.roll)}</TableCell>
+                                            <TableCell className="font-bold border-r-2 border-black whitespace-nowrap">{s.studentNameBn}</TableCell>
+                                            {routineData.map((_, i) => (
+                                                <TableCell key={i} className="border-r border-slate-300"></TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </div>
+
+                    <div className="hidden print:block printable-area attendance-sheet-print bg-white text-black font-kalpurush">
+                        <header className="text-center border-b-4 border-black pb-2 mb-4 flex flex-col items-center">
+                            {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain mb-1" />}
+                            <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
+                            <p className="text-sm font-bold">{schoolInfo.address}</p>
+                            <div className="mt-1 inline-block border-2 border-black px-10 py-1 rounded-full font-black text-lg uppercase bg-slate-50">
+                                শিক্ষার্থী হাজিরা শিট (স্বাক্ষর তালিকা)
+                            </div>
+                            <div className="flex gap-10 mt-2 font-black text-sm">
+                                <span>পরীক্ষা: {selectedExam}</span>
+                                <span>শ্রেণি: {classNamesMap[selectedClass]} শ্রেণি</span>
+                                <span>সেশন: {toBengaliNumber(academicYear)}</span>
+                            </div>
+                        </header>
+
+                        <table className="w-full border-collapse border-2 border-black">
+                            <thead>
+                                <tr className="bg-slate-100">
+                                    <th rowSpan={2} className="w-10">রোল</th>
+                                    <th rowSpan={2} className="text-left pl-3 w-48">শিক্ষার্থীর নাম</th>
+                                    {routineData.map((r, i) => (
+                                        <th key={i} className="text-[10px] font-black">{toBengaliNumber(r.date)}</th>
+                                    ))}
+                                </tr>
+                                <tr className="bg-white">
+                                    {routineData.map((r, i) => (
+                                        <th key={i} className="text-[9px] font-bold leading-tight border-t border-black">{r.subject}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {students.map(s => (
+                                    <tr key={s.id}>
+                                        <td className="font-black text-center">{toBengaliNumber(s.roll)}</td>
+                                        <td className="font-bold text-left pl-3">{s.studentNameBn}</td>
+                                        {routineData.map((_, i) => (
+                                            <td key={i}></td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        <footer className="mt-12 flex justify-between px-10 border-t-2 border-black pt-4">
+                            <div className="text-center w-56 border-t border-black pt-1 font-black text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                            <div className="text-center w-56 border-t border-black pt-1 font-black text-sm">প্রধান শিক্ষকের স্বাক্ষর</div>
+                        </footer>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -298,7 +516,7 @@ function ExamRoutineTab() {
                 endTime,
                 columns,
                 rows,
-                updatedAt: new Date().toISOString()
+                updatedAt: serverTimestamp()
             };
 
             const classRoutineDocId = `examRoutine_${selectedYear}_${examSlug}`;
@@ -448,7 +666,7 @@ function ExamRoutineTab() {
                                 <SelectTrigger className="h-11 bg-white border-2 font-black text-base shadow-sm">
                                     <SelectValue placeholder="পরীক্ষা নির্বাচন করুন" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="font-kalpurush">
                                     {cleanExamsList.map((name, idx) => (
                                         <SelectItem key={`exam-opt-${idx}-${name}`} value={name} className="font-bold text-sm">
                                             {name}
@@ -494,7 +712,7 @@ function ExamRoutineTab() {
                                             <div className="flex items-center justify-between gap-1 bg-white p-1 rounded-xl border border-slate-400 shadow-sm">
                                                 <Select value={col.className} onValueChange={(val) => handleColumnClassChange(col.id, val)}>
                                                     <SelectTrigger className="h-8 font-black text-xs border-0 focus:ring-0"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent className="font-kalpurush">
                                                         {Object.entries(classNamesMap).map(([cId, cName]) => (
                                                             <SelectItem key={cId} value={cId} className="font-bold text-xs">{cName} শ্রেণি</SelectItem>
                                                         ))}
@@ -536,7 +754,7 @@ function ExamRoutineTab() {
                                                         {cellSubs.length === 0 ? (
                                                             <Select value="none" onValueChange={(val) => handleSubjectChange(row.id, col.id, col.className, 0, val)}>
                                                                 <SelectTrigger className="h-9 text-xs font-bold bg-white border-2 border-slate-300 hover:border-primary transition-colors"><SelectValue placeholder="বিষয় সিলেক্ট করুন" /></SelectTrigger>
-                                                                <SelectContent className="max-h-[300px]">
+                                                                <SelectContent className="max-h-[300px] font-kalpurush">
                                                                     <SelectItem value="none" className="text-muted-foreground font-semibold text-xs">-- পরীক্ষা নেই / বন্ধ --</SelectItem>
                                                                     {subList.map((sub, sIdx) => (<SelectItem key={`sub-${sub.name}-${sub.code}-${sIdx}`} value={sub.name} className="font-bold text-xs">{sub.name} ({toBengaliNumber(sub.code)})</SelectItem>))}
                                                                 </SelectContent>
@@ -549,7 +767,7 @@ function ExamRoutineTab() {
                                                                             <span className="text-[11px] font-black text-slate-500 w-4 text-center shrink-0">{toBengaliNumber(sIdx + 1)}.</span>
                                                                             <Select value={entry.subjectName} onValueChange={(val) => handleSubjectChange(row.id, col.id, col.className, sIdx, val)}>
                                                                                 <SelectTrigger className="h-8 text-xs font-bold bg-white border border-slate-300 flex-1"><SelectValue placeholder="বিষয় সিলেক্ট করুন" /></SelectTrigger>
-                                                                                <SelectContent className="max-h-[300px]">
+                                                                                <SelectContent className="max-h-[300px] font-kalpurush">
                                                                                     <SelectItem value="none" className="text-rose-500 font-semibold text-xs">-- এই বিষয়টি মুছুন --</SelectItem>
                                                                                     {subList.map((sub) => (<SelectItem key={sub.name} value={sub.name} className="font-bold text-xs">{sub.name} ({toBengaliNumber(sub.code)})</SelectItem>))}
                                                                                 </SelectContent>
@@ -818,9 +1036,9 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                 </Card>
                 <div className="lg:col-span-3 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
-                        <div className="space-y-2"><Label className="font-black text-primary text-xs">পরীক্ষা নির্বাচন</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger><SelectContent>{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label className="font-black text-primary text-xs">পরীক্ষা নির্বাচন</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger><SelectContent className="font-kalpurush">{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label className="font-black text-primary text-xs">মোট কক্ষ</Label><Input type="number" min={1} value={roomCount} onChange={e => setRoomCount(parseInt(e.target.value) || 1)} className="font-black border-2" /></div>
-                        <div className="space-y-2"><Label className="font-black text-primary text-xs">প্রতি কক্ষে শিক্ষক</Label><Select value={String(perRoom)} onValueChange={v => setPerRoom(parseInt(v))}><SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="1">১ জন</SelectItem><SelectItem value="2">২ জন</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label className="font-black text-primary text-xs">প্রতি কক্ষে শিক্ষক</Label><Select value={String(perRoom)} onValueChange={v => setPerRoom(parseInt(v))}><SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger><SelectContent className="font-kalpurush"><SelectItem value="1">১ জন</SelectItem><SelectItem value="2">২ জন</SelectItem></SelectContent></Select></div>
                     </div>
                     <div className="flex gap-3"><Button onClick={handleGenerate} disabled={isGenerating || examDates.length === 0} size="lg" className="flex-1 font-black shadow-xl h-14">স্বয়ংক্রিয় ডিউটি তালিকা তৈরি</Button><Button variant="outline" size="lg" onClick={() => window.print()} className="h-14 w-14 border-2 border-primary text-primary font-black shadow-lg"><Printer className="h-6 w-6" /></Button></div>
                 </div>
