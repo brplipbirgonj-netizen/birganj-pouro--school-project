@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { 
-    Printer, Save, Loader2, List, ShieldCheck, Plus, Trash2, Info, CheckCircle2, ChevronRight, GraduationCap, Target, Award, Users, BookOpen, UserCheck, Search
+    Printer, Save, Loader2, List, ShieldCheck, Plus, Trash2, Info, CheckCircle2, ChevronRight, GraduationCap, Target, Award, Users, BookOpen, UserCheck, Search, Settings, AlertTriangle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
@@ -37,6 +37,11 @@ function toBengaliNumber(str: string | number | undefined | null) {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
+
+// Helper to get consistent URL-safe slugs for exam names including Bengali
+const getExamSlug = (name: string) => {
+    return (name || '').trim().replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
+};
 
 export default function ExamControlPage() {
     const { selectedYear } = useAcademicYear();
@@ -157,7 +162,7 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
             const studentList = sSnap.docs.map(studentFromDoc).sort((a, b) => a.roll - b.roll);
             setStudents(studentList);
 
-            const examSlug = selectedExam.trim().replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
+            const examSlug = getExamSlug(selectedExam);
             const docId = `examRoutine_${academicYear}_${examSlug}`;
             const routineSnap = await getDoc(doc(db, 'classRoutines', docId));
             
@@ -192,6 +197,10 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
         setIsLoading(false);
     };
 
+    const cleanExamsList = useMemo(() => {
+        return Array.from(new Set(exams.map(e => (typeof e?.name === 'string' ? e.name.trim() : '')).filter(Boolean)));
+    }, [exams]);
+
     const handlePrint = () => { window.print(); };
 
     return (
@@ -222,7 +231,7 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
                     <Select value={selectedExam} onValueChange={setSelectedExam}>
                         <SelectTrigger className="bg-slate-50 border-2 font-bold"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger>
                         <SelectContent className="font-kalpurush">
-                            {exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                            {cleanExamsList.map((name, idx) => <SelectItem key={`exam-att-${idx}`} value={name}>{name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -440,7 +449,7 @@ function ExamRoutineTab() {
         setIsLoading(true);
         try {
             const cleanExam = selectedExam.trim();
-            const examSlug = cleanExam.replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
+            const examSlug = getExamSlug(cleanExam);
             const classRoutineDocId = `examRoutine_${selectedYear}_${examSlug}`;
             const examDocId = `routine_${selectedYear}_${examSlug}`;
 
@@ -482,7 +491,7 @@ function ExamRoutineTab() {
         setIsSaving(true);
         try {
             const cleanExam = (selectedExam || 'অর্ধ-বার্ষিক পরীক্ষা').trim();
-            const examSlug = cleanExam.replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
+            const examSlug = getExamSlug(cleanExam);
             const routineDataToSave = {
                 type: 'exam_routine',
                 academicYear: selectedYear,
@@ -890,7 +899,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
         if (!db || !selectedExam || !academicYear) return;
         setIsLoading(true);
         try {
-            const examSlug = selectedExam.trim().replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
+            const examSlug = getExamSlug(selectedExam);
             const examDocId = `routine_${academicYear}_${examSlug}`;
             const snap = await getDoc(doc(db, 'exams', examDocId));
             if (snap.exists()) {
@@ -984,7 +993,7 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
         if (!db || Object.keys(roster).length === 0) return;
         setIsLoading(true);
         try {
-            const examSlug = selectedExam.trim().replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
+            const examSlug = getExamSlug(selectedExam);
             const rosterId = `roster_${academicYear}_${examSlug}`;
             await setDoc(doc(db, 'examRosters', rosterId), { examName: selectedExam, academicYear, roomCount, perRoom, roster, updatedAt: serverTimestamp() });
             toast({ title: 'তালিকা সংরক্ষিত হয়েছে' });
