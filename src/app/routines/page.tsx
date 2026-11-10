@@ -1570,6 +1570,40 @@ export default function RoutinesPage() {
                 </div>
             </main>
 
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4 portrait; margin: 3mm !important; }
+                    .printable-area { visibility: visible !important; display: block !important; }
+                    .routine-print-container { 
+                        display: flex !important;
+                        padding: 0 !important; 
+                        margin: 0 !important; 
+                        height: auto !important;
+                        width: 100% !important;
+                    }
+                    .routine-print-container header { margin-bottom: 2mm !important; }
+                    .routine-print-container h1 { font-size: 18px !important; }
+                    .routine-print-container h2 { font-size: 14px !important; }
+                    .routine-print-container table { 
+                        font-size: 8px !important; 
+                        width: 100% !important; 
+                        border-collapse: collapse !important;
+                        table-layout: auto !important;
+                    }
+                    .routine-print-container th, 
+                    .routine-print-container td { 
+                        padding: 2px 1px !important; 
+                        border: 1px solid black !important;
+                    }
+                    .routine-print-container .overflow-x-auto {
+                        overflow: visible !important;
+                        border: none !important;
+                    }
+                    .routine-print-container footer { margin-top: 5mm !important; padding-top: 2mm !important; }
+                    .no-print { display: none !important; }
+                }
+            `}</style>
+
             <div className={cn("printable-area routine-print-container text-black bg-white p-10 flex-col font-kalpurush", "hidden print:flex")}>
                 <header className="flex items-center gap-4 border-b-4 border-emerald-800 pb-2 mb-6">
                     {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={60} height={60} className="object-contain" />}
