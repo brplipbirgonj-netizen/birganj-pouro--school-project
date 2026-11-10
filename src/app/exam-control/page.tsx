@@ -38,7 +38,6 @@ function toBengaliNumber(str: string | number | undefined | null) {
   return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
 }
 
-// Helper to get consistent URL-safe slugs for exam names including Bengali
 const getExamSlug = (name: string) => {
     return (name || '').trim().replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
 };
@@ -153,6 +152,10 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
         getExams(db, academicYear).then(setExams);
     }, [db, academicYear]);
 
+    const cleanExamsList = useMemo(() => {
+        return Array.from(new Set(exams.map(e => (typeof e?.name === 'string' ? e.name.trim() : '')).filter(Boolean)));
+    }, [exams]);
+
     const fetchSheetData = async () => {
         if (!db || !selectedExam || !selectedClass) return;
         setIsLoading(true);
@@ -196,10 +199,6 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
         }
         setIsLoading(false);
     };
-
-    const cleanExamsList = useMemo(() => {
-        return Array.from(new Set(exams.map(e => (typeof e?.name === 'string' ? e.name.trim() : '')).filter(Boolean)));
-    }, [exams]);
 
     const handlePrint = () => { window.print(); };
 
@@ -1020,7 +1019,12 @@ function InvigilatorRosterTab({ staffList, academicYear }: { staffList: Staff[],
                 </Card>
                 <div className="lg:col-span-3 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-2 border-primary/10 rounded-2xl bg-white shadow-sm">
-                        <div className="space-y-2"><Label className="font-black text-primary text-xs">পরীক্ষা নির্বাচন</Label><Select value={selectedExam} onValueChange={setSelectedExam}><SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger><SelectContent className="font-kalpurush">{exams.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label className="font-black text-primary text-xs">পরীক্ষা নির্বাচন</Label><Select value={selectedExam} onValueChange={setSelectedExam}>
+                            <SelectTrigger className="font-bold border-2"><SelectValue placeholder="পরীক্ষা" /></SelectTrigger>
+                            <SelectContent className="font-kalpurush">
+                                {exams.filter(e => Boolean(e?.name)).map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select></div>
                         <div className="space-y-2"><Label className="font-black text-primary text-xs">মোট কক্ষ</Label><Input type="number" min={1} value={roomCount} onChange={e => setRoomCount(parseInt(e.target.value) || 1)} className="font-black border-2" /></div>
                         <div className="space-y-2"><Label className="font-black text-primary text-xs">প্রতি কক্ষে শিক্ষক</Label><Select value={String(perRoom)} onValueChange={v => setPerRoom(parseInt(v))}><SelectTrigger className="font-bold border-2"><SelectValue /></SelectTrigger><SelectContent className="font-kalpurush"><SelectItem value="1">১ জন</SelectItem><SelectItem value="2">২ জন</SelectItem></SelectContent></Select></div>
                     </div>
