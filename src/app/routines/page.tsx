@@ -1572,35 +1572,45 @@ export default function RoutinesPage() {
 
             <style jsx global>{`
                 @media print {
-                    @page { size: A4 portrait; margin: 3mm !important; }
-                    .printable-area { visibility: visible !important; display: block !important; }
-                    .routine-print-container { 
+                    @page { size: A4 portrait; margin: 5mm !important; }
+                    html, body { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+                    .printable-area.routine-print-container { 
+                        visibility: visible !important; 
                         display: flex !important;
+                        flex-direction: column !important;
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: 100% !important;
                         padding: 0 !important; 
                         margin: 0 !important; 
-                        height: auto !important;
-                        width: 100% !important;
+                        box-sizing: border-box !important;
+                        background: white !important;
                     }
                     .routine-print-container header { margin-bottom: 2mm !important; }
-                    .routine-print-container h1 { font-size: 18px !important; }
-                    .routine-print-container h2 { font-size: 14px !important; }
+                    .routine-print-container h1 { font-size: 16px !important; }
+                    .routine-print-container h2 { font-size: 12px !important; }
                     .routine-print-container table { 
                         font-size: 8px !important; 
                         width: 100% !important; 
                         border-collapse: collapse !important;
                         table-layout: auto !important;
+                        border: 1px solid black !important;
                     }
                     .routine-print-container th, 
                     .routine-print-container td { 
-                        padding: 2px 1px !important; 
+                        padding: 1.5px 1px !important; 
                         border: 1px solid black !important;
+                        line-height: 1.1 !important;
                     }
                     .routine-print-container .overflow-x-auto {
                         overflow: visible !important;
                         border: none !important;
                     }
-                    .routine-print-container footer { margin-top: 5mm !important; padding-top: 2mm !important; }
-                    .no-print { display: none !important; }
+                    .routine-print-container footer { margin-top: auto !important; padding-top: 2mm !important; }
+                    .no-print { display: none !important; visibility: hidden !important; }
                 }
             `}</style>
 
