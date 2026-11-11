@@ -86,7 +86,7 @@ const IDCardGeneratorPage = () => {
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
+        <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
             <main className="flex-1 p-4 md:p-8 no-print pb-40">
                 <div className="max-w-[1200px] mx-auto space-y-6">
@@ -146,7 +146,7 @@ const IDCardGeneratorPage = () => {
                                 <div className="pt-6 border-t">
                                     <Button 
                                         onClick={() => window.print()} 
-                                        className="w-full h-12 text-lg font-black shadow-lg"
+                                        className="w-full h-12 text-lg font-black shadow-xl"
                                         disabled={isLoading || availableStudents.length === 0 || (mode === 'single' && !selectedStudentId)}
                                     >
                                         <Printer className="mr-2 h-5 w-5" /> প্রিন্ট করুন (A4)
@@ -184,6 +184,12 @@ const IDCardGeneratorPage = () => {
 
             {/* Printable Area */}
             <div className="hidden print:block printable-area bg-white">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 0 !important; }
+                        .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+                    }
+                `}</style>
                 {mode === 'single' && previewStudent && (
                     <div className="flex justify-center items-center h-screen">
                         <StudentIDCard student={previewStudent} schoolInfo={schoolInfo} isPrint />

@@ -67,7 +67,7 @@
 
   @media print {
     @page {
-      margin: 5mm;
+      margin: 0 !important;
     }
     
     html, body {
@@ -92,17 +92,20 @@
     }
 
     .printable-area {
-      position: static !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
       width: 100% !important;
       max-width: 100% !important;
       height: auto !important;
-      min-height: auto !important;
+      min-height: 100% !important;
       margin: 0 !important;
-      padding: 10mm !important;
+      padding: 0 !important;
       background: white !important;
       overflow: visible !important;
       display: block !important;
       box-sizing: border-box !important;
+      z-index: 9999 !important;
     }
 
     /* Prevent table rows breaking awkwardly */
@@ -169,4 +172,3 @@ html, body {
 .goog-te-gadget {
   display: none !important;
 }
-

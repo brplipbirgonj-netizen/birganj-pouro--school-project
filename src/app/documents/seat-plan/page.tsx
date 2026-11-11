@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -239,6 +238,12 @@ export default function SeatPlanGeneratorPage() {
             </main>
 
             <div className="hidden print:block printable-area bg-white">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 0 !important; }
+                        .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+                    }
+                `}</style>
                 {paginatedLabels.map((page, pIdx) => (
                     <div key={pIdx} className="w-[210mm] h-[297mm] grid grid-cols-2 grid-rows-4 p-[10mm] gap-[5mm] box-border" style={{ pageBreakAfter: 'always' }}>
                         {page.map((item, i) => (

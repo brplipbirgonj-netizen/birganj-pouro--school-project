@@ -15,7 +15,7 @@ import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
 import { getSubjects, subjectNameNormalization } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
-import { Printer, ArrowLeft, User, Users, Info, FileBadge, Loader2, Minus, Plus } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, User, Users, Info, FileBadge, Minus, Plus } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -273,6 +273,12 @@ const MarksheetGeneratorPage = () => {
 
             {/* Hidden Printable Area */}
             <div className="hidden print:block printable-area bg-white">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 0 !important; }
+                        .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+                    }
+                `}</style>
                 {resultsToPrint.map((res) => (
                     <div key={res.student.id} className="w-[210mm] h-[297mm] mx-auto overflow-hidden relative bg-white" style={{ pageBreakAfter: 'always' }}>
                         <div className="p-8 h-full w-full box-border">
@@ -418,6 +424,10 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                     </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">
                         <div className="font-bold text-gray-600 uppercase">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
+                        <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
+                    </div>
+                    <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">
+                        <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
                         <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                     </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">

@@ -30,7 +30,7 @@ const AdmitCardGeneratorPage = () => {
     const [isClient, setIsClient] = useState(false);
     const [exams, setExams] = useState<Exam[]>([]);
     const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-    const [selectedClass, setSelectedClass] = useState<string>('');
+    const [selectedClass, setSelectedClass] = useState<string>('6');
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
     const [selectedStudentId, setSelectedStudentId] = useState<string>('');
@@ -167,7 +167,7 @@ const AdmitCardGeneratorPage = () => {
                                 </div>
 
                                 <div className="pt-6 border-t">
-                                    <Button onClick={() => window.print()} className="w-full h-12 text-lg font-black shadow-lg" disabled={!selectedExam || !selectedClass || (mode === 'single' && !selectedStudentId)}>
+                                    <Button onClick={() => window.print()} className="w-full h-12 text-lg font-black shadow-xl" disabled={!selectedExam || !selectedClass || (mode === 'single' && !selectedStudentId)}>
                                         <Printer className="mr-2 h-5 w-5" /> প্রিন্ট করুন (A4)
                                     </Button>
                                     <p className="text-[10px] text-muted-foreground mt-4 italic text-center">
@@ -201,6 +201,12 @@ const AdmitCardGeneratorPage = () => {
 
             {/* Printable Area */}
             <div className="hidden print:block printable-area">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 0 !important; }
+                        .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+                    }
+                `}</style>
                 {mode === 'single' && previewStudent && selectedExam && (
                     <div className="flex justify-center items-center h-screen">
                         <AdmitCard student={previewStudent} schoolInfo={schoolInfo} examName={selectedExam.name} />

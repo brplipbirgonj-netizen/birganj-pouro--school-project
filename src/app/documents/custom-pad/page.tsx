@@ -156,7 +156,13 @@ export default function CustomPadPage() {
             </main>
 
             {/* Hidden Printable Area */}
-            <div className="hidden print:block printable-area">
+            <div className="hidden print:block printable-area bg-white">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 0 !important; }
+                        .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+                    }
+                `}</style>
                 <LetterheadTemplate 
                     schoolInfo={schoolInfo} 
                     settings={customSettings} 

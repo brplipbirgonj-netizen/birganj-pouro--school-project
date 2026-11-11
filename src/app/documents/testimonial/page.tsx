@@ -303,6 +303,12 @@ export default function TestimonialGeneratorPage() {
       </main>
 
       <div className="hidden print:block printable-area">
+        <style jsx global>{`
+            @media print {
+                @page { size: A4 portrait; margin: 0 !important; }
+                .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            }
+        `}</style>
         {selectedStudent && (
             <TestimonialTemplate 
                 student={selectedStudent} 
