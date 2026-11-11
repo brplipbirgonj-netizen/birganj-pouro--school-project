@@ -15,7 +15,7 @@ import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
 import { getSubjects, subjectNameNormalization } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
-import { Printer, Loader2, ArrowLeft, User, Users, Info, FileBadge, Minus, Plus } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, User, Users, Info, FileBadge, Minus, Plus, Search } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -280,8 +280,8 @@ const MarksheetGeneratorPage = () => {
                     }
                 `}</style>
                 {resultsToPrint.map((res) => (
-                    <div key={res.student.id} className="w-[210mm] h-[297mm] mx-auto overflow-hidden relative bg-white" style={{ pageBreakAfter: 'always' }}>
-                        <div className="p-8 h-full w-full box-border">
+                    <div key={res.student.id} className="w-[210mm] h-[296mm] mx-auto overflow-hidden relative bg-white" style={{ pageBreakAfter: 'always' }}>
+                        <div className="p-5 h-full w-full box-border">
                             <MarksheetTemplate 
                                 result={res} 
                                 schoolInfo={schoolInfo} 
@@ -352,7 +352,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
     };
 
     return (
-        <div className="marksheet-container w-[210mm] h-[280mm] bg-white relative flex flex-col box-border font-sans text-black">
+        <div className="marksheet-container w-[210mm] h-[272mm] bg-white relative flex flex-col box-border font-sans text-black">
             <style jsx>{`
                 .watermark-layer img { visibility: visible !important; display: block !important; }
                 .marksheet-content { border: 1.5px solid black; padding: 16px; height: 100%; display: flex; flex-direction: column; background: transparent; position: relative; z-index: 10; }
