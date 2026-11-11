@@ -149,8 +149,9 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
 
     const studentChunks = useMemo(() => {
         const chunks = [];
-        for (let i = 0; i < students.length; i += 10) {
-            chunks.push(students.slice(i, i + 10));
+        // Changed to 8 students per page to ensure comfortable signature space on A4 Landscape
+        for (let i = 0; i < students.length; i += 8) {
+            chunks.push(students.slice(i, i + 8));
         }
         return chunks;
     }, [students]);
@@ -228,7 +229,8 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
                     .attendance-sheet-print table { border-collapse: collapse !important; width: 100% !important; border: 1.5px solid black !important; }
                     .attendance-sheet-print th, .attendance-sheet-print td { border: 1.5px solid black !important; padding: 2px 4px !important; font-size: 11px !important; text-align: center !important; }
                     .attendance-sheet-print th { background: #f8fafc !important; font-weight: 900 !important; height: 40px !important; }
-                    .attendance-sheet-print tbody tr { height: 52px !important; }
+                    /* Increased height for 8 rows to fill the page properly and give signature space */
+                    .attendance-sheet-print tbody tr { height: 64px !important; }
                     .no-print { display: none !important; }
                 }
             `}</style>
