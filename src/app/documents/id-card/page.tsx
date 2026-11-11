@@ -12,7 +12,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { StudentIDCard } from '@/components/StudentIDCard';
-import { Printer, ArrowLeft, User, Users, Info, IdCard, Loader2 } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, User, Users, Info, IdCard } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -196,7 +196,7 @@ const IDCardGeneratorPage = () => {
                     </div>
                 )}
                 {mode === 'bulk' && bulkStudentsGrouped.map((group, pageIdx) => (
-                    <div key={pageIdx} className="w-[210mm] h-auto min-h-[290mm] p-[15mm] grid grid-cols-2 grid-rows-3 gap-[10mm] box-border justify-items-center content-center" style={{ pageBreakAfter: 'always' }}>
+                    <div key={pageIdx} className="w-full h-[284mm] p-[5mm] grid grid-cols-2 grid-rows-3 gap-x-[10mm] gap-y-[8mm] box-border justify-items-center content-center" style={{ pageBreakAfter: 'always' }}>
                         {group.map(student => (
                             <div key={student.id} className="flex items-center justify-center">
                                 <StudentIDCard student={student} schoolInfo={schoolInfo} isPrint />
