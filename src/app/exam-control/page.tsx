@@ -228,7 +228,7 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
                     .attendance-sheet-print table { border-collapse: collapse !important; width: 100% !important; border: 1.5px solid black !important; }
                     .attendance-sheet-print th, .attendance-sheet-print td { border: 1.5px solid black !important; padding: 2px 4px !important; font-size: 11px !important; text-align: center !important; }
                     .attendance-sheet-print th { background: #f8fafc !important; font-weight: 900 !important; height: 40px !important; }
-                    .attendance-sheet-print tbody tr { height: 60px !important; }
+                    .attendance-sheet-print tbody tr { height: 52px !important; }
                     .no-print { display: none !important; }
                 }
             `}</style>
@@ -309,15 +309,15 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
 
                     <div className="hidden print:block printable-area attendance-sheet-print bg-white text-black font-kalpurush">
                         {studentChunks.map((chunk, chunkIdx) => (
-                            <div key={chunkIdx} className="print-page-container" style={{ pageBreakAfter: 'always', minHeight: '190mm', display: 'flex', flexDirection: 'column', padding: '5mm' }}>
-                                <header className="text-center border-b-4 border-black pb-2 mb-4 flex flex-col items-center">
-                                    {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-16 h-16 object-contain mb-1" />}
-                                    <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
-                                    <p className="text-sm font-bold">{schoolInfo.address}</p>
-                                    <div className="mt-1 inline-block border-2 border-black px-10 py-1 rounded-full font-black text-lg uppercase bg-slate-50">
+                            <div key={chunkIdx} className="print-page-container" style={{ pageBreakAfter: 'always', height: '194mm', display: 'flex', flexDirection: 'column', padding: '0 5mm' }}>
+                                <header className="text-center border-b-2 border-black pb-1 mb-2 flex flex-col items-center">
+                                    {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-12 h-12 object-contain mb-1" />}
+                                    <h1 className="text-xl font-black leading-tight">{schoolInfo.name}</h1>
+                                    <p className="text-[10px] font-bold">{schoolInfo.address}</p>
+                                    <div className="mt-1 inline-block border-[1.5px] border-black px-6 py-0.5 rounded-full font-black text-sm uppercase bg-slate-50">
                                         শিক্ষার্থী হাজিরা শিট (স্বাক্ষর তালিকা)
                                     </div>
-                                    <div className="flex gap-10 mt-2 font-black text-sm">
+                                    <div className="flex gap-6 mt-1 font-black text-[10px]">
                                         <span>পরীক্ষা: {selectedExam}</span>
                                         <span>শ্রেণি: {classNamesMap[selectedClass]} শ্রেণি</span>
                                         <span>সেশন: {toBengaliNumber(academicYear)}</span>
@@ -325,18 +325,18 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
                                     </div>
                                 </header>
 
-                                <table className="w-full border-collapse border-2 border-black flex-grow">
+                                <table className="w-full border-collapse border-[1.5px] border-black flex-grow">
                                     <thead>
-                                        <tr className="bg-slate-100">
+                                        <tr className="bg-slate-100 h-10">
                                             <th rowSpan={2} className="w-10">রোল</th>
-                                            <th rowSpan={2} className="text-left pl-3 w-48">শিক্ষার্থীর নাম</th>
+                                            <th rowSpan={2} className="text-left pl-2 w-48">শিক্ষার্থীর নাম</th>
                                             {routineData.map((r, i) => (
-                                                <th key={i} className="text-[10px] font-black">{toBengaliNumber(r.date)}</th>
+                                                <th key={i} className="text-[9px] font-black">{toBengaliNumber(r.date)}</th>
                                             ))}
                                         </tr>
-                                        <tr className="bg-white">
+                                        <tr className="bg-white h-10">
                                             {routineData.map((r, i) => (
-                                                <th key={i} className="text-[9px] font-bold leading-tight border-t border-black">{r.subject}</th>
+                                                <th key={i} className="text-[8px] font-bold leading-tight border-t border-black">{r.subject}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -344,7 +344,7 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
                                         {chunk.map(s => (
                                             <tr key={s.id}>
                                                 <td className="font-black text-center">{toBengaliNumber(s.roll)}</td>
-                                                <td className="font-bold text-left pl-3">{s.studentNameBn}</td>
+                                                <td className="font-bold text-left pl-2 text-[10px]">{s.studentNameBn}</td>
                                                 {routineData.map((_, i) => (
                                                     <td key={i}></td>
                                                 ))}
@@ -353,9 +353,9 @@ function ExamAttendanceSheetTab({ academicYear }: { academicYear: string }) {
                                     </tbody>
                                 </table>
 
-                                <footer className="mt-auto flex justify-between px-10 border-t-2 border-black pt-4 pb-6">
-                                    <div className="text-center w-56 border-t border-black pt-1 font-black text-sm">শ্রেণি শিক্ষকের স্বাক্ষর</div>
-                                    <div className="text-center w-56 border-t border-black pt-1 font-black text-sm">প্রধান শিক্ষকের স্বাক্ষর</div>
+                                <footer className="mt-2 flex justify-between px-10 border-t border-black pt-2 pb-2">
+                                    <div className="text-center w-40 border-t border-black pt-0.5 font-black text-[10px]">শ্রেণি শিক্ষকের স্বাক্ষর</div>
+                                    <div className="text-center w-40 border-t border-black pt-0.5 font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর</div>
                                 </footer>
                             </div>
                         ))}
