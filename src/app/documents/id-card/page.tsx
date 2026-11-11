@@ -196,7 +196,7 @@ const IDCardGeneratorPage = () => {
                     </div>
                 )}
                 {mode === 'bulk' && bulkStudentsGrouped.map((group, pageIdx) => (
-                    <div key={pageIdx} className="w-[210mm] h-[297mm] p-[15mm] grid grid-cols-2 grid-rows-3 gap-[10mm] box-border justify-items-center content-center" style={{ pageBreakAfter: 'always' }}>
+                    <div key={pageIdx} className="w-[210mm] h-auto min-h-[290mm] p-[15mm] grid grid-cols-2 grid-rows-3 gap-[10mm] box-border justify-items-center content-center" style={{ pageBreakAfter: 'always' }}>
                         {group.map(student => (
                             <div key={student.id} className="flex items-center justify-center">
                                 <StudentIDCard student={student} schoolInfo={schoolInfo} isPrint />

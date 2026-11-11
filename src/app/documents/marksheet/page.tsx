@@ -280,8 +280,8 @@ const MarksheetGeneratorPage = () => {
                     }
                 `}</style>
                 {resultsToPrint.map((res) => (
-                    <div key={res.student.id} className="w-[210mm] h-[296mm] mx-auto overflow-hidden relative bg-white" style={{ pageBreakAfter: 'always' }}>
-                        <div className="p-5 h-full w-full box-border">
+                    <div key={res.student.id} className="w-full h-auto mx-auto overflow-hidden relative bg-white" style={{ pageBreakAfter: 'always' }}>
+                        <div className="p-5 w-full box-border">
                             <MarksheetTemplate 
                                 result={res} 
                                 schoolInfo={schoolInfo} 
