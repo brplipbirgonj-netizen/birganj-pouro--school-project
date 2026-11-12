@@ -2092,7 +2092,7 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
                 <div className="max-w-4xl mx-auto space-y-6 animate-in zoom-in-95 duration-500">
                     <Card className="border-[4px] border-black rounded-[32px] overflow-hidden shadow-2xl bg-white">
                         <CardHeader className="p-8 bg-primary text-white flex flex-row items-center gap-8 border-b-0">
-                            <Avatar className="h-28 w-28 border-4 border-white shadow-xl">
+                            <Avatar className="h-28 w-28 border-4 border-white shadow-xl overflow-hidden shrink-0 rounded-full">
                                 <AvatarImage src={sanitizePhotoUrl(searchResult.student.photoUrl, searchResult.student.gender) || getStudentPlaceholderImage(searchResult.student.gender)} />
                                 <AvatarFallback className="bg-white/20 text-3xl font-black">S</AvatarFallback>
                             </Avatar>
@@ -2143,6 +2143,20 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
         </div>
     );
 };
+
+function BulkUploadTab() {
+    return (
+        <Card className="border-2 border-dashed border-rose-200 bg-rose-50/20 p-12 text-center rounded-3xl">
+            <FileUp className="h-16 w-16 text-rose-500 mx-auto mb-4" />
+            <h3 className="text-xl font-black mb-2">Excel ফলাফল আপলোড</h3>
+            <p className="text-sm font-bold text-muted-foreground mb-6">নির্ধারিত ফরম্যাটের এক্সেল ফাইল আপলোড করে এক ক্লিকে সকল বিষয়ের ফলাফল আপডেট করুন।</p>
+            <div className="flex flex-col items-center gap-4">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <p className="text-xs font-bold text-amber-800">এই ফিচারটি ব্যবহার করতে প্রথমে 'ফলাফল শিট' ট্যাব থেকে নমুনা ফাইলটি ডাউনলোড করে নিন।</p>
+            </div>
+        </Card>
+    );
+}
 
 const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Student[], onPrintRequested: (data: any) => void }) => {
     const { toast } = useToast();
@@ -2667,7 +2681,7 @@ export default function ResultsPage() {
                                         </tbody>
                                     </table>
 
-                                    {/* Part 2 Table */}
+                                    {/* Gap and Part 2 Table */}
                                     <div className="h-[5px]" /> 
                                     <table className="w-full">
                                         <thead className="bg-slate-50">
@@ -2724,7 +2738,7 @@ export default function ResultsPage() {
                                 </div>
 
                                 <footer className="mt-6 flex justify-between px-10 border-t border-black pt-2 pb-4 no-screen">
-                                    <div className="text-center w-40 border-t border-black pt-0.5 font-black text-[10px]">অফিস সহকারী</div>
+                                    <div className="text-center w-40 border-t border-black pt-0.5 font-black text-[10px]">অফিস সহকারীর স্বাক্ষর</div>
                                     <div className="text-center w-40 border-t border-black pt-0.5 font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর</div>
                                 </footer>
                             </div>
@@ -2798,3 +2812,4 @@ export default function ResultsPage() {
         </div>
     );
 }
+
