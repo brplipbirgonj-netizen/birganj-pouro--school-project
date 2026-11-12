@@ -99,7 +99,7 @@ function MarksheetContent() {
                 const fetchedResultsBySubject = allResults.filter(r => r.className === studentData.className);
                 setResultsBySubject(fetchedResultsBySubject);
 
-                // FIX: Robust group identification for getSubjects
+                // Robust group identification for getSubjects
                 const rawGroup = (studentData.group || '').toLowerCase().trim();
                 const groupKey = rawGroup === 'science' || rawGroup === 'বিজ্ঞান' ? 'science' : 
                                  rawGroup === 'arts' || rawGroup === 'মানবিক' ? 'arts' :
@@ -122,7 +122,7 @@ function MarksheetContent() {
                             const hmNorm = normalize('উচ্চতর গণিত');
                             const agriNorm = normalize('কৃষি শিক্ষা');
                             
-                            if (subNameNorm === hmNorm || subNameNorm === agriNormalized) {
+                            if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
                                 // Strictly follow optionalSubject if defined
                                 if (optSubNorm) {
                                     return subNameNorm === optSubNorm;
