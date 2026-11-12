@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
@@ -55,7 +55,7 @@ const normalize = (name: string) => {
     return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
 };
 
-const MarksheetGeneratorPage = () => {
+const MarksheetContent = () => {
     const db = useFirestore();
     const { schoolInfo } = useSchoolInfo();
     const { selectedYear } = useAcademicYear();

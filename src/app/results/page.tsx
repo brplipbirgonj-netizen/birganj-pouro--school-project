@@ -1017,7 +1017,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                 const promises = Object.values(subjectsToSave).map(cr => saveClassResults(db, cr));
                 await Promise.all(promises);
 
-                toast({ title: 'ফলাফল আপলোড সম্পন্ন', description: `${Object.keys(subjectsToSave).length} টি বিষয়ের তথ্য সিঙ্ক করা হয়েছে।` });
+                toast({ title: 'ফলাফল আপলোড সম্পন্ন', description: `${toBengaliNumber(Object.keys(subjectsToSave).length)} টি বিষয়ের তথ্য সিঙ্ক করা হয়েছে।` });
                 handleViewResults();
             } catch (error) {
                 console.error(error);
@@ -2144,20 +2144,6 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
-function BulkUploadTab() {
-    return (
-        <Card className="border-2 border-dashed border-rose-200 bg-rose-50/20 p-12 text-center rounded-3xl">
-            <FileUp className="h-16 w-16 text-rose-500 mx-auto mb-4" />
-            <h3 className="text-xl font-black mb-2">Excel ফলাফল আপলোড</h3>
-            <p className="text-sm font-bold text-muted-foreground mb-6">নির্ধারিত ফরম্যাটের এক্সেল ফাইল আপলোড করে এক ক্লিকে সকল বিষয়ের ফলাফল আপডেট করুন।</p>
-            <div className="flex flex-col items-center gap-4">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
-                <p className="text-xs font-bold text-amber-800">এই ফিচারটি ব্যবহার করতে প্রথমে 'ফলাফল শিট' ট্যাব থেকে নমুনা ফাইলটি ডাউনলোড করে নিন।</p>
-            </div>
-        </Card>
-    );
-}
-
 const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Student[], onPrintRequested: (data: any) => void }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -2812,4 +2798,3 @@ export default function ResultsPage() {
         </div>
     );
 }
-

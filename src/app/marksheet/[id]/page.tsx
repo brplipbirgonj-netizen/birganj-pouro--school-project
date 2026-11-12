@@ -100,7 +100,7 @@ function MarksheetContent() {
                 setResultsBySubject(fetchedResultsBySubject);
 
                 // Robust group identification for getSubjects
-                const rawGroup = (studentData.group || '').toLowerCase().trim();
+                const rawGroup = (studentData.group || 'none').toLowerCase().trim();
                 const groupKey = rawGroup === 'science' || rawGroup === 'বিজ্ঞান' ? 'science' : 
                                  rawGroup === 'arts' || rawGroup === 'মানবিক' ? 'arts' :
                                  rawGroup === 'commerce' || rawGroup === 'ব্যবসায় শিক্ষা' ? 'commerce' : undefined;
@@ -128,9 +128,8 @@ function MarksheetContent() {
                                     return subNameNorm === optSubNorm;
                                 }
                                 // If not defined, only show if marks exist for this specific student
-                                const sr = finalResultForThisStudent.subjectResults.get(subInfo.name);
-                                const hasMarks = sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
-                                return hasMarks;
+                                const studentResult = fetchedResultsBySubject.find(r => normalize(r.subject) === subNameNorm)?.results.find(res => res.studentId === studentId);
+                                return studentResult && (studentResult.written !== undefined || studentResult.mcq !== undefined || studentResult.practical !== undefined);
                             }
                         }
                         return true;
@@ -393,7 +392,7 @@ function MarksheetContent() {
                                                 <td className="border-r border-black p-1 text-center">{subResult?.mcq ?? '-'}</td>
                                                 <td className="border-r border-black p-1 text-center">{subResult?.practical ?? '-'}</td>
                                                 <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{subResult?.marks ?? '-'}</td>
-                                                <td className={cn("border-r border-black p-1 text-center font-black text-[12px]", isFail ? "text-red-600" : "")}>{subResult?.grade ?? '-'}</td>
+                                                <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{subResult?.grade ?? '-'}</td>
                                                 <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{subResult?.point !== undefined ? subResult.point.toFixed(2) : '-'}</td>
                                             </tr>
                                         );
