@@ -122,7 +122,7 @@ function MarksheetContent() {
                             const hmNorm = normalize('উচ্চতর গণিত');
                             const agriNorm = normalize('কৃষি শিক্ষা');
                             
-                            if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
+                            if (subNameNorm === hmNorm || subNameNorm === agriNormalized) {
                                 // Strictly follow optionalSubject if defined
                                 if (optSubNorm) {
                                     return subNameNorm === optSubNorm;
@@ -336,10 +336,6 @@ function MarksheetContent() {
                             </div>
                             <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
                                 <div className="font-bold text-gray-600 uppercase">Father's Name</div><div>: {student.fatherNameEn || student.fatherNameBn}</div>
-                                <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
-                            </div>
-                            <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">
-                                <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
                                 <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
                             </div>
                             <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b border-black/10 pb-1">

@@ -428,10 +428,6 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                     </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">
                         <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
-                        <div className="font-bold text-gray-600 text-right uppercase">Roll No.</div><div className="font-bold">: {student.roll}</div>
-                    </div>
-                    <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1 border-b pb-1">
-                        <div className="font-bold text-gray-600 uppercase">Mother's Name</div><div>: {student.motherNameEn || student.motherNameBn}</div>
                         <div className="font-bold text-gray-600 text-right uppercase">Group</div><div>: {student.group ? groupMap[student.group.toLowerCase()] || student.group : 'General'}</div>
                     </div>
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 mt-1">
@@ -473,7 +469,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                                     <tr key={sub.code} className={cn("border-b border-black", isFail && "bg-red-50/50")}>
                                         <td className="border-r border-black p-1 text-center font-medium text-gray-500">{sIdx + 1}</td>
                                         <td className="border-r border-black p-1 text-center font-medium">{sub.code}</td>
-                                        <td className="border-r border-black p-1 pl-4 font-semibold">
+                                        <td className="border-r border-black p-1 px-4 font-semibold">
                                             {sub.englishName}
                                         </td>
                                         <td className="border-r border-black p-1 text-center">{sr?.fullMarks || sub.fullMarks}</td>
@@ -518,4 +514,10 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
     );
 };
 
-export default MarksheetGeneratorPage;
+export default function MarksheetPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-slate-50">Loading...</div>}>
+            <MarksheetContent />
+        </Suspense>
+    );
+}
