@@ -1,32 +1,28 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Student, studentFromDoc } from '@/lib/student-data';
 import { Exam, getExams } from '@/lib/exam-data';
 import { getAllResults, ClassResult } from '@/lib/results-data';
 import { getSubjects, subjectNameNormalization } from '@/lib/subjects';
 import { processStudentResults, StudentProcessedResult } from '@/lib/results-calculation';
-import { Printer, Loader2, ArrowLeft, User, Users, Info, FileBadge, Minus, Plus, Search } from 'lucide-react';
+import { Printer, Loader2, ArrowLeft, User, Users, Info, FileBadge, Minus, Plus } from 'lucide-react';
 import { useSchoolInfo } from '@/context/SchoolInfoContext';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-
-const toBengaliNumber = (str: string | number | undefined | null) => {
-    if (!str && str !== 0) return '';
-    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return String(str).replace(/[0-9]/g, (w) => bengaliDigits[parseInt(w, 10)]);
-};
 
 const classNamesMap: { [key: string]: string } = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম' };
 const classMap: { [key: string]: string } = { '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '10': 'Ten' };
@@ -55,252 +51,9 @@ const normalize = (name: string) => {
     return (subjectNameNormalization[trimmed] || trimmed).toLowerCase();
 };
 
-const MarksheetContent = () => {
-    const db = useFirestore();
-    const { schoolInfo } = useSchoolInfo();
-    const { selectedYear } = useAcademicYear();
-
-    const [isClient, setIsClient] = useState(false);
-    const [exams, setExams] = useState<Exam[]>([]);
-    const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-    const [selectedClass, setSelectedClass] = useState<string>('6');
-    const [selectedGroup, setSelectedGroup] = useState<string>('all');
-    const [allStudents, setAllStudents] = useState<Student[]>([]);
-    const [classResults, setClassResults] = useState<ClassResult[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
-    const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-    const [watermarkOpacity, setWatermarkOpacity] = useState(0.15);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
-    useEffect(() => {
-        if (!db || !isClient) return;
-        getExams(db, selectedYear).then(setExams);
-    }, [db, selectedYear, isClient]);
-
-    const fetchClassData = useCallback(async () => {
-        if (!db || !selectedClass || !selectedExam || !isClient) return;
-        setIsLoading(true);
-        try {
-            const studentQuery = query(
-                collection(db, "students"), 
-                where("academicYear", "==", selectedYear),
-                where("className", "==", selectedClass)
-            );
-            const studentSnap = await getDocs(studentQuery);
-            const students = studentSnap.docs.map(studentFromDoc);
-            setAllStudents(students);
-
-            const results = await getAllResults(db, selectedYear, selectedExam.name);
-            setClassResults(results.filter(r => r.className === selectedClass));
-        } catch (e) {
-            console.error(e);
-        }
-        setIsLoading(false);
-    }, [db, selectedClass, selectedExam, selectedYear, isClient]);
-
-    useEffect(() => {
-        fetchClassData();
-    }, [fetchClassData]);
-
-    const processedResults = useMemo(() => {
-        if (allStudents.length === 0) return [];
-        const subs = getSubjects(selectedClass);
-        const filteredStudents = allStudents.filter(s => 
-            selectedGroup === 'all' || (s.group || '').toLowerCase().trim() === selectedGroup.toLowerCase().trim()
-        );
-        return processStudentResults(filteredStudents, classResults, subs);
-    }, [allStudents, classResults, selectedClass, selectedGroup]);
-
-    const availableStudents = useMemo(() => {
-        return processedResults.map(r => r.student).sort((a, b) => (a.roll || 0) - (b.roll || 0));
-    }, [processedResults]);
-
-    const resultsToPrint = useMemo(() => {
-        if (mode === 'single') {
-            const res = processedResults.find(r => r.student.id === selectedStudentId);
-            return res ? [res] : [];
-        }
-        return processedResults.sort((a, b) => (a.student.roll || 0) - (b.student.roll || 0));
-    }, [mode, selectedStudentId, processedResults]);
-
-    if (!isClient) return null;
-
-    return (
-        <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
-            <Header />
-            <main className="flex-1 p-4 md:p-8 no-print pb-40">
-                <div className="max-w-[1400px] mx-auto space-y-6">
-                    <div className="flex items-center gap-4">
-                        <Link href="/documents">
-                            <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-                        </Link>
-                        <div>
-                            <h1 className="text-2xl font-black text-primary">মার্কশিট (Marksheet) জেনারেটর</h1>
-                            <p className="text-sm text-muted-foreground">সব শিক্ষার্থীর জন্য প্রফেশনাল মার্কশিট তৈরি ও প্রিন্ট করুন</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                        {/* Configuration Column */}
-                        <Card className="shadow-lg border-2">
-                            <CardHeader className="bg-primary/5 border-b">
-                                <CardTitle className="text-lg">প্যারামিটার সেটআপ</CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-6 space-y-6">
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">১. পরীক্ষা নির্বাচন করুন</Label>
-                                        <Select 
-                                            value={selectedExam?.id || ""}
-                                            onValueChange={(id) => setSelectedExam(exams.find(e => e.id === id) || null)}
-                                        >
-                                            <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
-                                            <SelectContent>
-                                                {exams.map(exam => <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="font-bold">২. শ্রেণি</Label>
-                                            <Select value={selectedClass} onValueChange={setSelectedClass}>
-                                                <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
-                                                <SelectContent>
-                                                    {['6', '7', '8', '9', '10'].map(cls => <SelectItem key={cls} value={cls}>{classNamesMap[cls]} শ্রেণি</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        {parseInt(selectedClass) >= 9 && (
-                                            <div className="space-y-2">
-                                                <Label className="font-bold">৩. শাখা</Label>
-                                                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                                                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">সকল শাখা</SelectItem>
-                                                        <SelectItem value="science">বিজ্ঞান</SelectItem>
-                                                        <SelectItem value="arts">মানবিক</SelectItem>
-                                                        <SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">৪. প্রিন্ট মোড</Label>
-                                        <Tabs value={mode} onValueChange={(v: any) => setMode(v)}>
-                                            <TabsList className="grid grid-cols-2 w-full">
-                                                <TabsTrigger value="bulk" className="gap-2 font-bold"><Users className="h-4 w-4" /> শ্রেণিভিত্তিক</TabsTrigger>
-                                                <TabsTrigger value="single" className="gap-2 font-bold"><User className="h-4 w-4" /> একক</TabsTrigger>
-                                            </TabsList>
-                                        </Tabs>
-                                    </div>
-
-                                    {mode === 'single' && (
-                                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                            <Label className="font-bold">৫. শিক্ষার্থী নির্বাচন</Label>
-                                            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                                                <SelectTrigger className="bg-white">
-                                                    <SelectValue placeholder="শিক্ষার্থী সিলেক্ট করুন" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableStudents.map(s => <SelectItem key={s.id} value={s.id}>রোল {s.roll} - {s.studentNameBn}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-2 pt-4 border-t">
-                                        <Label className="font-bold text-xs flex items-center gap-2">জলছাপের স্বচ্ছতা (Watermark Opacity)</Label>
-                                        <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border">
-                                            <Button variant="ghost" size="icon" onClick={() => setWatermarkOpacity(prev => Math.max(0, prev - 0.05))}><Minus className="h-4 w-4" /></Button>
-                                            <span className="font-black flex-1 text-center">{Math.round(watermarkOpacity * 100)}%</span>
-                                            <Button variant="ghost" size="icon" onClick={() => setWatermarkOpacity(prev => Math.min(1, prev + 0.05))}><Plus className="h-4 w-4" /></Button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pt-6">
-                                    <Button 
-                                        onClick={() => window.print()} 
-                                        className="w-full h-12 text-lg font-black shadow-xl"
-                                        disabled={isLoading || !selectedExam || (mode === 'single' && !selectedStudentId) || resultsToPrint.length === 0}
-                                    >
-                                        <Printer className="mr-2 h-5 w-5" /> মার্কশিট প্রিন্ট করুন ({toBengaliNumber(resultsToPrint.length)})
-                                    </Button>
-                                    <p className="text-[10px] text-muted-foreground mt-4 italic text-center">
-                                        * ব্রাউজার থেকে 'Background Graphics' অন রাখুন। প্রতিটি মার্কশিট আলাদা পৃষ্ঠায় আসবে।
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Preview Column */}
-                        <div className="sticky top-24">
-                            <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
-                                <Info className="h-4 w-4" /> লাইভ প্রিভিউ (একটি নমুনা)
-                            </h3>
-                            <div className="bg-white p-4 border-4 border-dashed rounded-2xl shadow-inner min-h-[600px] flex items-start justify-center overflow-auto max-h-[80vh]">
-                                {isLoading ? (
-                                    <div className="flex flex-col items-center justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" /></div>
-                                ) : resultsToPrint.length > 0 ? (
-                                    <div className="origin-top scale-[0.5] sm:scale-[0.6] lg:scale-[0.7] xl:scale-[0.8] mb-[-200px]">
-                                        <MarksheetTemplate 
-                                            key={resultsToPrint[0].student.id}
-                                            result={resultsToPrint[0]} 
-                                            schoolInfo={schoolInfo} 
-                                            examName={selectedExam?.name || ''} 
-                                            academicYear={selectedYear}
-                                            watermarkOpacity={watermarkOpacity}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-muted-foreground py-40 italic">
-                                        <FileBadge className="h-16 w-16 mx-auto mb-4 opacity-10" />
-                                        <p>তথ্য পাওয়া যায়নি</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            {/* Hidden Printable Area */}
-            <div className="hidden print:block printable-area bg-white">
-                <style jsx global>{`
-                    @media print {
-                        @page { size: A4 portrait; margin: 0 !important; }
-                        .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
-                    }
-                `}</style>
-                {resultsToPrint.map((res) => (
-                    <div key={res.student.id} className="w-full h-auto mx-auto overflow-hidden relative bg-white" style={{ pageBreakAfter: 'always' }}>
-                        <div className="p-5 w-full box-border">
-                            <MarksheetTemplate 
-                                result={res} 
-                                schoolInfo={schoolInfo} 
-                                examName={selectedExam?.name || ''} 
-                                academicYear={selectedYear}
-                                watermarkOpacity={watermarkOpacity}
-                            />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
 const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, watermarkOpacity }: any) => {
     const student = result.student;
     
-    // Subjects sorting by code and ensuring English display
     const subjectsToDisplay = useMemo(() => {
         const rawGroup = (student.group || '').toLowerCase().trim();
         const groupKey = rawGroup === 'science' || rawGroup === 'বিজ্ঞান' ? 'science' : 
@@ -309,7 +62,6 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
         
         const allSubs = getSubjects(student.className, groupKey).filter(s => s.isExamSubject !== false);
         
-        // Filter out mutually exclusive electives if student has one picked
         const filtered = allSubs.filter(subInfo => {
             const subNameNorm = normalize(subInfo.name);
             const optSubNorm = normalize(student.optionalSubject || '');
@@ -352,7 +104,7 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
     };
 
     return (
-        <div className="marksheet-container w-[210mm] h-[272mm] bg-white relative flex flex-col box-border font-sans text-black">
+        <div className="marksheet-container w-[210mm] h-[284mm] bg-white relative flex flex-col box-border font-sans text-black">
             <style jsx>{`
                 .watermark-layer img { visibility: visible !important; display: block !important; }
                 .marksheet-content { border: 1.5px solid black; padding: 16px; height: 100%; display: flex; flex-direction: column; background: transparent; position: relative; z-index: 10; }
@@ -371,11 +123,10 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
             )}
             
             <div className="marksheet-content">
-                {/* Header */}
                 <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-4">
                         {schoolInfo.logoUrl && (
-                            <div className="w-20 h-20 relative">
+                            <div className="w-20 h-20 flex items-center justify-center">
                                 <img src={schoolInfo.logoUrl} alt="Logo" className="w-full h-full object-contain" />
                             </div>
                         )}
@@ -389,7 +140,6 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                             </div>
                         </div>
                     </div>
-                    {/* Grading Table */}
                     <div className="text-[8px]">
                         <table className="border-collapse border border-black text-center w-full">
                             <thead className="bg-gray-100">
@@ -416,7 +166,6 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                     <h2 className="text-lg font-black uppercase tracking-widest">{displayExamName} Progress Report</h2>
                 </div>
 
-                {/* Info Bar */}
                 <section className="mb-4 text-[11px] leading-relaxed bg-slate-50/50 p-2 border border-dashed border-gray-300 rounded">
                     <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 border-b pb-1">
                         <div className="font-bold text-gray-600 uppercase">Student's Name</div><div className="font-bold uppercase text-blue-900">: {student.studentNameEn || student.studentNameBn}</div>
@@ -436,7 +185,6 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                     </div>
                 </section>
 
-                {/* Summary Table */}
                 <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[11px] bg-blue-900 text-white mb-4 rounded-sm">
                     <div className="py-1.5 font-bold">Status: <span className={result.isPass ? "text-green-400" : "text-red-400"}>{result.isPass ? 'PASSED' : 'FAILED'}</span></div>
                     <div className="py-1.5 font-bold">GPA: <span className="text-amber-300">{result.gpa.toFixed(2)}</span></div>
@@ -444,7 +192,6 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                     <div className="py-1.5 font-bold">Merit Rank: <span>{result.isPass ? renderMeritPosition(result.meritPosition) : 'N/A'}</span></div>
                 </div>
 
-                {/* Subject Table */}
                 <div className="flex-grow">
                     <table className="w-full border-collapse border-[1.5px] border-black text-[10px]">
                         <thead className="bg-gray-100 font-bold">
@@ -514,10 +261,235 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
     );
 };
 
-export default function MarksheetPage() {
+const AdmitCardGeneratorPage = () => {
+    const db = useFirestore();
+    const { schoolInfo } = useSchoolInfo();
+    const { selectedYear } = useAcademicYear();
+
+    const [isClient, setIsClient] = useState(false);
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
+    const [selectedClass, setSelectedClass] = useState<string>('6');
+    const [allStudents, setAllStudents] = useState<Student[]>([]);
+    const [classResults, setClassResults] = useState<ClassResult[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
+    const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+    const [isFetchingExams, setIsFetchingExams] = useState(true);
+    const [watermarkOpacity, setWatermarkOpacity] = useState(0.15);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (!db || !isClient) return;
+        setIsFetchingExams(true);
+        getExams(db, selectedYear).then(data => {
+            setExams(data);
+            if (data.length > 0) setSelectedExam(data[0]);
+            setIsFetchingExams(false);
+        }).catch(() => setIsFetchingExams(false));
+    }, [db, selectedYear, isClient]);
+
+    useEffect(() => {
+        if (!db || !selectedClass || !selectedExam || !isClient) return;
+        setIsLoading(true);
+        const fetchData = async () => {
+            try {
+                const studentQuery = query(collection(db, "students"), where("academicYear", "==", selectedYear), where("className", "==", selectedClass));
+                const studentSnap = await getDocs(studentQuery);
+                const students = studentSnap.docs.map(studentFromDoc);
+                setAllStudents(students);
+
+                const results = await getAllResults(db, selectedYear, selectedExam.name);
+                setClassResults(results.filter(r => r.className === selectedClass));
+            } catch (e) {
+                console.error(e);
+            }
+            setIsLoading(false);
+        };
+        fetchData();
+    }, [db, selectedClass, selectedExam, selectedYear, isClient]);
+
+    const processedResults = useMemo(() => {
+        if (allStudents.length === 0) return [];
+        const subs = getSubjects(selectedClass);
+        return processStudentResults(allStudents, classResults, subs);
+    }, [allStudents, classResults, selectedClass]);
+
+    const availableStudents = useMemo(() => {
+        return processedResults.map(r => r.student).sort((a, b) => (Number(a.roll) || 0) - (Number(b.roll) || 0));
+    }, [processedResults]);
+
+    const resultsToPrint = useMemo(() => {
+        if (mode === 'single' && selectedStudentId) {
+            const res = processedResults.find(r => r.student.id === selectedStudentId);
+            return res ? [res] : [];
+        }
+        return processedResults.sort((a, b) => (Number(a.student.roll) || 0) - (Number(b.student.roll) || 0));
+    }, [mode, selectedStudentId, processedResults]);
+
+    const previewResult = useMemo(() => {
+        if (mode === 'single' && selectedStudentId) {
+            return processedResults.find(r => r.student.id === selectedStudentId) || null;
+        }
+        return processedResults.length > 0 ? processedResults[0] : null;
+    }, [mode, selectedStudentId, processedResults]);
+
+    if (!isClient) {
+        return (
+            <div className="flex min-h-screen w-full flex-col bg-slate-100">
+                <Header />
+                <main className="p-8">
+                    <Skeleton className="h-64 w-full rounded-xl" />
+                </main>
+            </div>
+        );
+    }
+
     return (
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-slate-50">Loading...</div>}>
-            <MarksheetContent />
-        </Suspense>
+        <div className="flex min-h-screen w-full flex-col bg-slate-100 font-kalpurush">
+            <Header />
+            <main className="flex-1 p-4 md:p-8 no-print">
+                <div className="max-w-[1400px] mx-auto space-y-6">
+                    <div className="flex items-center gap-4">
+                        <Link href="/documents">
+                            <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+                        </Link>
+                        <div>
+                            <h1 className="text-2xl font-black text-primary">মার্কশিট (Marksheet) জেনারেটর</h1>
+                            <p className="text-sm text-muted-foreground">সব শিক্ষার্থীর জন্য প্রফেশনাল মার্কশিট তৈরি ও প্রিন্ট করুন</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        {/* Form Column - Left */}
+                        <Card className="shadow-lg border-2">
+                            <CardHeader className="bg-primary/5 border-b">
+                                <CardTitle className="text-lg">প্যারামিটার ও সিলেকশন</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-6">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">১. পরীক্ষা নির্বাচন করুন</Label>
+                                        <Select 
+                                            disabled={isFetchingExams}
+                                            value={selectedExam?.id || ""}
+                                            onValueChange={(examId) => setSelectedExam(exams.find(e => e.id === examId) || null)}
+                                        >
+                                            <SelectTrigger className="bg-white"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                                            <SelectContent>
+                                                {exams.map(exam => <SelectItem key={exam.id} value={exam.id}>{exam.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">২. শ্রেণি নির্বাচন করুন</Label>
+                                        <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                            <SelectTrigger className="bg-white"><SelectValue placeholder="শ্রেণি নির্বাচন করুন" /></SelectTrigger>
+                                            <SelectContent>
+                                                {['6', '7', '8', '9', '10'].map(cls => <SelectItem key={cls} value={cls}>{classNamesMap[cls]} শ্রেণি</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="font-bold">৩. প্রিন্ট মোড</Label>
+                                        <Tabs value={mode} onValueChange={(v: any) => setMode(v)}>
+                                            <TabsList className="grid grid-cols-2 w-full">
+                                                <TabsTrigger value="bulk" className="gap-2 font-bold"><Users className="h-4 w-4" /> শ্রেণিভিত্তিক</TabsTrigger>
+                                                <TabsTrigger value="single" className="gap-2 font-bold"><User className="h-4 w-4" /> একক</TabsTrigger>
+                                            </TabsList>
+                                        </Tabs>
+                                    </div>
+
+                                    {mode === 'single' && (
+                                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                            <Label className="font-bold">৪. নির্দিষ্ট শিক্ষার্থী</Label>
+                                            <Select value={selectedStudentId} onValueChange={setSelectedStudentId} disabled={availableStudents.length === 0}>
+                                                <SelectTrigger className="bg-white"><SelectValue placeholder="শিক্ষার্থী সিলেক্ট করুন" /></SelectTrigger>
+                                                <SelectContent>
+                                                    {availableStudents.map(s => <SelectItem key={s.id} value={s.id}>রোল {s.roll} - {s.studentNameBn}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2 pt-4 border-t">
+                                        <Label className="font-bold text-xs flex items-center gap-2">জলছাপের স্বচ্ছতা (Watermark Opacity)</Label>
+                                        <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border">
+                                            <Button variant="ghost" size="icon" onClick={() => setWatermarkOpacity(prev => Math.max(0, prev - 0.05))}><Minus className="h-4 w-4" /></Button>
+                                            <span className="font-black flex-1 text-center">{Math.round(watermarkOpacity * 100)}%</span>
+                                            <Button variant="ghost" size="icon" onClick={() => setWatermarkOpacity(prev => Math.min(1, prev + 0.05))}><Plus className="h-4 w-4" /></Button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-6 border-t">
+                                    <Button onClick={() => window.print()} className="w-full h-12 text-lg font-black shadow-xl" disabled={!selectedExam || !selectedClass || (mode === 'single' && !selectedStudentId) || resultsToPrint.length === 0}>
+                                        <Printer className="mr-2 h-5 w-5" /> প্রিন্ট করুন (A4)
+                                    </Button>
+                                    <p className="text-[10px] text-muted-foreground mt-4 italic text-center">
+                                        * ব্রাউজার থেকে 'Background Graphics' অন রাখুন। প্রতিটি মার্কশিট আলাদা পাতায় আসবে।
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Preview Column - Right */}
+                        <div className="sticky top-24">
+                            <h3 className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
+                                <Info className="h-4 w-4" /> লাইভ প্রিভিউ (একটি নমুনা)
+                            </h3>
+                            <div className="flex justify-center bg-white p-4 border-4 border-black/10 rounded-xl shadow-2xl overflow-hidden min-h-[500px]">
+                                {previewResult && selectedExam ? (
+                                    <div className="origin-top scale-[0.55] sm:scale-[0.65] lg:scale-[0.75] xl:scale-[0.85] mb-[-100px]">
+                                        <MarksheetTemplate 
+                                            result={previewResult} 
+                                            schoolInfo={schoolInfo} 
+                                            examName={selectedExam.name} 
+                                            academicYear={selectedYear}
+                                            watermarkOpacity={watermarkOpacity}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-muted-foreground gap-4">
+                                        <FileBadge className="h-16 w-16 opacity-10" />
+                                        <p className="font-bold">শ্রেণি ও শিক্ষার্থী সিলেক্ট করলে এখানে প্রিভিউ দেখা যাবে</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            {/* Printable Area */}
+            <div className="hidden print:block printable-area bg-white">
+                <style jsx global>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 0 !important; }
+                        .printable-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+                    }
+                `}</style>
+                {resultsToPrint.map((res) => (
+                    <div key={res.student.id} className="w-full h-auto mx-auto overflow-hidden relative bg-white" style={{ pageBreakAfter: 'always' }}>
+                        <div className="p-0 w-full flex items-center justify-center">
+                            <MarksheetTemplate 
+                                result={res} 
+                                schoolInfo={schoolInfo} 
+                                examName={selectedExam?.name || ''} 
+                                academicYear={selectedYear}
+                                watermarkOpacity={watermarkOpacity}
+                            />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
     );
-}
+};
+
+export default AdmitCardGeneratorPage;

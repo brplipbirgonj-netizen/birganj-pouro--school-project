@@ -72,10 +72,8 @@ function MarksheetContent() {
 
             setIsLoading(true);
             try {
-                // Fetch exams for the year
                 getExams(db, academicYear).then(data => setAllExams(data));
 
-                // Fetch student details
                 const studentDoc = await getDoc(doc(db, 'students', studentId));
                 if (!studentDoc.exists()) {
                     setIsLoading(false);
@@ -84,7 +82,6 @@ function MarksheetContent() {
                 const studentData = studentFromDoc(studentDoc);
                 setStudent(studentData);
 
-                // Fetch all students of same class for merit calculation
                 const classQuery = query(
                     collection(db, 'students'),
                     where('academicYear', '==', academicYear),
@@ -94,26 +91,21 @@ function MarksheetContent() {
                 const studentsList = classSnap.docs.map(studentFromDoc);
                 setAllStudentsInClass(studentsList);
 
-                // Fetch all results for this exam and class
                 const allResults = await getAllResults(db, academicYear, currentExamName);
                 const fetchedResultsBySubject = allResults.filter(r => r.className === studentData.className);
                 setResultsBySubject(fetchedResultsBySubject);
 
-                // Robust group identification for getSubjects
                 const rawGroup = (studentData.group || 'none').toLowerCase().trim();
                 const groupKey = rawGroup === 'science' || rawGroup === 'বিজ্ঞান' ? 'science' : 
                                  rawGroup === 'arts' || rawGroup === 'মানবিক' ? 'arts' :
                                  rawGroup === 'commerce' || rawGroup === 'ব্যবসায় শিক্ষা' ? 'commerce' : undefined;
 
-                // Get allowed subjects for this class/group
                 const allSubjectsForGroup = getSubjects(studentData.className, groupKey).filter(s => s.isExamSubject !== false);
                 
-                // Process results
                 const allFinalResults = processStudentResults(studentsList, fetchedResultsBySubject, allSubjectsForGroup);
                 const finalResultForThisStudent = allFinalResults.find(res => res.student.id === studentId);
 
                 if (finalResultForThisStudent) {
-                    // Filter subjects to show only what the student actually took
                     const subjectsToShow = allSubjectsForGroup.filter(subInfo => {
                         const subNameNorm = normalize(subInfo.name);
                         const optSubNorm = normalize(studentData.optionalSubject || '');
@@ -123,11 +115,9 @@ function MarksheetContent() {
                             const agriNorm = normalize('কৃষি শিক্ষা');
                             
                             if (subNameNorm === hmNorm || subNameNorm === agriNorm) {
-                                // Strictly follow optionalSubject if defined
                                 if (optSubNorm) {
                                     return subNameNorm === optSubNorm;
                                 }
-                                // If not defined, only show if marks exist for this specific student
                                 const studentResult = fetchedResultsBySubject.find(r => normalize(r.subject) === subNameNorm)?.results.find(res => res.studentId === studentId);
                                 return studentResult && (studentResult.written !== undefined || studentResult.mcq !== undefined || studentResult.practical !== undefined);
                             }
@@ -182,7 +172,7 @@ function MarksheetContent() {
             <style jsx global>{`
                 @media print {
                     @page {
-                        size: A4;
+                        size: A4 portrait;
                         margin: 0 !important;
                     }
                     html, body {
@@ -195,18 +185,15 @@ function MarksheetContent() {
                         display: none !important;
                     }
                     .printable-area {
-                        position: absolute !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        width: 100% !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
+                        visibility: visible !important;
+                    }
+                    .printable-area * {
                         visibility: visible !important;
                     }
                     .marksheet-container {
                         width: 210mm !important;
-                        height: 297mm !important;
-                        margin: 0 !important;
+                        height: 284mm !important; /* Slightly reduced to fit in margins */
+                        margin: 0 auto !important;
                         padding: 10mm !important;
                         border: none !important;
                         box-shadow: none !important;
@@ -225,7 +212,6 @@ function MarksheetContent() {
                 }
             `}</style>
 
-            {/* Action Bar */}
             <div className="w-full max-w-[210mm] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print bg-white p-4 rounded-2xl shadow-sm border">
                 <div className="flex items-center gap-3">
                     <Button variant="outline" size="icon" onClick={() => window.history.back()} className="rounded-xl"><ArrowLeft className="h-4 w-4" /></Button>
@@ -271,7 +257,6 @@ function MarksheetContent() {
                 </div>
             </div>
             
-            {/* Marksheet Layout */}
             <div className="printable-area bg-white">
                 <div className="marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                     {schoolInfo.logoUrl && (
@@ -281,12 +266,11 @@ function MarksheetContent() {
                     )}
                     
                     <div className="relative z-10 border-[1.5px] border-black p-4 h-full flex flex-col bg-transparent">
-                        {/* Header */}
                         <div className="printable-header mb-4 flex justify-between items-start">
                             <div className="flex items-center gap-4">
                                 {schoolInfo.logoUrl && (
-                                    <div className="w-20 h-20 relative">
-                                        <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" priority />
+                                    <div className="w-20 h-20 flex items-center justify-center">
+                                        <img src={schoolInfo.logoUrl} alt="Logo" className="w-full h-full object-contain" />
                                     </div>
                                 )}
                                 <div className="text-left">
@@ -327,7 +311,6 @@ function MarksheetContent() {
                             </h2>
                         </div>
 
-                        {/* Student Info */}
                         <section className="mb-4 text-[12px] leading-relaxed bg-slate-50/50 p-2 border border-dashed border-gray-300 rounded">
                             <div className="grid grid-cols-[1.5fr_4fr_1fr_2fr] gap-x-4 border-b border-black/10 pb-1">
                                 <div className="font-bold text-gray-600 uppercase">Student's Name</div><div className="font-bold uppercase text-blue-900">: {student.studentNameEn || student.studentNameBn}</div>
@@ -347,7 +330,6 @@ function MarksheetContent() {
                             </div>
                         </section>
 
-                        {/* Summary Bar */}
                         <section className="mb-4">
                             <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[12px] bg-blue-900 text-white rounded-sm">
                                 <div className="py-1.5">Status: <span className={cn("font-black", processedResult.isPass ? "text-green-400" : "text-red-400")}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
@@ -357,7 +339,6 @@ function MarksheetContent() {
                             </div>
                         </section>
 
-                        {/* Subject Table */}
                         <section className="flex-grow overflow-visible">
                             <table className="w-full border-collapse border-[1.5px] border-black text-[11px]">
                                 <thead>
