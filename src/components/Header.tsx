@@ -56,6 +56,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { QuickDownloadPortal } from './QuickDownloadPortal';
 import { signOut } from '@/lib/auth';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, limit, onSnapshot, getDocs } from 'firebase/firestore';
@@ -92,7 +93,7 @@ const toBengaliNumber = (str: string | number | undefined | null) => {
 };
 
 const classNamesMap: { [key: string]: string } = {
-    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম'
 };
 
 const mainMenuItems = [
@@ -396,15 +397,18 @@ export function Header() {
         <div className="flex items-center gap-2 sm:gap-4">
           <LanguageSwitcher />
           {user && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full bg-white/20 text-white hover:bg-white/30 shadow-sm"
-              onClick={() => handleSearchOpen(true)}
-              title="শিক্ষার্থী খুঁজুন"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+            <>
+              <QuickDownloadPortal />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full bg-white/20 text-white hover:bg-white/30 shadow-sm"
+                onClick={() => handleSearchOpen(true)}
+                title="শিক্ষার্থী খুঁজুন"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            </>
           )}
           {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
             <div className="flex items-center gap-3">
