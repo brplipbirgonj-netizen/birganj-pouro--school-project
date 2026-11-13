@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -2586,7 +2587,7 @@ export default function ResultsPage() {
                             .printable-area { width: 100% !important; padding: 0 !important; }
                             .result-sheet-page { page-break-after: always; min-height: 185mm; display: flex; flex-direction: column; width: 100%; box-sizing: border-box; padding: 2mm !important; }
                             table { border-collapse: collapse !important; border: 1px solid black !important; width: 100% !important; table-layout: auto !important; }
-                            th, td { border: 1px solid black !important; padding: 1.5px 2px !important; font-size: 10px !important; line-height: 1.15 !important; text-align: center; }
+                            th, td { border: 1px solid black !important; padding: 1.5px 2px !important; font-size: 9px !important; line-height: 1.15 !important; text-align: center; }
                             .no-print { display: none !important; }
                         }
                     `}</style>
@@ -2612,10 +2613,10 @@ export default function ResultsPage() {
                         const subsPart1 = allSubs.slice(0, mid);
                         const subsPart2 = allSubs.slice(mid);
 
-                        // Chunk students by 8 per page
+                        // Chunk students by 10 per page
                         const studentChunks = [];
-                        for (let i = 0; i < results.length; i += 8) {
-                            studentChunks.push(results.slice(i, i + 8));
+                        for (let i = 0; i < results.length; i += 10) {
+                            studentChunks.push(results.slice(i, i + 10));
                         }
 
                         return studentChunks.map((chunk, chunkIdx) => (
@@ -2660,7 +2661,7 @@ export default function ResultsPage() {
                                         </thead>
                                         <tbody>
                                             {chunk.map((res: StudentProcessedResult) => (
-                                                <tr key={res.student.id} className={cn("h-[30px]", !res.isPass && "bg-rose-50/50")}>
+                                                <tr key={res.student.id} className={cn("h-[24px]", !res.isPass && "bg-rose-50/50")}>
                                                     <td className="font-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="text-left pl-2 font-bold whitespace-nowrap">{res.student.studentNameBn}</td>
                                                     {subsPart1.map((s, idx) => {
@@ -2711,7 +2712,7 @@ export default function ResultsPage() {
                                         </thead>
                                         <tbody>
                                             {chunk.map((res: StudentProcessedResult) => (
-                                                <tr key={res.student.id} className={cn("h-[30px]", !res.isPass && "bg-rose-50/50")}>
+                                                <tr key={res.student.id} className={cn("h-[24px]", !res.isPass && "bg-rose-50/50")}>
                                                     <td className="font-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="text-left pl-2 font-bold whitespace-nowrap">{res.student.studentNameBn}</td>
                                                     {subsPart2.map((s, idx) => {
