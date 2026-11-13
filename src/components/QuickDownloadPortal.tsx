@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   Popover, 
