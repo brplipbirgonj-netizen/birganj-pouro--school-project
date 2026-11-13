@@ -20,7 +20,16 @@ import {
   XCircle,
   Clock,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  IdCard,
+  Award,
+  Grid3X3,
+  Contact,
+  FileBadge,
+  ListChecks,
+  CalendarDays,
+  Target,
+  FilePen
 } from 'lucide-react';
 import { 
   Popover, 
@@ -41,6 +50,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
+import { ScrollArea } from './ui/scroll-area';
 
 const classNamesMap: Record<string, string> = {
     '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
@@ -158,13 +168,13 @@ export function QuickDownloadPortal() {
           className="h-10 px-4 rounded-xl bg-white/20 text-white hover:bg-white/30 shadow-sm border border-white/20 font-black gap-2 transition-all active:scale-95"
         >
           <Download className="h-4 w-4" />
-          <span className="hidden sm:inline">কুইক ডাউনলোড</span>
+          <span className="hidden sm:inline">কুইক প্রিন্ট ও ডাউনলোড</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0 font-kalpurush border-none shadow-2xl rounded-2xl overflow-hidden z-[200]">
         <div className="bg-primary p-4 text-white">
             <h3 className="font-black flex items-center gap-2">
-                <Download className="h-5 w-5" /> সেন্ট্রাল ডাউনলোড পোর্টাল
+                <Download className="h-5 w-5" /> সেন্ট্রাল প্রিন্ট পোর্টাল
             </h3>
             <p className="text-[10px] font-bold text-white/70 mt-0.5">সব সেকশনের ফাইল এক জায়গা থেকে ডাউনলোড করুন</p>
         </div>
@@ -194,91 +204,99 @@ export function QuickDownloadPortal() {
             </div>
         </div>
 
-        <div className="max-h-[350px] overflow-y-auto p-2 space-y-1 bg-white">
-            {/* Student Section */}
-            <div className="p-2 space-y-1">
-                <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 px-1">শিক্ষার্থী ও ভর্তি</p>
-                <button 
-                  onClick={handleDownloadStudentExcel}
-                  disabled={isProcessing}
-                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-all group"
-                >
-                    <div className="p-1.5 bg-emerald-100 rounded-md group-hover:scale-110 transition-transform">
-                        <FileSpreadsheet className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                        <p className="text-xs font-black">শিক্ষার্থী তালিকা (Excel)</p>
-                        <p className="text-[9px] font-bold opacity-70">শ্রেণি: {classNamesMap[selectedClass]}</p>
-                    </div>
-                    {isProcessing ? <Loader2 className="ml-auto h-3 w-3 animate-spin" /> : <ChevronRight className="ml-auto h-3 w-3 opacity-30" />}
-                </button>
-                <button 
-                  onClick={() => openPrintable(`/student-list?class=${selectedClass}&section=esif`)}
-                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 text-blue-700 transition-all group"
-                >
-                    <div className="p-1.5 bg-blue-100 rounded-md group-hover:scale-110 transition-transform">
-                        <FileText className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                        <p className="text-xs font-black">ESIF রেজিষ্ট্রেশন ফরম</p>
-                        <p className="text-[9px] font-bold opacity-70">বোর্ড রেজিষ্ট্রেশনের জন্য</p>
-                    </div>
-                    <Printer className="ml-auto h-3 w-3 opacity-30" />
-                </button>
-            </div>
+        <div className="max-h-[450px] overflow-hidden bg-white">
+            <ScrollArea className="h-[450px]">
+                {/* Section 1: Students & Admission */}
+                <div className="p-3 space-y-1">
+                    <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1 px-1">শিক্ষার্থী ও ভর্তি</p>
+                    <button onClick={handleDownloadStudentExcel} disabled={isProcessing} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-all group">
+                        <div className="p-1.5 bg-emerald-100 rounded-md group-hover:scale-110 transition-transform"><FileSpreadsheet className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">শিক্ষার্থী তালিকা (Excel)</p><p className="text-[9px] font-bold opacity-70">শ্রেণি: {classNamesMap[selectedClass]}</p></div>
+                        {isProcessing ? <Loader2 className="ml-auto h-3 w-3 animate-spin" /> : <ChevronRight className="ml-auto h-3 w-3 opacity-30" />}
+                    </button>
+                    <button onClick={() => openPrintable(`/student-list?class=${selectedClass}&section=print`)} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 text-slate-700 transition-all group">
+                        <div className="p-1.5 bg-slate-100 rounded-md group-hover:scale-110 transition-transform"><Printer className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">বিস্তারিত তালিকা (PDF)</p><p className="text-[9px] font-bold opacity-70">প্রিন্ট কপি</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                    <button onClick={() => openPrintable(`/student-list?class=${selectedClass}&section=esif`)} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 text-blue-700 transition-all group">
+                        <div className="p-1.5 bg-blue-100 rounded-md group-hover:scale-110 transition-transform"><FileText className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">ESIF রেজিষ্ট্রেশন ফরম</p><p className="text-[9px] font-bold opacity-70">বোর্ড রেজিষ্ট্রেশনের জন্য</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                </div>
 
-            <Separator />
+                <Separator />
 
-            {/* Academic Section */}
-            <div className="p-2 space-y-1">
-                <p className="text-[9px] font-black text-violet-600 uppercase tracking-widest mb-1 px-1">পরীক্ষা ও ফলাফল</p>
-                <button 
-                  onClick={() => openPrintable(`/results/merit-list?academicYear=${selectedYear}&examName=${encodeURIComponent(selectedExam)}&className=${selectedClass}&group=all`)}
-                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-violet-50 text-violet-700 transition-all group"
-                >
-                    <div className="p-1.5 bg-violet-100 rounded-md group-hover:scale-110 transition-transform">
-                        <Trophy className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                        <p className="text-xs font-black">মেধা তালিকা (PDF)</p>
-                        <p className="text-[9px] font-bold opacity-70">{selectedExam}</p>
-                    </div>
-                    <Printer className="ml-auto h-3 w-3 opacity-30" />
-                </button>
-            </div>
+                {/* Section 2: Examination & Results */}
+                <div className="p-3 space-y-1">
+                    <p className="text-[9px] font-black text-violet-600 uppercase tracking-widest mb-1 px-1">পরীক্ষা ও ফলাফল</p>
+                    <button onClick={() => openPrintable(`/results/merit-list?academicYear=${selectedYear}&examName=${encodeURIComponent(selectedExam)}&className=${selectedClass}&group=all`)} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-violet-50 text-violet-700 transition-all group">
+                        <div className="p-1.5 bg-violet-100 rounded-md group-hover:scale-110 transition-transform"><Trophy className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">মেধা তালিকা (PDF)</p><p className="text-[9px] font-bold opacity-70">{selectedExam}</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                    <button onClick={() => openPrintable(`/exam-control`)} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-orange-50 text-orange-700 transition-all group">
+                        <div className="p-1.5 bg-orange-100 rounded-md group-hover:scale-110 transition-transform"><CalendarDays className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">পরীক্ষার রুটিন ও ডিউটি</p><p className="text-[9px] font-bold opacity-70">Routine & Roster</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                    <button onClick={() => openPrintable(`/exam-control`)} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-all group">
+                        <div className="p-1.5 bg-emerald-100 rounded-md group-hover:scale-110 transition-transform"><UserCheck className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">শিক্ষার্থী হাজিরা শিট</p><p className="text-[9px] font-bold opacity-70">পরীক্ষার স্বাক্ষর তালিকা</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                </div>
 
-            <Separator />
+                <Separator />
 
-            {/* Staff Section */}
-            <div className="p-2 space-y-1">
-                <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest mb-1 px-1">স্টাফ ও প্রশাসন</p>
-                <button 
-                  onClick={handleDownloadStaffExcel}
-                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-orange-50 text-orange-700 transition-all group"
-                >
-                    <div className="p-1.5 bg-orange-100 rounded-md group-hover:scale-110 transition-transform">
-                        <Users2 className="h-4 w-4" />
+                {/* Section 3: Documents & Certificates */}
+                <div className="p-3 space-y-1">
+                    <p className="text-[9px] font-black text-rose-600 uppercase tracking-widest mb-1 px-1">ডকুমেন্ট ও সনদপত্র</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => openPrintable(`/documents/id-card`)} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-indigo-50 text-indigo-700 transition-all border border-transparent hover:border-indigo-200">
+                            <Contact className="h-3.5 w-3.5" /><span className="text-[10px] font-black">আইডি কার্ড</span>
+                        </button>
+                        <button onClick={() => openPrintable(`/documents/admit-card`)} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-rose-50 text-rose-700 transition-all border border-transparent hover:border-rose-200">
+                            <IdCard className="h-3.5 w-3.5" /><span className="text-[10px] font-black">প্রবেশপত্র</span>
+                        </button>
+                        <button onClick={() => openPrintable(`/documents/marksheet`)} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-violet-50 text-violet-700 transition-all border border-transparent hover:border-violet-200">
+                            <FileBadge className="h-3.5 w-3.5" /><span className="text-[10px] font-black">মার্কশিট</span>
+                        </button>
+                        <button onClick={() => openPrintable(`/documents/seat-plan`)} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-teal-50 text-teal-700 transition-all border border-transparent hover:border-teal-200">
+                            <Grid3X3 className="h-3.5 w-3.5" /><span className="text-[10px] font-black">আসন বিন্যাস</span>
+                        </button>
+                        <button onClick={() => openPrintable(`/documents/testimonial`)} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-blue-50 text-blue-700 transition-all border border-transparent hover:border-blue-200">
+                            <Award className="h-3.5 w-3.5" /><span className="text-[10px] font-black">প্রত্যয়ন পত্র</span>
+                        </button>
+                        <button onClick={() => openPrintable(`/documents/tc`)} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-amber-50 text-amber-700 transition-all border border-transparent hover:border-amber-200">
+                            <FileText className="h-3.5 w-3.5" /><span className="text-[10px] font-black">ছাড়পত্র (TC)</span>
+                        </button>
                     </div>
-                    <div className="text-left">
-                        <p className="text-xs font-black">সকল স্টাফ তালিকা (Excel)</p>
-                        <p className="text-[9px] font-bold opacity-70">শিক্ষক ও কর্মচারী</p>
-                    </div>
-                    <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
-                </button>
-                <button 
-                  onClick={() => openPrintable('/staff?section=report')}
-                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-all group"
-                >
-                    <div className="p-1.5 bg-slate-200 rounded-md group-hover:scale-110 transition-transform">
-                        <LayoutGrid className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                        <p className="text-xs font-black">হাজিরা ও ছুটির রিপোর্ট</p>
-                        <p className="text-[9px] font-bold opacity-70">মাসিক ও বার্ষিক সারাংশ</p>
-                    </div>
-                    <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
-                </button>
-            </div>
+                </div>
+
+                <Separator />
+
+                {/* Section 4: Administration & Accounts */}
+                <div className="p-3 space-y-1">
+                    <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1 px-1">হিসাব ও প্রশাসন</p>
+                    <button onClick={() => openPrintable(`/accounts`)} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-emerald-50 text-emerald-700 transition-all group">
+                        <div className="p-1.5 bg-emerald-100 rounded-md group-hover:scale-110 transition-transform"><Banknote className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">আদায় ও ব্যয়ের রিপোর্ট</p><p className="text-[9px] font-bold opacity-70">Collection & Expense</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                    <button onClick={handleDownloadStaffExcel} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-orange-50 text-orange-700 transition-all group">
+                        <div className="p-1.5 bg-orange-100 rounded-md group-hover:scale-110 transition-transform"><Users2 className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">স্টাফ তালিকা (Excel)</p><p className="text-[9px] font-bold opacity-70">সকল শিক্ষক ও কর্মচারী</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                    <button onClick={() => openPrintable(`/staff`)} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 text-blue-700 transition-all group">
+                        <div className="p-1.5 bg-blue-100 rounded-md group-hover:scale-110 transition-transform"><ListChecks className="h-4 w-4" /></div>
+                        <div className="text-left"><p className="text-xs font-black">স্টাফ হাজিরা রিপোর্ট</p><p className="text-[9px] font-bold opacity-70">মাসিক ও বার্ষিক সারাংশ</p></div>
+                        <ChevronRight className="ml-auto h-3 w-3 opacity-30" />
+                    </button>
+                </div>
+            </ScrollArea>
         </div>
         
         <div className="p-3 bg-slate-50 border-t flex items-center justify-center">
