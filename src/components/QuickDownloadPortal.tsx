@@ -29,7 +29,8 @@ import {
   ListChecks,
   CalendarDays,
   Target,
-  FilePen
+  FilePen,
+  UserCheck
 } from 'lucide-react';
 import { 
   Popover, 
