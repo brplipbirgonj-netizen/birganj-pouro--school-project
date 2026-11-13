@@ -2098,7 +2098,7 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
                             </Avatar>
                             <div className="flex-1">
                                 <CardTitle className="text-3xl font-black mb-1">{searchResult.student.studentNameBn}</CardTitle>
-                                <CardDescription className="text-white/90 text-lg font-bold">
+                                <CardDescription className="text-white/80 font-bold text-lg mt-1">
                                     রোল: {toBengaliNumber(searchResult.student.roll)} | {classNamesMap[searchResult.student.className]} শ্রেণি | {searchExam}
                                 </CardDescription>
                             </div>
@@ -2396,6 +2396,20 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
     );
 };
 
+const BulkUploadTab = () => {
+    return (
+        <Card className="border-2 border-dashed border-primary/20 bg-primary/5 p-12 text-center rounded-[32px] animate-in zoom-in-95 duration-500">
+            <FileUp className="h-20 w-20 text-primary mx-auto mb-6 opacity-30" />
+            <h3 className="text-2xl font-black text-slate-800 mb-2">Excel থেকে ফলাফল আপলোড করুন</h3>
+            <p className="text-base font-bold text-muted-foreground mb-8 max-w-xl mx-auto">ফলাফল শিট ট্যাব থেকে নমুনা ফাইল ডাউনলোড করে সকল বিষয়ের নম্বর একসাথে এন্ট্রি করে আপলোড করতে পারবেন।</p>
+            <div className="flex justify-center gap-4">
+                <Link href="/student-list"><Button variant="outline" className="font-bold border-primary text-primary h-12 px-8">শিক্ষার্থী তালিকা দেখুন</Button></Link>
+                <Link href="#sheet"><Button className="font-black h-12 px-8 shadow-xl">ফলাফল শিট ট্যাবে যান</Button></Link>
+            </div>
+        </Card>
+    );
+};
+
 export default function ResultsPage() {
     const [isClient, setIsClient] = useState(false); 
     const [allStudents, setAllStudents] = useState<Student[]>([]); 
@@ -2572,7 +2586,7 @@ export default function ResultsPage() {
                             .printable-area { width: 100% !important; padding: 0 !important; }
                             .result-sheet-page { page-break-after: always; min-height: 185mm; display: flex; flex-direction: column; width: 100%; box-sizing: border-box; padding: 2mm !important; }
                             table { border-collapse: collapse !important; border: 1px solid black !important; width: 100% !important; table-layout: auto !important; }
-                            th, td { border: 1px solid black !important; padding: 1.5px 2px !important; font-size: 8.5px !important; line-height: 1.15 !important; text-align: center; }
+                            th, td { border: 1px solid black !important; padding: 1.5px 2px !important; font-size: 10px !important; line-height: 1.15 !important; text-align: center; }
                             .no-print { display: none !important; }
                         }
                     `}</style>
@@ -2646,7 +2660,7 @@ export default function ResultsPage() {
                                         </thead>
                                         <tbody>
                                             {chunk.map((res: StudentProcessedResult) => (
-                                                <tr key={res.student.id} className={cn("h-[24px]", !res.isPass && "bg-rose-50/50")}>
+                                                <tr key={res.student.id} className={cn("h-[30px]", !res.isPass && "bg-rose-50/50")}>
                                                     <td className="font-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="text-left pl-2 font-bold whitespace-nowrap">{res.student.studentNameBn}</td>
                                                     {subsPart1.map((s, idx) => {
@@ -2697,7 +2711,7 @@ export default function ResultsPage() {
                                         </thead>
                                         <tbody>
                                             {chunk.map((res: StudentProcessedResult) => (
-                                                <tr key={res.student.id} className={cn("h-[24px]", !res.isPass && "bg-rose-50/50")}>
+                                                <tr key={res.student.id} className={cn("h-[30px]", !res.isPass && "bg-rose-50/50")}>
                                                     <td className="font-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="text-left pl-2 font-bold whitespace-nowrap">{res.student.studentNameBn}</td>
                                                     {subsPart2.map((s, idx) => {
