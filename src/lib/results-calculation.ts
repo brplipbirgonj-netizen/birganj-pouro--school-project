@@ -18,6 +18,9 @@ export interface StudentSubjectResult {
     grade: string;
     point: number;
     isPass: boolean;
+    writtenFail?: boolean;
+    mcqFail?: boolean;
+    practicalFail?: boolean;
 }
 
 export interface StudentProcessedResult {
@@ -64,6 +67,80 @@ const groupMap: Record<string, string> = {
     'commerce': 'commerce', 'ব্যবসায় শিক্ষা': 'commerce', 'business': 'commerce', 'Commerce': 'commerce', 'ব্যবসায় শিক্ষা শাখা': 'commerce',
     'none': 'none', 'all': 'none', 'general': 'none', '': 'none'
 };
+
+export function checkPartFails(params: {
+    subjectName: string;
+    fullMarks: number;
+    written?: number;
+    mcq?: number;
+    practical?: number;
+    writtenLimit?: number;
+    mcqLimit?: number;
+    practicalLimit?: number;
+    hasPractical?: boolean;
+}): { writtenFail: boolean; mcqFail: boolean; practicalFail: boolean; isPass: boolean } {
+    const { subjectName, fullMarks, written, mcq, practical } = params;
+    const normalizedSubjectName = normalize(subjectName);
+    
+    const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
+    const isIct = normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি') || normalizedSubjectName === 'ict';
+
+    let writtenFail = false;
+    let mcqFail = false;
+    let practicalFail = false;
+
+    const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
+    const overallPassMark = Math.ceil(fullMarks * 0.33);
+    const isOverallFail = obtainedMarks < overallPassMark;
+
+    if (!isEnglish) {
+        if (isIct) {
+            // ১. ICT (আইসিটি) পাশের লজিক: আইসিটির জন্য বিশেষ পাশের নিয়ম (নৈবেত্তিকে অন্তত ৮ এবং ব্যবহারিকে অন্তত ৮)
+            if (mcq !== undefined && mcq < 8) mcqFail = true;
+            if (practical !== undefined && practical < 8) practicalFail = true;
+            if (params.writtenLimit && params.writtenLimit > 0 && written !== undefined && written < Math.ceil(params.writtenLimit * 0.33)) {
+                writtenFail = true;
+            }
+        } else if (fullMarks === 100) {
+            const hasPrac = (params.practicalLimit !== undefined && params.practicalLimit > 0) || params.hasPractical;
+            if (hasPrac) {
+                if (written !== undefined && written < 17) writtenFail = true;
+                if (mcq !== undefined && mcq < 8) mcqFail = true;
+                if (practical !== undefined && practical < 8) practicalFail = true;
+            } else {
+                if (written !== undefined && written < 23) writtenFail = true;
+                if (mcq !== undefined && mcq < 10) mcqFail = true;
+            }
+        } else if (fullMarks === 50) {
+            const hasPrac = (params.practicalLimit !== undefined && params.practicalLimit > 0) || params.hasPractical;
+            if (hasPrac) {
+                if (written !== undefined && written < 8) writtenFail = true;
+                if (mcq !== undefined && mcq < 8) mcqFail = true;
+                if (practical !== undefined && practical < 8) practicalFail = true;
+            } else {
+                if (written !== undefined && written < 12) writtenFail = true;
+                if (mcq !== undefined && mcq < 5) mcqFail = true;
+            }
+        } else if (fullMarks === 25) {
+            if (mcq !== undefined && mcq < 8) mcqFail = true;
+            if (practical !== undefined && practical < 8) practicalFail = true;
+            if (written !== undefined && written < 8) writtenFail = true;
+        } else {
+            if (params.writtenLimit && params.writtenLimit > 0 && written !== undefined && written < Math.ceil(params.writtenLimit * 0.33)) {
+                writtenFail = true;
+            }
+            if (params.mcqLimit && params.mcqLimit > 0 && mcq !== undefined && mcq < Math.ceil(params.mcqLimit * 0.33)) {
+                mcqFail = true;
+            }
+            if (params.practicalLimit && params.practicalLimit > 0 && practical !== undefined && practical < Math.ceil(params.practicalLimit * 0.33)) {
+                practicalFail = true;
+            }
+        }
+    }
+
+    const isPass = !isOverallFail && !writtenFail && !mcqFail && !practicalFail;
+    return { writtenFail, mcqFail, practicalFail, isPass };
+}
 
 export function processStudentResults(
     students: Student[],
@@ -112,37 +189,69 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const normalizedSubjectName = normalize(subjectInfo.name);
             
-            // Prioritize specific group match over 'none' or incorrect group matches
-            const classResult = resultsBySubject.find(r => {
-                const nameMatch = normalize(r.subject) === normalizedSubjectName;
-                if (!nameMatch) return false;
-
-                const classMatch = String(r.className) === String(student.className);
-                if (!classMatch) return false;
-
-                const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                
-                // Primary check: Group match AND student must exist in this record's results
-                return rGroupNorm === studentGroupNormalized && r.results.some(res => res.studentId === student.id);
-            }) || resultsBySubject.find(r => {
-                const nameMatch = normalize(r.subject) === normalizedSubjectName;
-                if (!nameMatch) return false;
-
-                const classMatch = String(r.className) === String(student.className);
-                if (!classMatch) return false;
-
-                const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                
-                // Fallback 1: Match compulsory subjects (none group) that contain the student
-                return rGroupNorm === 'none' && r.results.some(res => res.studentId === student.id);
-            }) || resultsBySubject.find(r => {
-                // Fallback 2: Any record for the same subject/class containing the student
-                return normalize(r.subject) === normalizedSubjectName && 
-                       String(r.className) === String(student.className) && 
-                       r.results.some(res => res.studentId === student.id);
+            // Candidate records matching subject and className
+            const candidateRecords = resultsBySubject.filter(r => {
+                return normalize(r.subject) === normalizedSubjectName && String(r.className) === String(student.className);
             });
+
+            // Priority 1: Specific student group record where student has marks entered
+            let classResult = candidateRecords.find(r => {
+                const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                if (rGroupNorm !== studentGroupNormalized) return false;
+                const sr = r.results.find(res => res.studentId === student.id);
+                return sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
+            });
+
+            // Priority 2: "None" / General group record where student has marks entered (Smart Data Propagation)
+            if (!classResult) {
+                classResult = candidateRecords.find(r => {
+                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                    if (rGroupNorm !== 'none' && rGroupNorm !== 'all' && rGroupNorm !== '') return false;
+                    const sr = r.results.find(res => res.studentId === student.id);
+                    return sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
+                });
+            }
+
+            // Priority 3: Any record for this subject/class where student has marks entered
+            if (!classResult) {
+                classResult = candidateRecords.find(r => {
+                    const sr = r.results.find(res => res.studentId === student.id);
+                    return sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
+                });
+            }
+
+            // Priority 4: Specific student group record containing student
+            if (!classResult) {
+                classResult = candidateRecords.find(r => {
+                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                    return rGroupNorm === studentGroupNormalized && r.results.some(res => res.studentId === student.id);
+                });
+            }
+
+            // Priority 5: General / "none" group record containing student
+            if (!classResult) {
+                classResult = candidateRecords.find(r => {
+                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                    return (rGroupNorm === 'none' || rGroupNorm === 'all' || !r.group) && r.results.some(res => res.studentId === student.id);
+                });
+            }
+
+            // Priority 6: Fallback to group matching or first record
+            if (!classResult) {
+                classResult = candidateRecords.find(r => {
+                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                    return rGroupNorm === studentGroupNormalized;
+                }) || candidateRecords.find(r => {
+                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                    return rGroupNorm === 'none' || rGroupNorm === 'all' || !r.group;
+                }) || candidateRecords[0];
+            }
 
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
@@ -151,41 +260,21 @@ export function processStudentResults(
             const mcq = studentResult?.mcq;
             const practical = studentResult?.practical;
             const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
-            
-            let isPassSubject = true;
-            const overallPassMark = Math.ceil(fullMarks * 0.33);
 
-            if (obtainedMarks < overallPassMark) {
-                isPassSubject = false;
-            } else {
-                const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
-                const isIct25 = (normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি')) && fullMarks === 25;
+            const partFails = checkPartFails({
+                subjectName: subjectInfo.name,
+                fullMarks,
+                written,
+                mcq,
+                practical,
+                writtenLimit: classResult?.writtenLimit,
+                mcqLimit: classResult?.mcqLimit,
+                practicalLimit: classResult?.practicalLimit,
+                hasPractical: subjectInfo.practical,
+            });
 
-                if (!isEnglish) {
-                    if (isIct25) {
-                        if (mcq !== undefined && mcq < 8) isPassSubject = false;
-                    } else if (fullMarks === 100) {
-                        const wrLimit = classResult?.writtenLimit ?? (subjectInfo.practical ? 50 : 70);
-                        const mcqLimit = classResult?.mcqLimit ?? (subjectInfo.practical ? 25 : 30);
-                        const prLimit = classResult?.practicalLimit ?? (subjectInfo.practical ? 25 : 0);
-
-                        if (prLimit > 0) {
-                            if (written !== undefined && written < 17) isPassSubject = false;
-                            if (mcq !== undefined && mcq < 8) isPassSubject = false;
-                            if (practical !== undefined && practical < 8) isPassSubject = false;
-                        } else {
-                            if (written !== undefined && written < 23) isPassSubject = false;
-                            if (mcq !== undefined && mcq < 10) isPassSubject = false;
-                        }
-                    } 
-                    else if (fullMarks === 50) {
-                        if (written !== undefined && written < 12) isPassSubject = false;
-                        if (mcq !== undefined && mcq < 5) isPassSubject = false;
-                    }
-                }
-            }
-            
-            const percentageForGrade = (obtainedMarks / fullMarks) * 100;
+            const isPassSubject = partFails.isPass;
+            const percentageForGrade = fullMarks > 0 ? (obtainedMarks / fullMarks) * 100 : 0;
             const { grade, point } = getGradePoint(percentageForGrade);
             
             totalMarks += obtainedMarks;
@@ -199,7 +288,10 @@ export function processStudentResults(
                 fullMarks: fullMarks,
                 grade: isPassSubject ? grade : 'F',
                 point: isPassSubject ? point : 0,
-                isPass: isPassSubject
+                isPass: isPassSubject,
+                writtenFail: partFails.writtenFail,
+                mcqFail: partFails.mcqFail,
+                practicalFail: partFails.practicalFail
             });
         });
         

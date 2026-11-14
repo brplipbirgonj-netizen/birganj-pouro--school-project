@@ -369,9 +369,9 @@ function MarksheetContent() {
                                                     {normalize(student.optionalSubject || '') === normalize(subject.name) && <span className="text-[8px] text-blue-600 font-bold italic ml-2">(Optional)</span>}
                                                 </td>
                                                 <td className="border-r border-black p-1 text-center font-medium">{subResult?.fullMarks ?? subject.fullMarks}</td>
-                                                <td className="border-r border-black p-1 text-center">{subResult?.written ?? '-'}</td>
-                                                <td className="border-r border-black p-1 text-center">{subResult?.mcq ?? '-'}</td>
-                                                <td className="border-r border-black p-1 text-center">{subResult?.practical ?? '-'}</td>
+                                                <td className={cn("border-r border-black p-1 text-center font-medium", subResult?.writtenFail && "text-red-600 font-bold")}>{subResult?.written ?? '-'}</td>
+                                                <td className={cn("border-r border-black p-1 text-center font-medium", subResult?.mcqFail && "text-red-600 font-bold")}>{subResult?.mcq ?? '-'}</td>
+                                                <td className={cn("border-r border-black p-1 text-center font-medium", subResult?.practicalFail && "text-red-600 font-bold")}>{subResult?.practical ?? '-'}</td>
                                                 <td className={cn("border-r border-black p-1 text-center font-bold text-[14px]", isFail ? "text-red-600" : "text-blue-900")}>{subResult?.marks ?? '-'}</td>
                                                 <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{subResult?.grade ?? '-'}</td>
                                                 <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{subResult?.point !== undefined ? subResult.point.toFixed(2) : '-'}</td>

@@ -13,7 +13,7 @@ import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
-import { processStudentResults, StudentProcessedResult, getGradePoint } from '@/lib/results-calculation';
+import { processStudentResults, StudentProcessedResult, getGradePoint, checkPartFails } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { 
@@ -179,10 +179,31 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                 practical: firstRes.practicalLimit ?? 0
             });
 
-            matchingResults.forEach(resRecord => {
+            // Smart Data Loading with Priority: General/none group first, then specific group overlay
+            matchingResults.filter(r => {
+                const rg = (r.group || 'none').toLowerCase().trim();
+                return rg === 'none' || rg === 'all' || !r.group;
+            }).forEach(resRecord => {
                 resRecord.results.forEach(res => {
                     const existing = initialMarks.get(res.studentId) || {};
                     initialMarks.set(res.studentId, { ...existing, written: res.written, mcq: res.mcq, practical: res.practical });
+                });
+            });
+
+            matchingResults.filter(r => {
+                const rg = (r.group || 'none').toLowerCase().trim();
+                return rg !== 'none' && rg !== 'all' && Boolean(r.group);
+            }).forEach(resRecord => {
+                resRecord.results.forEach(res => {
+                    const existing = initialMarks.get(res.studentId) || {};
+                    const hasMarks = res.written !== undefined || res.mcq !== undefined || res.practical !== undefined;
+                    if (hasMarks || !initialMarks.has(res.studentId)) {
+                        initialMarks.set(res.studentId, {
+                            written: res.written !== undefined ? res.written : existing.written,
+                            mcq: res.mcq !== undefined ? res.mcq : existing.mcq,
+                            practical: res.practical !== undefined ? res.practical : existing.practical,
+                        });
+                    }
                 });
             });
             
@@ -364,34 +385,19 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         
                                         const isAnyMarkEntered = sMarks?.written !== undefined || sMarks?.mcq !== undefined || sMarks?.practical !== undefined;
 
-                                        const normalizedSubjectName = normalize(subject);
-                                        const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
-                                        const isIct25 = (normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি')) && fullMarks === 25;
+                                        const partFails = checkPartFails({
+                                            subjectName: subject,
+                                            fullMarks,
+                                            written: sMarks?.written,
+                                            mcq: sMarks?.mcq,
+                                            practical: sMarks?.practical,
+                                            writtenLimit: storedLimits.written,
+                                            mcqLimit: storedLimits.mcq,
+                                            practicalLimit: storedLimits.practical,
+                                            hasPractical: storedLimits.practical > 0,
+                                        });
 
-                                        let isAnyFail = false;
-                                        const overallPassMark = Math.ceil(fullMarks * 0.33);
-
-                                        if (isAnyMarkEntered) {
-                                            if (total < overallPassMark) {
-                                                isAnyFail = true;
-                                            } else if (!isEnglish) {
-                                                if (isIct25) {
-                                                    if (sMarks?.mcq !== undefined && mcq < 8) isAnyFail = true;
-                                                } else if (fullMarks === 100) {
-                                                    if (storedLimits.practical > 0) {
-                                                        if (sMarks?.written !== undefined && written < 17) isAnyFail = true;
-                                                        if (sMarks?.mcq !== undefined && mcq < 8) isAnyFail = true;
-                                                        if (sMarks?.practical !== undefined && practical < 8) isAnyFail = true;
-                                                    } else {
-                                                        if (sMarks?.written !== undefined && written < 23) isAnyFail = true;
-                                                        if (sMarks?.mcq !== undefined && mcq < 10) isAnyFail = true;
-                                                    }
-                                                } else if (fullMarks === 50) {
-                                                    if (sMarks?.written !== undefined && written < 12) isAnyFail = true;
-                                                    if (sMarks?.mcq !== undefined && mcq < 5) isAnyFail = true;
-                                                }
-                                            }
-                                        }
+                                        const isAnyFail = isAnyMarkEntered && !partFails.isPass;
 
                                         const writtenOver = written > storedLimits.written;
                                         const mcqOver = mcq > storedLimits.mcq;
@@ -410,7 +416,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                             value={sMarks?.written ?? ''} 
                                                             onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
-                                                            className={cn(numberInputClass, writtenOver && "bg-red-100 border-red-500 text-red-700")}
+                                                            className={cn(numberInputClass, (writtenOver || (sMarks?.written !== undefined && partFails.writtenFail)) && "bg-red-100 border-red-500 text-red-700 font-bold")}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -421,7 +427,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                             value={sMarks?.mcq ?? ''} 
                                                             onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
-                                                            className={cn(numberInputClass, mcqOver && "bg-red-100 border-red-500 text-red-700")}
+                                                            className={cn(numberInputClass, (mcqOver || (sMarks?.mcq !== undefined && partFails.mcqFail)) && "bg-red-100 border-red-500 text-red-700 font-bold")}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -432,7 +438,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                             value={sMarks?.practical ?? ''} 
                                                             onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
-                                                            className={cn(numberInputClass, practicalOver && "bg-red-100 border-red-500 text-red-700")}
+                                                            className={cn(numberInputClass, (practicalOver || (sMarks?.practical !== undefined && partFails.practicalFail)) && "bg-red-100 border-red-500 text-red-700 font-bold")}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -522,9 +528,34 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                     results: []
                 };
                 const studentResultsMap = new Map<string, StudentResult>();
-                matchingResults.forEach(r => {
+
+                // Priority 1: Load general/none records
+                matchingResults.filter(r => {
+                    const rg = (r.group || 'none').toLowerCase().trim();
+                    return rg === 'none' || rg === 'all' || !r.group;
+                }).forEach(r => {
                     r.results.forEach(sr => studentResultsMap.set(sr.studentId, sr));
                 });
+
+                // Priority 2: Overlay specific group records (so specific group takes precedence if marks exist)
+                matchingResults.filter(r => {
+                    const rg = (r.group || 'none').toLowerCase().trim();
+                    return rg !== 'none' && rg !== 'all' && Boolean(r.group);
+                }).forEach(r => {
+                    r.results.forEach(sr => {
+                        const existing = studentResultsMap.get(sr.studentId);
+                        const hasMarks = sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined;
+                        if (hasMarks || !existing) {
+                            studentResultsMap.set(sr.studentId, {
+                                studentId: sr.studentId,
+                                written: sr.written !== undefined ? sr.written : existing?.written,
+                                mcq: sr.mcq !== undefined ? sr.mcq : existing?.mcq,
+                                practical: sr.practical !== undefined ? sr.practical : existing?.practical,
+                            });
+                        }
+                    });
+                });
+
                 mergedResults.results = Array.from(studentResultsMap.values());
                 setResults(mergedResults);
             }
@@ -585,33 +616,19 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                 const obtainedMarks = (marks?.written || 0) + (marks?.mcq || 0) + (marks?.practical || 0);
                 const percentage = results.fullMarks > 0 ? (obtainedMarks / results.fullMarks) * 100 : 0;
                 
-                const normalizedSubjectName = normalize(subject);
-                const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
-                const isIct25 = (normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি')) && results.fullMarks === 25;
+                const partFails = checkPartFails({
+                    subjectName: subject,
+                    fullMarks: results.fullMarks,
+                    written: marks?.written,
+                    mcq: marks?.mcq,
+                    practical: marks?.practical,
+                    writtenLimit: results.writtenLimit,
+                    mcqLimit: results.mcqLimit,
+                    practicalLimit: results.practicalLimit,
+                    hasPractical: Boolean(results.practicalLimit && results.practicalLimit > 0),
+                });
 
-                let isPass = true;
-                const overallPassMark = Math.ceil(results.fullMarks * 0.33);
-
-                if (obtainedMarks < overallPassMark) {
-                    isPass = false;
-                } else if (!isEnglish) {
-                    if (isIct25) {
-                        if (marks?.mcq !== undefined && (marks.mcq < 8)) isPass = false;
-                    } else if (results.fullMarks === 100) {
-                        if (results.practicalLimit && results.practicalLimit > 0) {
-                            if (marks?.written !== undefined && marks.written < 17) isPass = false;
-                            if (marks?.mcq !== undefined && marks.mcq < 8) isPass = false;
-                            if (marks?.practical !== undefined && marks.practical < 8) isPass = false;
-                        } else {
-                            if (marks?.written !== undefined && marks.written < 23) isPass = false;
-                            if (marks?.mcq !== undefined && marks.mcq < 10) isPass = false;
-                        }
-                    } else if (results.fullMarks === 50) {
-                        if (marks?.written !== undefined && marks.written < 12) isPass = false;
-                        if (marks?.mcq !== undefined && marks.mcq < 5) isPass = false;
-                    }
-                }
-
+                const isPass = partFails.isPass;
                 const { grade, point } = getGradePoint(percentage);
 
                 return {
@@ -620,7 +637,10 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                     obtainedMarks,
                     grade: isPass ? grade : 'F',
                     point: isPass ? point : 0,
-                    isPass
+                    isPass,
+                    writtenFail: partFails.writtenFail,
+                    mcqFail: partFails.mcqFail,
+                    practicalFail: partFails.practicalFail,
                 };
             });
     }, [results, allStudents, selectedYear, className, group, subject]);
@@ -693,13 +713,13 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {reportStudents.map(({ student, marks, obtainedMarks, grade, point, isPass }) => (
+                                    {reportStudents.map(({ student, marks, obtainedMarks, grade, point, isPass, writtenFail, mcqFail, practicalFail }) => (
                                         <TableRow key={student.id} className={cn("hover:bg-slate-50 h-10", !isPass && "bg-rose-50/50")}>
                                             <TableCell className={cn("text-center font-black", !isPass && "text-rose-600")}>{toBengaliNumber(student.roll)}</TableCell>
                                             <TableCell className={cn("font-bold text-slate-700", !isPass && "text-rose-700")}>{student.studentNameBn}</TableCell>
-                                            <TableCell className={cn("text-center", !isPass && "text-rose-600")}>{marks.written ?? '-'}</TableCell>
-                                            <TableCell className={cn("text-center", !isPass && "text-rose-600")}>{marks.mcq ?? '-'}</TableCell>
-                                            <TableCell className={cn("text-center", !isPass && "text-rose-600")}>{marks.practical ?? '-'}</TableCell>
+                                            <TableCell className={cn("text-center", writtenFail ? "text-rose-600 font-bold bg-rose-50/50" : (!isPass ? "text-slate-700" : ""))}>{marks.written ?? '-'}</TableCell>
+                                            <TableCell className={cn("text-center", mcqFail ? "text-rose-600 font-bold bg-rose-50/50" : (!isPass ? "text-slate-700" : ""))}>{marks.mcq ?? '-'}</TableCell>
+                                            <TableCell className={cn("text-center", practicalFail ? "text-rose-600 font-bold bg-rose-50/50" : (!isPass ? "text-slate-700" : ""))}>{marks.practical ?? '-'}</TableCell>
                                             <TableCell className={cn("text-center font-black", isPass ? "text-blue-900" : "text-rose-700")}>
                                                 {toBengaliNumber(obtainedMarks)}
                                             </TableCell>
@@ -1192,9 +1212,9 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                     <React.Fragment key={`${res.student.id}-${s.name}`}>
                                                         {!isEng && (
                                                             <>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor)}>{toBengaliNumber(sr?.written ?? '-') }</td>
-                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor)}>{toBengaliNumber(sr?.mcq ?? '-') }</td>
-                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor)}>{toBengaliNumber(sr?.practical ?? '-') }</td>}
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.writtenFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.written ?? '-') }</td>
+                                                                <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.mcqFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.mcq ?? '-') }</td>
+                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.practicalFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.practical ?? '-') }</td>}
                                                             </>
                                                         )}
                                                         <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[13px] p-0.5 h-10 box-border", bgColor)}>{toBengaliNumber(sr?.marks ?? '-') }</td>
@@ -2561,9 +2581,9 @@ export default function ResultsPage() {
                             <TableRow key={item.student.id} className={cn("border-b border-slate-400", printingReport.isBlank ? "h-12" : "h-7", !item.isPass && "bg-rose-50/50")}>
                                 <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell>
                                 <TableCell className="font-bold border-r-2 border-black">{item.student.studentNameBn}</TableCell>
-                                <TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell>
-                                <TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
-                                <TableCell className="text-center border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
+                                <TableCell className={cn("text-center border-r-2 border-black", !printingReport.isBlank && item.writtenFail && "text-rose-600 font-bold")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell>
+                                <TableCell className={cn("text-center border-r-2 border-black", !printingReport.isBlank && item.mcqFail && "text-rose-600 font-bold")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
+                                <TableCell className={cn("text-center border-r-2 border-black", !printingReport.isBlank && item.practicalFail && "text-rose-600 font-bold")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
                                 <TableCell className="text-center font-black border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.obtainedMarks)}</TableCell>
                                 {!printingReport.isBlank && (
                                     <>
@@ -2670,7 +2690,7 @@ export default function ResultsPage() {
                                                         const bg = subBgColors[idx % subBgColors.length];
                                                         return (
                                                             <React.Fragment key={s.name}>
-                                                                {!isEng && <><td className={bg}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={bg}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{s.practical && <td className={bg}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
+                                                                {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{s.practical && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
                                                                 <td className="font-black bg-blue-50/30">{toBengaliNumber(sr?.marks ?? '-')}</td>
                                                                 <td className={cn(bg, sr && !sr.isPass && "text-rose-700 font-black")}>{sr?.grade ?? '-'}</td>
                                                                 <td className={bg}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-')}</td>
@@ -2721,7 +2741,7 @@ export default function ResultsPage() {
                                                         const bg = subBgColors[(mid + idx) % subBgColors.length];
                                                         return (
                                                             <React.Fragment key={s.name}>
-                                                                {!isEng && <><td className={bg}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={bg}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{s.practical && <td className={bg}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
+                                                                {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{s.practical && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
                                                                 <td className="font-black bg-blue-50/30">{toBengaliNumber(sr?.marks ?? '-')}</td>
                                                                 <td className={cn(bg, sr && !sr.isPass && "text-rose-700 font-black")}>{sr?.grade ?? '-'}</td>
                                                                 <td className={bg}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-')}</td>

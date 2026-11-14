@@ -220,9 +220,9 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                                             {sub.englishName}
                                         </td>
                                         <td className="border-r border-black p-1 text-center">{sr?.fullMarks || sub.fullMarks}</td>
-                                        <td className="border-r border-black p-1 text-center">{sr?.written ?? '-'}</td>
-                                        <td className="border-r border-black p-1 text-center">{sr?.mcq ?? '-'}</td>
-                                        <td className="border-r border-black p-1 text-center">{sr?.practical ?? '-'}</td>
+                                        <td className={cn("border-r border-black p-1 text-center font-medium", sr?.writtenFail && "text-red-600 font-bold")}>{sr?.written ?? '-'}</td>
+                                        <td className={cn("border-r border-black p-1 text-center font-medium", sr?.mcqFail && "text-red-600 font-bold")}>{sr?.mcq ?? '-'}</td>
+                                        <td className={cn("border-r border-black p-1 text-center font-medium", sr?.practicalFail && "text-red-600 font-bold")}>{sr?.practical ?? '-'}</td>
                                         <td className={cn("border-r border-black p-1 text-center font-bold", isFail ? "text-red-600" : "text-blue-900")}>{sr?.marks ?? '-'}</td>
                                         <td className={cn("border-r border-black p-1 text-center font-black", isFail ? "text-red-600" : "")}>{sr?.grade ?? '-'}</td>
                                         <td className={cn("p-1 text-center font-bold", isFail ? "text-red-600" : "")}>{sr?.point !== undefined ? sr.point.toFixed(2) : '-'}</td>
