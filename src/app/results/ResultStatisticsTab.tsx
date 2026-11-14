@@ -94,6 +94,7 @@ export const ResultStatisticsTab = ({ allStudents, onPrintRequested }: { allStud
         setIsLoading(true);
         try {
             const targetStudents = allStudents.filter(s => {
+                if (s.academicYear !== selectedYear) return false;
                 if (String(s.className) !== String(className)) return false;
                 if (parseInt(className) >= 9 && groupFilter !== 'all') {
                     const sGroupNorm = groupMap[(s.group || 'none').toLowerCase().trim()] || (s.group || 'none').toLowerCase().trim();
@@ -128,7 +129,7 @@ export const ResultStatisticsTab = ({ allStudents, onPrintRequested }: { allStud
         if (examName && className) {
             handleLoadData();
         }
-    }, [examName, className, groupFilter, selectedYear]);
+    }, [examName, className, groupFilter, selectedYear, allStudents]);
 
     // Overall Demographic & Result Statistics
     const stats = useMemo(() => {
