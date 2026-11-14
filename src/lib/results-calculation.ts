@@ -350,7 +350,7 @@ export function processStudentResults(
     }).sort((a, b) => {
         if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
         if (a.isPass) {
-            if (b.gpa !== a.gpa) return b.gpa - a.gpa;
+            if (Math.abs(b.gpa - a.gpa) > 0.001) return b.gpa - a.gpa;
             if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
             return a.student.roll - b.student.roll;
         }
@@ -362,7 +362,7 @@ export function processStudentResults(
         let meritPosition = idx + 1;
         if (idx > 0) {
             const prev = self[idx - 1];
-            if (prev.isPass && prev.gpa === res.gpa && prev.totalMarks === res.totalMarks) {
+            if (prev.isPass && Math.abs(prev.gpa - res.gpa) < 0.001 && prev.totalMarks === res.totalMarks) {
                 meritPosition = (prev as StudentProcessedResult).meritPosition!;
             }
         }

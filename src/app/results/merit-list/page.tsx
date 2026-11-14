@@ -104,11 +104,13 @@ function MeritListPrintContent() {
                 const sortedResults = finalResults.sort((a, b) => {
                     if (a.isPass !== b.isPass) return a.isPass ? -1 : 1;
                     if (a.isAbsent !== b.isAbsent) return a.isAbsent ? 1 : -1;
-                    // Priority logic for failed students: fewer failed subjects come first
-                    if (!a.isPass && !b.isPass) {
-                        if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
+                    if (a.isPass) {
+                        if (Math.abs(b.gpa - a.gpa) > 0.001) return b.gpa - a.gpa;
+                        if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+                        return a.student.roll - b.student.roll;
                     }
-                    // Secondary sorting by total marks
+                    // Priority logic for failed students: fewer failed subjects come first
+                    if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
                     if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
                     return a.student.roll - b.student.roll;
                 });
@@ -124,7 +126,13 @@ function MeritListPrintContent() {
     }, [db, academicYear, examName, className, groupFilter, user, canViewMeritList, authLoading]);
 
     const regularPassedStudents = useMemo(() => {
-        return results.filter(r => r.isPass && !r.isAbsent);
+        return results
+            .filter(r => r.isPass && !r.isAbsent)
+            .sort((a, b) => {
+                if (Math.abs(b.gpa - a.gpa) > 0.001) return b.gpa - a.gpa;
+                if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+                return a.student.roll - b.student.roll;
+            });
     }, [results]);
 
     const specialPassedStudents = useMemo(() => {

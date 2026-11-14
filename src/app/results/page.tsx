@@ -1973,7 +1973,13 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
     };
 
     const regularPassedStudents = useMemo(() => {
-        return meritResults.filter(r => r.isPass && !r.isAbsent);
+        return meritResults
+            .filter(r => r.isPass && !r.isAbsent)
+            .sort((a, b) => {
+                if (Math.abs(b.gpa - a.gpa) > 0.001) return b.gpa - a.gpa;
+                if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+                return a.student.roll - b.student.roll;
+            });
     }, [meritResults]);
 
     const specialPassedStudents = useMemo(() => {
