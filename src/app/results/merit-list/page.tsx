@@ -461,7 +461,7 @@ function MeritListPrintContent() {
                                                     <td className="text-center font-bold border-r border-black text-rose-700">{toBengaliNumber(res.failedSubjectsCount)}টি</td>
                                                     <td className="text-center font-black border-r border-black text-primary">{toBengaliNumber(res.totalMarks)}</td>
                                                     <td className="text-center font-black border-r border-black">{toBengaliNumber(res.gpa.toFixed(2))}</td>
-                                                    <td className="text-center font-black border-r border-black text-rose-600">F{toBengaliNumber(res.failedSubjectsCount)}</td>
+                                                    <td className="text-center font-black border-r border-black text-rose-600">{res.finalGrade}</td>
                                                     <td className="text-center font-black text-rose-700 text-[11px]">অকৃতকার্য</td>
                                                 </tr>
                                             ))}

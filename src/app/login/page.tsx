@@ -689,7 +689,7 @@ export default function LoginPage() {
                                     <Card className="p-4 text-center border-2 border-black/5 bg-white shadow-sm rounded-2xl">
                                         <p className="text-[9px] font-black text-muted-foreground uppercase mb-1">গ্রেড</p>
                                         <p className={cn("text-2xl font-black", searchResult.isPass ? "text-emerald-600" : "text-rose-600")}>
-                                            {searchResult.isPass ? searchResult.finalGrade : `F${toBengaliNumber(searchResult.failedSubjectsCount)}`}
+                                            {searchResult.finalGrade}
                                         </p>
                                     </Card>
                                     <Card className="p-4 text-center border-2 border-black/5 bg-white shadow-sm rounded-2xl">
@@ -755,7 +755,7 @@ export default function LoginPage() {
                     <div className="grid grid-cols-4 gap-3 mb-6">
                         <div className="p-2 border-[1.5px] border-black rounded-lg text-center shadow-sm"><p className="text-[8px] font-black uppercase text-muted-foreground mb-0.5">মোট নম্বর</p><p className="text-xl font-black text-primary">{toBengaliNumber(searchResult.totalMarks)}</p></div>
                         <div className="p-2 border-[1.5px] border-black rounded-lg text-center shadow-sm"><p className="text-[8px] font-black uppercase text-muted-foreground mb-0.5">GPA</p><p className="text-xl font-black text-primary">{toBengaliNumber(searchResult.gpa.toFixed(2))}</p></div>
-                        <div className="p-2 border-[1.5px] border-black rounded-lg text-center shadow-sm"><p className="text-[8px] font-black uppercase text-muted-foreground mb-0.5">গ্রেড</p><p className="text-xl font-black">{searchResult.isPass ? searchResult.finalGrade : 'F'}</p></div>
+                        <div className="p-2 border-[1.5px] border-black rounded-lg text-center shadow-sm"><p className="text-[8px] font-black uppercase text-muted-foreground mb-0.5">গ্রেড</p><p className="text-xl font-black">{searchResult.finalGrade}</p></div>
                         <div className="p-2 border-[1.5px] border-black rounded-lg text-center shadow-sm"><p className="text-[8px] font-black uppercase text-muted-foreground mb-0.5">মেধাস্থান</p><p className="text-xl font-black text-amber-600">{searchResult.isPass ? toBengaliNumber(searchResult.meritPosition || '-') : '-'}</p></div>
                     </div>
 

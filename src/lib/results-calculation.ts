@@ -334,7 +334,10 @@ export function processStudentResults(
             if (gpa > 5.0) gpa = 5.0;
         }
         
-        const finalGrade = isPass ? getFinalGrade(gpa) : 'F';
+        const failedSubjectsCount = isAbsent ? compulsorySubjectsCount : failedInCompulsoryCount;
+        const finalGrade = isPass 
+            ? getFinalGrade(gpa) 
+            : (isAbsent ? 'F' : (failedSubjectsCount > 0 ? `F${failedSubjectsCount}` : 'F'));
         
         return {
             student,
@@ -344,7 +347,7 @@ export function processStudentResults(
             finalGrade,
             isPass,
             isAbsent,
-            failedSubjectsCount: isAbsent ? compulsorySubjectsCount : failedInCompulsoryCount,
+            failedSubjectsCount,
             subjectResults: subjectResultsMap,
         };
     }).sort((a, b) => {

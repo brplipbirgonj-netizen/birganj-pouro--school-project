@@ -1196,7 +1196,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
             });
             row['মোট নম্বর'] = res.totalMarks; 
             row['জি.পি.এ'] = res.gpa.toFixed(2); 
-            row['গ্রেড'] = res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`; 
+            row['গ্রেড'] = res.finalGrade; 
             row['মেধাস্থান'] = res.isPass ? (res.meritPosition || '-') : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল');
             data.push(row);
         });
@@ -1574,7 +1574,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                             })}
                                             <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[280px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.totalMarks)}</td>
                                             <td className="text-center font-black border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[210px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.gpa.toFixed(2))}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-700")}>{res.finalGrade}</td>
                                             <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && (res.isAbsent ? "text-slate-500 italic text-[11px]" : "text-rose-500 italic text-[11px]"))}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল')}</td>
                                             <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[70px] h-10 box-border">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
@@ -2226,7 +2226,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center font-bold text-rose-700">{toBengaliNumber(res.failedSubjectsCount)}টি</TableCell>
                                                 <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
                                                 <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
-                                                <TableCell className="text-center font-black text-rose-600">F{toBengaliNumber(res.failedSubjectsCount)}</TableCell>
+                                                <TableCell className="text-center font-black text-rose-600">{res.finalGrade}</TableCell>
                                                 <TableCell className="text-center"><Badge className="font-black px-3 bg-rose-600">অকৃতকার্য</Badge></TableCell>
                                             </TableRow>
                                         ))}
@@ -2717,7 +2717,7 @@ const ResultSearchTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                                 <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">মোট নম্বর</p><p className="text-4xl font-black text-primary group-hover:scale-110 transition-transform">{toBengaliNumber(searchResult.totalMarks)}</p></Card>
                                 <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">GPA</p><p className="text-4xl font-black text-primary group-hover:scale-110 transition-transform">{toBengaliNumber(searchResult.gpa.toFixed(2))}</p></Card>
-                                <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">গ্রেড</p><p className={cn("text-4xl font-black group-hover:scale-110 transition-transform", searchResult.isPass ? "text-emerald-600" : "text-rose-600")}>{searchResult.isPass ? searchResult.finalGrade : 'F'}</p></Card>
+                                <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">গ্রেড</p><p className={cn("text-4xl font-black group-hover:scale-110 transition-transform", searchResult.isPass ? "text-emerald-600" : "text-rose-600")}>{searchResult.finalGrade}</p></Card>
                                 <Card className="p-6 text-center border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,0.1)] rounded-2xl bg-white group hover:scale-105 transition-all"><p className="text-[10px] font-black text-muted-foreground uppercase mb-2">মেধাস্থান</p><p className="text-4xl font-black text-amber-600 group-hover:scale-110 transition-transform">{searchResult.isPass ? toBengaliNumber(searchResult.meritPosition || '-') : '-'}</p></Card>
                             </div>
                             <div className="border-[3px] border-black rounded-[32px] overflow-hidden bg-white shadow-xl">
@@ -3356,7 +3356,7 @@ export default function ResultsPage() {
                                                     })}
                                                     <td className="font-black bg-blue-50/20">{toBengaliNumber(res.totalMarks)}</td>
                                                     <td className="font-black bg-blue-50/20">{toBengaliNumber(res.gpa.toFixed(2))}</td>
-                                                    <td className={cn("font-black bg-blue-50/20", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</td>
+                                                    <td className={cn("font-black bg-blue-50/20", !res.isPass && "text-rose-700")}>{res.finalGrade}</td>
                                                     <td className={cn("font-bold bg-blue-50/20", !res.isPass && (res.isAbsent ? "text-slate-600 italic text-[10px]" : "text-rose-600"))}>{res.isPass ? toBengaliNumber(res.meritPosition || '-') : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল')}</td>
                                                 </tr>
                                             ))}
