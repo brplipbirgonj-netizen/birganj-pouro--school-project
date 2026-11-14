@@ -194,72 +194,46 @@ export function processStudentResults(
                 return normalize(r.subject) === normalizedSubjectName && String(r.className) === String(student.className);
             });
 
-            // Priority 1: Specific student group record where student has marks entered
-            let classResult = candidateRecords.find(r => {
+            // Priority & Smart Data Merging across student's own group and general/none record
+            const groupRecord = candidateRecords.find(r => {
                 const rGroupRaw = (r.group || 'none').toLowerCase().trim();
                 const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                if (rGroupNorm !== studentGroupNormalized) return false;
-                const sr = r.results.find(res => res.studentId === student.id);
-                return sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
+                return rGroupNorm === studentGroupNormalized;
             });
+            const groupStudentResult = groupRecord?.results.find(res => res.studentId === student.id);
 
-            // Priority 2: "None" / General group record where student has marks entered (Smart Data Propagation)
-            if (!classResult) {
-                classResult = candidateRecords.find(r => {
-                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                    if (rGroupNorm !== 'none' && rGroupNorm !== 'all' && rGroupNorm !== '') return false;
-                    const sr = r.results.find(res => res.studentId === student.id);
-                    return sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
-                });
-            }
+            const generalRecord = candidateRecords.find(r => {
+                const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                return rGroupNorm === 'none' || rGroupNorm === 'all' || !r.group;
+            });
+            const generalStudentResult = generalRecord?.results.find(res => res.studentId === student.id);
 
-            // Priority 3: Any record for this subject/class where student has marks entered
-            if (!classResult) {
-                classResult = candidateRecords.find(r => {
-                    const sr = r.results.find(res => res.studentId === student.id);
-                    return sr && (sr.written !== undefined || sr.mcq !== undefined || sr.practical !== undefined);
-                });
-            }
+            const anyOtherRecord = candidateRecords.find(r => r.results.some(res => res.studentId === student.id && (res.written !== undefined || res.mcq !== undefined || res.practical !== undefined)));
+            const anyOtherStudentResult = anyOtherRecord?.results.find(res => res.studentId === student.id);
 
-            // Priority 4: Specific student group record containing student
-            if (!classResult) {
-                classResult = candidateRecords.find(r => {
-                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                    return rGroupNorm === studentGroupNormalized && r.results.some(res => res.studentId === student.id);
-                });
-            }
+            // Merge marks with student's own group having priority, falling back to general/none record
+            const written = groupStudentResult?.written !== undefined ? groupStudentResult.written 
+                : (generalStudentResult?.written !== undefined ? generalStudentResult.written : anyOtherStudentResult?.written);
 
-            // Priority 5: General / "none" group record containing student
-            if (!classResult) {
-                classResult = candidateRecords.find(r => {
-                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                    return (rGroupNorm === 'none' || rGroupNorm === 'all' || !r.group) && r.results.some(res => res.studentId === student.id);
-                });
-            }
+            const mcq = groupStudentResult?.mcq !== undefined ? groupStudentResult.mcq 
+                : (generalStudentResult?.mcq !== undefined ? generalStudentResult.mcq : anyOtherStudentResult?.mcq);
 
-            // Priority 6: Fallback to group matching or first record
-            if (!classResult) {
-                classResult = candidateRecords.find(r => {
-                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                    return rGroupNorm === studentGroupNormalized;
-                }) || candidateRecords.find(r => {
-                    const rGroupRaw = (r.group || 'none').toLowerCase().trim();
-                    const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
-                    return rGroupNorm === 'none' || rGroupNorm === 'all' || !r.group;
-                }) || candidateRecords[0];
-            }
+            const practical = groupStudentResult?.practical !== undefined ? groupStudentResult.practical 
+                : (generalStudentResult?.practical !== undefined ? generalStudentResult.practical : anyOtherStudentResult?.practical);
 
-            const studentResult = classResult?.results.find(r => r.studentId === student.id);
-            const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
+            const activeRecord = (groupRecord?.fullMarks && groupRecord.fullMarks > 0) ? groupRecord 
+                : ((generalRecord?.fullMarks && generalRecord.fullMarks > 0) ? generalRecord : (anyOtherRecord || candidateRecords[0]));
 
-            const written = studentResult?.written;
-            const mcq = studentResult?.mcq;
-            const practical = studentResult?.practical;
+            const fullMarks = activeRecord?.fullMarks || subjectInfo.fullMarks;
+            const writtenLimit = activeRecord?.writtenLimit ?? generalRecord?.writtenLimit;
+            const mcqLimit = activeRecord?.mcqLimit ?? generalRecord?.mcqLimit;
+            const practicalLimit = activeRecord?.practicalLimit ?? generalRecord?.practicalLimit;
+
             const obtainedMarks = (written || 0) + (mcq || 0) + (practical || 0);
+
+            const isIct = normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি') || normalizedSubjectName === 'ict';
+            const hasPractical = subjectInfo.practical || isIct;
 
             const partFails = checkPartFails({
                 subjectName: subjectInfo.name,
@@ -267,10 +241,10 @@ export function processStudentResults(
                 written,
                 mcq,
                 practical,
-                writtenLimit: classResult?.writtenLimit,
-                mcqLimit: classResult?.mcqLimit,
-                practicalLimit: classResult?.practicalLimit,
-                hasPractical: subjectInfo.practical,
+                writtenLimit,
+                mcqLimit,
+                practicalLimit,
+                hasPractical,
             });
 
             const isPassSubject = partFails.isPass;

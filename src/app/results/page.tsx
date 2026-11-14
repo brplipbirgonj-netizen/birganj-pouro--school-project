@@ -172,11 +172,15 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
             
             const initialMarks = new Map<string, Marks>();
             const firstRes = matchingResults[0];
-            setFullMarks(firstRes.fullMarks);
+            const isIct = normalize(subject).includes('তথ্য ও যোগাযোগ') || normalize(subject).includes('আইসিটি') || normalize(subject) === 'ict';
+            const effPracticalLimit = (firstRes.practicalLimit !== undefined && firstRes.practicalLimit > 0) ? firstRes.practicalLimit : (isIct ? 25 : 0);
+            const effMcqLimit = (firstRes.mcqLimit !== undefined && firstRes.mcqLimit > 0) ? firstRes.mcqLimit : (isIct ? 25 : (firstRes.mcqLimit ?? 0));
+            const effFullMarks = firstRes.fullMarks > 0 ? firstRes.fullMarks : (isIct ? 50 : firstRes.fullMarks);
+            setFullMarks(effFullMarks);
             setStoredLimits({
                 written: firstRes.writtenLimit ?? 0,
-                mcq: firstRes.mcqLimit ?? 0,
-                practical: firstRes.practicalLimit ?? 0
+                mcq: effMcqLimit,
+                practical: effPracticalLimit
             });
 
             // Smart Data Loading with Priority: General/none group first, then specific group overlay
@@ -251,16 +255,20 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
         const resultsData: StudentResult[] = Array.from(marks.entries()).map(([studentId, marks]) => ({ studentId, ...marks }));
         const effectiveGroup = (parseInt(className) < 9 || group === 'all') ? undefined : group;
         
+        const isIct = normalize(subject).includes('তথ্য ও যোগাযোগ') || normalize(subject).includes('আইসিটি') || normalize(subject) === 'ict';
+        const practicalLimitToSave = storedLimits.practical > 0 ? storedLimits.practical : (isIct ? 25 : 0);
+        const fullMarksToSave = fullMarks > 0 ? fullMarks : (isIct ? 50 : fullMarks);
+
         await saveClassResults(db, { 
             academicYear: selectedYear, 
             examName, 
             className, 
             group: effectiveGroup || undefined, 
             subject, 
-            fullMarks: fullMarks,
+            fullMarks: fullMarksToSave,
             writtenLimit: storedLimits.written,
             mcqLimit: storedLimits.mcq,
-            practicalLimit: storedLimits.practical,
+            practicalLimit: practicalLimitToSave,
             results: resultsData 
         });
         
@@ -370,7 +378,9 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         <TableHead className="font-black">শিক্ষার্থীর নাম</TableHead>
                                         {storedLimits.written > 0 && <TableHead className="w-28 font-black text-center">লিখিত ({toBengaliNumber(storedLimits.written)})</TableHead>}
                                         {storedLimits.mcq > 0 && <TableHead className="w-28 font-black text-center">MCQ ({toBengaliNumber(storedLimits.mcq)})</TableHead>}
-                                        {storedLimits.practical > 0 && <TableHead className="w-28 font-black text-center">ব্যবহারিক ({toBengaliNumber(storedLimits.practical)})</TableHead>}
+                                        {(storedLimits.practical > 0 || normalize(subject).includes('তথ্য ও যোগাযোগ') || normalize(subject).includes('আইসিটি')) && (
+                                            <TableHead className="w-28 font-black text-center">ব্যবহারিক ({toBengaliNumber(storedLimits.practical > 0 ? storedLimits.practical : 25)})</TableHead>
+                                        )}
                                         <TableHead className="w-24 text-center font-black text-blue-900">মোট</TableHead>
                                         <TableHead className="w-32 text-center font-black">অবস্থা</TableHead>
                                     </TableRow>
@@ -780,9 +790,11 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         let width = 60 + 200 + 350; 
         subs.forEach(s => {
             const isEng = s.name.includes('ইংরেজি');
+            const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+            const hasPrac = s.practical || isIct;
             if (isEng) {
                 width += 144; 
-            } else if (s.practical) {
+            } else if (hasPrac) {
                 width += 288; 
             } else {
                 width += 240; 
@@ -838,10 +850,12 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
             subs.forEach(s => {
                 const sr = res.subjectResults.get(s.name);
                 const isEng = s.name.includes('ইংরেজি');
+                const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+                const hasPrac = s.practical || isIct;
                 if (!isEng) { 
                     row[`${s.name} (লিখিত)`] = sr?.written ?? '-'; 
                     row[`${s.name} (MCQ)`] = sr?.mcq ?? '-'; 
-                    if (s.practical) row[`${s.name} (ব্যবহারিক)`] = sr?.practical ?? '-'; 
+                    if (hasPrac) row[`${s.name} (ব্যবহারিক)`] = sr?.practical ?? '-'; 
                 }
                 row[`${s.name} (প্রাপ্ত)`] = sr?.marks ?? '-'; 
                 row[`${s.name} (গ্রেড)`] = sr?.grade ?? '-'; 
@@ -884,10 +898,12 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
         const headers = ['রোল', 'নাম', 'বিভাগ'];
         subjects.forEach(s => {
             const isEng = s.name.includes('ইংরেজি');
+            const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+            const hasPrac = s.practical || isIct;
             if (!isEng) {
                 headers.push(`${s.name} - লিখিত`);
                 headers.push(`${s.name} - MCQ`);
-                if (s.practical) headers.push(`${s.name} - ব্যবহারিক`);
+                if (hasPrac) headers.push(`${s.name} - ব্যবহারিক`);
             } else {
                 headers.push(`${s.name} - প্রাপ্ত`);
             }
@@ -1163,7 +1179,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                         {subs.map((s, idx) => (
                                             <th 
                                                 key={s.name} 
-                                                colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} 
+                                                colSpan={s.name.includes('ইংরেজি') ? 3 : ((s.practical || normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি')) ? 6 : 5)} 
                                                 className={cn(
                                                     "text-center border-r-2 border-b-2 border-black font-black py-1 text-[12px] sticky top-0 z-40 px-2 h-[32px] box-border",
                                                     subBgColors[idx % subBgColors.length]
@@ -1188,7 +1204,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                         <>
                                                             <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>লিখিত</th>
                                                             <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>MCQ</th>
-                                                            {s.practical && <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>ব্যবহারিক</th>}
+                                                            {(s.practical || normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি')) && <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-bold p-0.5 sticky top-[32px] z-30 w-12 h-[32px] box-border", bgColor)}>ব্যবহারিক</th>}
                                                         </>
                                                     )}
                                                     <th className={cn("text-[11px] text-center border-r-2 border-b-2 border-black font-black bg-blue-200 text-blue-950 p-0.5 sticky top-[32px] z-30 w-14 h-[32px] box-border", bgColor)}>প্রাপ্ত</th>
@@ -1214,7 +1230,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                             <>
                                                                 <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.writtenFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.written ?? '-') }</td>
                                                                 <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.mcqFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.mcq ?? '-') }</td>
-                                                                {s.practical && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.practicalFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.practical ?? '-') }</td>}
+                                                                {(s.practical || normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি')) && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.practicalFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.practical ?? '-') }</td>}
                                                             </>
                                                         )}
                                                         <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[13px] p-0.5 h-10 box-border", bgColor)}>{toBengaliNumber(sr?.marks ?? '-') }</td>
@@ -1346,11 +1362,12 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
             
             const existingRecord = matchingRecords.length > 0 ? matchingRecords[0] : null;
             const isEnglish = normalize(subInfo.name).includes('ইংরেজি') || normalize(subInfo.name).includes('english');
-            const hasPractical = subInfo.practical;
+            const isIct = normalize(subInfo.name).includes('তথ্য ও যোগাযোগ') || normalize(subInfo.name).includes('আইসিটি') || normalize(subInfo.name) === 'ict';
+            const hasPractical = subInfo.practical || isIct;
 
-            const defaultW = existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : (subInfo.fullMarks === 0 ? '0' : '35')));
-            const defaultM = existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : (subInfo.fullMarks === 0 ? '0' : '15'))));
-            const defaultP = existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0'));
+            const defaultW = existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (isIct ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : (subInfo.fullMarks === 0 ? '0' : '35'))));
+            const defaultM = existingRecord?.mcqLimit?.toString() || (existingRecord ? (isIct && (!existingRecord.mcqLimit || existingRecord.mcqLimit === 0) ? '25' : '0') : (isEnglish ? '0' : (isIct ? '25' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : (subInfo.fullMarks === 0 ? '0' : '15')))));
+            const defaultP = existingRecord?.practicalLimit?.toString() || (existingRecord ? (isIct && (!existingRecord.practicalLimit || existingRecord.practicalLimit === 0) ? '25' : '0') : (hasPractical ? '25' : '0'));
 
             const wLimit = parseInt(writtenLimits[inputKey] ?? defaultW, 10) || 0;
             const mLimit = parseInt(mcqLimits[inputKey] ?? defaultM, 10) || 0;
@@ -1461,11 +1478,12 @@ const FullMarksTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const inputKey = `${selectedClass}-${subInfo.name}-${examName}`;
                                         
                                         const isEnglish = normalize(subInfo.name).includes('ইংরেজি') || normalize(subInfo.name).includes('english');
-                                        const hasPractical = subInfo.practical;
+                                        const isIct = normalize(subInfo.name).includes('তথ্য ও যোগাযোগ') || normalize(subInfo.name).includes('আইসিটি') || normalize(subInfo.name) === 'ict';
+                                        const hasPractical = subInfo.practical || isIct;
 
-                                        const defaultW = existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : (subInfo.fullMarks === 0 ? '0' : '35')));
-                                        const defaultM = existingRecord?.mcqLimit?.toString() || (existingRecord ? '0' : (isEnglish ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : (subInfo.fullMarks === 0 ? '0' : '15'))));
-                                        const defaultP = existingRecord?.practicalLimit?.toString() || (existingRecord ? '0' : (hasPractical ? '25' : '0'));
+                                        const defaultW = existingRecord?.writtenLimit?.toString() || (existingRecord ? '0' : (isIct ? '0' : (subInfo.fullMarks === 100 ? (hasPractical ? '50' : '70') : (subInfo.fullMarks === 0 ? '0' : '35'))));
+                                        const defaultM = existingRecord?.mcqLimit?.toString() || (existingRecord ? (isIct && (!existingRecord.mcqLimit || existingRecord.mcqLimit === 0) ? '25' : '0') : (isEnglish ? '0' : (isIct ? '25' : (subInfo.fullMarks === 100 ? (hasPractical ? '25' : '30') : (subInfo.fullMarks === 0 ? '0' : '15')))));
+                                        const defaultP = existingRecord?.practicalLimit?.toString() || (existingRecord ? (isIct && (!existingRecord.practicalLimit || existingRecord.practicalLimit === 0) ? '25' : '0') : (hasPractical ? '25' : '0'));
 
                                         const wVal = writtenLimits[inputKey] ?? defaultW;
                                         const mVal = mcqLimits[inputKey] ?? defaultM;
@@ -2662,17 +2680,23 @@ export default function ResultsPage() {
                                             <tr>
                                                 <th rowSpan={2} className="w-8">রোল</th>
                                                 <th rowSpan={2} className="min-w-[140px] text-left pl-2">শিক্ষার্থীর নাম</th>
-                                                {subsPart1.map((s, idx) => (
-                                                    <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className={subBgColors[idx % subBgColors.length]}>{s.name}</th>
-                                                ))}
+                                                {subsPart1.map((s, idx) => {
+                                                    const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+                                                    const hasPrac = s.practical || isIct;
+                                                    return (
+                                                        <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (hasPrac ? 6 : 5)} className={subBgColors[idx % subBgColors.length]}>{s.name}</th>
+                                                    );
+                                                })}
                                             </tr>
                                             <tr className="bg-white">
                                                 {subsPart1.map((s, idx) => {
                                                     const isEng = s.name.includes('ইংরেজি');
+                                                    const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+                                                    const hasPrac = s.practical || isIct;
                                                     const bg = subBgColors[idx % subBgColors.length];
                                                     return (
                                                         <React.Fragment key={s.name}>
-                                                            {!isEng && <><th className={bg}>লিখিত</th><th className={bg}>MCQ</th>{s.practical && <th className={bg}>ব্যবহারিক</th>}</>}
+                                                            {!isEng && <><th className={bg}>লিখিত</th><th className={bg}>MCQ</th>{hasPrac && <th className={bg}>ব্যবহারিক</th>}</>}
                                                             <th className="bg-blue-50">প্রাপ্ত</th><th className={bg}>গ্রেড</th><th className={bg}>পয়েন্ট</th>
                                                         </React.Fragment>
                                                     )
@@ -2687,10 +2711,12 @@ export default function ResultsPage() {
                                                     {subsPart1.map((s, idx) => {
                                                         const sr = res.subjectResults.get(s.name);
                                                         const isEng = s.name.includes('ইংরেজি');
+                                                        const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+                                                        const hasPrac = s.practical || isIct;
                                                         const bg = subBgColors[idx % subBgColors.length];
                                                         return (
                                                             <React.Fragment key={s.name}>
-                                                                {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{s.practical && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
+                                                                {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{hasPrac && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
                                                                 <td className="font-black bg-blue-50/30">{toBengaliNumber(sr?.marks ?? '-')}</td>
                                                                 <td className={cn(bg, sr && !sr.isPass && "text-rose-700 font-black")}>{sr?.grade ?? '-'}</td>
                                                                 <td className={bg}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-')}</td>
@@ -2709,9 +2735,13 @@ export default function ResultsPage() {
                                             <tr>
                                                 <th rowSpan={2} className="w-8">রোল</th>
                                                 <th rowSpan={2} className="min-w-[140px] text-left pl-2">শিক্ষার্থীর নাম</th>
-                                                {subsPart2.map((s, idx) => (
-                                                    <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (s.practical ? 6 : 5)} className={subBgColors[(mid + idx) % subBgColors.length]}>{s.name}</th>
-                                                ))}
+                                                {subsPart2.map((s, idx) => {
+                                                    const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+                                                    const hasPrac = s.practical || isIct;
+                                                    return (
+                                                        <th key={s.name} colSpan={s.name.includes('ইংরেজি') ? 3 : (hasPrac ? 6 : 5)} className={subBgColors[(mid + idx) % subBgColors.length]}>{s.name}</th>
+                                                    );
+                                                })}
                                                 <th rowSpan={2} className="w-12 bg-blue-50">মোট</th>
                                                 <th rowSpan={2} className="w-12 bg-blue-50">GPA</th>
                                                 <th rowSpan={2} className="w-10 bg-blue-50">গ্রেড</th>
@@ -2720,10 +2750,12 @@ export default function ResultsPage() {
                                             <tr className="bg-white">
                                                 {subsPart2.map((s, idx) => {
                                                     const isEng = s.name.includes('ইংরেজি');
+                                                    const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+                                                    const hasPrac = s.practical || isIct;
                                                     const bg = subBgColors[(mid + idx) % subBgColors.length];
                                                     return (
                                                         <React.Fragment key={s.name}>
-                                                            {!isEng && <><th className={bg}>লিখিত</th><th className={bg}>MCQ</th>{s.practical && <th className={bg}>ব্যবহারিক</th>}</>}
+                                                            {!isEng && <><th className={bg}>লিখিত</th><th className={bg}>MCQ</th>{hasPrac && <th className={bg}>ব্যবহারিক</th>}</>}
                                                             <th className="bg-blue-50">প্রাপ্ত</th><th className={bg}>গ্রেড</th><th className={bg}>পয়েন্ট</th>
                                                         </React.Fragment>
                                                     )
@@ -2738,10 +2770,12 @@ export default function ResultsPage() {
                                                     {subsPart2.map((s, idx) => {
                                                         const sr = res.subjectResults.get(s.name);
                                                         const isEng = s.name.includes('ইংরেজি');
+                                                        const isIct = normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি') || normalize(s.name) === 'ict';
+                                                        const hasPrac = s.practical || isIct;
                                                         const bg = subBgColors[(mid + idx) % subBgColors.length];
                                                         return (
                                                             <React.Fragment key={s.name}>
-                                                                {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{s.practical && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
+                                                                {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{hasPrac && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
                                                                 <td className="font-black bg-blue-50/30">{toBengaliNumber(sr?.marks ?? '-')}</td>
                                                                 <td className={cn(bg, sr && !sr.isPass && "text-rose-700 font-black")}>{sr?.grade ?? '-'}</td>
                                                                 <td className={bg}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-')}</td>
