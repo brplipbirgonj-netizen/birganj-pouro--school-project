@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
-import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
+import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl, isFemale } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
 import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult, ExamAttendanceRecord, saveExamAttendance, getExamAttendance } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult, getGradePoint, checkPartFails } from '@/lib/results-calculation';
@@ -3037,6 +3037,7 @@ export default function ResultsPage() {
     const [printingReport, setPrintingReport] = useState<any>(null);
     const [fullSheetPrintData, setFullSheetPrintData] = useState<any>(null);
     const [specialPrintData, setSpecialPrintData] = useState<any>(null);
+    const [statisticsPrintData, setStatisticsPrintData] = useState<any>(null);
 
     useEffect(() => {
         setIsClient(true); 
@@ -3072,6 +3073,11 @@ export default function ResultsPage() {
     const handleSpecialPrint = (data: any) => {
         setSpecialPrintData(data);
         setTimeout(() => { window.print(); setSpecialPrintData(null); }, 1500);
+    };
+
+    const handleStatisticsPrint = (data: any) => {
+        setStatisticsPrintData(data);
+        setTimeout(() => { window.print(); setStatisticsPrintData(null); }, 1500);
     };
 
     const sidebarItems = useMemo(() => {
@@ -3120,7 +3126,7 @@ export default function ResultsPage() {
                                     {activeSection === 'attendance' && <ExamAttendanceTab allStudents={allStudents} />}
                                     {activeSection === 'subject-report' && <SubjectReportTab allStudents={allStudents} onPrintRequested={handleSubjectPrint} />}
                                     {activeSection === 'sheet' && <ResultSheetTab allStudents={allStudents} onPrint={handleFullSheetPrint} />}
-                                    {activeSection === 'statistics' && <ResultStatisticsTab allStudents={allStudents} />}
+                                    {activeSection === 'statistics' && <ResultStatisticsTab allStudents={allStudents} onPrintRequested={handleStatisticsPrint} />}
                                     {activeSection === 'search' && <ResultSearchTab allStudents={allStudents} />}
                                     {activeSection === 'full-marks' && <FullMarksTab allStudents={allStudents} />}
                                     {activeSection === 'merit' && <MeritListTab allStudents={allStudents} />}
@@ -3438,6 +3444,244 @@ export default function ResultsPage() {
                             })}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {statisticsPrintData && (
+                <div className="hidden print:block printable-area bg-white text-black font-kalpurush p-6">
+                    <style jsx global>{`
+                        @media print {
+                            @page { size: A4 portrait; margin: 10mm !important; }
+                            body { background: white !important; }
+                            .no-print { display: none !important; }
+                            .printable-area { display: block !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
+                            .printable-area table { border-collapse: collapse !important; width: 100% !important; margin-bottom: 12px !important; }
+                            .printable-area th, .printable-area td { border: 1px solid black !important; padding: 3px 6px !important; font-size: 10px !important; }
+                            .printable-area th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    `}</style>
+
+                    {/* Printable Header */}
+                    <header className="border-b-2 border-black pb-3 mb-4 text-center">
+                        <div className="flex items-center justify-center gap-3.5 mx-auto">
+                            {schoolInfo.logoUrl && (
+                                <img src={schoolInfo.logoUrl} alt="Logo" className="w-14 h-14 object-contain" />
+                            )}
+                            <div className="text-center">
+                                <h1 className="text-2xl font-black text-black leading-tight uppercase tracking-tight">{schoolInfo.name}</h1>
+                                <p className="text-[12px] font-bold text-slate-800">{schoolInfo.address}</p>
+                                <p className="text-[10px] font-bold text-slate-700 mt-0.5">
+                                    EIIN: {toBengaliNumber(schoolInfo.eiin)} | কোড: {toBengaliNumber(schoolInfo.code)} | শিক্ষাবর্ষ: {toBengaliNumber(statisticsPrintData.selectedYear)}
+                                </p>
+                            </div>
+                            {schoolInfo.logoUrl && (
+                                <div className="w-14 h-14 shrink-0 invisible" aria-hidden="true" />
+                            )}
+                        </div>
+
+                        <div className="mt-2.5 inline-block border-[1.5px] border-black px-8 py-0.5 rounded-full font-black text-sm uppercase bg-slate-50">
+                            {statisticsPrintData.examName} - বিষয়ভিত্তিক পাস-ফেল ও ফলাফল পরিসংখ্যান প্রতিবেদন
+                        </div>
+                        <p className="mt-1 font-black text-black text-xs">
+                            শ্রেণি: {classNamesMap[statisticsPrintData.className]} {statisticsPrintData.groupFilter !== 'all' && `(${groupNamesMap[statisticsPrintData.groupFilter] || statisticsPrintData.groupFilter})`}
+                        </p>
+                    </header>
+
+                    {/* ১. সার্বিক ও লিঙ্গভিত্তিক পরিসংখ্যান সারসংক্ষেপ */}
+                    <div className="mb-4">
+                        <div className="font-black text-xs text-black border-b border-black pb-1 mb-1 uppercase">
+                            ১. সার্বিক ও লিঙ্গভিত্তিক পরিসংখ্যান সারসংক্ষেপ
+                        </div>
+                        <table className="w-full text-center">
+                            <thead>
+                                <tr>
+                                    <th>বিবরণ</th>
+                                    <th>মোট শিক্ষার্থী</th>
+                                    <th>অংশগ্রহণকারী (উপস্থিত)</th>
+                                    <th>অনুপস্থিত</th>
+                                    <th>মোট পাশ (কৃতকার্য)</th>
+                                    <th>পাশের হার (%)</th>
+                                    <th>মোট ফেল (অকৃতকার্য)</th>
+                                    <th>ফেলের হার (%)</th>
+                                    <th>GPA ৫.০০</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td className="font-black">ছাত্র</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.totalBoys)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.presentBoys)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.absentBoys)}</td>
+                                    <td className="font-bold">{toBengaliNumber(statisticsPrintData.stats.passedBoys)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.passRateBoys)}%</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.failedBoys)}</td>
+                                    <td>-</td>
+                                    <td className="font-bold">{toBengaliNumber(statisticsPrintData.stats.gpa5Boys)}</td>
+                                </tr>
+                                <tr>
+                                    <td className="font-black">ছাত্রী</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.totalGirls)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.presentGirls)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.absentGirls)}</td>
+                                    <td className="font-bold">{toBengaliNumber(statisticsPrintData.stats.passedGirls)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.passRateGirls)}%</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.failedGirls)}</td>
+                                    <td>-</td>
+                                    <td className="font-bold">{toBengaliNumber(statisticsPrintData.stats.gpa5Girls)}</td>
+                                </tr>
+                                <tr className="font-black bg-slate-50">
+                                    <td>সর্বমোট</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.total)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.presentCount)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.absentCount)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.passedCount)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.passRate)}%</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.failedCount)}</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.failRate)}%</td>
+                                    <td>{toBengaliNumber(statisticsPrintData.stats.gpa5Count)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ২. শাখা / বিভাগ ভিত্তিক ফলাফল পরিসংখ্যান */}
+                    {statisticsPrintData.groupStats.length > 0 && (
+                        <div className="mb-4">
+                            <div className="font-black text-xs text-black border-b border-black pb-1 mb-1 uppercase">
+                                ২. শাখা / বিভাগ ভিত্তিক ফলাফল পরিসংখ্যান
+                            </div>
+                            <table className="w-full text-center">
+                                <thead>
+                                    <tr>
+                                        <th>শাখা/বিভাগ</th>
+                                        <th>মোট শিক্ষার্থী</th>
+                                        <th>উপস্থিত</th>
+                                        <th>অনুপস্থিত</th>
+                                        <th>মোট পাশ</th>
+                                        <th>ছাত্র পাশ</th>
+                                        <th>ছাত্রী পাশ</th>
+                                        <th>পাশের হার</th>
+                                        <th>মোট ফেল</th>
+                                        <th>GPA ৫.০০</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {statisticsPrintData.groupStats.map((g: any) => (
+                                        <tr key={g.groupKey}>
+                                            <td className="font-black">{g.name}</td>
+                                            <td>{toBengaliNumber(g.total)}</td>
+                                            <td>{toBengaliNumber(g.present)}</td>
+                                            <td>{toBengaliNumber(g.absent)}</td>
+                                            <td className="font-bold">{toBengaliNumber(g.passedCount)}</td>
+                                            <td>{toBengaliNumber(g.passedBoys)}</td>
+                                            <td>{toBengaliNumber(g.passedGirls)}</td>
+                                            <td className="font-black">{toBengaliNumber(g.passRate)}%</td>
+                                            <td>{toBengaliNumber(g.failedCount)}</td>
+                                            <td className="font-bold">{toBengaliNumber(g.gpa5)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* ৩. বিষয়ভিত্তিক পাস ও ফেল পরিসংখ্যান */}
+                    <div className="mb-4">
+                        <div className="font-black text-xs text-black border-b border-black pb-1 mb-1 uppercase">
+                            ৩. বিষয়ভিত্তিক পাস ও ফেল পরিসংখ্যান
+                        </div>
+                        <table className="w-full text-center">
+                            <thead>
+                                <tr>
+                                    <th className="w-8">ক্রমিক</th>
+                                    <th className="text-left pl-2">বিষয়ের নাম</th>
+                                    <th className="w-12">পূর্ণমান</th>
+                                    <th className="w-16">পরীক্ষার্থী</th>
+                                    <th className="w-14">মোট পাশ</th>
+                                    <th className="w-12">ছাত্র পাশ</th>
+                                    <th className="w-12">ছাত্রী পাশ</th>
+                                    <th className="w-14">পাশের হার</th>
+                                    <th className="w-14">মোট ফেল</th>
+                                    <th className="w-12">ছাত্র ফেল</th>
+                                    <th className="w-12">ছাত্রী ফেল</th>
+                                    <th className="w-14">ফেলের হার</th>
+                                    <th className="w-12">সর্বোচ্চ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {statisticsPrintData.subjectStats.map((sub: any, idx: number) => (
+                                    <tr key={sub.name}>
+                                        <td>{toBengaliNumber(idx + 1)}</td>
+                                        <td className="text-left pl-2 font-bold">{sub.name}</td>
+                                        <td>{toBengaliNumber(sub.fullMarks)}</td>
+                                        <td className="font-bold">{toBengaliNumber(sub.presentCount)}</td>
+                                        <td className="font-bold">{toBengaliNumber(sub.passedTotal)}</td>
+                                        <td>{toBengaliNumber(sub.passedBoys)}</td>
+                                        <td>{toBengaliNumber(sub.passedGirls)}</td>
+                                        <td className="font-black">{toBengaliNumber(sub.passRate)}%</td>
+                                        <td className="font-bold">{toBengaliNumber(sub.failedTotal)}</td>
+                                        <td>{toBengaliNumber(sub.failedBoys)}</td>
+                                        <td>{toBengaliNumber(sub.failedGirls)}</td>
+                                        <td>{toBengaliNumber(sub.failRate)}%</td>
+                                        <td className="font-bold">{toBengaliNumber(sub.highestMarks)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ৪. অকৃতকার্য শিক্ষার্থীদের তালিকা ও ফেলকৃত বিষয়সমূহ */}
+                    {statisticsPrintData.failedStudentsList.length > 0 && (
+                        <div className="mb-6">
+                            <div className="font-black text-xs text-black border-b border-black pb-1 mb-1 uppercase">
+                                ৪. অকৃতকার্য শিক্ষার্থীদের তালিকা ও ফেলকৃত বিষয়সমূহ (মোট: {toBengaliNumber(statisticsPrintData.failedStudentsList.length)} জন)
+                            </div>
+                            <table className="w-full">
+                                <thead>
+                                    <tr>
+                                        <th className="w-8 text-center">ক্রমিক</th>
+                                        <th className="w-12 text-center">রোল</th>
+                                        <th className="text-left pl-2">শিক্ষার্থীর নাম</th>
+                                        <th className="w-12 text-center">লিঙ্গ</th>
+                                        <th className="w-16 text-center">শাখা</th>
+                                        <th className="w-14 text-center">ফেল সংখ্যা</th>
+                                        <th className="text-left pl-2">ফেলকৃত বিষয়সমূহ</th>
+                                        <th className="w-14 text-center">মোট নম্বর</th>
+                                        <th className="w-12 text-center">গ্রেড</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {statisticsPrintData.failedStudentsList.map((item: any, idx: number) => (
+                                        <tr key={item.student.id}>
+                                            <td className="text-center font-bold">{toBengaliNumber(idx + 1)}</td>
+                                            <td className="text-center font-black">{toBengaliNumber(item.student.roll)}</td>
+                                            <td className="pl-2 font-bold">{item.student.studentNameBn}</td>
+                                            <td className="text-center">{isFemale(item.student.gender) ? 'ছাত্রী' : 'ছাত্র'}</td>
+                                            <td className="text-center">{groupNamesMap[item.student.group || ''] || item.student.group || 'সাধারণ'}</td>
+                                            <td className="text-center font-black">{toBengaliNumber(item.failedCount)} টি</td>
+                                            <td className="pl-2">
+                                                {item.failedSubjects.map((s: any, i: number) => (
+                                                    <span key={i} className="mr-2 inline-block">
+                                                        {s.name}{s.marks !== undefined ? `(${toBengaliNumber(s.marks)})` : ''}
+                                                        {i < item.failedSubjects.length - 1 ? ',' : ''}
+                                                    </span>
+                                                ))}
+                                            </td>
+                                            <td className="text-center font-bold">{toBengaliNumber(item.totalMarks)}</td>
+                                            <td className="text-center font-black">{item.finalGrade}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Printable Footer / Signatures */}
+                    <div className="mt-12 pt-6 flex justify-between items-center text-xs font-black">
+                        <div className="text-center border-t border-black pt-1 w-36">শ্রেণি শিক্ষক</div>
+                        <div className="text-center border-t border-black pt-1 w-44">পরীক্ষা কমিটির আহ্বায়ক</div>
+                        <div className="text-center border-t border-black pt-1 w-36">প্রধান শিক্ষক</div>
+                    </div>
                 </div>
             )}
         </div>
