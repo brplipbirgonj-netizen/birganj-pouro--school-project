@@ -150,4 +150,105 @@ export const deleteClassResult = (db: Firestore, id: string) => {
         errorEmitter.emit('permission-error', permissionError);
     });
     return Promise.resolve();
+};
+
+export interface ExamAttendanceRecord {
+  id?: string;
+  academicYear: string;
+  examName: string;
+  className: string;
+  group?: string;
+  attendance: Record<string, 'present' | 'absent'>;
+  updatedAt?: any;
 }
+
+export const getExamAttendanceDocId = (academicYear: string, examName: string, className: string, group?: string) => {
+  const sanitizedExam = examName.replace(/[^\p{L}\p{N}]+/gu, '-');
+  const grp = (group || 'none').toLowerCase().trim();
+  return `${academicYear}_${sanitizedExam}_${className}_${grp}_ATTENDANCE`;
+};
+
+export const saveExamAttendance = async (
+  db: Firestore,
+  record: ExamAttendanceRecord
+) => {
+  const docId = getExamAttendanceDocId(record.academicYear, record.examName, record.className, record.group);
+  const grp = (record.group || 'none').toLowerCase().trim();
+  
+  // 1. Save to dedicated examAttendance collection
+  const examAttRef = doc(db, 'examAttendance', docId);
+  setDoc(examAttRef, {
+    academicYear: record.academicYear,
+    examName: record.examName,
+    className: record.className,
+    group: grp,
+    attendance: record.attendance,
+    updatedAt: new Date().toISOString(),
+  }, { merge: true }).catch(err => {
+    console.warn("Notice: could not write to examAttendance collection directly:", err);
+  });
+
+  // 2. Also save to results collection with subject '__ATTENDANCE__' for instant getAllResults synchronization
+  const sanitizedExam = record.examName.replace(/[^\p{L}\p{N}]+/gu, '-');
+  const resultsDocId = `${record.academicYear}_${sanitizedExam}_${record.className}_${grp}___ATTENDANCE__`;
+  const resultsRef = doc(db, resultsCollection, resultsDocId);
+  await setDoc(resultsRef, {
+    academicYear: record.academicYear,
+    examName: record.examName,
+    className: record.className,
+    group: grp,
+    subject: '__ATTENDANCE__',
+    fullMarks: 0,
+    results: [],
+    attendanceMap: record.attendance,
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
+};
+
+export const getExamAttendance = async (
+  db: Firestore,
+  academicYear: string,
+  examName: string,
+  className: string,
+  group?: string
+): Promise<ExamAttendanceRecord | undefined> => {
+  const grp = (group || 'none').toLowerCase().trim();
+  const sanitizedExam = examName.replace(/[^\p{L}\p{N}]+/gu, '-');
+
+  // Try results collection with subject '__ATTENDANCE__' first as it guarantees consistency
+  try {
+    const resultsDocId = `${academicYear}_${sanitizedExam}_${className}_${grp}___ATTENDANCE__`;
+    const rSnap = await getDoc(doc(db, resultsCollection, resultsDocId));
+    if (rSnap.exists()) {
+      const data = rSnap.data();
+      return {
+        id: rSnap.id,
+        academicYear: data.academicYear,
+        examName: data.examName,
+        className: data.className,
+        group: data.group,
+        attendance: data.attendanceMap || {},
+      };
+    }
+  } catch (e) {
+    console.warn("Could not read attendance from results collection:", e);
+  }
+
+  // Fallback to examAttendance collection
+  try {
+    const docId = getExamAttendanceDocId(academicYear, examName, className, grp);
+    const snap = await getDoc(doc(db, 'examAttendance', docId));
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() } as ExamAttendanceRecord;
+    }
+  } catch (e) {
+    console.warn("Could not read attendance from examAttendance collection:", e);
+  }
+
+  // If specific group not found, check fallback to 'none' (সকল শাখা)
+  if (grp !== 'none' && grp !== 'all') {
+    return getExamAttendance(db, academicYear, examName, className, 'none');
+  }
+
+  return undefined;
+};

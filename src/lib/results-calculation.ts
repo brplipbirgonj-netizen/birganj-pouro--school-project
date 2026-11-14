@@ -303,7 +303,29 @@ export function processStudentResults(
             effectiveCompulsoryCount = 11;
         }
 
-        const isAbsent = !hasAnyMarkEntered;
+        // Check exam attendance records
+        const attendanceDocs = resultsBySubject.filter(r => r.subject === '__ATTENDANCE__' && String(r.className) === String(student.className));
+        let markedAttendance: 'present' | 'absent' | undefined = undefined;
+        
+        // Priority: group-specific attendance doc first, then general ('none' or 'all')
+        const groupAttDoc = attendanceDocs.find(r => {
+            const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+            const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+            return rGroupNorm === studentGroupNormalized;
+        });
+        const generalAttDoc = attendanceDocs.find(r => {
+            const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+            const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+            return rGroupNorm === 'none' || rGroupNorm === 'all' || !r.group;
+        });
+
+        if (groupAttDoc && (groupAttDoc as any).attendanceMap?.[student.id]) {
+            markedAttendance = (groupAttDoc as any).attendanceMap[student.id];
+        } else if (generalAttDoc && (generalAttDoc as any).attendanceMap?.[student.id]) {
+            markedAttendance = (generalAttDoc as any).attendanceMap[student.id];
+        }
+
+        const isAbsent = markedAttendance === 'absent' || (!hasAnyMarkEntered && markedAttendance !== 'present');
         const isPass = !isAbsent && failedInCompulsoryCount === 0;
         let gpa = 0;
 

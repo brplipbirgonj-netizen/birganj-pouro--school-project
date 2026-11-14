@@ -119,6 +119,12 @@ service cloud.firestore {
       allow write: if isAuthed() && (hasPermission('manage:attendance') || hasPermission('input:quick-roll-attendance') || hasPermission('input:missed-attendance') || isAdmin());
       allow delete: if isAdmin() || hasPermission('manage:attendance');
     }
+
+    match /examAttendance/{id} {
+      allow read: if true;
+      allow write: if isAuthed() && (hasPermission('input:results') || hasPermission('manage:results') || isAdmin());
+      allow delete: if isAdmin() || (isAuthed() && hasPermission('manage:results'));
+    }
     
     match /results/{id} {
       allow read: if true;

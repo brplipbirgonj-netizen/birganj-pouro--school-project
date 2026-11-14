@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAcademicYear } from '@/context/AcademicYearContext';
 import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
 import { getSubjects, Subject as SubjectType, subjectNameNormalization } from '@/lib/subjects';
-import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult } from '@/lib/results-data';
+import { saveClassResults, getResultsForClass, getAllResults, deleteClassResult, ClassResult, StudentResult, ExamAttendanceRecord, saveExamAttendance, getExamAttendance } from '@/lib/results-data';
 import { processStudentResults, StudentProcessedResult, getGradePoint, checkPartFails } from '@/lib/results-calculation';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -102,6 +102,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [studentsForClass, setStudentsForClass] = useState<Student[]>([]);
     const [marks, setMarks] = useState<Map<string, Marks>>(new Map());
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+    const [examAttendance, setExamAttendance] = useState<Record<string, 'present' | 'absent'>>({});
 
     const [storedLimits, setStoredLimits] = useState<{ written: number, mcq: number, practical: number }>({ written: 70, mcq: 30, practical: 0 });
 
@@ -215,6 +216,15 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                 if (!initialMarks.has(student.id)) initialMarks.set(student.id, {});
             });
             setMarks(initialMarks);
+
+            // Load exam attendance for this class/exam/group
+            try {
+                const attRecord = await getExamAttendance(db, selectedYear, examName, className, group);
+                setExamAttendance(attRecord?.attendance || {});
+            } catch (attErr) {
+                console.warn("Could not load exam attendance:", attErr);
+                setExamAttendance({});
+            }
         } catch (e) {
             console.error(e);
         }
@@ -413,20 +423,30 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         const mcqOver = mcq > storedLimits.mcq;
                                         const practicalOver = practical > storedLimits.practical;
 
+                                        const isStudentAbsent = examAttendance[student.id] === 'absent';
+
                                         return (
-                                            <TableRow key={student.id} className="hover:bg-accent/5">
+                                            <TableRow key={student.id} className={cn("hover:bg-accent/5", isStudentAbsent && "bg-amber-50/40")}>
                                                 <TableCell className="font-black text-center border-r">{toBengaliNumber(student.roll)}</TableCell>
                                                 <TableCell className={cn("font-bold border-r transition-colors", isAnyMarkEntered && isAnyFail ? "text-red-600" : "text-slate-700")}>
-                                                    {student.studentNameBn}
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{student.studentNameBn}</span>
+                                                        {isStudentAbsent && (
+                                                            <Badge variant="destructive" className="text-[10px] bg-rose-600 text-white font-black px-1.5 py-0 h-4 leading-none">
+                                                                অনুপস্থিত
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 {storedLimits.written > 0 && (
                                                     <TableCell className="border-r">
                                                         <Input 
                                                             type="number" 
                                                             value={sMarks?.written ?? ''} 
+                                                            placeholder={isStudentAbsent ? "অনুপস্থিত" : undefined}
                                                             onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
-                                                            className={cn(numberInputClass, (writtenOver || (sMarks?.written !== undefined && partFails.writtenFail)) && "bg-red-100 border-red-500 text-red-700 font-bold")}
+                                                            className={cn(numberInputClass, (writtenOver || (sMarks?.written !== undefined && partFails.writtenFail)) && "bg-red-100 border-red-500 text-red-700 font-bold", isStudentAbsent && "border-amber-400 bg-amber-50/60")}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -435,9 +455,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                         <Input 
                                                             type="number" 
                                                             value={sMarks?.mcq ?? ''} 
+                                                            placeholder={isStudentAbsent ? "অনুপস্থিত" : undefined}
                                                             onChange={(e) => handleMarkChange(student.id, 'mcq', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
-                                                            className={cn(numberInputClass, (mcqOver || (sMarks?.mcq !== undefined && partFails.mcqFail)) && "bg-red-100 border-red-500 text-red-700 font-bold")}
+                                                            className={cn(numberInputClass, (mcqOver || (sMarks?.mcq !== undefined && partFails.mcqFail)) && "bg-red-100 border-red-500 text-red-700 font-bold", isStudentAbsent && "border-amber-400 bg-amber-50/60")}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -446,9 +467,10 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                         <Input 
                                                             type="number" 
                                                             value={sMarks?.practical ?? ''} 
+                                                            placeholder={isStudentAbsent ? "অনুপস্থিত" : undefined}
                                                             onChange={(e) => handleMarkChange(student.id, 'practical', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
-                                                            className={cn(numberInputClass, (practicalOver || (sMarks?.practical !== undefined && partFails.practicalFail)) && "bg-red-100 border-red-500 text-red-700 font-bold")}
+                                                            className={cn(numberInputClass, (practicalOver || (sMarks?.practical !== undefined && partFails.practicalFail)) && "bg-red-100 border-red-500 text-red-700 font-bold", isStudentAbsent && "border-amber-400 bg-amber-50/60")}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -456,8 +478,11 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                     {toBengaliNumber(total)}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge className={cn("font-black px-3", !isAnyMarkEntered ? "bg-slate-300 text-slate-600" : (isAnyFail ? "bg-rose-600" : "bg-emerald-600"))}>
-                                                        {!isAnyMarkEntered ? 'এন্ট্রি হয়নি' : (isAnyFail ? 'অকৃতকার্য' : 'কৃতকার্য')}
+                                                    <Badge className={cn("font-black px-3", 
+                                                        isStudentAbsent ? "bg-rose-700 text-white" : 
+                                                        (!isAnyMarkEntered ? "bg-slate-300 text-slate-600" : (isAnyFail ? "bg-rose-600" : "bg-emerald-600"))
+                                                    )}>
+                                                        {isStudentAbsent ? 'অনুপস্থিত' : (!isAnyMarkEntered ? 'এন্ট্রি হয়নি' : (isAnyFail ? 'অকৃতকার্য' : 'কৃতকার্য'))}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>
@@ -471,6 +496,314 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <Button onClick={handleSaveResults} size="lg" className="px-10 font-black shadow-md"><Save className="mr-2 h-4 w-4" /> প্রাপ্ত নম্বর সেভ করুন</Button>
                         </div>
                     </CardContent>
+                </Card>
+            )}
+        </div>
+    );
+};
+
+const ExamAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
+    const { toast } = useToast();
+    const { selectedYear } = useAcademicYear();
+    const db = useFirestore();
+    const { user } = useAuth();
+
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examName, setExamName] = useState('');
+    const [className, setClassName] = useState('6');
+    const [group, setGroup] = useState('all');
+
+    const [studentsForClass, setStudentsForClass] = useState<Student[]>([]);
+    const [attendanceMap, setAttendanceMap] = useState<Record<string, 'present' | 'absent'>>({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const showGroupSelector = useMemo(() => parseInt(className) >= 9, [className]);
+
+    useEffect(() => {
+        if (!db || !user) return;
+        getExams(db, selectedYear).then(setExams);
+    }, [db, selectedYear, user]);
+
+    const handleLoadAttendance = useCallback(async () => {
+        if (!examName || !className || !db) return;
+        setIsLoading(true);
+        try {
+            const filtered = allStudents.filter(s => {
+                if (s.academicYear !== selectedYear || s.className !== className) return false;
+                if (showGroupSelector && group !== 'all') {
+                    const sGrp = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                    const fGrp = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
+                    if (sGrp !== fGrp) return false;
+                }
+                return true;
+            }).sort((a, b) => a.roll - b.roll);
+
+            setStudentsForClass(filtered);
+
+            // Fetch saved attendance
+            const attRecord = await getExamAttendance(db, selectedYear, examName, className, group);
+            const initialMap: Record<string, 'present' | 'absent'> = {};
+            filtered.forEach(s => {
+                if (attRecord?.attendance && attRecord.attendance[s.id]) {
+                    initialMap[s.id] = attRecord.attendance[s.id];
+                } else {
+                    initialMap[s.id] = 'present';
+                }
+            });
+            setAttendanceMap(initialMap);
+        } catch (e) {
+            console.error("Error loading attendance:", e);
+            toast({ variant: 'destructive', title: 'উপস্থিতি তালিকা লোড করতে সমস্যা হয়েছে' });
+        }
+        setIsLoading(false);
+    }, [examName, className, group, db, selectedYear, allStudents, showGroupSelector, toast]);
+
+    useEffect(() => {
+        if (examName && className) {
+            handleLoadAttendance();
+        }
+    }, [examName, className, group, handleLoadAttendance]);
+
+    const handleToggleStatus = (studentId: string, status: 'present' | 'absent') => {
+        setAttendanceMap(prev => ({
+            ...prev,
+            [studentId]: status
+        }));
+    };
+
+    const handleMarkAll = (status: 'present' | 'absent') => {
+        setAttendanceMap(prev => {
+            const next = { ...prev };
+            studentsForClass.forEach(s => {
+                next[s.id] = status;
+            });
+            return next;
+        });
+        toast({ title: status === 'present' ? 'সকলকে উপস্থিত মার্ক করা হয়েছে' : 'সকলকে অনুপস্থিত মার্ক করা হয়েছে' });
+    };
+
+    const handleSave = async () => {
+        if (!db || !examName || !className) {
+            toast({ variant: 'destructive', title: 'পরীক্ষা ও শ্রেণি নির্বাচন করুন' });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            await saveExamAttendance(db, {
+                academicYear: selectedYear,
+                examName,
+                className,
+                group: showGroupSelector ? group : 'none',
+                attendance: attendanceMap,
+            });
+            toast({ title: 'উপস্থিতি তালিকা সফলভাবে সংরক্ষিত হয়েছে' });
+        } catch (e) {
+            console.error(e);
+            toast({ variant: 'destructive', title: 'সংরক্ষণ ব্যর্থ হয়েছে' });
+        }
+        setIsSaving(false);
+    };
+
+    const filteredDisplayStudents = useMemo(() => {
+        if (!searchQuery.trim()) return studentsForClass;
+        const q = searchQuery.toLowerCase().trim();
+        return studentsForClass.filter(s => 
+            s.studentNameBn?.toLowerCase().includes(q) ||
+            s.studentNameEn?.toLowerCase().includes(q) ||
+            s.roll.toString().includes(q) ||
+            s.generatedId?.toLowerCase().includes(q) ||
+            s.id?.toLowerCase().includes(q)
+        );
+    }, [studentsForClass, searchQuery]);
+
+    const presentCount = useMemo(() => {
+        return studentsForClass.filter(s => attendanceMap[s.id] !== 'absent').length;
+    }, [studentsForClass, attendanceMap]);
+
+    const absentCount = useMemo(() => {
+        return studentsForClass.filter(s => attendanceMap[s.id] === 'absent').length;
+    }, [studentsForClass, attendanceMap]);
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-xl bg-white/60 shadow-sm">
+                <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">পরীক্ষার নাম</Label>
+                    <Select value={examName} onValueChange={setExamName}>
+                        <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
+                        <SelectContent>{exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-${e.id || idx}-${e.name}`} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">শ্রেণি</Label>
+                    <Select value={className} onValueChange={(val) => { setClassName(val); setGroup('all'); }}>
+                        <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                        <SelectContent>{Object.entries(classNamesMap).map(([val, label]) => <SelectItem key={val} value={val}>{label} শ্রেণি</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+
+                {showGroupSelector && (
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-slate-700">শাখা / বিভাগ</Label>
+                        <Select value={group} onValueChange={setGroup}>
+                            <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="শাখা" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">সকল শাখা</SelectItem>
+                                <SelectItem value="science">বিজ্ঞান</SelectItem>
+                                <SelectItem value="arts">মানবিক</SelectItem>
+                                <SelectItem value="commerce">ব্যবসায় শিক্ষা</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
+                <Button onClick={handleLoadAttendance} disabled={isLoading || !examName} className="h-9 text-xs font-black">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />}
+                    তালিকা রিফ্রেশ
+                </Button>
+            </div>
+
+            {studentsForClass.length > 0 ? (
+                <Card className="overflow-hidden border-2 shadow-lg rounded-2xl bg-white">
+                    <CardHeader className="bg-muted/30 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <span className="font-black text-slate-800 text-sm">
+                                {classNamesMap[className]} শ্রেণি {group !== 'all' && `(${groupNamesMap[group] || group})`} - {examName}
+                            </span>
+                            <Badge variant="outline" className="bg-white font-black text-xs px-3 border-slate-300">
+                                মোট: {toBengaliNumber(studentsForClass.length)} জন
+                            </Badge>
+                            <Badge className="bg-emerald-600 hover:bg-emerald-600 font-black text-xs px-3">
+                                উপস্থিত: {toBengaliNumber(presentCount)} জন
+                            </Badge>
+                            <Badge className="bg-rose-600 hover:bg-rose-600 font-black text-xs px-3">
+                                অনুপস্থিত: {toBengaliNumber(absentCount)} জন
+                            </Badge>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-48">
+                                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                <Input 
+                                    placeholder="রোল বা নাম খুঁজুন..." 
+                                    value={searchQuery} 
+                                    onChange={(e) => setSearchQuery(e.target.value)} 
+                                    className="pl-8 h-8 text-xs font-bold bg-white"
+                                />
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => handleMarkAll('present')} className="h-8 text-xs font-bold text-emerald-700 hover:bg-emerald-50 border-emerald-200">
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> সবাই উপস্থিত
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleMarkAll('absent')} className="h-8 text-xs font-bold text-rose-700 hover:bg-rose-50 border-rose-200">
+                                <XCircle className="h-3.5 w-3.5 mr-1" /> সবাই অনুপস্থিত
+                            </Button>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="p-0">
+                        <div className="max-h-[550px] overflow-auto">
+                            <Table>
+                                <TableHeader className="sticky top-0 bg-slate-50 z-20 shadow-sm border-b-2 border-slate-200">
+                                    <TableRow className="h-10">
+                                        <TableHead className="w-20 text-center font-black">রোল</TableHead>
+                                        <TableHead className="font-black">শিক্ষার্থীর তথ্য</TableHead>
+                                        <TableHead className="w-28 text-center font-black">শাখা/বিভাগ</TableHead>
+                                        <TableHead className="w-64 text-center font-black">উপস্থিতি নির্বাচন</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredDisplayStudents.map(student => {
+                                        const status = attendanceMap[student.id] || 'present';
+                                        const isAbsent = status === 'absent';
+
+                                        return (
+                                            <TableRow key={student.id} className={cn("h-12 hover:bg-accent/5 transition-colors", isAbsent && "bg-rose-50/50")}>
+                                                <TableCell className="font-black text-center border-r text-base">
+                                                    {toBengaliNumber(student.roll)}
+                                                </TableCell>
+                                                <TableCell className="border-r">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-8 w-8 border border-slate-200">
+                                                            <AvatarImage src={sanitizePhotoUrl(student.photoUrl)} alt={student.studentNameBn} />
+                                                            <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+                                                                {student.studentNameBn?.slice(0, 2) || 'শিক্ষার্থী'}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <p className={cn("font-bold text-sm", isAbsent ? "text-rose-700" : "text-slate-800")}>
+                                                                {student.studentNameBn}
+                                                            </p>
+                                                            <p className="text-[10px] text-muted-foreground font-mono font-medium">
+                                                                ID: {student.generatedId || student.id.slice(0, 6)} {student.studentNameEn && `| ${student.studentNameEn}`}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center font-bold text-xs border-r text-slate-600">
+                                                    {groupNamesMap[student.group || ''] || student.group || 'সাধারণ'}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="inline-flex rounded-lg border p-1 bg-slate-100 gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleStatus(student.id, 'present')}
+                                                            className={cn(
+                                                                "px-3 py-1 text-xs font-black rounded-md transition-all flex items-center gap-1.5",
+                                                                !isAbsent 
+                                                                    ? "bg-emerald-600 text-white shadow-sm" 
+                                                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                                                            )}
+                                                        >
+                                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                                            উপস্থিত
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleStatus(student.id, 'absent')}
+                                                            className={cn(
+                                                                "px-3 py-1 text-xs font-black rounded-md transition-all flex items-center gap-1.5",
+                                                                isAbsent 
+                                                                    ? "bg-rose-600 text-white shadow-sm" 
+                                                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                                                            )}
+                                                        >
+                                                            <XCircle className="h-3.5 w-3.5" />
+                                                            অনুপস্থিত
+                                                        </button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-t bg-muted/10 gap-3">
+                            <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
+                                <Info className="h-4 w-4 text-primary shrink-0" />
+                                অনুপস্থিত নির্বাচিত শিক্ষার্থীদের নম্বর ইনপুট, ফলাফল শিট ও মেধা তালিকায় 'অনুপস্থিত' হিসেবে নির্ধারণ করা হবে।
+                            </p>
+                            <Button 
+                                onClick={handleSave} 
+                                disabled={isSaving} 
+                                size="lg" 
+                                className="px-8 font-black shadow-md bg-emerald-700 hover:bg-emerald-800"
+                            >
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="mr-2 h-4 w-4" />}
+                                উপস্থিতি সংরক্ষণ করুন
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card className="p-12 text-center border-2 border-dashed rounded-2xl bg-white/50">
+                    <UserCheck className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-slate-700">কোনো শিক্ষার্থী পাওয়া যায়নি</h3>
+                    <p className="text-xs text-muted-foreground mt-1">উপরে পরীক্ষা ও শ্রেণি নির্বাচন করে তালিকা দেখুন।</p>
                 </Card>
             )}
         </div>
@@ -1604,6 +1937,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
     const [examName, setExamName] = useState('');
     const [className, setClassName] = useState('');
     const [groupFilter, setGroupFilter] = useState('all');
+    const [consideredFails, setConsideredFails] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [meritResults, setMeritResults] = useState<StudentProcessedResult[]>([]);
 
@@ -1638,6 +1972,53 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
         setIsLoading(false);
     };
 
+    const regularPassedStudents = useMemo(() => {
+        return meritResults.filter(r => r.isPass && !r.isAbsent);
+    }, [meritResults]);
+
+    const specialPassedStudents = useMemo(() => {
+        if (consideredFails.length === 0) return [];
+        return meritResults
+            .filter(r => !r.isPass && !r.isAbsent && consideredFails.includes(r.failedSubjectsCount))
+            .sort((a, b) => {
+                if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+                return a.student.roll - b.student.roll;
+            });
+    }, [meritResults, consideredFails]);
+
+    const failedStudents = useMemo(() => {
+        return meritResults
+            .filter(r => !r.isPass && !r.isAbsent && !consideredFails.includes(r.failedSubjectsCount))
+            .sort((a, b) => {
+                if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
+                if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+                return a.student.roll - b.student.roll;
+            });
+    }, [meritResults, consideredFails]);
+
+    const absentStudents = useMemo(() => {
+        return meritResults
+            .filter(r => r.isAbsent)
+            .sort((a, b) => a.student.roll - b.student.roll);
+    }, [meritResults]);
+
+    const getSpecialPassTitle = (fails: number[]) => {
+        const sorted = [...fails].sort((a, b) => a - b);
+        if (sorted.length === 0) return '';
+        const bengaliNums = sorted.map(n => toBengaliNumber(n));
+        let numStr = '';
+        if (bengaliNums.length === 1) {
+            numStr = `${bengaliNums[0]} বিষয়ে`;
+        } else if (bengaliNums.length === 2) {
+            numStr = `${bengaliNums[0]} ও ${bengaliNums[1]} বিষয়ে`;
+        } else {
+            numStr = `${bengaliNums.slice(0, -1).join(', ')} ও ${bengaliNums[bengaliNums.length - 1]} বিষয়ে`;
+        }
+        return `${numStr} ফেল করে বিশেষ বিবেচনায় পাশ করা শিক্ষার্থীর তালিকা`;
+    };
+
+    const queryFails = consideredFails.length > 0 ? `&consideredFails=${consideredFails.join(',')}` : '';
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
@@ -1665,50 +2046,227 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                     </div>
                 )}
                 <Button onClick={handleViewMeritList} disabled={isLoading || !examName || !className} className="h-9 text-xs font-black">মেধা তালিকা দেখুন</Button>
-                <Link href={`/results/merit-list?academicYear=${selectedYear}&examName=${encodeURIComponent(examName)}&className=${className}&group=${groupFilter}`} target="_blank">
+                <Link href={`/results/merit-list?academicYear=${selectedYear}&examName=${encodeURIComponent(examName)}&className=${className}&group=${groupFilter}${queryFails}`} target="_blank">
                     <Button variant="outline" disabled={meritResults.length === 0} className="w-full h-9 text-xs font-black border-primary text-primary"><Printer className="h-3.5 w-3.5 mr-1" /> প্রিন্ট তালিকা</Button>
                 </Link>
             </div>
 
             {meritResults.length > 0 && (
-                <Card className="border-2 shadow-lg rounded-2xl overflow-hidden bg-white">
-                    <CardHeader className="bg-primary/5 p-4 border-b flex flex-row justify-between items-center">
-                        <CardTitle className="text-lg font-black text-primary">মেধা তালিকা - {examName}</CardTitle>
-                        <Badge className="bg-primary font-black px-4">{toBengaliNumber(meritResults.length)} জন</Badge>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader className="bg-muted/50">
-                                <TableRow>
-                                    <TableHead className="w-16 text-center font-black">মেধা</TableHead>
-                                    <TableHead className="w-16 text-center font-black">রোল</TableHead>
-                                    <TableHead className="font-black">নাম</TableHead>
-                                    <TableHead className="text-center font-black">মোট নম্বর</TableHead>
-                                    <TableHead className="text-center font-black">GPA</TableHead>
-                                    <TableHead className="text-center font-black">গ্রেড</TableHead>
-                                    <TableHead className="text-center font-black">অবস্থা</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {meritResults.map((res, idx) => (
-                                    <TableRow key={res.student.id} className={cn("h-11", !res.isPass && "bg-rose-50/50")}>
-                                        <TableCell className="text-center font-black text-lg">{res.isPass ? toBengaliNumber(res.meritPosition || idx + 1) : '-'}</TableCell>
-                                        <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
-                                        <TableCell className="font-bold text-slate-700">{res.student.studentNameBn}</TableCell>
-                                        <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
-                                        <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
-                                        <TableCell className={cn("text-center font-black", !res.isPass && "text-rose-600")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</TableCell>
-                                        <TableCell className="text-center"><Badge className={cn("font-black px-3", res.isPass ? "bg-emerald-600" : "bg-rose-600")}>{res.isPass ? 'কৃতকার্য' : 'অকৃতকার্য'}</Badge></TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                <div className="flex flex-wrap items-center justify-between gap-4 p-4 border rounded-xl bg-amber-50/50 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                            <Sparkles className="h-4 w-4 text-amber-600" />
+                            বিশেষ বিবেচনায় পাশ নির্বাচন:
+                        </span>
+                        <div className="flex items-center gap-2">
+                            {[1, 2, 3].map(failCount => (
+                                <label 
+                                    key={failCount} 
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-black cursor-pointer transition-all",
+                                        consideredFails.includes(failCount) 
+                                            ? "bg-amber-100 border-amber-400 text-amber-900 shadow-sm" 
+                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                    )}
+                                >
+                                    <Checkbox 
+                                        checked={consideredFails.includes(failCount)}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                setConsideredFails(prev => [...prev, failCount].sort());
+                                            } else {
+                                                setConsideredFails(prev => prev.filter(c => c !== failCount));
+                                            }
+                                        }}
+                                        className="data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                                    />
+                                    <span>{toBengaliNumber(failCount)} বিষয়ে ফেল</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="text-[11px] font-bold text-amber-800">
+                        * টিক দিলে তাদের ফলাফল 'পাশ' দেখাবে এবং পৃথক তালিকায় তাদের মেধাক্রম ১, ২, ৩... সাজানো হবে।
+                    </div>
+                </div>
+            )}
+
+            {meritResults.length > 0 && (
+                <div className="space-y-6">
+                    {/* ১. নিয়মিত কৃতকার্য শিক্ষার্থী */}
+                    <Card className="border-2 shadow-lg rounded-2xl overflow-hidden bg-white">
+                        <CardHeader className="bg-emerald-500/10 p-4 border-b flex flex-row justify-between items-center">
+                            <CardTitle className="text-base font-black text-emerald-950 flex items-center gap-2">
+                                <Trophy className="h-5 w-5 text-amber-500" />
+                                মেধা তালিকা (কৃতকার্য শিক্ষার্থী) - {examName}
+                            </CardTitle>
+                            <Badge className="bg-emerald-700 font-black px-4">{toBengaliNumber(regularPassedStudents.length)} জন</Badge>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {regularPassedStudents.length > 0 ? (
+                                <Table>
+                                    <TableHeader className="bg-slate-50">
+                                        <TableRow>
+                                            <TableHead className="w-16 text-center font-black">মেধা</TableHead>
+                                            <TableHead className="w-16 text-center font-black">রোল</TableHead>
+                                            <TableHead className="font-black">নাম</TableHead>
+                                            <TableHead className="text-center font-black">মোট নম্বর</TableHead>
+                                            <TableHead className="text-center font-black">GPA</TableHead>
+                                            <TableHead className="text-center font-black">গ্রেড</TableHead>
+                                            <TableHead className="text-center font-black">ফলাফল</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {regularPassedStudents.map((res, idx) => (
+                                            <TableRow key={res.student.id} className="h-11 hover:bg-slate-50">
+                                                <TableCell className="text-center font-black text-lg text-emerald-800">{toBengaliNumber(idx + 1)}</TableCell>
+                                                <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
+                                                <TableCell className="font-bold text-slate-800">{res.student.studentNameBn}</TableCell>
+                                                <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
+                                                <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
+                                                <TableCell className="text-center font-black">{res.finalGrade}</TableCell>
+                                                <TableCell className="text-center"><Badge className="font-black px-3 bg-emerald-600">কৃতকার্য</Badge></TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="p-6 text-center text-sm font-bold text-muted-foreground">কোনো শিক্ষার্থী নিয়মিত পাস করেনি।</div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* ২. বিশেষ বিবেচনায় পাশ করা শিক্ষার্থী */}
+                    {specialPassedStudents.length > 0 && (
+                        <Card className="border-2 border-amber-300 shadow-lg rounded-2xl overflow-hidden bg-white">
+                            <CardHeader className="bg-amber-500/15 p-4 border-b border-amber-200 flex flex-row justify-between items-center">
+                                <CardTitle className="text-base font-black text-amber-950 flex items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-amber-600" />
+                                    {getSpecialPassTitle(consideredFails)}
+                                </CardTitle>
+                                <Badge className="bg-amber-600 font-black px-4">{toBengaliNumber(specialPassedStudents.length)} জন</Badge>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader className="bg-amber-50/50">
+                                        <TableRow>
+                                            <TableHead className="w-20 text-center font-black text-amber-950">মেধাক্রম</TableHead>
+                                            <TableHead className="w-16 text-center font-black">রোল</TableHead>
+                                            <TableHead className="font-black">নাম</TableHead>
+                                            <TableHead className="text-center font-black">ফেল বিষয়</TableHead>
+                                            <TableHead className="text-center font-black">মোট নম্বর</TableHead>
+                                            <TableHead className="text-center font-black">GPA</TableHead>
+                                            <TableHead className="text-center font-black">গ্রেড</TableHead>
+                                            <TableHead className="text-center font-black">ফলাফল</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {specialPassedStudents.map((res, idx) => (
+                                            <TableRow key={res.student.id} className="h-11 bg-amber-50/20 hover:bg-amber-100/40">
+                                                <TableCell className="text-center font-black text-lg text-amber-900">{toBengaliNumber(idx + 1)}</TableCell>
+                                                <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
+                                                <TableCell className="font-bold text-slate-800">{res.student.studentNameBn}</TableCell>
+                                                <TableCell className="text-center font-bold text-amber-800">{toBengaliNumber(res.failedSubjectsCount)}টি</TableCell>
+                                                <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
+                                                <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
+                                                <TableCell className="text-center font-black text-amber-700">{res.finalGrade}</TableCell>
+                                                <TableCell className="text-center"><Badge className="font-black px-3 bg-emerald-600">পাশ</Badge></TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* ৩. অকৃতকার্য শিক্ষার্থী */}
+                    {failedStudents.length > 0 && (
+                        <Card className="border-2 border-rose-200 shadow-lg rounded-2xl overflow-hidden bg-white">
+                            <CardHeader className="bg-rose-50 p-4 border-b border-rose-200 flex flex-row justify-between items-center">
+                                <CardTitle className="text-base font-black text-rose-950 flex items-center gap-2">
+                                    <AlertCircle className="h-5 w-5 text-rose-600" />
+                                    অকৃতকার্য শিক্ষার্থীর তালিকা
+                                </CardTitle>
+                                <Badge className="bg-rose-600 font-black px-4">{toBengaliNumber(failedStudents.length)} জন</Badge>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader className="bg-rose-50/40">
+                                        <TableRow>
+                                            <TableHead className="w-20 text-center font-black text-rose-950">ক্রমিক</TableHead>
+                                            <TableHead className="w-16 text-center font-black">রোল</TableHead>
+                                            <TableHead className="font-black">নাম</TableHead>
+                                            <TableHead className="text-center font-black">ফেল বিষয়</TableHead>
+                                            <TableHead className="text-center font-black">মোট নম্বর</TableHead>
+                                            <TableHead className="text-center font-black">GPA</TableHead>
+                                            <TableHead className="text-center font-black">গ্রেড</TableHead>
+                                            <TableHead className="text-center font-black">ফলাফল</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {failedStudents.map((res, idx) => (
+                                            <TableRow key={res.student.id} className="h-11 bg-rose-50/20 hover:bg-rose-100/30">
+                                                <TableCell className="text-center font-black text-base text-rose-800">{toBengaliNumber(idx + 1)}</TableCell>
+                                                <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
+                                                <TableCell className="font-bold text-slate-800">{res.student.studentNameBn}</TableCell>
+                                                <TableCell className="text-center font-bold text-rose-700">{toBengaliNumber(res.failedSubjectsCount)}টি</TableCell>
+                                                <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
+                                                <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
+                                                <TableCell className="text-center font-black text-rose-600">F{toBengaliNumber(res.failedSubjectsCount)}</TableCell>
+                                                <TableCell className="text-center"><Badge className="font-black px-3 bg-rose-600">অকৃতকার্য</Badge></TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* ৪. অনুপস্থিত শিক্ষার্থী */}
+                    {absentStudents.length > 0 && (
+                        <Card className="border-2 border-slate-200 shadow-lg rounded-2xl overflow-hidden bg-white">
+                            <CardHeader className="bg-slate-100 p-4 border-b flex flex-row justify-between items-center">
+                                <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
+                                    <UserCheck className="h-5 w-5 text-slate-600" />
+                                    অনুপস্থিত শিক্ষার্থীর তালিকা
+                                </CardTitle>
+                                <Badge className="bg-slate-600 font-black px-4">{toBengaliNumber(absentStudents.length)} জন</Badge>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader className="bg-slate-50">
+                                        <TableRow>
+                                            <TableHead className="w-20 text-center font-black text-slate-800">ক্রমিক</TableHead>
+                                            <TableHead className="w-16 text-center font-black">রোল</TableHead>
+                                            <TableHead className="font-black">নাম</TableHead>
+                                            <TableHead className="text-center font-black">শ্রেণি ও বিভাগ</TableHead>
+                                            <TableHead className="text-center font-black">অবস্থা</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {absentStudents.map((res, idx) => (
+                                            <TableRow key={res.student.id} className="h-11 hover:bg-slate-50">
+                                                <TableCell className="text-center font-black text-base text-slate-700">{toBengaliNumber(idx + 1)}</TableCell>
+                                                <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
+                                                <TableCell className="font-bold text-slate-700">{res.student.studentNameBn}</TableCell>
+                                                <TableCell className="text-center font-bold text-slate-600">
+                                                    {classNamesMap[res.student.className] || res.student.className} শ্রেণি 
+                                                    {res.student.group && ` (${groupNamesMap[res.student.group] || res.student.group})`}
+                                                </TableCell>
+                                                <TableCell className="text-center"><Badge className="font-black px-3 bg-slate-500">অনুপস্থিত</Badge></TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             )}
         </div>
     );
-}
+};
 
 const PromotionTab = ({ allStudents }: { allStudents: Student[] }) => {
     const db = useFirestore();
@@ -2506,6 +3064,7 @@ export default function ResultsPage() {
         const items = [];
         if (canViewRes) {
             items.push({ id: 'management', label: 'নম্বর ইনপুট', icon: FilePen, color: 'text-indigo-600 bg-indigo-50' });
+            items.push({ id: 'attendance', label: 'উপস্থিত শিক্ষার্থীর তালিকা', icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' });
             items.push({ id: 'subject-report', label: 'বিষয় ভিত্তিক রিপোর্ট', icon: FileText, color: 'text-emerald-600 bg-emerald-50' });
             items.push({ id: 'sheet', label: 'ফলাফল শিট', icon: FileSpreadsheet, color: 'text-blue-600 bg-blue-50' });
         }
@@ -2543,6 +3102,7 @@ export default function ResultsPage() {
                             {isLoading ? (<div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>) : (
                                 <div className="animate-in fade-in duration-500">
                                     {activeSection === 'management' && <MarkManagementTab allStudents={allStudents} />}
+                                    {activeSection === 'attendance' && <ExamAttendanceTab allStudents={allStudents} />}
                                     {activeSection === 'subject-report' && <SubjectReportTab allStudents={allStudents} onPrintRequested={handleSubjectPrint} />}
                                     {activeSection === 'sheet' && <ResultSheetTab allStudents={allStudents} onPrint={handleFullSheetPrint} />}
                                     {activeSection === 'search' && <ResultSearchTab allStudents={allStudents} />}
