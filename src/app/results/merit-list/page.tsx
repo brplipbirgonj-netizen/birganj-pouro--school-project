@@ -315,18 +315,23 @@ function MeritListPrintContent() {
                             </div>
                         )}
 
-                        <header className="relative z-10 flex items-center gap-6 border-b-2 border-primary/30 pb-3 mb-4 printable-header">
-                            {schoolInfo.logoUrl && (
-                                <div className="relative w-16 h-16 shrink-0">
-                                    <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />
+                        <header className="relative z-10 border-b-2 border-primary/30 pb-3 mb-4 printable-header">
+                            <div className="flex items-center justify-center gap-3.5 mx-auto">
+                                {schoolInfo.logoUrl && (
+                                    <div className="relative w-14 h-14 shrink-0">
+                                        <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />
+                                    </div>
+                                )}
+                                <div className="text-center">
+                                    <h1 className="text-2xl font-black text-primary leading-tight uppercase tracking-tight">{schoolInfo.name}</h1>
+                                    <p className="text-[12px] font-bold text-slate-700">{schoolInfo.address}</p>
+                                    <p className="text-[10px] font-bold text-slate-600 mt-0.5">
+                                        EIIN: {toBengaliNumber(schoolInfo.eiin)} | কোড: {toBengaliNumber(schoolInfo.code)} | শিক্ষাবর্ষ: {toBengaliNumber(academicYear)}
+                                    </p>
                                 </div>
-                            )}
-                            <div className="text-center flex-grow">
-                                <h1 className="text-2xl font-black text-primary leading-tight uppercase">{schoolInfo.name}</h1>
-                                <p className="text-[12px] font-bold text-slate-700">{schoolInfo.address}</p>
-                                <p className="text-[10px] font-bold text-slate-600 mt-0.5">
-                                    EIIN: {toBengaliNumber(schoolInfo.eiin)} | কোড: {toBengaliNumber(schoolInfo.code)} | শিক্ষাবর্ষ: {toBengaliNumber(academicYear)}
-                                </p>
+                                {schoolInfo.logoUrl && (
+                                    <div className="w-14 h-14 shrink-0 invisible" aria-hidden="true" />
+                                )}
                             </div>
                         </header>
 
