@@ -354,6 +354,7 @@ function MeritListPrintContent() {
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">মেধা</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">রোল</th>
                                                 <th className="font-black text-slate-900 border-r border-black text-left pl-3">শিক্ষার্থীর নাম</th>
+                                                <th className="text-center font-black text-slate-900 border-r border-black w-20">শাখা/বিভাগ</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">মোট নম্বর</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">জি.পি.এ</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-16">গ্রেড</th>
@@ -366,6 +367,7 @@ function MeritListPrintContent() {
                                                     <td className="text-center font-black border-r border-black">{toBengaliNumber(idx + 1)}</td>
                                                     <td className="text-center font-bold border-r border-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="font-bold border-r border-black pl-3">{res.student.studentNameBn}</td>
+                                                    <td className="text-center font-bold border-r border-black text-slate-700 text-[11px]">{groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}</td>
                                                     <td className="text-center font-black border-r border-black text-primary">{toBengaliNumber(res.totalMarks)}</td>
                                                     <td className="text-center font-black border-r border-black">{toBengaliNumber(res.gpa.toFixed(2))}</td>
                                                     <td className="text-center font-black border-r border-black">{res.finalGrade}</td>
@@ -389,6 +391,7 @@ function MeritListPrintContent() {
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">মেধাক্রম</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">রোল</th>
                                                 <th className="font-black text-slate-900 border-r border-black text-left pl-3">শিক্ষার্থীর নাম</th>
+                                                <th className="text-center font-black text-slate-900 border-r border-black w-20">শাখা/বিভাগ</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">ফেল বিষয়</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">মোট নম্বর</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">জি.পি.এ</th>
@@ -402,6 +405,7 @@ function MeritListPrintContent() {
                                                     <td className="text-center font-black border-r border-black text-amber-900">{toBengaliNumber(idx + 1)}</td>
                                                     <td className="text-center font-bold border-r border-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="font-bold border-r border-black pl-3">{res.student.studentNameBn}</td>
+                                                    <td className="text-center font-bold border-r border-black text-slate-700 text-[11px]">{groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}</td>
                                                     <td className="text-center font-bold border-r border-black text-amber-900">{toBengaliNumber(res.failedSubjectsCount)}টি</td>
                                                     <td className="text-center font-black border-r border-black text-primary">{toBengaliNumber(res.totalMarks)}</td>
                                                     <td className="text-center font-black border-r border-black">{toBengaliNumber(res.gpa.toFixed(2))}</td>
@@ -426,6 +430,7 @@ function MeritListPrintContent() {
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">ক্রমিক</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">রোল</th>
                                                 <th className="font-black text-slate-900 border-r border-black text-left pl-3">শিক্ষার্থীর নাম</th>
+                                                <th className="text-center font-black text-slate-900 border-r border-black w-20">শাখা/বিভাগ</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">ফেল বিষয়</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">মোট নম্বর</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-20">জি.পি.এ</th>
@@ -439,6 +444,7 @@ function MeritListPrintContent() {
                                                     <td className="text-center font-black border-r border-black text-rose-800">{toBengaliNumber(idx + 1)}</td>
                                                     <td className="text-center font-bold border-r border-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="font-bold border-r border-black pl-3">{res.student.studentNameBn}</td>
+                                                    <td className="text-center font-bold border-r border-black text-slate-700 text-[11px]">{groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}</td>
                                                     <td className="text-center font-bold border-r border-black text-rose-700">{toBengaliNumber(res.failedSubjectsCount)}টি</td>
                                                     <td className="text-center font-black border-r border-black text-primary">{toBengaliNumber(res.totalMarks)}</td>
                                                     <td className="text-center font-black border-r border-black">{toBengaliNumber(res.gpa.toFixed(2))}</td>
@@ -463,7 +469,7 @@ function MeritListPrintContent() {
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">ক্রমিক</th>
                                                 <th className="text-center font-black text-slate-900 border-r border-black w-14">রোল</th>
                                                 <th className="font-black text-slate-900 border-r border-black text-left pl-3">শিক্ষার্থীর নাম</th>
-                                                <th className="text-center font-black text-slate-900 border-r border-black w-24">শ্রেণি ও বিভাগ</th>
+                                                <th className="text-center font-black text-slate-900 border-r border-black w-24">শাখা/বিভাগ</th>
                                                 <th className="text-center font-black text-slate-900 w-20">অবস্থা</th>
                                             </tr>
                                         </thead>
@@ -473,9 +479,8 @@ function MeritListPrintContent() {
                                                     <td className="text-center font-black border-r border-black text-slate-700">{toBengaliNumber(idx + 1)}</td>
                                                     <td className="text-center font-bold border-r border-black">{toBengaliNumber(res.student.roll)}</td>
                                                     <td className="font-bold border-r border-black pl-3">{res.student.studentNameBn}</td>
-                                                    <td className="text-center font-bold border-r border-black text-slate-600 text-[11px]">
-                                                        {classNamesMap[res.student.className] || res.student.className} শ্রেণি 
-                                                        {res.student.group && ` (${groupNamesMap[res.student.group] || res.student.group})`}
+                                                    <td className="text-center font-bold border-r border-black text-slate-700 text-[11px]">
+                                                        {groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}
                                                     </td>
                                                     <td className="text-center font-black text-slate-600 text-[11px]">অনুপস্থিত</td>
                                                 </tr>

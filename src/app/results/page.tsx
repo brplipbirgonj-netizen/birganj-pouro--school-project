@@ -2112,6 +2112,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             <TableHead className="w-16 text-center font-black">মেধা</TableHead>
                                             <TableHead className="w-16 text-center font-black">রোল</TableHead>
                                             <TableHead className="font-black">নাম</TableHead>
+                                            <TableHead className="w-24 text-center font-black">শাখা/বিভাগ</TableHead>
                                             <TableHead className="text-center font-black">মোট নম্বর</TableHead>
                                             <TableHead className="text-center font-black">GPA</TableHead>
                                             <TableHead className="text-center font-black">গ্রেড</TableHead>
@@ -2124,6 +2125,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center font-black text-lg text-emerald-800">{toBengaliNumber(idx + 1)}</TableCell>
                                                 <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
                                                 <TableCell className="font-bold text-slate-800">{res.student.studentNameBn}</TableCell>
+                                                <TableCell className="text-center font-bold text-slate-600 text-xs">{groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}</TableCell>
                                                 <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
                                                 <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
                                                 <TableCell className="text-center font-black">{res.finalGrade}</TableCell>
@@ -2155,6 +2157,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             <TableHead className="w-20 text-center font-black text-amber-950">মেধাক্রম</TableHead>
                                             <TableHead className="w-16 text-center font-black">রোল</TableHead>
                                             <TableHead className="font-black">নাম</TableHead>
+                                            <TableHead className="w-24 text-center font-black text-amber-950">শাখা/বিভাগ</TableHead>
                                             <TableHead className="text-center font-black">ফেল বিষয়</TableHead>
                                             <TableHead className="text-center font-black">মোট নম্বর</TableHead>
                                             <TableHead className="text-center font-black">GPA</TableHead>
@@ -2168,6 +2171,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center font-black text-lg text-amber-900">{toBengaliNumber(idx + 1)}</TableCell>
                                                 <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
                                                 <TableCell className="font-bold text-slate-800">{res.student.studentNameBn}</TableCell>
+                                                <TableCell className="text-center font-bold text-slate-600 text-xs">{groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}</TableCell>
                                                 <TableCell className="text-center font-bold text-amber-800">{toBengaliNumber(res.failedSubjectsCount)}টি</TableCell>
                                                 <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
                                                 <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
@@ -2198,6 +2202,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             <TableHead className="w-20 text-center font-black text-rose-950">ক্রমিক</TableHead>
                                             <TableHead className="w-16 text-center font-black">রোল</TableHead>
                                             <TableHead className="font-black">নাম</TableHead>
+                                            <TableHead className="w-24 text-center font-black text-rose-950">শাখা/বিভাগ</TableHead>
                                             <TableHead className="text-center font-black">ফেল বিষয়</TableHead>
                                             <TableHead className="text-center font-black">মোট নম্বর</TableHead>
                                             <TableHead className="text-center font-black">GPA</TableHead>
@@ -2211,6 +2216,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center font-black text-base text-rose-800">{toBengaliNumber(idx + 1)}</TableCell>
                                                 <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
                                                 <TableCell className="font-bold text-slate-800">{res.student.studentNameBn}</TableCell>
+                                                <TableCell className="text-center font-bold text-slate-600 text-xs">{groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}</TableCell>
                                                 <TableCell className="text-center font-bold text-rose-700">{toBengaliNumber(res.failedSubjectsCount)}টি</TableCell>
                                                 <TableCell className="text-center font-black text-blue-900">{toBengaliNumber(res.totalMarks)}</TableCell>
                                                 <TableCell className="text-center font-black">{toBengaliNumber(res.gpa.toFixed(2))}</TableCell>
@@ -2241,7 +2247,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                             <TableHead className="w-20 text-center font-black text-slate-800">ক্রমিক</TableHead>
                                             <TableHead className="w-16 text-center font-black">রোল</TableHead>
                                             <TableHead className="font-black">নাম</TableHead>
-                                            <TableHead className="text-center font-black">শ্রেণি ও বিভাগ</TableHead>
+                                            <TableHead className="w-24 text-center font-black text-slate-800">শাখা/বিভাগ</TableHead>
                                             <TableHead className="text-center font-black">অবস্থা</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -2251,9 +2257,8 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                 <TableCell className="text-center font-black text-base text-slate-700">{toBengaliNumber(idx + 1)}</TableCell>
                                                 <TableCell className="text-center font-bold">{toBengaliNumber(res.student.roll)}</TableCell>
                                                 <TableCell className="font-bold text-slate-700">{res.student.studentNameBn}</TableCell>
-                                                <TableCell className="text-center font-bold text-slate-600">
-                                                    {classNamesMap[res.student.className] || res.student.className} শ্রেণি 
-                                                    {res.student.group && ` (${groupNamesMap[res.student.group] || res.student.group})`}
+                                                <TableCell className="text-center font-bold text-slate-600 text-xs">
+                                                    {groupNamesMap[res.student.group || ''] || res.student.group || 'সাধারণ'}
                                                 </TableCell>
                                                 <TableCell className="text-center"><Badge className="font-black px-3 bg-slate-500">অনুপস্থিত</Badge></TableCell>
                                             </TableRow>
