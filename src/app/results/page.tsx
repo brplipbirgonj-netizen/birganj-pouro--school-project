@@ -19,8 +19,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { 
     Trash2, FileUp, Download, FilePen, BookOpen, AlertCircle, Trophy, Printer, Loader2, 
     FileSpreadsheet, CheckCircle2, Save, Star, ChevronRight, LayoutGrid, FileText, 
-    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCcw, RotateCcw, Plus, AlertTriangle, Info, History
+    Search, Sparkles, Settings, ListTodo, List, XCircle, UserCheck, RefreshCcw, RotateCcw, Plus, AlertTriangle, Info, History,
+    BarChart3
 } from 'lucide-react';
+import { ResultStatisticsTab } from './ResultStatisticsTab';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -3079,6 +3081,7 @@ export default function ResultsPage() {
             items.push({ id: 'attendance', label: 'উপস্থিত শিক্ষার্থীর তালিকা', icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' });
             items.push({ id: 'subject-report', label: 'বিষয় ভিত্তিক রিপোর্ট', icon: FileText, color: 'text-emerald-600 bg-emerald-50' });
             items.push({ id: 'sheet', label: 'ফলাফল শিট', icon: FileSpreadsheet, color: 'text-blue-600 bg-blue-50' });
+            items.push({ id: 'statistics', label: 'ফলাফল পরিসংখ্যান ও পাস-ফেল', icon: BarChart3, color: 'text-purple-600 bg-purple-50' });
         }
         items.push({ id: 'search', label: 'ফলাফল অনুসন্ধান', icon: Search, color: 'text-blue-600 bg-blue-50' });
         if (canManageFullMarks) items.push({ id: 'full-marks', label: 'বিষয় ও পূর্ণমান', icon: CheckCircle2, color: 'text-violet-600 bg-violet-50' });
@@ -3117,6 +3120,7 @@ export default function ResultsPage() {
                                     {activeSection === 'attendance' && <ExamAttendanceTab allStudents={allStudents} />}
                                     {activeSection === 'subject-report' && <SubjectReportTab allStudents={allStudents} onPrintRequested={handleSubjectPrint} />}
                                     {activeSection === 'sheet' && <ResultSheetTab allStudents={allStudents} onPrint={handleFullSheetPrint} />}
+                                    {activeSection === 'statistics' && <ResultStatisticsTab allStudents={allStudents} />}
                                     {activeSection === 'search' && <ResultSearchTab allStudents={allStudents} />}
                                     {activeSection === 'full-marks' && <FullMarksTab allStudents={allStudents} />}
                                     {activeSection === 'merit' && <MeritListTab allStudents={allStudents} />}
