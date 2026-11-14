@@ -332,10 +332,10 @@ function MarksheetContent() {
 
                         <section className="mb-4">
                             <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[12px] bg-blue-900 text-white rounded-sm">
-                                <div className="py-1.5">Status: <span className={cn("font-black", processedResult.isPass ? "text-green-400" : "text-red-400")}>{processedResult.isPass ? 'PASSED' : 'FAILED'}</span></div>
+                                <div className="py-1.5">Status: <span className={cn("font-black", processedResult.isPass ? "text-green-400" : (processedResult.isAbsent ? "text-amber-400" : "text-red-400"))}>{processedResult.isPass ? 'PASSED' : (processedResult.isAbsent ? 'ABSENT' : 'FAILED')}</span></div>
                                 <div className="py-1.5">GPA: <span className="font-black text-amber-300">{processedResult.gpa.toFixed(2)}</span></div>
                                 <div className="py-1.5">Final Grade: <span className="font-black text-amber-300">{processedResult.finalGrade}</span></div>
-                                <div className="py-1.5">Merit Rank: <span className="font-black">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : 'N/A'}</span></div>
+                                <div className="py-1.5">Merit Rank: <span className="font-black">{processedResult.isPass ? renderMeritPosition(processedResult.meritPosition) : (processedResult.isAbsent ? 'অনুপস্থিত' : 'N/A')}</span></div>
                             </div>
                         </section>
 

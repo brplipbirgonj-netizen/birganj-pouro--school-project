@@ -30,6 +30,7 @@ export interface StudentProcessedResult {
     gpa: number;
     finalGrade: string;
     isPass: boolean;
+    isAbsent?: boolean;
     failedSubjectsCount: number;
     meritPosition?: number;
     subjectResults: Map<string, StudentSubjectResult>;
@@ -184,6 +185,7 @@ export function processStudentResults(
 
         let totalMarks = 0;
         let totalPossibleMarks = 0;
+        let hasAnyMarkEntered = false;
         const subjectResultsMap = new Map<string, StudentSubjectResult>();
 
         subjectsForStudent.forEach(subjectInfo => {
@@ -251,6 +253,10 @@ export function processStudentResults(
             const percentageForGrade = fullMarks > 0 ? (obtainedMarks / fullMarks) * 100 : 0;
             const { grade, point } = getGradePoint(percentageForGrade);
             
+            if (written !== undefined || mcq !== undefined || practical !== undefined) {
+                hasAnyMarkEntered = true;
+            }
+
             totalMarks += obtainedMarks;
             totalPossibleMarks += fullMarks;
             
@@ -297,7 +303,8 @@ export function processStudentResults(
             effectiveCompulsoryCount = 11;
         }
 
-        const isPass = failedInCompulsoryCount === 0;
+        const isAbsent = !hasAnyMarkEntered;
+        const isPass = !isAbsent && failedInCompulsoryCount === 0;
         let gpa = 0;
 
         if (isPass && effectiveCompulsoryCount > 0) {
@@ -314,7 +321,8 @@ export function processStudentResults(
             gpa: isPass ? parseFloat(gpa.toFixed(2)) : 0.0,
             finalGrade,
             isPass,
-            failedSubjectsCount: failedInCompulsoryCount,
+            isAbsent,
+            failedSubjectsCount: isAbsent ? compulsorySubjectsCount : failedInCompulsoryCount,
             subjectResults: subjectResultsMap,
         };
     }).sort((a, b) => {
@@ -324,6 +332,7 @@ export function processStudentResults(
             if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
             return a.student.roll - b.student.roll;
         }
+        if (a.isAbsent !== b.isAbsent) return a.isAbsent ? 1 : -1;
         if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
         return b.totalMarks - a.totalMarks;
     }).map((res, idx, self) => {

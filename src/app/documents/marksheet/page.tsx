@@ -186,10 +186,10 @@ const MarksheetTemplate = ({ result, schoolInfo, examName, academicYear, waterma
                 </section>
 
                 <div className="grid grid-cols-4 border-2 border-black divide-x-2 divide-black text-center text-[11px] bg-blue-900 text-white mb-4 rounded-sm">
-                    <div className="py-1.5 font-bold">Status: <span className={result.isPass ? "text-green-400" : "text-red-400"}>{result.isPass ? 'PASSED' : 'FAILED'}</span></div>
+                    <div className="py-1.5 font-bold">Status: <span className={result.isPass ? "text-green-400" : (result.isAbsent ? "text-amber-400" : "text-red-400")}>{result.isPass ? 'PASSED' : (result.isAbsent ? 'ABSENT' : 'FAILED')}</span></div>
                     <div className="py-1.5 font-bold">GPA: <span className="text-amber-300">{result.gpa.toFixed(2)}</span></div>
                     <div className="py-1.5 font-bold">Final Grade: <span className="text-amber-300">{result.finalGrade}</span></div>
-                    <div className="py-1.5 font-bold">Merit Rank: <span>{result.isPass ? renderMeritPosition(result.meritPosition) : 'N/A'}</span></div>
+                    <div className="py-1.5 font-bold">Merit Rank: <span>{result.isPass ? renderMeritPosition(result.meritPosition) : (result.isAbsent ? 'অনুপস্থিত' : 'N/A')}</span></div>
                 </div>
 
                 <div className="flex-grow">

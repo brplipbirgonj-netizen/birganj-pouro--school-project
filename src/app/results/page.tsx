@@ -864,7 +864,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
             row['মোট নম্বর'] = res.totalMarks; 
             row['জি.পি.এ'] = res.gpa.toFixed(2); 
             row['গ্রেড'] = res.isPass ? res.finalGrade : `F${res.failedSubjectsCount}`; 
-            row['মেধাস্থান'] = res.isPass ? (res.meritPosition || '-') : 'ফেল';
+            row['মেধাস্থান'] = res.isPass ? (res.meritPosition || '-') : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল');
             data.push(row);
         });
         const ws = XLSX.utils.json_to_sheet(data);
@@ -1242,7 +1242,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                             <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[280px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.totalMarks)}</td>
                                             <td className="text-center font-black border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[210px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.gpa.toFixed(2))}</td>
                                             <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-500 italic text-[11px]")}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : 'ফেল'}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && (res.isAbsent ? "text-slate-500 italic text-[11px]" : "text-rose-500 italic text-[11px]"))}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল')}</td>
                                             <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[70px] h-10 box-border">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
                                                     <Button variant="ghost" size="icon" className="h-6 v-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-4 w-4 text-primary" /></Button>
@@ -2785,7 +2785,7 @@ export default function ResultsPage() {
                                                     <td className="font-black bg-blue-50/20">{toBengaliNumber(res.totalMarks)}</td>
                                                     <td className="font-black bg-blue-50/20">{toBengaliNumber(res.gpa.toFixed(2))}</td>
                                                     <td className={cn("font-black bg-blue-50/20", !res.isPass && "text-rose-700")}>{res.isPass ? res.finalGrade : `F${toBengaliNumber(res.failedSubjectsCount)}`}</td>
-                                                    <td className="font-bold bg-blue-50/20">{res.isPass ? toBengaliNumber(res.meritPosition || '-') : 'ফেল'}</td>
+                                                    <td className={cn("font-bold bg-blue-50/20", !res.isPass && (res.isAbsent ? "text-slate-600 italic text-[10px]" : "text-rose-600"))}>{res.isPass ? toBengaliNumber(res.meritPosition || '-') : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল')}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
