@@ -1,7 +1,7 @@
 'use client';
 import type { Student } from './student-data';
 import { getSubjects, subjectNameNormalization } from './subjects';
-import type { ClassResult } from './results-data';
+import type { ClassResult, StudentResult } from './results-data';
 import type { Subject } from './subjects';
 
 export interface GradeInfo {
@@ -84,15 +84,14 @@ export function processStudentResults(
             const currentSubNameNormalized = normalize(subInfo.name);
             
             if (studentClassNum >= 9) {
-                const hmNormalized = normalize('উচ্চতর গণিত');
-                const agriNormalized = normalize('কৃষি শিক্ষা');
+                const hmNorm = normalize('উচ্চতর গণিত');
+                const agriNorm = normalize('কৃষি শিক্ষা');
                 
-                if (currentSubNameNormalized === hmNormalized || currentSubNameNormalized === agriNormalized) {
+                if (currentSubNameNormalized === hmNorm || currentSubNameNormalized === agriNorm) {
                     if (optionalSubjectNameNormalized) {
                         return currentSubNameNormalized === optionalSubjectNameNormalized;
                     }
                     
-                    // If no optional subject is set, only show if marks exist for this specific student
                     const studentHasMarks = resultsBySubject.some(r => {
                         const nameMatch = normalize(r.subject) === currentSubNameNormalized;
                         if (!nameMatch) return false;
@@ -113,7 +112,7 @@ export function processStudentResults(
         subjectsForStudent.forEach(subjectInfo => {
             const normalizedSubjectName = normalize(subjectInfo.name);
             
-            // CRITICAL FIX: Find the specific record that contains this student's result
+            // Prioritize specific group match over 'none' or incorrect group matches
             const classResult = resultsBySubject.find(r => {
                 const nameMatch = normalize(r.subject) === normalizedSubjectName;
                 if (!nameMatch) return false;
@@ -121,16 +120,29 @@ export function processStudentResults(
                 const classMatch = String(r.className) === String(student.className);
                 if (!classMatch) return false;
 
-                // Priority: Specific group match or 'none' group match
                 const rGroupRaw = (r.group || 'none').toLowerCase().trim();
                 const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
                 
-                const groupMatch = rGroupNorm === 'none' || rGroupNorm === studentGroupNormalized;
-                if (!groupMatch) return false;
+                // Primary check: Group match AND student must exist in this record's results
+                return rGroupNorm === studentGroupNormalized && r.results.some(res => res.studentId === student.id);
+            }) || resultsBySubject.find(r => {
+                const nameMatch = normalize(r.subject) === normalizedSubjectName;
+                if (!nameMatch) return false;
 
-                // Final confirmation: This record must contain the student's ID
-                return r.results.some(res => res.studentId === student.id);
-            }) || resultsBySubject.find(r => normalize(r.subject) === normalizedSubjectName && String(r.className) === String(student.className));
+                const classMatch = String(r.className) === String(student.className);
+                if (!classMatch) return false;
+
+                const rGroupRaw = (r.group || 'none').toLowerCase().trim();
+                const rGroupNorm = groupMap[rGroupRaw] || rGroupRaw;
+                
+                // Fallback 1: Match compulsory subjects (none group) that contain the student
+                return rGroupNorm === 'none' && r.results.some(res => res.studentId === student.id);
+            }) || resultsBySubject.find(r => {
+                // Fallback 2: Any record for the same subject/class containing the student
+                return normalize(r.subject) === normalizedSubjectName && 
+                       String(r.className) === String(student.className) && 
+                       r.results.some(res => res.studentId === student.id);
+            });
 
             const studentResult = classResult?.results.find(r => r.studentId === student.id);
             const fullMarks = classResult?.fullMarks || subjectInfo.fullMarks;
