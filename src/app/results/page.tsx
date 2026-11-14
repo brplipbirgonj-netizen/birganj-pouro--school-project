@@ -1981,6 +1981,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
         return meritResults
             .filter(r => !r.isPass && !r.isAbsent && consideredFails.includes(r.failedSubjectsCount))
             .sort((a, b) => {
+                if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
                 if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
                 return a.student.roll - b.student.roll;
             });
@@ -2058,8 +2059,8 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                             <Sparkles className="h-4 w-4 text-amber-600" />
                             বিশেষ বিবেচনায় পাশ নির্বাচন:
                         </span>
-                        <div className="flex items-center gap-2">
-                            {[1, 2, 3].map(failCount => (
+                        <div className="flex flex-wrap items-center gap-2">
+                            {[1, 2, 3, 4, 5, 6].map(failCount => (
                                 <label 
                                     key={failCount} 
                                     className={cn(

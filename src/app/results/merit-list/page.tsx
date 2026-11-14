@@ -132,6 +132,7 @@ function MeritListPrintContent() {
         return results
             .filter(r => !r.isPass && !r.isAbsent && consideredFails.includes(r.failedSubjectsCount))
             .sort((a, b) => {
+                if (a.failedSubjectsCount !== b.failedSubjectsCount) return a.failedSubjectsCount - b.failedSubjectsCount;
                 if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
                 return a.student.roll - b.student.roll;
             });
@@ -272,12 +273,12 @@ function MeritListPrintContent() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                <div className="flex flex-wrap items-center gap-2.5 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
                     <span className="text-xs font-black text-amber-900 flex items-center gap-1">
                         <Sparkles className="h-3.5 w-3.5 text-amber-600" />
                         বিশেষ বিবেচনা:
                     </span>
-                    {[1, 2, 3].map(failCount => (
+                    {[1, 2, 3, 4, 5, 6].map(failCount => (
                         <label key={failCount} className="flex items-center gap-1.5 cursor-pointer text-xs font-black text-slate-700">
                             <Checkbox 
                                 checked={consideredFails.includes(failCount)}
