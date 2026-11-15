@@ -448,7 +448,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                             placeholder={isStudentAbsent ? "অনুপস্থিত" : undefined}
                                                             onChange={(e) => handleMarkChange(student.id, 'written', e.target.value)} 
                                                             onKeyDown={handleKeyDown} 
-                                                            className={cn(numberInputClass, (writtenOver || (sMarks?.written !== undefined && partFails.writtenFail)) && "bg-red-100 border-red-500 text-red-700 font-bold", isStudentAbsent && "border-amber-400 bg-amber-50/60")}
+                                                            className={cn(numberInputClass, (writtenOver || (sMarks?.written !== undefined && (partFails.writtenFail || isAnyFail))) && "bg-red-100 border-red-500 text-red-700 font-bold", isStudentAbsent && "border-amber-400 bg-amber-50/60")}
                                                         />
                                                     </TableCell>
                                                 )}
@@ -476,7 +476,7 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                                                         />
                                                     </TableCell>
                                                 )}
-                                                <TableCell className="text-center font-black text-blue-900 bg-slate-50/50 border-r">
+                                                <TableCell className={cn("text-center font-black border-r", isAnyMarkEntered && isAnyFail ? "text-red-600 bg-red-50/60" : "text-blue-900 bg-slate-50/50")}>
                                                     {toBengaliNumber(total)}
                                                 </TableCell>
                                                 <TableCell className="text-center">

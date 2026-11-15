@@ -83,7 +83,7 @@ export function checkPartFails(params: {
     const { subjectName, fullMarks, written, mcq, practical } = params;
     const normalizedSubjectName = normalize(subjectName);
     
-    const isEnglish = normalizedSubjectName === normalize('ইংরেজি প্রথম') || normalizedSubjectName === normalize('ইংরেজি দ্বিতীয়');
+    const isEnglish = normalizedSubjectName.includes('ইংরেজি') || normalizedSubjectName.includes('english');
     const isIct = normalizedSubjectName.includes('তথ্য ও যোগাযোগ') || normalizedSubjectName.includes('আইসিটি') || normalizedSubjectName === 'ict';
 
     let writtenFail = false;
@@ -94,48 +94,51 @@ export function checkPartFails(params: {
     const overallPassMark = Math.ceil(fullMarks * 0.33);
     const isOverallFail = obtainedMarks < overallPassMark;
 
-    if (!isEnglish) {
-        if (isIct) {
-            // ১. ICT (আইসিটি) পাশের লজিক: আইসিটির জন্য বিশেষ পাশের নিয়ম (নৈবেত্তিকে অন্তত ৮ এবং ব্যবহারিকে অন্তত ৮)
+    if (isEnglish) {
+        // English is 100% written, so if written mark is less than 33% of full marks, it is a written fail
+        if (written !== undefined && written < overallPassMark) {
+            writtenFail = true;
+        }
+    } else if (isIct) {
+        // ১. ICT (আইসিটি) পাশের লজিক: আইসিটির জন্য বিশেষ পাশের নিয়ম (নৈবেত্তিকে অন্তত ৮ এবং ব্যবহারিকে অন্তত ৮)
+        if (mcq !== undefined && mcq < 8) mcqFail = true;
+        if (practical !== undefined && practical < 8) practicalFail = true;
+        if (params.writtenLimit && params.writtenLimit > 0 && written !== undefined && written < Math.ceil(params.writtenLimit * 0.33)) {
+            writtenFail = true;
+        }
+    } else if (fullMarks === 100) {
+        const hasPrac = (params.practicalLimit !== undefined && params.practicalLimit > 0) || params.hasPractical;
+        if (hasPrac) {
+            if (written !== undefined && written < 17) writtenFail = true;
             if (mcq !== undefined && mcq < 8) mcqFail = true;
             if (practical !== undefined && practical < 8) practicalFail = true;
-            if (params.writtenLimit && params.writtenLimit > 0 && written !== undefined && written < Math.ceil(params.writtenLimit * 0.33)) {
-                writtenFail = true;
-            }
-        } else if (fullMarks === 100) {
-            const hasPrac = (params.practicalLimit !== undefined && params.practicalLimit > 0) || params.hasPractical;
-            if (hasPrac) {
-                if (written !== undefined && written < 17) writtenFail = true;
-                if (mcq !== undefined && mcq < 8) mcqFail = true;
-                if (practical !== undefined && practical < 8) practicalFail = true;
-            } else {
-                if (written !== undefined && written < 23) writtenFail = true;
-                if (mcq !== undefined && mcq < 10) mcqFail = true;
-            }
-        } else if (fullMarks === 50) {
-            const hasPrac = (params.practicalLimit !== undefined && params.practicalLimit > 0) || params.hasPractical;
-            if (hasPrac) {
-                if (written !== undefined && written < 8) writtenFail = true;
-                if (mcq !== undefined && mcq < 8) mcqFail = true;
-                if (practical !== undefined && practical < 8) practicalFail = true;
-            } else {
-                if (written !== undefined && written < 12) writtenFail = true;
-                if (mcq !== undefined && mcq < 5) mcqFail = true;
-            }
-        } else if (fullMarks === 25) {
-            if (mcq !== undefined && mcq < 8) mcqFail = true;
-            if (practical !== undefined && practical < 8) practicalFail = true;
-            if (written !== undefined && written < 8) writtenFail = true;
         } else {
-            if (params.writtenLimit && params.writtenLimit > 0 && written !== undefined && written < Math.ceil(params.writtenLimit * 0.33)) {
-                writtenFail = true;
-            }
-            if (params.mcqLimit && params.mcqLimit > 0 && mcq !== undefined && mcq < Math.ceil(params.mcqLimit * 0.33)) {
-                mcqFail = true;
-            }
-            if (params.practicalLimit && params.practicalLimit > 0 && practical !== undefined && practical < Math.ceil(params.practicalLimit * 0.33)) {
-                practicalFail = true;
-            }
+            if (written !== undefined && written < 23) writtenFail = true;
+            if (mcq !== undefined && mcq < 10) mcqFail = true;
+        }
+    } else if (fullMarks === 50) {
+        const hasPrac = (params.practicalLimit !== undefined && params.practicalLimit > 0) || params.hasPractical;
+        if (hasPrac) {
+            if (written !== undefined && written < 8) writtenFail = true;
+            if (mcq !== undefined && mcq < 8) mcqFail = true;
+            if (practical !== undefined && practical < 8) practicalFail = true;
+        } else {
+            if (written !== undefined && written < 12) writtenFail = true;
+            if (mcq !== undefined && mcq < 5) mcqFail = true;
+        }
+    } else if (fullMarks === 25) {
+        if (mcq !== undefined && mcq < 8) mcqFail = true;
+        if (practical !== undefined && practical < 8) practicalFail = true;
+        if (written !== undefined && written < 8) writtenFail = true;
+    } else {
+        if (params.writtenLimit && params.writtenLimit > 0 && written !== undefined && written < Math.ceil(params.writtenLimit * 0.33)) {
+            writtenFail = true;
+        }
+        if (params.mcqLimit && params.mcqLimit > 0 && mcq !== undefined && mcq < Math.ceil(params.mcqLimit * 0.33)) {
+            mcqFail = true;
+        }
+        if (params.practicalLimit && params.practicalLimit > 0 && practical !== undefined && practical < Math.ceil(params.practicalLimit * 0.33)) {
+            practicalFail = true;
         }
     }
 
