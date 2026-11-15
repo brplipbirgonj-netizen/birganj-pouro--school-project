@@ -41,6 +41,18 @@ const getExamSlug = (name: string) => {
     return (name || '').trim().replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
 };
 
+export interface ColumnSetting {
+    className: string; // '6' | '7' | '8' | '9' | '10' | 'auto'
+    gender: 'male' | 'female' | 'any';
+}
+
+const getDefaultSideColumns = (spb: number, defaultGender: 'male' | 'female' = 'male'): ColumnSetting[] => {
+    return Array.from({ length: spb }).map(() => ({
+        className: 'auto',
+        gender: defaultGender
+    }));
+};
+
 const getDefaultSeatGenders = (spb: number): ('male' | 'female' | 'any')[] => {
     if (spb === 2) return ['male', 'female'];
     if (spb === 3) return ['male', 'female', 'male'];
@@ -48,15 +60,34 @@ const getDefaultSeatGenders = (spb: number): ('male' | 'female' | 'any')[] => {
     return Array(spb).fill('any');
 };
 
+function sanitizeForFirestore(val: any): any {
+    if (val === undefined) return null;
+    if (val === null || typeof val !== 'object') return val;
+    if (Array.isArray(val)) return val.map(sanitizeForFirestore);
+    const cleaned: Record<string, any> = {};
+    for (const key of Object.keys(val)) {
+        const item = val[key];
+        if (item !== undefined) {
+            cleaned[key] = sanitizeForFirestore(item);
+        } else {
+            cleaned[key] = null;
+        }
+    }
+    return cleaned;
+}
+
 export interface RoomSetup {
     id: string;
     roomName: string;
     benchCount: number;       // total = leftBenchCount + rightBenchCount
-    leftBenchCount: number;   // new
-    rightBenchCount: number;  // new
+    leftBenchCount: number;   // বামের বেঞ্চ
+    rightBenchCount: number;  // ডানের বেঞ্চ
     seatsPerBench: number;
+    // Word Diagram layout: column configurations for right and left sides
+    rightSideColumns?: ColumnSetting[];
+    leftSideColumns?: ColumnSetting[];
     genderSide?: 'boys_left' | 'girls_left' | 'mixed'; // legacy
-    benchSeatGenders?: ('male' | 'female' | 'any')[];  // seat-by-seat gender selection
+    benchSeatGenders?: ('male' | 'female' | 'any')[];  // legacy
 }
 
 export interface SeatStudent {
@@ -69,7 +100,7 @@ export interface SeatStudent {
 
 export interface SeatSlot {
     seatNo: number;
-    student?: SeatStudent;
+    student?: SeatStudent | null;
 }
 
 export interface BenchSlot {
@@ -110,9 +141,39 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
 
     // Room Configurations
     const [rooms, setRooms] = useState<RoomSetup[]>([
-        { id: 'r-1', roomName: 'কক্ষ নং ১০১', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, benchSeatGenders: ['male', 'female'] },
-        { id: 'r-2', roomName: 'কক্ষ নং ১০২', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, benchSeatGenders: ['male', 'female'] },
-        { id: 'r-3', roomName: 'কক্ষ নং ১০৩', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, benchSeatGenders: ['male', 'female'] },
+        { 
+            id: 'r-1', 
+            roomName: 'কক্ষ নং ১০১', 
+            benchCount: 20, 
+            leftBenchCount: 10, 
+            rightBenchCount: 10, 
+            seatsPerBench: 2, 
+            rightSideColumns: getDefaultSideColumns(2, 'male'),
+            leftSideColumns: getDefaultSideColumns(2, 'female'),
+            benchSeatGenders: ['male', 'female'] 
+        },
+        { 
+            id: 'r-2', 
+            roomName: 'কক্ষ নং ১০২', 
+            benchCount: 20, 
+            leftBenchCount: 10, 
+            rightBenchCount: 10, 
+            seatsPerBench: 2, 
+            rightSideColumns: getDefaultSideColumns(2, 'male'),
+            leftSideColumns: getDefaultSideColumns(2, 'female'),
+            benchSeatGenders: ['male', 'female'] 
+        },
+        { 
+            id: 'r-3', 
+            roomName: 'কক্ষ নং ১০৩', 
+            benchCount: 20, 
+            leftBenchCount: 10, 
+            rightBenchCount: 10, 
+            seatsPerBench: 2, 
+            rightSideColumns: getDefaultSideColumns(2, 'male'),
+            leftSideColumns: getDefaultSideColumns(2, 'female'),
+            benchSeatGenders: ['male', 'female'] 
+        },
     ]);
 
     // Seating Pattern
@@ -275,6 +336,13 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                 genders = getDefaultSeatGenders(spb);
                             }
                         }
+                        const rightCols = Array.isArray(r.rightSideColumns) && r.rightSideColumns.length === spb
+                            ? r.rightSideColumns
+                            : getDefaultSideColumns(spb, 'male');
+                        const leftCols = Array.isArray(r.leftSideColumns) && r.leftSideColumns.length === spb
+                            ? r.leftSideColumns
+                            : getDefaultSideColumns(spb, 'female');
+
                         return {
                             id: r.id,
                             roomName: r.roomName,
@@ -282,6 +350,8 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                             leftBenchCount: r.leftBenchCount ?? Math.floor((r.benchCount || 20) / 2),
                             rightBenchCount: r.rightBenchCount ?? Math.ceil((r.benchCount || 20) / 2),
                             seatsPerBench: spb,
+                            rightSideColumns: rightCols,
+                            leftSideColumns: leftCols,
                             genderSide: r.genderSide || 'mixed',
                             benchSeatGenders: genders,
                         };
@@ -365,6 +435,8 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 leftBenchCount: 10, 
                 rightBenchCount: 10, 
                 seatsPerBench: 2, 
+                rightSideColumns: getDefaultSideColumns(2, 'male'),
+                leftSideColumns: getDefaultSideColumns(2, 'female'),
                 benchSeatGenders: ['male', 'female'] 
             }
         ]);
@@ -391,6 +463,23 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
             } else if (field === 'seatsPerBench') {
                 const spb = parseInt(String(val)) || 2;
                 updated.seatsPerBench = spb;
+                
+                // Adjust rightSideColumns length
+                const curRight = r.rightSideColumns || getDefaultSideColumns(r.seatsPerBench, 'male');
+                const nextRight: ColumnSetting[] = [];
+                for (let i = 0; i < spb; i++) {
+                    nextRight.push(curRight[i] || { className: 'auto', gender: 'male' });
+                }
+                updated.rightSideColumns = nextRight;
+
+                // Adjust leftSideColumns length
+                const curLeft = r.leftSideColumns || getDefaultSideColumns(r.seatsPerBench, 'female');
+                const nextLeft: ColumnSetting[] = [];
+                for (let i = 0; i < spb; i++) {
+                    nextLeft.push(curLeft[i] || { className: 'auto', gender: 'female' });
+                }
+                updated.leftSideColumns = nextLeft;
+
                 const prevGenders = r.benchSeatGenders || getDefaultSeatGenders(r.seatsPerBench);
                 const nextGenders: ('male' | 'female' | 'any')[] = [];
                 for (let i = 0; i < spb; i++) {
@@ -403,6 +492,29 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 updated.benchSeatGenders = nextGenders;
             }
             return updated;
+        }));
+    };
+
+    const updateSideColumn = (
+        roomId: string, 
+        side: 'right' | 'left', 
+        colIdx: number, 
+        field: 'className' | 'gender', 
+        value: string
+    ) => {
+        setRooms(prev => prev.map(r => {
+            if (r.id !== roomId) return r;
+            const key = side === 'right' ? 'rightSideColumns' : 'leftSideColumns';
+            const defaultGender = side === 'right' ? 'male' : 'female';
+            const current = [...(r[key] || getDefaultSideColumns(r.seatsPerBench, defaultGender))];
+            current[colIdx] = {
+                ...current[colIdx],
+                [field]: value
+            };
+            return {
+                ...r,
+                [key]: current
+            };
         }));
     };
 
@@ -542,69 +654,83 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
             for (const rSetup of rooms) {
                 const roomBenches: BenchSlot[] = [];
                 const roomStudents: SeatStudent[] = [];
+                const spb = rSetup.seatsPerBench;
 
-                for (let b = 1; b <= rSetup.benchCount; b++) {
+                const rightCols = rSetup.rightSideColumns || getDefaultSideColumns(spb, 'male');
+                const leftCols = rSetup.leftSideColumns || getDefaultSideColumns(spb, 'female');
+
+                let benchNumberCounter = 1;
+
+                // 1. ডানের বেঞ্চসমূহ (Right side benches)
+                for (let b = 1; b <= rSetup.rightBenchCount; b++) {
                     const benchSeats: SeatSlot[] = [];
-                    const spb = rSetup.seatsPerBench;
-
-                    let classA = selectedClasses[0];
-                    let classB = selectedClasses[1] || selectedClasses[0];
-
-                    if (classPattern === 'cross_class' && pairedClasses.length > 0) {
-                        const pair = pairedClasses[currentPairIdx % pairedClasses.length];
-                        classA = pair[0];
-                        classB = pair[1] || pair[0];
-                    }
-
-                    const roomSeatGenders = rSetup.benchSeatGenders || getDefaultSeatGenders(spb);
-
                     for (let sPos = 0; sPos < spb; sPos++) {
-                        let targetClass = (sPos % 2 === 0) ? classA : classB;
-                        const seatGenderSetting = roomSeatGenders[sPos];
+                        const colConfig = rightCols[sPos] || { className: 'auto', gender: 'male' };
+                        let st: SeatStudent | undefined = undefined;
 
-                        let preferredGender: 'male' | 'female' | undefined;
-                        if (seatGenderSetting === 'male' || seatGenderSetting === 'female') {
-                            preferredGender = seatGenderSetting;
+                        if (colConfig.className !== 'auto') {
+                            st = pullStudent(colConfig.className, colConfig.gender === 'any' ? undefined : colConfig.gender);
                         } else {
-                            // Fallback to global gender pattern if 'any'
-                            if (genderPattern === 'opposite_sides') {
-                                preferredGender = (sPos === 0) ? 'male' : 'female';
-                            } else if (genderPattern === 'sandwich_boy_middle') {
-                                preferredGender = (sPos === 1) ? 'male' : 'female';
-                            } else if (genderPattern === 'sandwich_girl_middle') {
-                                preferredGender = (sPos === 1) ? 'female' : 'male';
+                            st = pullAnyRemaining(colConfig.gender === 'any' ? undefined : colConfig.gender);
+                        }
+
+                        // Fallback without gender restriction if still not found
+                        if (!st) {
+                            if (colConfig.className !== 'auto') {
+                                st = pullStudent(colConfig.className, undefined);
+                            }
+                            if (!st) {
+                                st = pullAnyRemaining(undefined);
                             }
                         }
 
-                        let st = pullStudent(targetClass, preferredGender);
-                        if (!st) {
-                            const altClass = (targetClass === classA) ? classB : classA;
-                            st = pullStudent(altClass, preferredGender);
-                        }
-                        if (!st) {
-                            st = pullAnyRemaining(preferredGender);
-                        }
-                        // Fallback without gender restriction if preferred gender has no more students
-                        if (!st && preferredGender) {
-                            st = pullStudent(targetClass, undefined) || pullStudent((targetClass === classA ? classB : classA), undefined) || pullAnyRemaining(undefined);
-                        }
-
-                        if (st) {
-                            benchSeats.push({ seatNo: sPos + 1, student: st });
-                            roomStudents.push(st);
-                        } else {
-                            benchSeats.push({ seatNo: sPos + 1, student: undefined });
-                        }
+                        benchSeats.push({
+                            seatNo: sPos + 1,
+                            student: st || null
+                        });
+                        if (st) roomStudents.push(st);
                     }
 
                     roomBenches.push({
-                        benchNumber: b,
+                        benchNumber: benchNumberCounter++,
                         seats: benchSeats
                     });
+                }
 
-                    if (b % 2 === 0) {
-                        currentPairIdx++;
+                // 2. বামের বেঞ্চসমূহ (Left side benches)
+                for (let b = 1; b <= rSetup.leftBenchCount; b++) {
+                    const benchSeats: SeatSlot[] = [];
+                    for (let sPos = 0; sPos < spb; sPos++) {
+                        const colConfig = leftCols[sPos] || { className: 'auto', gender: 'female' };
+                        let st: SeatStudent | undefined = undefined;
+
+                        if (colConfig.className !== 'auto') {
+                            st = pullStudent(colConfig.className, colConfig.gender === 'any' ? undefined : colConfig.gender);
+                        } else {
+                            st = pullAnyRemaining(colConfig.gender === 'any' ? undefined : colConfig.gender);
+                        }
+
+                        // Fallback without gender restriction if still not found
+                        if (!st) {
+                            if (colConfig.className !== 'auto') {
+                                st = pullStudent(colConfig.className, undefined);
+                            }
+                            if (!st) {
+                                st = pullAnyRemaining(undefined);
+                            }
+                        }
+
+                        benchSeats.push({
+                            seatNo: sPos + 1,
+                            student: st || null
+                        });
+                        if (st) roomStudents.push(st);
                     }
+
+                    roomBenches.push({
+                        benchNumber: benchNumberCounter++,
+                        seats: benchSeats
+                    });
                 }
 
                 const classMap: Record<string, number[]> = {};
@@ -659,7 +785,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
             const examSlug = getExamSlug(cleanExam);
             const docRef = doc(db, 'classRoutines', `seatPlan_${academicYear}_${examSlug}`);
 
-            await setDoc(docRef, {
+            const payload = sanitizeForFirestore({
                 academicYear,
                 examName: cleanExam,
                 roomsSetup: rooms,
@@ -670,7 +796,9 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 absentStudentIds: Array.from(absentStudentIds),
                 rooms: generatedRooms,
                 updatedAt: serverTimestamp()
-            }, { merge: true });
+            });
+
+            await setDoc(docRef, payload, { merge: true });
 
             toast({ title: `'${cleanExam}' এর সিট প্ল্যান সার্ভারে সংরক্ষণ করা হয়েছে।` });
         } catch (e: any) {
@@ -916,178 +1044,310 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {rooms.map((room) => (
-                                <div key={room.id} className="p-4 bg-slate-50/70 border-2 border-slate-200 rounded-2xl space-y-3 relative group hover:border-violet-300 transition-colors">
-                                    {/* Room Name & Delete */}
-                                    <div className="flex items-center justify-between gap-2">
-                                        <Input
-                                            value={room.roomName}
-                                            onChange={e => updateRoom(room.id, 'roomName', e.target.value)}
-                                            className="font-black text-sm h-9 bg-white border border-slate-300 flex-1"
-                                            placeholder="কক্ষের নাম"
-                                        />
-                                        {rooms.length > 1 && (
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg shrink-0"
-                                                onClick={() => handleRemoveRoom(room.id)}
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
-                                        )}
-                                    </div>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            {rooms.map((room) => {
+                                const rightCols = room.rightSideColumns || getDefaultSideColumns(room.seatsPerBench, 'male');
+                                const leftCols = room.leftSideColumns || getDefaultSideColumns(room.seatsPerBench, 'female');
 
-                                    {/* Left / Right bench count + seats per bench */}
-                                    <div className="grid grid-cols-3 gap-2 text-xs">
-                                        <div className="space-y-1">
-                                            <Label className="text-[10px] font-bold text-blue-700 flex items-center gap-0.5">
-                                                ◀ বামের বেঞ্চ
-                                            </Label>
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={room.leftBenchCount}
-                                                onChange={e => updateRoom(room.id, 'leftBenchCount', Math.max(0, parseInt(e.target.value) || 0))}
-                                                className="h-8 font-black text-center bg-white border-blue-200"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-[10px] font-bold text-rose-700 flex items-center gap-0.5">
-                                                ডানের বেঞ্চ ▶
-                                            </Label>
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={room.rightBenchCount}
-                                                onChange={e => updateRoom(room.id, 'rightBenchCount', Math.max(0, parseInt(e.target.value) || 0))}
-                                                className="h-8 font-black text-center bg-white border-rose-200"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-[10px] font-bold text-slate-600">বেঞ্চে আসন</Label>
-                                            <Select 
-                                                value={String(room.seatsPerBench)} 
-                                                onValueChange={v => updateRoom(room.id, 'seatsPerBench', parseInt(v))}
-                                            >
-                                                <SelectTrigger className="h-8 bg-white font-bold text-xs"><SelectValue /></SelectTrigger>
-                                                <SelectContent className="font-kalpurush">
-                                                    <SelectItem value="2" className="font-bold">২ জন</SelectItem>
-                                                    <SelectItem value="3" className="font-bold">৩ জন</SelectItem>
-                                                    <SelectItem value="4" className="font-bold">৪ জন</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
+                                return (
+                                    <div key={room.id} className="p-4 bg-slate-50/70 border-2 border-slate-300 rounded-3xl space-y-3 relative group hover:border-violet-400 transition-colors shadow-sm">
+                                        {/* Room Name, Bench Seats & Delete */}
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200">
+                                            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                                                <div className="w-3 h-3 rounded-full bg-violet-600 shrink-0"></div>
+                                                <Input
+                                                    value={room.roomName}
+                                                    onChange={e => updateRoom(room.id, 'roomName', e.target.value)}
+                                                    className="font-black text-base h-9 bg-white border border-slate-300 flex-1"
+                                                    placeholder="কক্ষের নাম"
+                                                />
+                                            </div>
 
-                                    {/* Total benches display */}
-                                    <div className="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-white/70 px-2 py-1 rounded-lg border border-slate-200">
-                                        <span>মোট বেঞ্চ: <span className="text-violet-700 font-black">{toBengaliNumber(room.benchCount)} টি</span></span>
-                                        <span>মোট আসন: <span className="text-violet-700 font-black">{toBengaliNumber(room.benchCount * room.seatsPerBench)} টি</span></span>
-                                    </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1.5 text-xs font-bold bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+                                                    <span className="text-slate-600">বেঞ্চে আসন:</span>
+                                                    <Select 
+                                                        value={String(room.seatsPerBench)} 
+                                                        onValueChange={v => updateRoom(room.id, 'seatsPerBench', parseInt(v))}
+                                                    >
+                                                        <SelectTrigger className="h-7 w-20 bg-violet-50 font-black text-violet-800 text-xs border-violet-200"><SelectValue /></SelectTrigger>
+                                                        <SelectContent className="font-kalpurush">
+                                                            <SelectItem value="2" className="font-bold">২ জন</SelectItem>
+                                                            <SelectItem value="3" className="font-bold">৩ জন</SelectItem>
+                                                            <SelectItem value="4" className="font-bold">৪ জন</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
 
-                                    {/* Per-Seat Gender Selector */}
-                                    <div className="pt-2 border-t border-slate-200">
-                                        <div className="flex items-center justify-between mb-1.5">
-                                            <Label className="text-[10px] font-black text-slate-700 flex items-center gap-1">
-                                                <Users className="h-3.5 w-3.5 text-violet-600" /> বেঞ্চের আসন অনুযায়ী জেন্ডার নির্বাচন
-                                            </Label>
-                                            <span className="text-[9px] font-black text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-200">
-                                                {toBengaliNumber(room.seatsPerBench)} জনের বেঞ্চ
-                                            </span>
+                                                <div className="text-[11px] font-black bg-violet-100 text-violet-900 px-3 py-1 rounded-xl border border-violet-200 shadow-2xs">
+                                                    মোট: {toBengaliNumber(room.benchCount)} বেঞ্চ ({toBengaliNumber(room.benchCount * room.seatsPerBench)} আসন)
+                                                </div>
+
+                                                {rooms.length > 1 && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl shrink-0"
+                                                        onClick={() => handleRemoveRoom(room.id)}
+                                                        title="কক্ষ মুছুন"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-1.5 bg-slate-50/80 p-2 rounded-xl border border-slate-200">
-                                            {Array.from({ length: room.seatsPerBench }).map((_, seatIdx) => {
-                                                const seatGenders = room.benchSeatGenders || getDefaultSeatGenders(room.seatsPerBench);
-                                                const currentGender = seatGenders[seatIdx] || (seatIdx % 2 === 0 ? 'male' : 'female');
-
-                                                let seatLabel = `আসন ${toBengaliNumber(seatIdx + 1)}`;
-                                                if (room.seatsPerBench === 2) {
-                                                    seatLabel = seatIdx === 0 ? 'বামের আসন' : 'ডানের আসন';
-                                                } else if (room.seatsPerBench === 3) {
-                                                    seatLabel = seatIdx === 0 ? 'বামের আসন' : seatIdx === 1 ? 'মাঝের আসন' : 'ডানের আসন';
-                                                } else if (room.seatsPerBench === 4) {
-                                                    seatLabel = seatIdx === 0 ? 'বামের আসন (১)' : seatIdx === 1 ? 'মাঝ-বাম (২)' : seatIdx === 2 ? 'মাঝ-ডান (৩)' : 'ডানের আসন (৪)';
-                                                }
-
-                                                return (
-                                                    <div key={seatIdx} className="flex items-center justify-between bg-white px-2 py-1.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
-                                                        <span className="font-black text-slate-700 text-[11px] flex items-center gap-1">
-                                                            <span className={cn(
-                                                                "w-2 h-2 rounded-full",
-                                                                currentGender === 'male' ? "bg-blue-500" : currentGender === 'female' ? "bg-rose-500" : "bg-slate-400"
-                                                            )}></span>
-                                                            {seatLabel}:
-                                                        </span>
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => updateSeatGender(room.id, seatIdx, 'male')}
-                                                                className={cn(
-                                                                    "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black transition-all border",
-                                                                    currentGender === 'male'
-                                                                        ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                                                                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700"
-                                                                )}
-                                                            >
-                                                                {currentGender === 'male' && <Check className="h-3 w-3" />}
-                                                                👦 ছাত্র
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => updateSeatGender(room.id, seatIdx, 'female')}
-                                                                className={cn(
-                                                                    "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black transition-all border",
-                                                                    currentGender === 'female'
-                                                                        ? "bg-rose-600 text-white border-rose-600 shadow-xs"
-                                                                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-rose-50 hover:text-rose-700"
-                                                                )}
-                                                            >
-                                                                {currentGender === 'female' && <Check className="h-3 w-3" />}
-                                                                👧 ছাত্রী
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => updateSeatGender(room.id, seatIdx, 'any')}
-                                                                className={cn(
-                                                                    "flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold transition-all border",
-                                                                    currentGender === 'any'
-                                                                        ? "bg-slate-700 text-white border-slate-700 shadow-xs"
-                                                                        : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
-                                                                )}
-                                                            >
-                                                                {currentGender === 'any' && <Check className="h-2.5 w-2.5" />}
-                                                                উভয়
-                                                            </button>
-                                                        </div>
+                                        {/* Side-by-side Layout: ডান সাইড এবং বাম সাইড (Word Diagram Style) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                                            {/* ডান সাইড (Right Side) */}
+                                            <div className="bg-white p-3 rounded-2xl border-2 border-blue-200/80 shadow-2xs space-y-2.5">
+                                                <div className="flex items-center justify-between border-b border-blue-100 pb-1.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                                                        <span className="font-black text-xs text-blue-950">ডান সাইড</span>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    <div className="flex items-center gap-1 text-[11px] font-bold">
+                                                        <span className="text-slate-500">বেঞ্চ:</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            value={room.rightBenchCount}
+                                                            onChange={e => updateRoom(room.id, 'rightBenchCount', Math.max(0, parseInt(e.target.value) || 0))}
+                                                            className="w-12 h-6 text-center font-black bg-blue-50/80 border border-blue-300 rounded text-xs"
+                                                        />
+                                                        <span className="text-blue-700 font-bold">({toBengaliNumber(room.rightBenchCount * room.seatsPerBench)} আসন)</span>
+                                                    </div>
+                                                </div>
 
-                                        {/* Visual bench layout indicator */}
-                                        <div className="mt-1.5 text-[10px] font-black text-slate-600 bg-violet-50/70 rounded-md px-2 py-1 flex items-center justify-between border border-violet-100">
-                                            <span className="text-slate-500 text-[9px]">বেঞ্চ বিন্যাস:</span>
-                                            <div className="flex items-center gap-1">
-                                                {(room.benchSeatGenders || getDefaultSeatGenders(room.seatsPerBench)).slice(0, room.seatsPerBench).map((g, idx) => (
-                                                    <span key={idx} className={cn(
-                                                        "px-1.5 py-0.5 rounded text-[9px] font-black border flex items-center gap-0.5",
-                                                        g === 'male' ? "bg-blue-100 text-blue-800 border-blue-200" :
-                                                        g === 'female' ? "bg-rose-100 text-rose-800 border-rose-200" :
-                                                        "bg-slate-100 text-slate-700 border-slate-200"
-                                                    )}>
-                                                        {idx === 0 ? 'বাম' : (room.seatsPerBench === 3 && idx === 1) ? 'মাঝ' : (idx === room.seatsPerBench - 1) ? 'ডান' : `#${idx+1}`}: {g === 'male' ? '👦 ছাত্র' : g === 'female' ? '👧 ছাত্রী' : 'উভয়'}
-                                                    </span>
-                                                ))}
+                                                {/* Column Settings (Class Dropdown & Gender) */}
+                                                <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${room.seatsPerBench}, minmax(0, 1fr))` }}>
+                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
+                                                        const col = rightCols[cIdx] || { className: 'auto', gender: 'male' };
+                                                        const colTitle = cIdx === 0 ? 'কলাম ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'কলাম ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? `কলাম ${toBengaliNumber(cIdx + 1)} (ডান)` : `কলাম ${toBengaliNumber(cIdx + 1)}`;
+
+                                                        return (
+                                                            <div key={cIdx} className="bg-slate-50/90 p-1.5 rounded-xl border border-slate-200 space-y-1">
+                                                                <div className="text-[10px] font-black text-slate-700 text-center truncate">
+                                                                    {colTitle}
+                                                                </div>
+                                                                {/* Class Dropdown */}
+                                                                <select
+                                                                    value={col.className}
+                                                                    onChange={e => updateSideColumn(room.id, 'right', cIdx, 'className', e.target.value)}
+                                                                    className="w-full h-7 text-[10px] font-black bg-white border border-slate-300 rounded px-1 text-slate-800"
+                                                                >
+                                                                    <option value="auto">স্বয়ংক্রিয় (অটো)</option>
+                                                                    {selectedClasses.map(c => (
+                                                                        <option key={c} value={c}>{classNamesMap[c]} শ্রেণি</option>
+                                                                    ))}
+                                                                </select>
+                                                                {/* Gender Toggle */}
+                                                                <div className="flex gap-0.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateSideColumn(room.id, 'right', cIdx, 'gender', 'male')}
+                                                                        className={cn(
+                                                                            "flex-1 py-0.5 text-[9px] font-black rounded border transition-all text-center",
+                                                                            col.gender === 'male' ? "bg-blue-600 text-white border-blue-600 shadow-2xs" : "bg-white text-slate-600 border-slate-200 hover:bg-blue-50"
+                                                                        )}
+                                                                    >
+                                                                        ছাত্র
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateSideColumn(room.id, 'right', cIdx, 'gender', 'female')}
+                                                                        className={cn(
+                                                                            "flex-1 py-0.5 text-[9px] font-black rounded border transition-all text-center",
+                                                                            col.gender === 'female' ? "bg-rose-600 text-white border-rose-600 shadow-2xs" : "bg-white text-slate-600 border-slate-200 hover:bg-rose-50"
+                                                                        )}
+                                                                    >
+                                                                        ছাত্রী
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateSideColumn(room.id, 'right', cIdx, 'gender', 'any')}
+                                                                        className={cn(
+                                                                            "px-1 py-0.5 text-[8px] font-bold rounded border transition-all text-center",
+                                                                            col.gender === 'any' ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-500 border-slate-200"
+                                                                        )}
+                                                                    >
+                                                                        উভয়
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Mini Bench Rows Preview Table */}
+                                                <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px]">
+                                                    <table className="w-full text-center border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-blue-50 font-bold border-b border-blue-200 text-[9px] text-blue-900">
+                                                                {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
+                                                                    <th key={cIdx} className="p-1 border-r border-blue-200 last:border-r-0">
+                                                                        {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {Array.from({ length: Math.min(4, Math.max(1, room.rightBenchCount)) }).map((_, rIdx) => (
+                                                                <tr key={rIdx} className="border-b border-slate-100 last:border-b-0">
+                                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
+                                                                        const col = rightCols[cIdx] || { className: 'auto', gender: 'male' };
+                                                                        const isMale = col.gender === 'male';
+                                                                        return (
+                                                                            <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 font-bold">
+                                                                                <span className={cn(
+                                                                                    "inline-block px-1.5 py-0.5 rounded text-[9px] font-bold",
+                                                                                    isMale ? "bg-blue-50 text-blue-800 border border-blue-200" : col.gender === 'female' ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-700 border border-slate-200"
+                                                                                )}>
+                                                                                    {col.className !== 'auto' ? `[${classNamesMap[col.className]}] ` : ''}
+                                                                                    {isMale ? 'ছাত্র' : col.gender === 'female' ? 'ছাত্রী' : 'উভয়'}
+                                                                                </span>
+                                                                            </td>
+                                                                        );
+                                                                    })}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    {room.rightBenchCount > 4 && (
+                                                        <div className="bg-slate-50 text-[9px] text-center py-0.5 text-slate-500 font-semibold border-t border-slate-100">
+                                                            + আরও {toBengaliNumber(room.rightBenchCount - 4)}টি বেঞ্চ নিচে সাজানো হবে
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* বাম সাইড (Left Side) */}
+                                            <div className="bg-white p-3 rounded-2xl border-2 border-rose-200/80 shadow-2xs space-y-2.5">
+                                                <div className="flex items-center justify-between border-b border-rose-100 pb-1.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
+                                                        <span className="font-black text-xs text-rose-950">বাম সাইড</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-[11px] font-bold">
+                                                        <span className="text-slate-500">বেঞ্চ:</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            value={room.leftBenchCount}
+                                                            onChange={e => updateRoom(room.id, 'leftBenchCount', Math.max(0, parseInt(e.target.value) || 0))}
+                                                            className="w-12 h-6 text-center font-black bg-rose-50/80 border border-rose-300 rounded text-xs"
+                                                        />
+                                                        <span className="text-rose-700 font-bold">({toBengaliNumber(room.leftBenchCount * room.seatsPerBench)} আসন)</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Column Settings (Class Dropdown & Gender) */}
+                                                <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${room.seatsPerBench}, minmax(0, 1fr))` }}>
+                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
+                                                        const col = leftCols[cIdx] || { className: 'auto', gender: 'female' };
+                                                        const colTitle = cIdx === 0 ? 'কলাম ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'কলাম ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? `কলাম ${toBengaliNumber(cIdx + 1)} (ডান)` : `কলাম ${toBengaliNumber(cIdx + 1)}`;
+
+                                                        return (
+                                                            <div key={cIdx} className="bg-slate-50/90 p-1.5 rounded-xl border border-slate-200 space-y-1">
+                                                                <div className="text-[10px] font-black text-slate-700 text-center truncate">
+                                                                    {colTitle}
+                                                                </div>
+                                                                {/* Class Dropdown */}
+                                                                <select
+                                                                    value={col.className}
+                                                                    onChange={e => updateSideColumn(room.id, 'left', cIdx, 'className', e.target.value)}
+                                                                    className="w-full h-7 text-[10px] font-black bg-white border border-slate-300 rounded px-1 text-slate-800"
+                                                                >
+                                                                    <option value="auto">স্বয়ংক্রিয় (অটো)</option>
+                                                                    {selectedClasses.map(c => (
+                                                                        <option key={c} value={c}>{classNamesMap[c]} শ্রেণি</option>
+                                                                    ))}
+                                                                </select>
+                                                                {/* Gender Toggle */}
+                                                                <div className="flex gap-0.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateSideColumn(room.id, 'left', cIdx, 'gender', 'male')}
+                                                                        className={cn(
+                                                                            "flex-1 py-0.5 text-[9px] font-black rounded border transition-all text-center",
+                                                                            col.gender === 'male' ? "bg-blue-600 text-white border-blue-600 shadow-2xs" : "bg-white text-slate-600 border-slate-200 hover:bg-blue-50"
+                                                                        )}
+                                                                    >
+                                                                        ছাত্র
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateSideColumn(room.id, 'left', cIdx, 'gender', 'female')}
+                                                                        className={cn(
+                                                                            "flex-1 py-0.5 text-[9px] font-black rounded border transition-all text-center",
+                                                                            col.gender === 'female' ? "bg-rose-600 text-white border-rose-600 shadow-2xs" : "bg-white text-slate-600 border-slate-200 hover:bg-rose-50"
+                                                                        )}
+                                                                    >
+                                                                        ছাত্রী
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateSideColumn(room.id, 'left', cIdx, 'gender', 'any')}
+                                                                        className={cn(
+                                                                            "px-1 py-0.5 text-[8px] font-bold rounded border transition-all text-center",
+                                                                            col.gender === 'any' ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-500 border-slate-200"
+                                                                        )}
+                                                                    >
+                                                                        উভয়
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Mini Bench Rows Preview Table */}
+                                                <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px]">
+                                                    <table className="w-full text-center border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-rose-50 font-bold border-b border-rose-200 text-[9px] text-rose-900">
+                                                                {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
+                                                                    <th key={cIdx} className="p-1 border-r border-rose-200 last:border-r-0">
+                                                                        {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {Array.from({ length: Math.min(4, Math.max(1, room.leftBenchCount)) }).map((_, rIdx) => (
+                                                                <tr key={rIdx} className="border-b border-slate-100 last:border-b-0">
+                                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
+                                                                        const col = leftCols[cIdx] || { className: 'auto', gender: 'female' };
+                                                                        const isMale = col.gender === 'male';
+                                                                        return (
+                                                                            <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 font-bold">
+                                                                                <span className={cn(
+                                                                                    "inline-block px-1.5 py-0.5 rounded text-[9px] font-bold",
+                                                                                    isMale ? "bg-blue-50 text-blue-800 border border-blue-200" : col.gender === 'female' ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-700 border border-slate-200"
+                                                                                )}>
+                                                                                    {col.className !== 'auto' ? `[${classNamesMap[col.className]}] ` : ''}
+                                                                                    {isMale ? 'ছাত্র' : col.gender === 'female' ? 'ছাত্রী' : 'উভয়'}
+                                                                                </span>
+                                                                            </td>
+                                                                        );
+                                                                    })}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    {room.leftBenchCount > 4 && (
+                                                        <div className="bg-slate-50 text-[9px] text-center py-0.5 text-slate-500 font-semibold border-t border-slate-100">
+                                                            + আরও {toBengaliNumber(room.leftBenchCount - 4)}টি বেঞ্চ নিচে সাজানো হবে
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
