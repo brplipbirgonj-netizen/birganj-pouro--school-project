@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { LocationSelector } from '@/components/ui/location-selector';
 
 function toBengaliNumber(str: string | number | undefined | null) {
     if (!str && str !== 0) return '';
@@ -500,30 +501,19 @@ export default function AddStudentPage() {
                     
                     <div className="space-y-4">
                         <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-primary pl-2">বর্তমান ঠিকানা</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label className="font-bold">গ্রাম/মহল্লা *</Label>
-                                <Input required value={student.presentVillage || ''} onChange={e => handleInputChange('presentVillage', e.target.value)} className={cn(inputFocusClasses, !student.presentVillage && "border-red-300 bg-red-50/30")} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">ইউনিয়ন</Label>
-                                <Input value={student.presentUnion || ''} onChange={e => handleInputChange('presentUnion', e.target.value)} className={inputFocusClasses} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">ডাকঘর</Label>
-                                <Input value={student.presentPostOffice || ''} onChange={e => handleInputChange('presentPostOffice', e.target.value)} className={inputFocusClasses} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="font-bold">উপজেলা *</Label>
-                                    <Input required value={student.presentUpazila || ''} onChange={e => handleInputChange('presentUpazila', e.target.value)} className={cn(inputFocusClasses, !student.presentUpazila && "border-red-300 bg-red-50/30")} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="font-bold">জেলা *</Label>
-                                    <Input required value={student.presentDistrict || ''} onChange={e => handleInputChange('presentDistrict', e.target.value)} className={cn(inputFocusClasses, !student.presentDistrict && "border-red-300 bg-red-50/30")} />
-                                </div>
-                            </div>
-                        </div>
+                        <LocationSelector
+                          prefix="present"
+                          values={{
+                            district: student.presentDistrict || "",
+                            upazila: student.presentUpazila || "",
+                            union: student.presentUnion || "",
+                            postOffice: student.presentPostOffice || "",
+                            village: student.presentVillage || "",
+                          }}
+                          onChange={handleInputChange}
+                          required={true}
+                          inputFocusClasses={inputFocusClasses}
+                        />
                     </div>
 
                     <Separator className="my-6" />
@@ -536,30 +526,19 @@ export default function AddStudentPage() {
                                 <label htmlFor="same-address" className="text-xs font-bold text-emerald-700 cursor-pointer">বর্তমান ঠিকানা আর স্থায়ী একই</label>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label className="font-bold">গ্রাম/মহল্লা</Label>
-                                <Input value={student.permanentVillage || ''} onChange={e => handleInputChange('permanentVillage', e.target.value)} className={inputFocusClasses} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">ইউনিয়ন</Label>
-                                <Input value={student.permanentUnion || ''} onChange={e => handleInputChange('permanentUnion', e.target.value)} className={inputFocusClasses} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="font-bold">ডাকঘর</Label>
-                                <Input value={student.permanentPostOffice || ''} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} className={inputFocusClasses} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="font-bold">উপজেলা</Label>
-                                    <Input value={student.permanentUpazila || ''} onChange={e => handleInputChange('permanentUpazila', e.target.value)} className={inputFocusClasses} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="font-bold">জেলা</Label>
-                                    <Input value={student.permanentDistrict || ''} onChange={e => handleInputChange('permanentDistrict', e.target.value)} className={inputFocusClasses} />
-                                </div>
-                            </div>
-                        </div>
+                        <LocationSelector
+                          prefix="permanent"
+                          values={{
+                            district: student.permanentDistrict || "",
+                            upazila: student.permanentUpazila || "",
+                            union: student.permanentUnion || "",
+                            postOffice: student.permanentPostOffice || "",
+                            village: student.permanentVillage || "",
+                          }}
+                          onChange={handleInputChange}
+                          required={false}
+                          inputFocusClasses={inputFocusClasses}
+                        />
                     </div>
                   </div>
 

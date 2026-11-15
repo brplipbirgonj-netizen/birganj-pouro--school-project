@@ -18,6 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { LocationSelector } from '@/components/ui/location-selector';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
@@ -469,30 +470,18 @@ export default function AdmissionPortalPage() {
                             
                             <div className="space-y-4">
                                 <p className="font-black text-sm text-muted-foreground uppercase tracking-widest border-l-4 border-primary pl-2">বর্তমান ঠিকানা</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label className={cn("font-bold", errors.has('presentVillage') && "text-red-600")}>গ্রাম/মহল্লা *</Label>
-                                        <Input name="village" autoComplete="address-line1" className={cn("h-12", errors.has('presentVillage') && "border-red-500")} value={student.presentVillage} onChange={e => handleInputChange('presentVillage', e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
-                                        <Input name="union" autoComplete="address-line2" className="h-12" value={student.presentUnion} onChange={e => handleInputChange('presentUnion', e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">ডাকঘর</Label>
-                                        <Input name="post_office" autoComplete="off" className="h-12" value={student.presentPostOffice} onChange={e => handleInputChange('presentPostOffice', e.target.value)} />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className={cn("font-bold", errors.has('presentUpazila') && "text-red-600")}>উপজেলা *</Label>
-                                            <Input name="upazila" autoComplete="address-level2" className={cn("h-12", errors.has('presentUpazila') && "border-red-500")} value={student.presentUpazila} onChange={e => handleInputChange('presentUpazila', e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className={cn("font-bold", errors.has('presentDistrict') && "text-red-600")}>জেলা *</Label>
-                                            <Input name="district" autoComplete="address-level1" className={cn("h-12", errors.has('presentDistrict') && "border-red-500")} value={student.presentDistrict} onChange={e => handleInputChange('presentDistrict', e.target.value)} />
-                                        </div>
-                                    </div>
-                                </div>
+                                <LocationSelector
+                                  prefix="present"
+                                  values={{
+                                    district: student.presentDistrict || "",
+                                    upazila: student.presentUpazila || "",
+                                    union: student.presentUnion || "",
+                                    postOffice: student.presentPostOffice || "",
+                                    village: student.presentVillage || "",
+                                  }}
+                                  onChange={handleInputChange}
+                                  required={true}
+                                />
                             </div>
 
                             <div className="space-y-4 pt-4">
@@ -503,30 +492,18 @@ export default function AdmissionPortalPage() {
                                         <label htmlFor="same-as-present" className="text-xs font-bold text-emerald-700 cursor-pointer">বর্তমান ঠিকানার অনুরূপ</label>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">গ্রাম/মহল্লা</Label>
-                                        <Input name="p_village" autoComplete="address-line1" className="h-12" value={student.permanentVillage} onChange={e => handleInputChange('permanentVillage', e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">ইউনিয়ন/ওয়ার্ড</Label>
-                                        <Input name="p_union" autoComplete="address-line2" className="h-12" value={student.permanentUnion} onChange={e => handleInputChange('permanentUnion', e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="font-bold">ডাকঘর</Label>
-                                        <Input name="p_post_office" autoComplete="off" className="h-12" value={student.permanentPostOffice} onChange={e => handleInputChange('permanentPostOffice', e.target.value)} />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="font-bold">উপজেলা</Label>
-                                            <Input name="p_upazila" autoComplete="address-level2" className="h-12" value={student.permanentUpazila} onChange={e => handleInputChange('permanentUpazila', e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="font-bold">জেলা</Label>
-                                            <Input name="p_district" autoComplete="address-level1" className="h-12" value={student.permanentDistrict} onChange={e => handleInputChange('permanentDistrict', e.target.value)} />
-                                        </div>
-                                    </div>
-                                </div>
+                                <LocationSelector
+                                  prefix="permanent"
+                                  values={{
+                                    district: student.permanentDistrict || "",
+                                    upazila: student.permanentUpazila || "",
+                                    union: student.permanentUnion || "",
+                                    postOffice: student.permanentPostOffice || "",
+                                    village: student.permanentVillage || "",
+                                  }}
+                                  onChange={handleInputChange}
+                                  required={false}
+                                />
                             </div>
 
                             <div className="flex gap-4 mt-6">
