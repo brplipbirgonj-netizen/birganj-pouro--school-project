@@ -326,25 +326,25 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
     const numberInputClass = "h-9 font-bold border-2 border-black focus:ring-primary shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
-                <div className="space-y-2">
-                    <Label>পরীক্ষা</Label>
+        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4 items-end p-3 sm:p-4 border rounded-lg bg-white/50 shadow-sm">
+                <div className="space-y-1 sm:space-y-2">
+                    <Label className="text-xs font-bold">পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
                         <SelectTrigger className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="পরীক্ষা নির্বাচন" /></SelectTrigger>
                         <SelectContent>{exams.filter(e => Boolean(e?.name)).map((e, idx) => <SelectItem key={`exam-opt-${e.id || idx}-${e.name}`} value={e.name}>{e.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="class">শ্রেণি</Label>
+                <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="class" className="text-xs font-bold">শ্রেণি</Label>
                     <Select value={className} onValueChange={(v) => { setClassName(v); setGroup('all'); setSubject(''); }}>
                         <SelectTrigger id="class" className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
                         <SelectContent><SelectItem value="6">৬ষ্ঠ</SelectItem><SelectItem value="7">৭ম</SelectItem><SelectItem value="8">৮ম</SelectItem><SelectItem value="9">৯ম</SelectItem><SelectItem value="10">১০ম</SelectItem></SelectContent>
                     </Select>
                 </div>
                 {showGroupSelector && (
-                    <div className="space-y-2">
-                        <Label htmlFor="group">গ্রুপ</Label>
+                    <div className="space-y-1 sm:space-y-2">
+                        <Label htmlFor="group" className="text-xs font-bold">গ্রুপ</Label>
                         <Select value={group} onValueChange={setGroup} required>
                             <SelectTrigger id="group" className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="গ্রুপ নির্বাচন" /></SelectTrigger>
                             <SelectContent>
@@ -356,14 +356,14 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </Select>
                     </div>
                 )}
-                <div className="space-y-2">
-                    <Label htmlFor="subject">বিষয়</Label>
+                <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="subject" className="text-xs font-bold">বিষয়</Label>
                     <Select value={subject} onValueChange={setSubject} disabled={!className || (showGroupSelector && !group)}>
                         <SelectTrigger id="subject" className="bg-white h-9 text-xs font-bold border-2"><SelectValue placeholder="বিষয় নির্বাচন" /></SelectTrigger>
                         <SelectContent>{availableSubjects.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
-                <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject || !examName} className="h-9 text-xs font-black">{isLoadingStudents ? 'লোড হচ্ছে...' : 'লোড করুন'}</Button>
+                <Button onClick={handleLoadStudents} disabled={isLoadingStudents || !subject || !examName} className="h-9 text-xs font-black col-span-2 sm:col-span-1 shadow-sm">{isLoadingStudents ? 'লোড হচ্ছে...' : 'লোড করুন'}</Button>
             </div>
             
             {studentsForClass.length > 0 && (
@@ -382,8 +382,8 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                          )}
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="max-h-[500px] overflow-auto">
-                            <Table>
+                        <div className="max-h-[500px] overflow-x-auto w-full">
+                            <Table className="min-w-[650px] w-full">
                                 <TableHeader className="sticky top-0 bg-white z-20 shadow-sm border-b-2 border-black">
                                     <TableRow>
                                         <TableHead className="w-20 text-center font-black">রোল</TableHead>
@@ -1203,8 +1203,8 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                         </Button>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="table-container !max-h-[550px]">
-                            <Table>
+                        <div className="table-container !max-h-[550px] overflow-x-auto w-full">
+                            <Table className="min-w-[650px] w-full">
                                 <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
                                     <TableRow>
                                         <TableHead className="w-20 text-center font-black">রোল</TableHead>
@@ -3236,7 +3236,11 @@ export default function ResultsPage() {
     useEffect(() => {
         setIsClient(true); 
         if (!db || !user) return;
-        const unsubscribe = onSnapshot(query(collection(db, "students")), (snap) => { 
+        setIsLoading(true);
+        const q = selectedYear 
+            ? query(collection(db, "students"), where("academicYear", "==", selectedYear))
+            : query(collection(db, "students"));
+        const unsubscribe = onSnapshot(q, (snap) => { 
             setAllStudents(snap.docs.map(studentFromDoc)); 
             setIsLoading(false); 
         }, (err) => { 
@@ -3244,7 +3248,7 @@ export default function ResultsPage() {
             setIsLoading(false); 
         });
         return () => unsubscribe();
-    }, [db, user]);
+    }, [db, user, selectedYear]);
 
     useEffect(() => {
         if (canViewRes) setActiveSection('management');
@@ -3301,13 +3305,28 @@ export default function ResultsPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
-            <main className="flex-1 p-4 md:p-8 no-print pb-40">
-                <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
-                    <aside className="w-full md:w-64 shrink-0 space-y-1 bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+            <main className="flex-1 p-2 sm:p-4 md:p-8 no-print pb-32 w-full max-w-full overflow-hidden box-border">
+                <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-4 md:gap-8">
+                    <aside className="w-full md:w-64 shrink-0 space-y-1 bg-white/95 md:bg-transparent p-2 sm:p-4 md:p-0 border-b md:border-0 sticky top-14 sm:top-16 md:top-28 z-30 self-start backdrop-blur-md shadow-sm md:shadow-none -mx-2 sm:mx-0">
                         <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">ফলাফল ব্যবস্থাপনা</h2>
-                        <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
+                        <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-1 md:pb-0 gap-1.5 scrollbar-thin px-2 md:px-0">
                             {sidebarItems.map(item => (
-                                <button key={item.id} onClick={() => setActiveSection(item.id)} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit", activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50")}><div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}><item.icon className="h-4 w-4" /></div><span className="text-sm font-black">{item.label}</span>{activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}</button>
+                                <button 
+                                    key={item.id} 
+                                    onClick={() => setActiveSection(item.id)} 
+                                    className={cn(
+                                        "flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 font-bold whitespace-nowrap min-w-fit text-xs sm:text-sm", 
+                                        activeSection === item.id 
+                                            ? "bg-primary text-white shadow-md md:bg-white md:text-primary ring-1 ring-primary/20 md:ring-0" 
+                                            : "text-muted-foreground hover:bg-slate-200/50 bg-slate-100/60 md:bg-transparent"
+                                    )}
+                                >
+                                    <div className={cn("p-1 sm:p-1.5 rounded-lg shrink-0", activeSection === item.id ? "bg-white/20 text-white md:" + item.color : "bg-muted")}>
+                                        <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                    </div>
+                                    <span className="font-black">{item.label}</span>
+                                    {activeSection === item.id && <ChevronRight className="ml-auto h-3.5 w-3.5 hidden md:block" />}
+                                </button>
                             ))}
                         </div>
                     </aside>

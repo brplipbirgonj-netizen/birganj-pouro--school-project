@@ -418,11 +418,11 @@ export const ResultStatisticsTab = ({ allStudents, onPrintRequested }: { allStud
                     )}
                 </div>
 
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full md:w-auto">
                     <Button 
                         onClick={handleLoadData} 
                         disabled={isLoading || !examName} 
-                        className="bg-primary hover:bg-primary/90 font-black h-10 px-5 shadow-sm"
+                        className="bg-primary hover:bg-primary/90 font-black h-10 px-4 sm:px-5 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm"
                     >
                         {isLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <TrendingUp className="h-4 w-4 mr-2" />}
                         পরিসংখ্যান লোড
@@ -431,7 +431,7 @@ export const ResultStatisticsTab = ({ allStudents, onPrintRequested }: { allStud
                         onClick={handlePrint} 
                         disabled={processedResults.length === 0} 
                         variant="outline" 
-                        className="border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-black h-10 px-5 shadow-sm"
+                        className="border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-black h-10 px-4 sm:px-5 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm"
                     >
                         <Printer className="h-4 w-4 mr-2 text-emerald-600" />
                         রিপোর্ট প্রিন্ট

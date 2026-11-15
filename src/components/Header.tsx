@@ -267,22 +267,22 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-[60] flex h-16 md:h-24 items-center justify-between border-b bg-primary px-4 text-primary-foreground shadow-sm sm:px-6 md:px-8">
-        <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-[60] flex h-14 sm:h-16 md:h-24 items-center justify-between border-b bg-primary px-2 sm:px-6 md:px-8 text-primary-foreground shadow-sm w-full max-w-full overflow-hidden box-border">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {user && (
             <>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100"
+                className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100"
                 onClick={() => router.back()}
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">
-                    <Menu className="h-6 w-6" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-lg bg-white text-primary hover:bg-gray-100">
+                    <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col p-0 font-kalpurush h-full w-[260px]">
@@ -291,7 +291,7 @@ export function Header() {
                       <SheetDescription className="sr-only">Navigation and settings</SheetDescription>
                     <Link href="/" className="flex items-center gap-2 text-base font-semibold text-foreground">
                       {isSchoolInfoLoading ? <Skeleton className="h-6 w-6 rounded-full" /> : (schoolInfo.logoUrl && (
-                        <div className="relative h-6 w-6">
+                        <div className="relative h-6 w-6 shrink-0">
                           <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
                         </div>
                       ))}
@@ -299,18 +299,23 @@ export function Header() {
                     </Link>
                   </SheetHeader>
                   
-                  <div className="px-3 py-1 border-b bg-slate-50 shrink-0">
-                      <Label htmlFor="year-select" className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">শিক্ষাবর্ষ</Label>
-                      <Select value={selectedYear} onValueChange={setSelectedYear}>
-                          <SelectTrigger id="year-select" className="mt-0.5 h-6 bg-white border-2 border-primary/10 font-black text-primary text-[10px] px-2">
-                              <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                              {availableYears.map(year => (
-                                  <SelectItem key={year} value={year} className="font-bold">{toBengaliNumber(year)}</SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
+                  <div className="px-3 py-1.5 border-b bg-slate-50 shrink-0 flex items-center justify-between gap-2">
+                      <div className="flex-1">
+                          <Label htmlFor="year-select" className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">শিক্ষাবর্ষ</Label>
+                          <Select value={selectedYear} onValueChange={setSelectedYear}>
+                              <SelectTrigger id="year-select" className="mt-0.5 h-6 bg-white border-2 border-primary/10 font-black text-primary text-[10px] px-2">
+                                  <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {availableYears.map(year => (
+                                      <SelectItem key={year} value={year} className="font-bold">{toBengaliNumber(year)}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div className="sm:hidden pt-2">
+                          <LanguageSwitcher />
+                      </div>
                   </div>
 
                   <div className="flex-1 overflow-hidden">
@@ -369,58 +374,62 @@ export function Header() {
           )}
         </div>
 
-        <Link href="/" className="flex items-center gap-2 sm:gap-4 md:gap-6">
+        <Link href="/" className="flex items-center gap-1.5 sm:gap-3 md:gap-6 min-w-0 overflow-hidden mx-1 sm:mx-2">
             {!isSchoolInfoLoading && schoolInfo.logoUrl && (
-              <div className="relative h-10 w-10 md:h-[70px] md:w-[70px] shrink-0">
+              <div className="relative h-8 w-8 sm:h-10 sm:w-10 md:h-[70px] md:w-[70px] shrink-0">
                 <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
               </div>
             )}
-            <div className="flex flex-col items-center md:items-start">
-              <div className="text-xl sm:text-2xl md:text-[40px] font-black whitespace-nowrap tracking-tight md:[text-shadow:1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-tight">
-                {isSchoolInfoLoading ? <Skeleton className="h-8 w-40 md:h-12 md:w-80" /> : schoolInfo.name}
+            <div className="flex flex-col items-center md:items-start min-w-0 overflow-hidden">
+              <div className="text-xs sm:text-lg md:text-[36px] lg:text-[40px] font-black truncate max-w-[130px] xs:max-w-[170px] sm:max-w-none tracking-tight md:[text-shadow:1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-tight text-center md:text-left">
+                {isSchoolInfoLoading ? <Skeleton className="h-5 w-24 md:h-12 md:w-80" /> : schoolInfo.name}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-1.5 mt-0.5">
                 {isClient && (
-                  <Badge variant="outline" className="bg-white/20 text-white border-white/40 font-black text-[10px] md:text-xs h-5 px-3 backdrop-blur-sm shadow-sm">
-                    শিক্ষাবর্ষ: {toBengaliNumber(selectedYear)}
+                  <Badge variant="outline" className="bg-white/20 text-white border-white/40 font-black text-[8.5px] sm:text-[10px] md:text-xs h-4 sm:h-5 px-1.5 sm:px-3 backdrop-blur-sm shadow-sm whitespace-nowrap">
+                    {toBengaliNumber(selectedYear)}
                   </Badge>
                 )}
                 {!isOnline && (
                   <Badge className="bg-rose-500 text-white font-black text-[8px] md:text-[10px] h-4 animate-pulse gap-1">
-                    <WifiOff className="h-2 w-2" /> অফলাইন মোড (লোকাল সেভ)
+                    <WifiOff className="h-2 w-2" /> অফলাইন
                   </Badge>
                 )}
               </div>
             </div>
         </Link>
         
-        <div className="flex items-center gap-2 sm:gap-4">
-          <LanguageSwitcher />
+        <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
+          </div>
           {user && (
             <>
-              <QuickDownloadPortal />
+              <div className="hidden sm:block">
+                <QuickDownloadPortal />
+              </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="rounded-full bg-white/20 text-white hover:bg-white/30 shadow-sm"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white/20 text-white hover:bg-white/30 shadow-sm shrink-0"
                 onClick={() => handleSearchOpen(true)}
                 title="শিক্ষার্থী খুঁজুন"
               >
-                <Search className="h-5 w-5" />
+                <Search className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </>
           )}
-          {authLoading ? <Skeleton className="h-10 w-10 rounded-full" /> : user ? (
-            <div className="flex items-center gap-3">
+          {authLoading ? <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" /> : user ? (
+            <div className="flex items-center gap-2">
               <div className="hidden md:flex flex-col items-end text-right">
                 <span className="text-sm font-black text-white leading-tight">{displayName || 'ব্যবহারকারী'}</span>
                 <span className="text-[10px] font-bold text-white/80 leading-tight">{displayDesignation || (user.role === 'admin' ? 'সিস্টেম এডমিনিস্ট্রেটর' : 'শিক্ষক')}</span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white cursor-pointer shadow-md">
+                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 border-2 border-white cursor-pointer shadow-md shrink-0">
                     <AvatarImage src={displayPhoto || undefined} />
-                    <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="text-xs">{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 font-kalpurush">
@@ -439,7 +448,7 @@ export function Header() {
               </DropdownMenu>
             </div>
           ) : (
-            <Link href="/login"><Button variant="secondary">লগইন</Button></Link>
+            <Link href="/login"><Button variant="secondary" size="sm" className="h-8 text-xs font-bold">লগইন</Button></Link>
           )}
         </div>
       </header>
