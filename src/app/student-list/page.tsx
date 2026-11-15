@@ -286,11 +286,11 @@ function StudentListContent() {
 
     const studentsQuery = query(
       collection(db, "students"), 
-      orderBy("roll")
+      where("academicYear", "==", selectedYear)
     );
 
     const unsubscribe = onSnapshot(studentsQuery, (querySnapshot) => {
-      const studentsData = querySnapshot.docs.map(studentFromDoc);
+      const studentsData = querySnapshot.docs.map(studentFromDoc).sort((a, b) => Number(a.roll || 0) - Number(b.roll || 0));
       setAllStudents(studentsData);
       setIsLoading(false);
     }, (error: FirestoreError) => {
@@ -303,7 +303,7 @@ function StudentListContent() {
     });
 
     return () => unsubscribe();
-  }, [db, user]);
+  }, [db, user, selectedYear]);
 
   useEffect(() => {
     if (targetStudentId && !isLoading && isMounted) {
@@ -582,9 +582,9 @@ function StudentListContent() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
       <Header />
-      <main className="flex-1 p-4 md:p-10 pb-40">
+      <main className="flex-1 p-2 sm:p-4 md:p-10 pb-28">
         <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
-            <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+            <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-2 sm:p-4 md:p-0 border-b md:border-0 sticky top-14 sm:top-16 md:top-28 z-30 self-start">
                 <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">শিক্ষার্থী মডিউল</h2>
                 <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
                     {sidebarItems.map(item => (
@@ -593,7 +593,7 @@ function StudentListContent() {
                             onClick={() => setActiveSection(item.id)}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
-                                activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                                activeSection === item.id ? "bg-white shadow-md text-primary md:scale-105" : "text-muted-foreground hover:bg-slate-200/50"
                             )}
                         >
                             <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
@@ -718,9 +718,9 @@ function StudentListContent() {
                     )}
 
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="no-print">
-                        <TabsList className="grid w-full grid-cols-5 h-12 bg-slate-100 p-1 rounded-2xl mb-8">
+                        <TabsList className="flex overflow-x-auto w-full sm:grid sm:grid-cols-5 h-auto sm:h-12 bg-slate-100 p-1 rounded-2xl mb-6 sm:mb-8 no-scrollbar gap-1">
                             {classes.map((c) => (
-                                <TabsTrigger key={c} value={c} className="font-black text-xs sm:text-sm rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md notranslate" translate="no">
+                                <TabsTrigger key={c} value={c} className="flex-1 sm:flex-initial shrink-0 px-3 py-2 sm:py-0 font-black text-xs sm:text-sm rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md notranslate" translate="no">
                                     {isEn ? `Class ${c}` : `${classNamesMap[c]} শ্রেণি`} 
                                     <Badge variant="secondary" className="ml-2 h-5 bg-primary/10 text-primary border-none hidden sm:inline-flex notranslate" translate="no">
                                         {isEn ? allStudents.filter(s => s.academicYear === selectedYear && s.className === c).length : toBengaliNumber(allStudents.filter(s => s.academicYear === selectedYear && s.className === c).length)}

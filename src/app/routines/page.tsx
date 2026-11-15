@@ -1476,7 +1476,7 @@ export default function RoutinesPage() {
             <Header />
             <main className="flex-1 p-4 md:p-10 pb-40">
                 <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
-                    <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+                    <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-14 sm:top-16 md:top-28 z-30 self-start">
                         <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">রুটিন শাখা</h2>
                         <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
                             {sidebarItems.map(item => (
@@ -1485,7 +1485,7 @@ export default function RoutinesPage() {
                                     onClick={() => setActiveSection(item.id)}
                                     className={cn(
                                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
-                                        activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                                        activeSection === item.id ? "bg-white shadow-md text-primary md:scale-105" : "text-muted-foreground hover:bg-slate-200/50"
                                     )}
                                 >
                                     <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>

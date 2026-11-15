@@ -1341,10 +1341,10 @@ export default function Home() {
     <div className="flex min-h-screen w-full flex-col bg-sky-100 font-kalpurush">
       <Header />
       <NoticeTicker />
-      <main className="p-4 md:p-8 pb-[600px] max-w-[1600px] mx-auto w-full">
+      <main className="p-2 sm:p-4 md:p-8 pb-24 max-w-[1600px] mx-auto w-full overflow-x-hidden">
         
         {/* Quick Actions Bar */}
-        <div className="mb-8 flex flex-wrap gap-4 items-center justify-center sm:justify-start">
+        <div className="mb-6 sm:mb-8 flex flex-wrap gap-2.5 sm:gap-4 items-center justify-center sm:justify-start">
             <Link href="/add-student">
                 <Button className="h-12 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-500 shadow-lg font-black gap-2 transition-all border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 text-yellow-950">
                     <UserPlus className="h-5 w-5" /> কুইক ভর্তি

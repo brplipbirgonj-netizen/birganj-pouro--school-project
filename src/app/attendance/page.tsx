@@ -1775,11 +1775,14 @@ export default function AttendancePage() {
     useEffect(() => {
         if (!db || !user) return;
         setIsLoading(true);
-        const studentsQuery = query(collection(db, "students"), orderBy("roll"));
+        const studentsQuery = query(
+            collection(db, "students"),
+            where("academicYear", "==", selectedYear)
+        );
 
         const unsubscribe = onSnapshot(studentsQuery, (querySnapshot) => {
             const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), dob: doc.data().dob?.toDate(), })) as Student[];
-            setAllStudents(studentsData);
+            setAllStudents(studentsData.sort((a, b) => Number(a.roll || 0) - Number(b.roll || 0)));
             setIsLoading(false);
         }, (error: FirestoreError) => {
             if (error.code === 'permission-denied') {
@@ -1789,7 +1792,7 @@ export default function AttendancePage() {
         });
 
         return () => unsubscribe();
-    }, [db, user]);
+    }, [db, user, selectedYear]);
 
     const canInputQuickRoll = hasPermission('input:quick-roll-attendance');
     const canViewMissedAttendance = hasPermission('view:missed-attendance');
@@ -1827,10 +1830,10 @@ export default function AttendancePage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
             <Header />
-            <main className="flex-1 p-4 md:p-10 pb-40">
+            <main className="flex-1 p-2 sm:p-4 md:p-10 pb-28">
                 <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row gap-8">
                     {/* Sidebar Navigation */}
-                    <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+                    <aside className="w-full md:w-64 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-2 sm:p-4 md:p-0 border-b md:border-0 sticky top-14 sm:top-16 md:top-28 z-30 self-start">
                         <div className="mb-6 px-4 hidden md:block">
                             <h2 className="text-2xl font-black text-slate-900 tracking-tight">হাজিরা ব্যবস্থাপনা</h2>
                             <Badge className={cn(
@@ -1848,7 +1851,7 @@ export default function AttendancePage() {
                                     className={cn(
                                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
                                         activeSection === item.id 
-                                            ? "bg-white shadow-md text-primary scale-105" 
+                                            ? "bg-white shadow-md text-primary md:scale-105" 
                                             : "text-muted-foreground hover:bg-slate-200/50"
                                     )}
                                 >

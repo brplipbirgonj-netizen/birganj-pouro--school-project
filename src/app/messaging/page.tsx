@@ -163,10 +163,10 @@ export default function MessagingPage() {
     return (
       <div className="flex min-h-screen w-full flex-col bg-[#F6F7F9] font-kalpurush">
         <Header />
-        <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full md:p-6 lg:p-10 gap-8 pb-[500px]">
+        <main className="flex-1 flex flex-col md:flex-row h-full max-w-[1600px] mx-auto w-full p-2 sm:p-4 md:p-6 lg:p-10 gap-4 md:gap-8 pb-28">
           
           {/* Sidebar Navigation - Fixed/Sticky */}
-          <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-20 md:top-28 self-start">
+          <aside className="w-full md:w-60 shrink-0 space-y-1 no-print bg-white md:bg-transparent p-4 md:p-0 border-b md:border-0 sticky top-14 sm:top-16 md:top-28 z-30 self-start">
             <h2 className="text-2xl font-black mb-6 px-4 hidden md:block text-slate-900 tracking-tight">মেসেজ সেন্টার</h2>
             <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-1 scrollbar-none">
                 {sidebarItems.map(item => (
@@ -175,7 +175,7 @@ export default function MessagingPage() {
                         onClick={() => handleSectionChange(item.id)}
                         className={cn(
                             "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold whitespace-nowrap min-w-fit",
-                            activeSection === item.id ? "bg-white shadow-md text-primary scale-105" : "text-muted-foreground hover:bg-slate-200/50"
+                            activeSection === item.id ? "bg-white shadow-md text-primary md:scale-105" : "text-muted-foreground hover:bg-slate-200/50"
                         )}
                     >
                         <div className={cn("p-1.5 rounded-lg shrink-0", activeSection === item.id ? item.color : "bg-muted")}>
