@@ -1645,11 +1645,45 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
 
                 const totalTableWidth = calculateTableWidth(subs);
 
+                const totalCandidates = results.length;
+                const absentCandidates = results.filter((r: StudentProcessedResult) => r.isAbsent).length;
+                const presentCandidates = totalCandidates - absentCandidates;
+                const passedCandidates = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent).length;
+                const failedCandidates = results.filter((r: StudentProcessedResult) => !r.isPass && !r.isAbsent).length;
+                const passRate = presentCandidates > 0 ? ((passedCandidates / presentCandidates) * 100).toFixed(1) : '0';
+
+                const aPlusCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && (r.finalGrade === 'A+' || r.gpa === 5.0)).length;
+                const aCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'A' && r.gpa < 5.0).length;
+                const aMinusCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'A-').length;
+                const bCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'B').length;
+                const cCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'C').length;
+                const dCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'D').length;
+                const showCandD = cCount > 0 || dCount > 0;
+
                 return (
                     <div key={gk} className="space-y-0">
                         <div className="flex justify-between items-center bg-primary/10 p-2 rounded-t-lg border-2 border-black">
                             <h3 className="font-black text-primary text-sm uppercase">শাখা: {groupNamesMap[gk] || gk}</h3>
                             <Badge variant="secondary" className="font-black px-3 text-xs">মোট: {toBengaliNumber(results.length)} জন</Badge>
+                        </div>
+
+                        <div className="overflow-x-auto no-print border-x-2 border-b-2 border-black bg-slate-50 text-[11px] font-bold p-1.5 flex flex-wrap items-center justify-around gap-2 text-slate-800">
+                            <span>মোট পরীক্ষার্থী: <b className="text-black">{toBengaliNumber(totalCandidates)}</b> জন</span>
+                            <span>উপস্থিত: <b className="text-black">{toBengaliNumber(presentCandidates)}</b> জন</span>
+                            <span>অনুপস্থিত: <b className="text-black">{toBengaliNumber(absentCandidates)}</b> জন</span>
+                            <span>পাশের হার: <b className="text-emerald-700">{toBengaliNumber(passRate)}%</b></span>
+                            <span>মোট পাশ: <b className="text-emerald-700">{toBengaliNumber(passedCandidates)}</b> জন</span>
+                            <span>ফেল: <b className="text-rose-700">{toBengaliNumber(failedCandidates)}</b> জন</span>
+                            <span>A+: <b className="text-amber-800">{toBengaliNumber(aPlusCount)}</b> জন</span>
+                            <span>A: <b className="text-black">{toBengaliNumber(aCount)}</b> জন</span>
+                            <span>A-: <b className="text-black">{toBengaliNumber(aMinusCount)}</b> জন</span>
+                            <span>B: <b className="text-black">{toBengaliNumber(bCount)}</b> জন</span>
+                            {showCandD && (
+                                <>
+                                    <span>C: <b className="text-black">{toBengaliNumber(cCount)}</b> জন</span>
+                                    <span>D: <b className="text-black">{toBengaliNumber(dCount)}</b> জন</span>
+                                </>
+                            )}
                         </div>
                         
                         <div 
@@ -3546,21 +3580,87 @@ export default function ResultsPage() {
                             studentChunks.push(results.slice(i, i + 10));
                         }
 
+                        // Overall Statistics for this group/class matching the user's Word doc format
+                        const totalCandidates = results.length;
+                        const absentCandidates = results.filter((r: StudentProcessedResult) => r.isAbsent).length;
+                        const presentCandidates = totalCandidates - absentCandidates;
+                        const passedCandidates = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent).length;
+                        const failedCandidates = results.filter((r: StudentProcessedResult) => !r.isPass && !r.isAbsent).length;
+                        const passRate = presentCandidates > 0 ? ((passedCandidates / presentCandidates) * 100).toFixed(1) : '0';
+
+                        const aPlusCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && (r.finalGrade === 'A+' || r.gpa === 5.0)).length;
+                        const aCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'A' && r.gpa < 5.0).length;
+                        const aMinusCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'A-').length;
+                        const bCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'B').length;
+                        const cCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'C').length;
+                        const dCount = results.filter((r: StudentProcessedResult) => r.isPass && !r.isAbsent && r.finalGrade === 'D').length;
+                        const showCandD = cCount > 0 || dCount > 0;
+
                         return studentChunks.map((chunk, chunkIdx) => (
                             <div key={`${gk}-${chunkIdx}`} className="result-sheet-page">
-                                <header className="text-center border-b-[1.5px] border-black pb-1 mb-2 flex flex-col items-center">
+                                <header className="text-center border-b-[1.5px] border-black pb-1 mb-1.5 flex flex-col items-center">
                                     <div className="flex items-center gap-3">
                                         {schoolInfo.logoUrl && <img src={schoolInfo.logoUrl} alt="Logo" className="w-8 h-8 object-contain" />}
                                         <h1 className="text-base font-black uppercase leading-tight">{schoolInfo.name}</h1>
                                     </div>
-                                    <div className="mt-1 inline-block border-[1.5px] border-black px-6 py-0.5 rounded-full font-black text-[10px] uppercase bg-slate-50">
+                                    <div className="mt-0.5 inline-block border-[1.5px] border-black px-6 py-0.5 rounded-full font-black text-[10px] uppercase bg-slate-50">
                                         {fullSheetPrintData.examName} - ফলাফল বিবরণী (শ্রেণি: {classNamesMap[fullSheetPrintData.className]} | শাখা: {groupNamesMap[gk] || gk})
                                     </div>
-                                    <div className="flex gap-4 mt-1 font-bold text-[9px]">
+                                    <div className="flex gap-4 mt-0.5 font-bold text-[9px]">
                                         <span>সেশন: {toBengaliNumber(selectedYear)}</span>
                                         <span>পৃষ্ঠা: {toBengaliNumber(chunkIdx + 1)}/{toBengaliNumber(studentChunks.length)}</span>
                                     </div>
                                 </header>
+
+                                {/* Overall Statistics Summary Bar matching Word document image */}
+                                <div className="w-full mb-1.5">
+                                    <table className="w-full border-collapse border border-black text-center text-[9px]">
+                                        <tbody>
+                                            <tr className="bg-slate-50 font-bold h-6 border border-black">
+                                                <td className="border border-black px-1.5 whitespace-nowrap">
+                                                    মোট পরীক্ষার্থী: <span className="font-black">{toBengaliNumber(totalCandidates)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1.5 whitespace-nowrap">
+                                                    উপস্থিত: <span className="font-black">{toBengaliNumber(presentCandidates)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1.5 whitespace-nowrap">
+                                                    অনুপস্থিত: <span className="font-black">{toBengaliNumber(absentCandidates)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1.5 whitespace-nowrap">
+                                                    পাশের হার: <span className="font-black">{toBengaliNumber(passRate)}%</span>
+                                                </td>
+                                                <td className="border border-black px-1.5 whitespace-nowrap">
+                                                    মোট পাশ: <span className="font-black text-emerald-800">{toBengaliNumber(passedCandidates)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1.5 whitespace-nowrap">
+                                                    ফেল: <span className="font-black text-rose-800">{toBengaliNumber(failedCandidates)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1 whitespace-nowrap">
+                                                    A+: <span className="font-black">{toBengaliNumber(aPlusCount)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1 whitespace-nowrap">
+                                                    A: <span className="font-black">{toBengaliNumber(aCount)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1 whitespace-nowrap">
+                                                    A-: <span className="font-black">{toBengaliNumber(aMinusCount)}</span> জন
+                                                </td>
+                                                <td className="border border-black px-1 whitespace-nowrap">
+                                                    B: <span className="font-black">{toBengaliNumber(bCount)}</span> জন
+                                                </td>
+                                                {showCandD && (
+                                                    <>
+                                                        <td className="border border-black px-1 whitespace-nowrap">
+                                                            C: <span className="font-black">{toBengaliNumber(cCount)}</span> জন
+                                                        </td>
+                                                        <td className="border border-black px-1 whitespace-nowrap">
+                                                            D: <span className="font-black">{toBengaliNumber(dCount)}</span> জন
+                                                        </td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
 
                                 {/* Part 1 Table */}
                                 <div className="space-y-0.5 flex-1">
@@ -3681,7 +3781,7 @@ export default function ResultsPage() {
                                     </table>
                                 </div>
 
-                                <footer className="mt-6 flex justify-between px-10 border-t border-black pt-2 pb-4 no-screen">
+                                <footer className="mt-2.5 flex justify-between px-10 border-t border-black pt-1 pb-2 no-screen">
                                     <div className="text-center w-40 border-t border-black pt-0.5 font-black text-[10px]">অফিস সহকারীর স্বাক্ষর</div>
                                     <div className="text-center w-40 border-t border-black pt-0.5 font-black text-[10px]">প্রধান শিক্ষকের স্বাক্ষর</div>
                                 </footer>
