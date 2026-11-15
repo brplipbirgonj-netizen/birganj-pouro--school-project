@@ -65,6 +65,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /seatPlans/{id} {
+      allow read: if true;
+      allow write: if isAuthed() && (hasPermission('manage:routines') || isAdmin());
+    }
+
     match /classRoutines/{id} {
       allow read: if true;
       allow write: if isAuthed() && (hasPermission('manage:routines') || isAdmin());

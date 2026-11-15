@@ -159,7 +159,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
     useEffect(() => {
         if (!db || !academicYear || !selectedExam) return;
         const examSlug = getExamSlug(selectedExam);
-        const docRef = doc(db, 'seatPlans', `plan_${academicYear}_${examSlug}`);
+        const docRef = doc(db, 'classRoutines', `seatPlan_${academicYear}_${examSlug}`);
         getDoc(docRef).then(snap => {
             if (snap.exists()) {
                 const data = snap.data();
@@ -452,7 +452,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         try {
             const cleanExam = selectedExam.trim();
             const examSlug = getExamSlug(cleanExam);
-            const docRef = doc(db, 'seatPlans', `plan_${academicYear}_${examSlug}`);
+            const docRef = doc(db, 'classRoutines', `seatPlan_${academicYear}_${examSlug}`);
 
             await setDoc(docRef, {
                 academicYear,
