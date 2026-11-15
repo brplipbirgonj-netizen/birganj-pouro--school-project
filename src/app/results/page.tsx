@@ -812,6 +812,49 @@ const ExamAttendanceTab = ({ allStudents }: { allStudents: Student[] }) => {
     );
 };
 
+const getSubjectColumns = (sub: SubjectType, rec?: ClassResult | null) => {
+    const subNameNorm = normalize(sub.name);
+    const isEnglish = subNameNorm.includes('ইংরেজি') || subNameNorm.includes('english');
+    const isIct = subNameNorm.includes('তথ্য ও যোগাযোগ') || subNameNorm.includes('আইসিটি') || subNameNorm === 'ict';
+    const hasPrac = sub.practical || isIct || (rec?.practicalLimit !== undefined && rec.practicalLimit > 0);
+
+    let hasWritten = true;
+    let hasMcq = true;
+    let hasPractical = hasPrac;
+
+    if (rec && (rec.writtenLimit !== undefined || rec.mcqLimit !== undefined || rec.practicalLimit !== undefined)) {
+        hasWritten = (rec.writtenLimit ?? 0) > 0;
+        hasMcq = (rec.mcqLimit ?? 0) > 0;
+        hasPractical = (rec.practicalLimit ?? 0) > 0;
+    } else {
+        if (isEnglish) {
+            hasWritten = true;
+            hasMcq = false;
+            hasPractical = false;
+        } else if (isIct) {
+            hasWritten = false;
+            hasMcq = true;
+            hasPractical = true;
+        } else if (hasPrac) {
+            hasWritten = true;
+            hasMcq = true;
+            hasPractical = true;
+        } else {
+            hasWritten = true;
+            hasMcq = true;
+            hasPractical = false;
+        }
+    }
+
+    if (!hasWritten && !hasMcq && !hasPractical) {
+        hasWritten = true;
+    }
+
+    const fullMarks = rec?.fullMarks ?? sub.fullMarks ?? 100;
+
+    return { hasWritten, hasMcq, hasPractical, fullMarks };
+};
+
 const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Student[], onPrintRequested: (data: any) => void }) => {
     const { toast } = useToast();
     const { selectedYear } = useAcademicYear();
@@ -911,36 +954,149 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
         }
     };
 
-    const handlePrintBlank = () => {
+    const [isBulkLoading, setIsBulkLoading] = useState(false);
+
+    const handlePrintBlank = async () => {
         if (!className || !subject) {
             toast({ variant: 'destructive', title: 'শ্রেণি ও বিষয় নির্বাচন করুন' });
             return;
         }
-        const students = allStudents
-            .filter(s => {
-                const yearMatch = s.academicYear === selectedYear;
-                const classMatch = s.className === className;
-                if (!yearMatch || !classMatch) return false;
-                if (!group || group === 'all') return true;
-                const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
-                const filterGroupNorm = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
-                return sGroupNorm === filterGroupNorm;
-            })
-            .sort((a, b) => a.roll - b.roll)
-            .map(student => ({
-                student,
-                marks: {},
-                obtainedMarks: '',
-                grade: '',
-                point: 0,
-                isPass: true
-            }));
+        setIsLoading(true);
+        try {
+            const normSub = normalize(subject);
+            let matchingRecord: ClassResult | null = null;
+            if (db) {
+                const q = query(
+                    collection(db, 'results'),
+                    where('academicYear', '==', selectedYear),
+                    where('examName', '==', examName),
+                    where('className', '==', className)
+                );
+                const snap = await getDocs(q);
+                const classResults = snap.docs.map(d => d.data() as ClassResult);
+                matchingRecord = classResults.find(r => normalize(r.subject) === normSub) || null;
+            }
 
-        onPrintRequested({ 
-            studentData: students, 
-            info: { examName: examName || 'ফাঁকা ফরম', className, subject, group, fullMarks: availableSubjects.find(s => s.name === subject)?.fullMarks || 100 },
-            isBlank: true 
-        });
+            const subInfo = availableSubjects.find(s => normalize(s.name) === normSub) || {
+                name: subject,
+                englishName: subject,
+                code: '',
+                practical: false,
+                fullMarks: 100
+            };
+
+            const colInfo = getSubjectColumns(subInfo, matchingRecord);
+
+            const students = allStudents
+                .filter(s => {
+                    const yearMatch = s.academicYear === selectedYear;
+                    const classMatch = s.className === className;
+                    if (!yearMatch || !classMatch) return false;
+                    if (parseInt(className) < 9 || !group || group === 'all') return true;
+                    const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                    const filterGroupNorm = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
+                    return sGroupNorm === filterGroupNorm;
+                })
+                .sort((a, b) => (a.roll || 0) - (b.roll || 0));
+
+            onPrintRequested({ 
+                isBlank: true,
+                isAllSubjects: false,
+                subjects: [
+                    {
+                        info: { 
+                            examName: examName || 'ফাঁকা ফরম', 
+                            className, 
+                            subject, 
+                            group, 
+                            fullMarks: colInfo.fullMarks,
+                            academicYear: selectedYear 
+                        },
+                        columns: colInfo,
+                        students
+                    }
+                ]
+            });
+        } catch (e) {
+            console.error('Error preparing blank marksheet:', e);
+            toast({ variant: 'destructive', title: 'ফাঁকা মার্কশিট প্রস্তুত করতে সমস্যা হয়েছে' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handlePrintAllBlank = async () => {
+        if (!className || !examName) {
+            toast({ variant: 'destructive', title: 'পরীক্ষা ও শ্রেণি নির্বাচন করুন' });
+            return;
+        }
+        setIsBulkLoading(true);
+        try {
+            let classResults: ClassResult[] = [];
+            if (db) {
+                const q = query(
+                    collection(db, 'results'),
+                    where('academicYear', '==', selectedYear),
+                    where('examName', '==', examName),
+                    where('className', '==', className)
+                );
+                const snap = await getDocs(q);
+                classResults = snap.docs.map(d => d.data() as ClassResult);
+            }
+
+            const subsToPrint = getSubjects(className, group === 'all' ? undefined : group).filter(s => s.isExamSubject !== false);
+
+            if (subsToPrint.length === 0) {
+                toast({ variant: 'destructive', title: 'এই শ্রেণির কোনো পরীক্ষা বিষয় পাওয়া যায়নি' });
+                return;
+            }
+
+            const classStudents = allStudents
+                .filter(s => {
+                    if (s.academicYear !== selectedYear) return false;
+                    if (s.className !== className) return false;
+                    if (parseInt(className) < 9 || !group || group === 'all') return true;
+                    const sGroupNorm = groupMap[(s.group || '').toLowerCase().trim()] || (s.group || '').toLowerCase().trim();
+                    const filterGroupNorm = groupMap[group.toLowerCase().trim()] || group.toLowerCase().trim();
+                    return sGroupNorm === filterGroupNorm;
+                })
+                .sort((a, b) => (a.roll || 0) - (b.roll || 0));
+
+            if (classStudents.length === 0) {
+                toast({ variant: 'destructive', title: 'এই শ্রেণিতে কোনো শিক্ষার্থী পাওয়া যায়নি' });
+                return;
+            }
+
+            const allSubjectsPayload = subsToPrint.map(subInfo => {
+                const normSub = normalize(subInfo.name);
+                const matchingRecord = classResults.find(r => normalize(r.subject) === normSub);
+                const colInfo = getSubjectColumns(subInfo, matchingRecord);
+
+                return {
+                    info: {
+                        examName: examName || 'ফাঁকা ফরম',
+                        className,
+                        subject: subInfo.name,
+                        group,
+                        fullMarks: colInfo.fullMarks,
+                        academicYear: selectedYear
+                    },
+                    columns: colInfo,
+                    students: classStudents
+                };
+            });
+
+            onPrintRequested({
+                isBlank: true,
+                isAllSubjects: true,
+                subjects: allSubjectsPayload
+            });
+        } catch (e) {
+            console.error('Error preparing all blank marksheets:', e);
+            toast({ variant: 'destructive', title: 'সকল বিষয়ের ফাঁকা মার্কশিট তৈরিতে সমস্যা হয়েছে' });
+        } finally {
+            setIsBulkLoading(false);
+        }
     };
 
     const reportStudents = useMemo(() => {
@@ -992,7 +1148,7 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 items-end p-4 border rounded-lg bg-white/50 shadow-sm">
                 <div className="space-y-2">
                     <Label className="text-xs font-bold">পরীক্ষা</Label>
                     <Select value={examName} onValueChange={setExamName}>
@@ -1026,8 +1182,12 @@ const SubjectReportTab = ({ allStudents, onPrintRequested }: { allStudents: Stud
                 <Button onClick={handleLoadReport} disabled={isLoading || !subject || !examName} className="h-9 text-xs font-black">
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'রিপোর্ট দেখুন'}
                 </Button>
-                <Button onClick={handlePrintBlank} variant="outline" className="h-9 text-xs font-black border-amber-600 text-amber-700 hover:bg-amber-50">
-                    <Printer className="mr-2 h-4 w-4" /> ফাঁকা মার্কশিট
+                <Button onClick={handlePrintBlank} disabled={!className || !subject || isLoading} variant="outline" className="h-9 text-xs font-black border-amber-600 text-amber-700 hover:bg-amber-50">
+                    <Printer className="mr-1.5 h-3.5 w-3.5" /> ফাঁকা মার্কশিট
+                </Button>
+                <Button onClick={handlePrintAllBlank} disabled={!className || !examName || isBulkLoading} className="h-9 text-xs font-black bg-purple-600 hover:bg-purple-700 text-white shadow-sm whitespace-nowrap">
+                    {isBulkLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Printer className="mr-1.5 h-3.5 w-3.5" />}
+                    সকল বিষয়ের ফাঁকা মার্কশিট
                 </Button>
             </div>
 
@@ -3142,60 +3302,189 @@ export default function ResultsPage() {
 
             {printingReport && (
                 <div className="hidden print:block printable-area bg-white text-black font-kalpurush">
-                    <style jsx global>{`
-                        @media print {
-                            @page { size: A4 portrait; margin: 15mm !important; }
-                            .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
-                            .printable-area table tr { height: auto !important; }
-                            .printable-area table td, .printable-area table th { padding: 2px 8px !important; font-size: 11px !important; border: 1px solid black !important; }
-                            .no-print { display: none !important; }
-                        }
-                    `}</style>
-                    <header className="border-b-4 border-emerald-800 pb-4 mb-6">
-                        <div className="flex items-center gap-6 mb-2">
-                            {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}
-                            <div className="text-center flex-grow">
-                                <h1 className="text-4xl font-black text-emerald-950 leading-none mb-1">{schoolInfo.name}</h1>
-                                <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
-                                <div className="mt-2 inline-block border-2 border-emerald-800 px-8 py-0.5 rounded-full bg-emerald-50 shadow-sm">
-                                    <h2 className="text-xl font-black uppercase text-emerald-900">
-                                        {printingReport.info.examName} - {toBengaliNumber(selectedYear)}
-                                    </h2>
+                    {printingReport.isBlank ? (
+                        /* NEW 2-COLUMN SIDE-BY-SIDE BLANK MARKSHEET TEMPLATE (MATCHING USER'S WORD DOCUMENT) */
+                        <div>
+                            <style jsx global>{`
+                                @media print {
+                                    @page { size: A4 portrait; margin: 8mm 10mm !important; }
+                                    .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; width: 100% !important; }
+                                    .no-print { display: none !important; }
+                                    .blank-marksheet-page { page-break-after: always; min-height: 96vh; display: flex; flex-direction: column; justify-content: space-between; }
+                                    .blank-marksheet-page:last-child { page-break-after: auto; }
+                                }
+                            `}</style>
+
+                            {(printingReport.subjects || []).map((subItem: any, subIdx: number) => {
+                                const PAGE_SIZE = 44; // 22 left, 22 right per sheet
+                                const studentPages = [];
+                                for (let i = 0; i < subItem.students.length; i += PAGE_SIZE) {
+                                    const chunk = subItem.students.slice(i, i + PAGE_SIZE);
+                                    const mid = Math.ceil(chunk.length / 2);
+                                    const left = chunk.slice(0, mid);
+                                    const right = chunk.slice(mid);
+                                    while (right.length < left.length) {
+                                        right.push(null);
+                                    }
+                                    studentPages.push({ left, right, pageIdx: studentPages.length + 1, totalPages: Math.ceil(subItem.students.length / PAGE_SIZE) });
+                                }
+
+                                if (studentPages.length === 0) {
+                                    studentPages.push({ left: [], right: [], pageIdx: 1, totalPages: 1 });
+                                }
+
+                                return studentPages.map((pageData: any, pIdx: number) => (
+                                    <div key={`blank-sub-${subIdx}-p-${pIdx}`} className="blank-marksheet-page py-2">
+                                        <div>
+                                            {/* Header matching Word document image */}
+                                            <header className="border-b-2 border-black pb-2 mb-2 text-center">
+                                                <div className="flex items-center justify-center gap-3.5 mx-auto">
+                                                    {schoolInfo.logoUrl && (
+                                                        <div className="relative w-12 h-12 shrink-0">
+                                                            <Image src={schoolInfo.logoUrl} alt="Logo" fill className="object-contain" />
+                                                        </div>
+                                                    )}
+                                                    <div className="text-center">
+                                                        <h1 className="text-2xl font-black text-black leading-tight tracking-tight">{schoolInfo.name}</h1>
+                                                        <p className="text-[11px] font-bold text-slate-800">{schoolInfo.address}</p>
+                                                        <p className="text-sm font-black text-black mt-0.5">
+                                                            {subItem.info.examName} - {toBengaliNumber(subItem.info.academicYear)}
+                                                        </p>
+                                                        <p className="text-base font-black text-black underline underline-offset-4 mt-0.5">
+                                                            বিষয়: {subItem.info.subject}
+                                                        </p>
+                                                    </div>
+                                                    {schoolInfo.logoUrl && (
+                                                        <div className="w-12 h-12 shrink-0 invisible" aria-hidden="true" />
+                                                    )}
+                                                </div>
+
+                                                <div className="flex justify-between items-center px-2 mt-2 font-black text-xs">
+                                                    <span>শ্রেণি: {classNamesMap[subItem.info.className]} শ্রেণি {subItem.info.group && subItem.info.group !== 'all' && `(${groupNamesMap[subItem.info.group] || subItem.info.group})`}</span>
+                                                    <span>পূর্ণমান: {toBengaliNumber(subItem.columns.fullMarks)}</span>
+                                                </div>
+                                            </header>
+
+                                            {/* Side-by-Side 2-Column Table Grid */}
+                                            <div className="grid grid-cols-2 gap-3 w-full">
+                                                {/* Left Table */}
+                                                <table className="w-full border-collapse border border-black text-center text-xs">
+                                                    <thead>
+                                                        <tr className="bg-slate-100 font-bold h-7 border border-black text-[11px]">
+                                                            <th className="w-8 border border-black">রোল</th>
+                                                            <th className="text-left pl-2 border border-black min-w-[90px]">শিক্ষার্থীর নাম</th>
+                                                            {subItem.columns.hasWritten && <th className="w-11 border border-black">লিখিত</th>}
+                                                            {subItem.columns.hasMcq && <th className="w-14 border border-black">নৈর্ব্যক্তিক</th>}
+                                                            {subItem.columns.hasPractical && <th className="w-14 border border-black">ব্যবহারিক</th>}
+                                                            <th className="w-11 border border-black">মোট</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {pageData.left.map((student: any, sIdx: number) => (
+                                                            <tr key={student ? student.id : `empty-left-${sIdx}`} className="h-7 border border-black">
+                                                                <td className="font-bold border border-black text-[11px]">{student ? toBengaliNumber(student.roll) : ''}</td>
+                                                                <td className="text-left pl-2 font-bold border border-black text-[11px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[110px]">{student ? (student.studentNameBn || student.studentNameEn) : ''}</td>
+                                                                {subItem.columns.hasWritten && <td className="border border-black"></td>}
+                                                                {subItem.columns.hasMcq && <td className="border border-black"></td>}
+                                                                {subItem.columns.hasPractical && <td className="border border-black"></td>}
+                                                                <td className="border border-black"></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+
+                                                {/* Right Table */}
+                                                <table className="w-full border-collapse border border-black text-center text-xs">
+                                                    <thead>
+                                                        <tr className="bg-slate-100 font-bold h-7 border border-black text-[11px]">
+                                                            <th className="w-8 border border-black">রোল</th>
+                                                            <th className="text-left pl-2 border border-black min-w-[90px]">শিক্ষার্থীর নাম</th>
+                                                            {subItem.columns.hasWritten && <th className="w-11 border border-black">লিখিত</th>}
+                                                            {subItem.columns.hasMcq && <th className="w-14 border border-black">নৈর্ব্যক্তিক</th>}
+                                                            {subItem.columns.hasPractical && <th className="w-14 border border-black">ব্যবহারিক</th>}
+                                                            <th className="w-11 border border-black">মোট</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {pageData.right.map((student: any, sIdx: number) => (
+                                                            <tr key={student ? student.id : `empty-right-${sIdx}`} className="h-7 border border-black">
+                                                                <td className="font-bold border border-black text-[11px]">{student ? toBengaliNumber(student.roll) : ''}</td>
+                                                                <td className="text-left pl-2 font-bold border border-black text-[11px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[110px]">{student ? (student.studentNameBn || student.studentNameEn) : ''}</td>
+                                                                {subItem.columns.hasWritten && <td className="border border-black"></td>}
+                                                                {subItem.columns.hasMcq && <td className="border border-black"></td>}
+                                                                {subItem.columns.hasPractical && <td className="border border-black"></td>}
+                                                                <td className="border border-black"></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        {/* Signature Footer matching Word document */}
+                                        <footer className="mt-6 flex justify-between items-center text-xs font-black px-2">
+                                            <div className="font-black text-black">শিক্ষকের স্বাক্ষর: ___________________________</div>
+                                            <div className="font-black text-black">প্রধান শিক্ষকের স্বাক্ষর: ___________________________</div>
+                                        </footer>
+                                    </div>
+                                ));
+                            })}
+                        </div>
+                    ) : (
+                        /* FILLED MARKS REPORT */
+                        <div>
+                            <style jsx global>{`
+                                @media print {
+                                    @page { size: A4 portrait; margin: 15mm !important; }
+                                    .printable-area { padding: 0 !important; margin: 0 !important; border: none !important; }
+                                    .printable-area table tr { height: auto !important; }
+                                    .printable-area table td, .printable-area table th { padding: 2px 8px !important; font-size: 11px !important; border: 1px solid black !important; }
+                                    .no-print { display: none !important; }
+                                }
+                            `}</style>
+                            <header className="border-b-4 border-emerald-800 pb-4 mb-6">
+                                <div className="flex items-center gap-6 mb-2">
+                                    {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={80} height={80} className="object-contain" />}
+                                    <div className="text-center flex-grow">
+                                        <h1 className="text-4xl font-black text-emerald-950 leading-none mb-1">{schoolInfo.name}</h1>
+                                        <p className="text-sm font-bold text-slate-700">{schoolInfo.address}</p>
+                                        <div className="mt-2 inline-block border-2 border-emerald-800 px-8 py-0.5 rounded-full bg-emerald-50 shadow-sm">
+                                            <h2 className="text-xl font-black uppercase text-emerald-900">
+                                                {printingReport.info?.examName} - {toBengaliNumber(selectedYear)}
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <div className="w-20"></div>
                                 </div>
-                            </div>
-                            <div className="w-20"></div>
+                                
+                                <div className="flex flex-col gap-2 mt-4 px-2 font-black text-lg">
+                                    <div className="flex justify-between items-center border-b-2 border-slate-300 pb-1">
+                                        <span>বিষয়ঃ {printingReport.info?.subject}</span>
+                                        <span>শ্রেণিঃ {classNamesMap[printingReport.info?.className]} শ্রেণি {printingReport.info?.group && printingReport.info?.group !== 'all' && `(${groupNamesMap[printingReport.info?.group]})`}</span>
+                                        <span>পূর্ণমান: {toBengaliNumber(printingReport.info?.fullMarks)}</span>
+                                    </div>
+                                </div>
+                            </header>
+                            <Table className="border-2 border-black">
+                                <TableHeader className="bg-slate-100"><TableRow className="border-b-2 border-black"><TableHead className="w-16 text-center font-black border-r-2 border-black text-black">রোল</TableHead><TableHead className="font-black border-r-2 border-black text-black">শিক্ষার্থীর নাম</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">নৈবেত্তিক</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">প্রাপ্ত</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">গ্রেড</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">পয়েন্ট</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {printingReport.studentData?.map((item: any) => (
+                                        <TableRow key={item.student.id} className={cn("border-b border-slate-400 h-7", !item.isPass && "bg-rose-50/50")}>
+                                            <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell>
+                                            <TableCell className="font-bold border-r-2 border-black">{item.student.studentNameBn}</TableCell>
+                                            <TableCell className={cn("text-center border-r-2 border-black", item.writtenFail && "text-rose-600 font-bold")}>{toBengaliNumber(item.marks.written ?? '-')}</TableCell>
+                                            <TableCell className={cn("text-center border-r-2 border-black", item.mcqFail && "text-rose-600 font-bold")}>{toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
+                                            <TableCell className={cn("text-center border-r-2 border-black", item.practicalFail && "text-rose-600 font-bold")}>{toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
+                                            <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.obtainedMarks)}</TableCell>
+                                            <TableCell className="text-center font-black border-r-2 border-black">{item.grade}</TableCell>
+                                            <TableCell className="text-center font-black">{toBengaliNumber(item.point.toFixed(2))}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                            <footer className="mt-20 flex justify-between px-10 no-screen"><div className="text-center w-48 border-t-2 border-black pt-1 font-black">শ্রেণি শিক্ষকের স্বাক্ষর</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div></footer>
                         </div>
-                        
-                        <div className="flex flex-col gap-2 mt-4 px-2 font-black text-lg">
-                            <div className="flex justify-between items-center border-b-2 border-slate-300 pb-1">
-                                <span>বিষয়ঃ {printingReport.info.subject}</span>
-                                <span>শ্রেণিঃ {classNamesMap[printingReport.info.className]} শ্রেণি {printingReport.info.group && printingReport.info.group !== 'all' && `(${groupNamesMap[printingReport.info.group]})`}</span>
-                                <span>পূর্ণমান: {toBengaliNumber(printingReport.info.fullMarks)}</span>
-                            </div>
-                        </div>
-                    </header>
-                    <Table className="border-2 border-black">
-                        <TableHeader className="bg-slate-100"><TableRow className="border-b-2 border-black"><TableHead className="w-16 text-center font-black border-r-2 border-black text-black">রোল</TableHead><TableHead className="font-black border-r-2 border-black text-black">শিক্ষার্থীর নাম</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">লিখিত</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">নৈবেত্তিক</TableHead><TableHead className="w-20 text-center font-black border-r-2 border-black text-black">ব্যবহারিক</TableHead><TableHead className={cn("w-20 text-center font-black text-black", !printingReport.isBlank && "border-r-2 border-black")}>{printingReport.isBlank ? 'মোট' : 'প্রাপ্ত'}</TableHead>{!printingReport.isBlank && <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">গ্রেড</TableHead>}{!printingReport.isBlank && <TableHead className="w-20 text-center font-black border-r-2 border-black text-black">পয়েন্ট</TableHead>}</TableRow></TableHeader>
-                        <TableBody>
-                          {printingReport.studentData.map((item: any) => (
-                            <TableRow key={item.student.id} className={cn("border-b border-slate-400", printingReport.isBlank ? "h-12" : "h-7", !item.isPass && "bg-rose-50/50")}>
-                                <TableCell className="text-center font-black border-r-2 border-black">{toBengaliNumber(item.student.roll)}</TableCell>
-                                <TableCell className="font-bold border-r-2 border-black">{item.student.studentNameBn}</TableCell>
-                                <TableCell className={cn("text-center border-r-2 border-black", !printingReport.isBlank && item.writtenFail && "text-rose-600 font-bold")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.written ?? '-')}</TableCell>
-                                <TableCell className={cn("text-center border-r-2 border-black", !printingReport.isBlank && item.mcqFail && "text-rose-600 font-bold")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.mcq ?? '-')}</TableCell>
-                                <TableCell className={cn("text-center border-r-2 border-black", !printingReport.isBlank && item.practicalFail && "text-rose-600 font-bold")}>{printingReport.isBlank ? '' : toBengaliNumber(item.marks.practical ?? '-')}</TableCell>
-                                <TableCell className="text-center font-black border-r-2 border-black">{printingReport.isBlank ? '' : toBengaliNumber(item.obtainedMarks)}</TableCell>
-                                {!printingReport.isBlank && (
-                                    <>
-                                        <TableCell className="text-center font-black border-r-2 border-black">{item.grade}</TableCell>
-                                        <TableCell className="text-center font-black">{toBengaliNumber(item.point.toFixed(2))}</TableCell>
-                                    </>
-                                )}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                    </Table>
-                    <footer className="mt-20 flex justify-between px-10 no-screen"><div className="text-center w-48 border-t-2 border-black pt-1 font-black">শ্রেণি শিক্ষকের স্বাক্ষর</div><div className="text-center w-48 border-t-2 border-black pt-1 font-black">প্রধান শিক্ষকের স্বাক্ষর</div></footer>
+                    )}
                 </div>
             )}
 
