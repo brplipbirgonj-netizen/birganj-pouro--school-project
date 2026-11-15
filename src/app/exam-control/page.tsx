@@ -445,6 +445,21 @@ function ExamRoutineTab() {
         return toBengaliNumber(dateStr);
     };
 
+    // Helper: Check if a subject is already assigned to this class in any date/slot
+    const isSubjectAlreadyInClass = (colId: string, subjectName: string, currentRowId?: string, currentSlotIdx?: number): { isDuplicate: boolean; date: string } => {
+        if (!subjectName || subjectName === 'none') return { isDuplicate: false, date: '' };
+        for (const r of rows) {
+            const subs = getCellSubjects(r, colId);
+            for (let idx = 0; idx < subs.length; idx++) {
+                if (r.id === currentRowId && idx === currentSlotIdx) continue;
+                if (subs[idx].subjectName === subjectName) {
+                    return { isDuplicate: true, date: r.date };
+                }
+            }
+        }
+        return { isDuplicate: false, date: '' };
+    };
+
     useEffect(() => {
         if (!db || !selectedYear) return;
         getExams(db, selectedYear).then(exams => {
@@ -503,6 +518,28 @@ function ExamRoutineTab() {
 
     const handleSave = async () => {
         if (!db) return;
+
+        // Validation: একই শ্রেণিতে কোনো বিষয় দুইবার রয়েছে কি না যাচাই
+        for (const col of columns) {
+            const seenSubjects = new Map<string, string>();
+            for (const r of rows) {
+                const subs = getCellSubjects(r, col.id);
+                for (const s of subs) {
+                    if (!s.subjectName || s.subjectName === 'none') continue;
+                    if (seenSubjects.has(s.subjectName)) {
+                        const prevDate = seenSubjects.get(s.subjectName);
+                        toast({
+                            variant: 'destructive',
+                            title: 'একই বিষয় একাধিকবার রয়েছে!',
+                            description: `${classNamesMap[col.className] || col.className} শ্রেণিতে '${s.subjectName}' বিষয়টি একাধিকবার রয়েছে (${prevDate ? formatBengaliDate(prevDate) : ''} এবং ${r.date ? formatBengaliDate(r.date) : ''})। দয়া করে দ্বৈত বিষয়টি পরিবর্তন করুন।`
+                        });
+                        return;
+                    }
+                    seenSubjects.set(s.subjectName, r.date);
+                }
+            }
+        }
+
         setIsSaving(true);
         try {
             const cleanExam = (selectedExam || 'অর্ধ-বার্ষিক পরীক্ষা').trim();
@@ -542,6 +579,18 @@ function ExamRoutineTab() {
     };
 
     const handleSubjectChange = (rowId: string, colId: string, className: string, index: number, subjectName: string) => {
+        if (subjectName && subjectName !== 'none') {
+            const { isDuplicate, date } = isSubjectAlreadyInClass(colId, subjectName, rowId, index);
+            if (isDuplicate) {
+                toast({
+                    variant: 'destructive',
+                    title: 'বিষয়টি ইতিমধ্যে নির্ধারিত!',
+                    description: `'${subjectName}' বিষয়টি ${classNamesMap[className] || className} শ্রেণিতে ${date ? formatBengaliDate(date) + ' তারিখে ' : ''}ইতিমধ্যে যুক্ত রয়েছে। একই শ্রেণিতে একটি বিষয় দুইবার দেওয়া যাবে না।`
+                });
+                return;
+            }
+        }
+
         setRows(prev => prev.map(r => {
             if (r.id !== rowId) return r;
             const currentList = [...getCellSubjects(r, colId)];
@@ -571,14 +620,31 @@ function ExamRoutineTab() {
 
     const handleAddSubjectSlot = (rowId: string, colId: string, className: string) => {
         const subList = getSubjects(className);
+        // Find all subjects already used across all rows for this class
+        const usedSubjectsInClass = new Set<string>();
+        rows.forEach(r => {
+            const subs = getCellSubjects(r, colId);
+            subs.forEach(s => {
+                if (s.subjectName && s.subjectName !== 'none') {
+                    usedSubjectsInClass.add(s.subjectName);
+                }
+            });
+        });
+
+        const availableSub = subList.find(s => !usedSubjectsInClass.has(s.name));
+        if (!availableSub) {
+            toast({
+                variant: 'destructive',
+                title: 'সকল বিষয় ইতিমধ্যে নির্ধারিত',
+                description: `${classNamesMap[className] || className} শ্রেণির সকল বিষয় ইতিমধ্যে রুটিনে যুক্ত করা হয়েছে।`
+            });
+            return;
+        }
+
         setRows(prev => prev.map(r => {
             if (r.id !== rowId) return r;
             const currentList = [...getCellSubjects(r, colId)];
-            const existingNames = currentList.map(s => s.subjectName);
-            const availableSub = subList.find(s => !existingNames.includes(s.name)) || subList[0];
-            if (availableSub) {
-                currentList.push({ subjectName: availableSub.name, subjectCode: availableSub.code });
-            }
+            currentList.push({ subjectName: availableSub.name, subjectCode: availableSub.code });
             return {
                 ...r,
                 subjects: {
@@ -755,7 +821,19 @@ function ExamRoutineTab() {
                                                                 <SelectTrigger className="h-9 text-xs font-bold bg-white border-2 border-slate-300 hover:border-primary transition-colors"><SelectValue placeholder="বিষয় সিলেক্ট করুন" /></SelectTrigger>
                                                                 <SelectContent className="max-h-[300px] font-kalpurush">
                                                                     <SelectItem value="none" className="text-muted-foreground font-semibold text-xs">-- পরীক্ষা নেই / বন্ধ --</SelectItem>
-                                                                    {subList.map((sub, sIdx) => (<SelectItem key={`sub-${sub.name}-${sub.code}-${sIdx}`} value={sub.name} className="font-bold text-xs">{sub.name} ({toBengaliNumber(sub.code)})</SelectItem>))}
+                                                                    {subList.map((sub, sIdx) => {
+                                                                      const dup = isSubjectAlreadyInClass(col.id, sub.name, row.id, -1);
+                                                                      return (
+                                                                          <SelectItem 
+                                                                              key={`sub-${sub.name}-${sub.code}-${sIdx}`} 
+                                                                              value={sub.name} 
+                                                                              disabled={dup.isDuplicate}
+                                                                              className={cn("font-bold text-xs", dup.isDuplicate && "opacity-40 text-muted-foreground line-through cursor-not-allowed")}
+                                                                          >
+                                                                              {sub.name} ({toBengaliNumber(sub.code)}){dup.isDuplicate ? ' ✓ (নির্ধারিত)' : ''}
+                                                                          </SelectItem>
+                                                                      );
+                                                                  })}
                                                                 </SelectContent>
                                                             </Select>
                                                         ) : (
@@ -768,7 +846,19 @@ function ExamRoutineTab() {
                                                                                 <SelectTrigger className="h-8 text-xs font-bold bg-white border border-slate-300 flex-1"><SelectValue placeholder="বিষয় সিলেক্ট করুন" /></SelectTrigger>
                                                                                 <SelectContent className="max-h-[300px] font-kalpurush">
                                                                                     <SelectItem value="none" className="text-rose-500 font-semibold text-xs">-- এই বিষয়টি মুছুন --</SelectItem>
-                                                                                    {subList.map((sub) => (<SelectItem key={sub.name} value={sub.name} className="font-bold text-xs">{sub.name} ({toBengaliNumber(sub.code)})</SelectItem>))}
+                                                                                    {subList.map((sub) => {
+                                                                                      const dup = isSubjectAlreadyInClass(col.id, sub.name, row.id, sIdx);
+                                                                                      return (
+                                                                                          <SelectItem 
+                                                                                              key={sub.name} 
+                                                                                              value={sub.name} 
+                                                                                              disabled={dup.isDuplicate}
+                                                                                              className={cn("font-bold text-xs", dup.isDuplicate && "opacity-40 text-muted-foreground line-through cursor-not-allowed")}
+                                                                                          >
+                                                                                              {sub.name} ({toBengaliNumber(sub.code)}){dup.isDuplicate ? ' ✓ (নির্ধারিত)' : ''}
+                                                                                          </SelectItem>
+                                                                                      );
+                                                                                  })}
                                                                                 </SelectContent>
                                                                             </Select>
                                                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded shrink-0" onClick={() => handleRemoveSubjectSlot(row.id, col.id, sIdx)}><Trash2 className="h-3.5 w-3.5" /></Button>
