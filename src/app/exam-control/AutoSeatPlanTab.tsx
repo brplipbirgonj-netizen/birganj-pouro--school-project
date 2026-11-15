@@ -18,8 +18,10 @@ import { cn } from '@/lib/utils';
 import { 
     Grid3X3, Plus, Trash2, Printer, Save, Loader2, Sparkles, 
     Users, UserCheck, ShieldCheck, CheckCircle2, AlertCircle, 
-    Layers, LayoutGrid, FileText, Tag, RefreshCw, Eye
+    Layers, LayoutGrid, FileText, Tag, RefreshCw, Eye, UserX, Check, ChevronDown, ChevronUp, Search,
+    ArrowLeftRight
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const classNamesMap: Record<string, string> = { 
     '6': '৬ষ্ঠ', 
@@ -42,8 +44,11 @@ const getExamSlug = (name: string) => {
 export interface RoomSetup {
     id: string;
     roomName: string;
-    benchCount: number;
+    benchCount: number;       // total = leftBenchCount + rightBenchCount
+    leftBenchCount: number;   // new
+    rightBenchCount: number;  // new
     seatsPerBench: number;
+    genderSide: 'boys_left' | 'girls_left' | 'mixed'; // new
 }
 
 export interface SeatStudent {
@@ -97,14 +102,22 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
 
     // Room Configurations
     const [rooms, setRooms] = useState<RoomSetup[]>([
-        { id: 'r-1', roomName: 'কক্ষ নং ১০১', benchCount: 15, seatsPerBench: 2 },
-        { id: 'r-2', roomName: 'কক্ষ নং ১০২', benchCount: 15, seatsPerBench: 2 },
-        { id: 'r-3', roomName: 'কক্ষ নং ১০৩', benchCount: 15, seatsPerBench: 2 },
+        { id: 'r-1', roomName: 'কক্ষ নং ১০১', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' },
+        { id: 'r-2', roomName: 'কক্ষ নং ১০২', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' },
+        { id: 'r-3', roomName: 'কক্ষ নং ১০৩', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' },
     ]);
 
     // Seating Pattern
     const [genderPattern, setGenderPattern] = useState<GenderPattern>('opposite_sides');
     const [classPattern, setClassPattern] = useState<ClassPattern>('cross_class');
+
+    // Absent Students Filtering
+    const [excludeAbsents, setExcludeAbsents] = useState<boolean>(true);
+    const [absentStudentIds, setAbsentStudentIds] = useState<Set<string>>(new Set());
+    const [isSyncingAbsents, setIsSyncingAbsents] = useState<boolean>(false);
+    const [showAbsentManager, setShowAbsentManager] = useState<boolean>(false);
+    const [absentManagerClass, setAbsentManagerClass] = useState<string>('10');
+    const [absentSearchQuery, setAbsentSearchQuery] = useState<string>('');
 
     // State for students, loading, and result
     const [studentsByClass, setStudentsByClass] = useState<Record<string, Student[]>>({});
@@ -125,7 +138,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         }).catch(() => {});
     }, [db, academicYear]);
 
-    // Fetch students for all selected classes
+    // Fetch students for all classes
     const loadStudents = async () => {
         if (!db || !academicYear) return;
         setIsFetchingStudents(true);
@@ -155,6 +168,80 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         loadStudents();
     }, [db, academicYear]);
 
+    // Automatically sync absent students from results & attendance
+    const syncAbsentsFromResults = async () => {
+        if (!db || !academicYear || !selectedExam) return;
+        setIsSyncingAbsents(true);
+        try {
+            const foundAbsentIds = new Set<string>();
+            const sanitizedExam = selectedExam.replace(/[^\p{L}\p{N}]+/gu, '-');
+
+            // 1. Scan attendance docs in results collection
+            for (const cName of selectedClasses) {
+                for (const grp of ['none', 'arts', 'science', 'business', 'all']) {
+                    try {
+                        const docId = `${academicYear}_${sanitizedExam}_${cName}_${grp}___ATTENDANCE__`;
+                        const snap = await getDoc(doc(db, 'results', docId));
+                        if (snap.exists()) {
+                            const att = snap.data().attendance;
+                            if (att) {
+                                Object.entries(att).forEach(([stId, status]) => {
+                                    if (status === 'absent') foundAbsentIds.add(stId);
+                                });
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            // 2. Scan subject result documents for isAbsent: true
+            for (const cName of selectedClasses) {
+                try {
+                    const q = query(
+                        collection(db, 'results'),
+                        where('academicYear', '==', academicYear),
+                        where('examName', '==', selectedExam),
+                        where('className', '==', cName)
+                    );
+                    const rSnap = await getDocs(q);
+                    rSnap.forEach(d => {
+                        const resList = d.data().results || [];
+                        resList.forEach((r: any) => {
+                            if (r.isAbsent || r.absent) {
+                                foundAbsentIds.add(r.studentId);
+                            }
+                        });
+                    });
+                } catch (e) {}
+            }
+
+            setAbsentStudentIds(prev => new Set([...prev, ...foundAbsentIds]));
+
+            if (foundAbsentIds.size > 0) {
+                toast({
+                    title: 'অনুপস্থিত শিক্ষার্থী সিন্ক হয়েছে!',
+                    description: `ফলাফল সেকশন থেকে ${foundAbsentIds.size} জন অনুপস্থিত শিক্ষার্থী শনাক্ত করা হয়েছে।`
+                });
+            } else {
+                toast({
+                    title: 'ফলাফলে কোনো অনুপস্থিত মার্ক করা নেই',
+                    description: 'আপনি নিচের তালিকা থেকে নিজে টিক দিয়ে যেকোনো শিক্ষার্থীকে অনুপস্থিত চিহ্নিত করতে পারেন।'
+                });
+            }
+        } catch (err: any) {
+            console.error('Error syncing absents:', err);
+        } finally {
+            setIsSyncingAbsents(false);
+        }
+    };
+
+    // Auto-sync when exam changes
+    useEffect(() => {
+        if (selectedExam && academicYear) {
+            syncAbsentsFromResults();
+        }
+    }, [selectedExam, academicYear]);
+
     // Load saved seat plan from Firebase if available
     useEffect(() => {
         if (!db || !academicYear || !selectedExam) return;
@@ -166,20 +253,55 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 if (Array.isArray(data.rooms)) {
                     setGeneratedRooms(data.rooms);
                 }
-                if (data.roomsSetup) setRooms(data.roomsSetup);
+                if (data.roomsSetup) {
+                    // Migrate old room setup that may lack new fields
+                    const migratedRooms: RoomSetup[] = (data.roomsSetup as any[]).map((r: any) => ({
+                        id: r.id,
+                        roomName: r.roomName,
+                        benchCount: r.benchCount || 20,
+                        leftBenchCount: r.leftBenchCount ?? Math.floor((r.benchCount || 20) / 2),
+                        rightBenchCount: r.rightBenchCount ?? Math.ceil((r.benchCount || 20) / 2),
+                        seatsPerBench: r.seatsPerBench || 2,
+                        genderSide: r.genderSide || 'mixed',
+                    }));
+                    setRooms(migratedRooms);
+                }
                 if (data.genderPattern) setGenderPattern(data.genderPattern);
                 if (data.classPattern) setClassPattern(data.classPattern);
                 if (Array.isArray(data.selectedClasses)) setSelectedClasses(data.selectedClasses);
+                if (Array.isArray(data.absentStudentIds)) setAbsentStudentIds(new Set(data.absentStudentIds));
+                if (data.excludeAbsents !== undefined) setExcludeAbsents(data.excludeAbsents);
             }
         }).catch(err => console.error('Error loading saved seat plan:', err));
     }, [db, academicYear, selectedExam]);
 
-    // Calculate totals
+    // Calculate totals considering absent filter
     const totalSelectedStudents = useMemo(() => {
         return selectedClasses.reduce((acc, cName) => {
-            return acc + (studentsByClass[cName]?.length || 0);
+            const list = studentsByClass[cName] || [];
+            return acc + list.length;
         }, 0);
     }, [selectedClasses, studentsByClass]);
+
+    const activeExamineesCount = useMemo(() => {
+        return selectedClasses.reduce((acc, cName) => {
+            const list = studentsByClass[cName] || [];
+            if (!excludeAbsents) return acc + list.length;
+            const activeList = list.filter(s => !absentStudentIds.has(s.id));
+            return acc + activeList.length;
+        }, 0);
+    }, [selectedClasses, studentsByClass, excludeAbsents, absentStudentIds]);
+
+    const absentInSelectedClasses = useMemo(() => {
+        let count = 0;
+        selectedClasses.forEach(cName => {
+            const list = studentsByClass[cName] || [];
+            list.forEach(s => {
+                if (absentStudentIds.has(s.id)) count++;
+            });
+        });
+        return count;
+    }, [selectedClasses, studentsByClass, absentStudentIds]);
 
     const totalCapacity = useMemo(() => {
         return rooms.reduce((acc, r) => acc + (r.benchCount * r.seatsPerBench), 0);
@@ -196,12 +318,25 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         );
     };
 
+    // Toggle single student absent status
+    const toggleStudentAbsent = (studentId: string) => {
+        setAbsentStudentIds(prev => {
+            const next = new Set(prev);
+            if (next.has(studentId)) {
+                next.delete(studentId);
+            } else {
+                next.add(studentId);
+            }
+            return next;
+        });
+    };
+
     // Room setup handlers
     const handleAddRoom = () => {
         const nextNum = rooms.length + 101;
         setRooms(prev => [
             ...prev,
-            { id: `r-${Date.now()}`, roomName: `কক্ষ নং ${nextNum}`, benchCount: 15, seatsPerBench: 2 }
+            { id: `r-${Date.now()}`, roomName: `কক্ষ নং ${nextNum}`, benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' }
         ]);
     };
 
@@ -211,7 +346,21 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
     };
 
     const updateRoom = (id: string, field: keyof RoomSetup, val: any) => {
-        setRooms(prev => prev.map(r => r.id === id ? { ...r, [field]: val } : r));
+        setRooms(prev => prev.map(r => {
+            if (r.id !== id) return r;
+            const updated = { ...r, [field]: val };
+            // Auto-update benchCount when left or right changes
+            if (field === 'leftBenchCount') {
+                const left = Math.max(0, parseInt(String(val)) || 0);
+                updated.leftBenchCount = left;
+                updated.benchCount = left + updated.rightBenchCount;
+            } else if (field === 'rightBenchCount') {
+                const right = Math.max(0, parseInt(String(val)) || 0);
+                updated.rightBenchCount = right;
+                updated.benchCount = updated.leftBenchCount + right;
+            }
+            return updated;
+        }));
     };
 
     // ==========================================
@@ -223,16 +372,16 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
             return;
         }
 
-        if (totalSelectedStudents === 0) {
-            toast({ variant: 'destructive', title: 'নির্বাচিত শ্রেণিসমূহে কোনো শিক্ষার্থী পাওয়া যায়নি' });
+        if (activeExamineesCount === 0) {
+            toast({ variant: 'destructive', title: 'কোনো সক্রিয় পরীক্ষার্থী পাওয়া যায়নি' });
             return;
         }
 
-        if (totalCapacity < totalSelectedStudents) {
+        if (totalCapacity < activeExamineesCount) {
             toast({ 
                 variant: 'destructive', 
                 title: 'আসন সংখ্যা অপ্রতুল!', 
-                description: `মোট শিক্ষার্থী ${totalSelectedStudents} জন, কিন্তু রুমসমূহের মোট আসন ক্ষমতা ${totalCapacity} টি। অনুগ্রহ করে আরও রুম বা বেঞ্চ যোগ করুন।` 
+                description: `মোট সক্রিয় পরীক্ষার্থী ${activeExamineesCount} জন, কিন্তু মোট আসন ক্ষমতা ${totalCapacity} টি। অনুগ্রহ করে আরও রুম বা বেঞ্চ যোগ করুন।` 
             });
             return;
         }
@@ -240,8 +389,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         setIsGenerating(true);
 
         try {
-            // 1. Prepare structured queues for each class
-            // Split by gender: male and female
+            // Prepare structured queues for each class (excluding absents if toggle active)
             const classQueues: Record<string, {
                 male: SeatStudent[];
                 female: SeatStudent[];
@@ -250,7 +398,11 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
 
             selectedClasses.forEach(cName => {
                 const list = studentsByClass[cName] || [];
-                const mapped: SeatStudent[] = list.map(s => ({
+                const activeList = excludeAbsents 
+                    ? list.filter(s => !absentStudentIds.has(s.id))
+                    : list;
+
+                const mapped: SeatStudent[] = activeList.map(s => ({
                     id: s.id,
                     roll: s.roll || 0,
                     className: s.className,
@@ -265,8 +417,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 };
             });
 
-            // Class pairing strategy for Cross-Class (Anti-cheating)
-            // e.g. 10 + 6, 9 + 7, 8...
+            // Class pairing strategy for Cross-Class
             const pairedClasses: [string, string | null][] = [];
             const sortedClasses = [...selectedClasses].sort((a, b) => parseInt(b) - parseInt(a)); // e.g. 10, 9, 8, 7, 6
             let leftIdx = 0;
@@ -281,14 +432,13 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 rightIdx--;
             }
 
-            // Function to pull a student from class queue
+            // Pull student from class queue
             const pullStudent = (cName: string, preferGender?: 'male' | 'female'): SeatStudent | undefined => {
                 const q = classQueues[cName];
                 if (!q) return undefined;
 
                 if (preferGender === 'male' && q.male.length > 0) {
                     const st = q.male.shift()!;
-                    // remove from all
                     const aIdx = q.all.findIndex(s => s.id === st.id);
                     if (aIdx !== -1) q.all.splice(aIdx, 1);
                     return st;
@@ -300,7 +450,6 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                     return st;
                 }
 
-                // If preferred gender not available, take any from this class
                 if (q.all.length > 0) {
                     const st = q.all.shift()!;
                     if (st.gender === 'male') {
@@ -316,13 +465,12 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 return undefined;
             };
 
-            // Global fallback: pull from ANY available class
+            // Global fallback
             const pullAnyRemaining = (preferGender?: 'male' | 'female'): SeatStudent | undefined => {
                 for (const cName of selectedClasses) {
                     const st = pullStudent(cName, preferGender);
                     if (st) return st;
                 }
-                // If preferGender failed, try again without gender preference
                 if (preferGender) {
                     for (const cName of selectedClasses) {
                         const st = pullStudent(cName, undefined);
@@ -332,7 +480,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 return undefined;
             };
 
-            // 2. Allocate into each room and bench
+            // Allocate into rooms and benches
             const newRoomPlans: RoomSeating[] = [];
             let currentPairIdx = 0;
 
@@ -344,7 +492,6 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                     const benchSeats: SeatSlot[] = [];
                     const spb = rSetup.seatsPerBench;
 
-                    // Choose classes for this bench
                     let classA = selectedClasses[0];
                     let classB = selectedClasses[1] || selectedClasses[0];
 
@@ -354,30 +501,40 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         classB = pair[1] || pair[0];
                     }
 
-                    // Fill seats on this bench
+                    // Determine gender preference based on room genderSide and bench position
+                    const isLeftSide = b <= rSetup.leftBenchCount;
+                    let benchGenderPref: 'male' | 'female' | undefined = undefined;
+                    if (rSetup.genderSide !== 'mixed') {
+                        if (isLeftSide) {
+                            benchGenderPref = rSetup.genderSide === 'boys_left' ? 'male' : 'female';
+                        } else {
+                            benchGenderPref = rSetup.genderSide === 'boys_left' ? 'female' : 'male';
+                        }
+                    }
+
                     for (let sPos = 0; sPos < spb; sPos++) {
                         let targetClass = (sPos % 2 === 0) ? classA : classB;
-                        let preferredGender: 'male' | 'female' | undefined = undefined;
+                        let preferredGender: 'male' | 'female' | undefined;
 
-                        if (genderPattern === 'opposite_sides') {
-                            // Left side: Male, Right side: Female (or alternate)
-                            preferredGender = (sPos === 0) ? 'male' : 'female';
-                        } else if (genderPattern === 'sandwich_boy_middle') {
-                            // 3-seat bench: Girl - Boy - Girl
-                            preferredGender = (sPos === 1) ? 'male' : 'female';
-                        } else if (genderPattern === 'sandwich_girl_middle') {
-                            // 3-seat bench: Boy - Girl - Boy
-                            preferredGender = (sPos === 1) ? 'female' : 'male';
+                        if (rSetup.genderSide !== 'mixed' && benchGenderPref) {
+                            // For non-mixed rooms, the bench-level gender overrides per-seat patterns
+                            preferredGender = benchGenderPref;
+                        } else {
+                            // Use global gender pattern for mixed rooms
+                            if (genderPattern === 'opposite_sides') {
+                                preferredGender = (sPos === 0) ? 'male' : 'female';
+                            } else if (genderPattern === 'sandwich_boy_middle') {
+                                preferredGender = (sPos === 1) ? 'male' : 'female';
+                            } else if (genderPattern === 'sandwich_girl_middle') {
+                                preferredGender = (sPos === 1) ? 'female' : 'male';
+                            }
                         }
 
-                        // Try target class first
                         let st = pullStudent(targetClass, preferredGender);
-                        // If target class empty, try the other paired class
                         if (!st) {
                             const altClass = (targetClass === classA) ? classB : classA;
                             st = pullStudent(altClass, preferredGender);
                         }
-                        // If still empty, pull any remaining student
                         if (!st) {
                             st = pullAnyRemaining(preferredGender);
                         }
@@ -395,13 +552,11 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         seats: benchSeats
                     });
 
-                    // Cycle class pairs smoothly every few benches
                     if (b % 2 === 0) {
                         currentPairIdx++;
                     }
                 }
 
-                // Calculate room summaries
                 const classMap: Record<string, number[]> = {};
                 roomStudents.forEach(st => {
                     if (!classMap[st.className]) classMap[st.className] = [];
@@ -434,7 +589,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
             setGeneratedRooms(newRoomPlans);
             toast({
                 title: 'স্মার্ট সিট প্ল্যান সফলভাবে তৈরি হয়েছে!',
-                description: `মোট ${totalSelectedStudents} জন শিক্ষার্থীর জন্য ${rooms.length}টি কক্ষে স্বয়ংক্রিয় আসন বিন্যাস সম্পন্ন হয়েছে।`
+                description: `মোট ${activeExamineesCount} জন শিক্ষার্থীর জন্য ${rooms.length}টি কক্ষে আসন বিন্যাস সম্পন্ন হয়েছে${excludeAbsents && absentInSelectedClasses > 0 ? ` (অনুপস্থিত ${absentInSelectedClasses} জন বাদ)` : ''}।`
             });
 
         } catch (err: any) {
@@ -461,6 +616,8 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 genderPattern,
                 classPattern,
                 selectedClasses,
+                excludeAbsents,
+                absentStudentIds: Array.from(absentStudentIds),
                 rooms: generatedRooms,
                 updatedAt: serverTimestamp()
             }, { merge: true });
@@ -478,27 +635,86 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         window.print();
     };
 
+    // Filter students for the on-screen absent manager list
+    const currentClassStudentsForAbsent = useMemo(() => {
+        const list = studentsByClass[absentManagerClass] || [];
+        if (!absentSearchQuery.trim()) return list;
+        const q = absentSearchQuery.toLowerCase();
+        return list.filter(s => 
+            (s.studentNameBn || '').toLowerCase().includes(q) ||
+            (s.studentNameEn || '').toLowerCase().includes(q) ||
+            String(s.roll || '').includes(q)
+        );
+    }, [studentsByClass, absentManagerClass, absentSearchQuery]);
+
+    // Compute which print content to show in the printable area
+    const activePrintContent = useMemo(() => {
+        if (generatedRooms.length === 0) return null;
+        // For 'preview' tab, show door_notice as the default print content
+        const tab = activePrintTab === 'preview' ? 'door_notice' : activePrintTab;
+        return tab;
+    }, [activePrintTab, generatedRooms]);
+
     return (
         <div className="space-y-8 font-kalpurush">
 
             {/* Print Styles */}
             <style jsx global>{`
                 @media print {
-                    @page { size: A4 portrait; margin: 8mm 6mm !important; }
-                    html, body { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; }
-                    .no-print { display: none !important; }
-                    .print-only { display: block !important; }
-                    .page-break { page-break-after: always !important; }
+                    @page { 
+                        size: A4 portrait; 
+                        margin: 8mm 6mm !important; 
+                    }
+                    html, body { 
+                        background: white !important; 
+                        color: black !important; 
+                        margin: 0 !important; 
+                        padding: 0 !important; 
+                        width: 100% !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                    }
+                    body * { 
+                        visibility: hidden !important; 
+                    }
+                    .printable-area,
+                    .printable-area * { 
+                        visibility: visible !important; 
+                    }
+                    .printable-area.seat-plan-print-root { 
+                        position: absolute !important; 
+                        top: 0 !important; 
+                        left: 0 !important; 
+                        width: 100% !important; 
+                        max-width: 100% !important;
+                        height: auto !important;
+                        min-height: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: white !important;
+                        overflow: visible !important;
+                        display: block !important;
+                        box-sizing: border-box !important;
+                        z-index: 99999 !important;
+                    }
+                    .no-print { 
+                        display: none !important; 
+                    }
+                    .page-break { 
+                        page-break-after: always !important; 
+                        break-after: page !important; 
+                    }
                     .seat-sticker-grid {
                         display: grid !important;
                         grid-template-columns: repeat(2, 1fr) !important;
-                        gap: 8px !important;
+                        gap: 12px !important;
                     }
                     .door-notice-box {
                         border: 2px solid black !important;
-                        padding: 12px !important;
+                        padding: 16px !important;
                         margin-bottom: 20px !important;
                         page-break-inside: avoid !important;
+                        break-inside: avoid !important;
                     }
                 }
             `}</style>
@@ -512,7 +728,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                 <Sparkles className="h-6 w-6 text-violet-600" /> স্মার্ট অটো সিট প্ল্যান (Automatic Exam Seating)
                             </CardTitle>
                             <CardDescription className="font-bold text-slate-600 mt-1">
-                                শিক্ষাবর্ষ: {toBengaliNumber(academicYear)} | নকল প্রতিরোধক ক্রস-ক্লাস ও জেন্ডারভিত্তিক স্বয়ংক্রিয় আসন বিন্যাস
+                                শিক্ষাবর্ষ: {toBengaliNumber(academicYear)} | নকল প্রতিরোধক ক্রস-ক্লাস, জেন্ডার ও অনুপস্থিতি ফিল্টারিং সমন্বয়
                             </CardDescription>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -541,8 +757,15 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                     {/* Stats Overview */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-4 border-t border-violet-200/60">
                         <div className="p-3 bg-white rounded-xl border border-violet-200 shadow-xs">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase">নির্বাচিত পরীক্ষার্থী</span>
-                            <p className="text-xl font-black text-violet-700">{toBengaliNumber(totalSelectedStudents)} জন</p>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase">সক্রিয় পরীক্ষার্থী</span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <p className="text-xl font-black text-violet-700">{toBengaliNumber(activeExamineesCount)} জন</p>
+                                {excludeAbsents && absentInSelectedClasses > 0 && (
+                                    <Badge className="bg-rose-100 text-rose-700 text-[10px] font-bold border-none">
+                                        -{toBengaliNumber(absentInSelectedClasses)} অনুপস্থিত
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
                         <div className="p-3 bg-white rounded-xl border border-violet-200 shadow-xs">
                             <span className="text-[10px] font-bold text-muted-foreground uppercase">মোট পরীক্ষার কক্ষ</span>
@@ -556,10 +779,10 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                             <span className="text-[10px] font-bold text-muted-foreground uppercase">আসন ক্ষমতা / অবস্থান</span>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className="text-xl font-black text-slate-800">{toBengaliNumber(totalCapacity)} সিট</span>
-                                {totalCapacity >= totalSelectedStudents ? (
+                                {totalCapacity >= activeExamineesCount ? (
                                     <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">পর্যাপ্ত ✓</Badge>
                                 ) : (
-                                    <Badge className="bg-rose-100 text-rose-800 text-[10px] font-bold">ঘাটতি {toBengaliNumber(totalSelectedStudents - totalCapacity)}</Badge>
+                                    <Badge className="bg-rose-100 text-rose-800 text-[10px] font-bold">ঘাটতি {toBengaliNumber(activeExamineesCount - totalCapacity)}</Badge>
                                 )}
                             </div>
                         </div>
@@ -617,7 +840,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <Label className="font-black text-base text-slate-800 flex items-center gap-2">
-                                <LayoutGrid className="h-5 w-5 text-violet-600" /> ৩. কক্ষ ও বেঞ্চ ব্যবস্থাপনা (কয়টি রুম ও কতটি বেঞ্চ)
+                                <LayoutGrid className="h-5 w-5 text-violet-600" /> ৩. কক্ষ ও বেঞ্চ ব্যবস্থাপনা (বাম-ডান বেঞ্চ ও জেন্ডার সাইড)
                             </Label>
                             <Button 
                                 type="button" 
@@ -630,21 +853,22 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {rooms.map((room, idx) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {rooms.map((room) => (
                                 <div key={room.id} className="p-4 bg-slate-50/70 border-2 border-slate-200 rounded-2xl space-y-3 relative group hover:border-violet-300 transition-colors">
+                                    {/* Room Name & Delete */}
                                     <div className="flex items-center justify-between gap-2">
                                         <Input
                                             value={room.roomName}
                                             onChange={e => updateRoom(room.id, 'roomName', e.target.value)}
-                                            className="font-black text-sm h-9 bg-white border border-slate-300 w-36"
+                                            className="font-black text-sm h-9 bg-white border border-slate-300 flex-1"
                                             placeholder="কক্ষের নাম"
                                         />
                                         {rooms.length > 1 && (
                                             <Button 
                                                 variant="ghost" 
                                                 size="icon" 
-                                                className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg"
+                                                className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg shrink-0"
                                                 onClick={() => handleRemoveRoom(room.id)}
                                             >
                                                 <Trash2 className="h-3.5 w-3.5" />
@@ -652,37 +876,94 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                         )}
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 text-xs">
+                                    {/* Left / Right bench count + seats per bench */}
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
                                         <div className="space-y-1">
-                                            <Label className="text-[11px] font-bold text-slate-600">বেঞ্চ সংখ্যা</Label>
+                                            <Label className="text-[10px] font-bold text-blue-700 flex items-center gap-0.5">
+                                                ◀ বামের বেঞ্চ
+                                            </Label>
                                             <Input
                                                 type="number"
-                                                min="1"
+                                                min="0"
                                                 max="100"
-                                                value={room.benchCount}
-                                                onChange={e => updateRoom(room.id, 'benchCount', Math.max(1, parseInt(e.target.value) || 1))}
-                                                className="h-8 font-black text-center bg-white"
+                                                value={room.leftBenchCount}
+                                                onChange={e => updateRoom(room.id, 'leftBenchCount', Math.max(0, parseInt(e.target.value) || 0))}
+                                                className="h-8 font-black text-center bg-white border-blue-200"
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-[11px] font-bold text-slate-600">বেঞ্চে আসন</Label>
+                                            <Label className="text-[10px] font-bold text-rose-700 flex items-center gap-0.5">
+                                                ডানের বেঞ্চ ▶
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={room.rightBenchCount}
+                                                onChange={e => updateRoom(room.id, 'rightBenchCount', Math.max(0, parseInt(e.target.value) || 0))}
+                                                className="h-8 font-black text-center bg-white border-rose-200"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] font-bold text-slate-600">বেঞ্চে আসন</Label>
                                             <Select 
                                                 value={String(room.seatsPerBench)} 
                                                 onValueChange={v => updateRoom(room.id, 'seatsPerBench', parseInt(v))}
                                             >
                                                 <SelectTrigger className="h-8 bg-white font-bold text-xs"><SelectValue /></SelectTrigger>
                                                 <SelectContent className="font-kalpurush">
-                                                    <SelectItem value="2" className="font-bold">২ জন (ডানে/বামে)</SelectItem>
-                                                    <SelectItem value="3" className="font-bold">৩ জন (স্যান্ডউইচ)</SelectItem>
-                                                    <SelectItem value="4" className="font-bold">৪ জন (বড় বেঞ্চ)</SelectItem>
+                                                    <SelectItem value="2" className="font-bold">২ জন</SelectItem>
+                                                    <SelectItem value="3" className="font-bold">৩ জন</SelectItem>
+                                                    <SelectItem value="4" className="font-bold">৪ জন</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                     </div>
 
-                                    <div className="pt-2 border-t border-slate-200/80 flex justify-between items-center text-[11px] font-bold text-slate-500">
-                                        <span>কক্ষের মোট আসন:</span>
-                                        <span className="text-violet-700 font-black">{toBengaliNumber(room.benchCount * room.seatsPerBench)} টি</span>
+                                    {/* Total benches display */}
+                                    <div className="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-white/70 px-2 py-1 rounded-lg border border-slate-200">
+                                        <span>মোট বেঞ্চ: <span className="text-violet-700 font-black">{toBengaliNumber(room.benchCount)} টি</span></span>
+                                        <span>মোট আসন: <span className="text-violet-700 font-black">{toBengaliNumber(room.benchCount * room.seatsPerBench)} টি</span></span>
+                                    </div>
+
+                                    {/* Gender Side Selector */}
+                                    <div className="pt-2 border-t border-slate-200">
+                                        <Label className="text-[10px] font-bold text-slate-600 mb-1.5 flex items-center gap-1">
+                                            <ArrowLeftRight className="h-3 w-3" /> জেন্ডার সাইড নির্বাচন
+                                        </Label>
+                                        <div className="flex flex-col gap-1">
+                                            {[
+                                                { value: 'boys_left', label: 'বামে ছাত্র, ডানে ছাত্রী', icon: '👦◀▶👧' },
+                                                { value: 'girls_left', label: 'বামে ছাত্রী, ডানে ছাত্র', icon: '👧◀▶👦' },
+                                                { value: 'mixed', label: 'মিশ্রিত (গ্লোবাল প্যাটার্ন)', icon: '🔀' },
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.value}
+                                                    type="button"
+                                                    onClick={() => updateRoom(room.id, 'genderSide', opt.value as RoomSetup['genderSide'])}
+                                                    className={cn(
+                                                        "flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-bold text-left transition-all",
+                                                        room.genderSide === opt.value
+                                                            ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                                                            : "bg-white text-slate-700 border-slate-200 hover:border-violet-300"
+                                                    )}
+                                                >
+                                                    <span className="text-xs">{opt.icon}</span>
+                                                    <span>{opt.label}</span>
+                                                    {room.genderSide === opt.value && <Check className="h-3 w-3 ml-auto" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {room.genderSide !== 'mixed' && (
+                                            <div className="mt-1.5 text-[9px] font-semibold text-slate-500 flex justify-between px-1">
+                                                <span className="text-blue-600">
+                                                    ◀ বাম ({toBengaliNumber(room.leftBenchCount)} বেঞ্চ): {room.genderSide === 'boys_left' ? 'ছাত্র' : 'ছাত্রী'}
+                                                </span>
+                                                <span className="text-rose-600">
+                                                    ডান ({toBengaliNumber(room.rightBenchCount)} বেঞ্চ): {room.genderSide === 'boys_left' ? 'ছাত্রী' : 'ছাত্র'} ▶
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -694,7 +975,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         {/* Gender arrangement */}
                         <div className="space-y-2">
                             <Label className="font-black text-sm text-violet-950 flex items-center gap-1.5">
-                                <Users className="h-4 w-4 text-violet-600" /> ৪. ছাত্র-ছাত্রী বসার পদ্ধতি
+                                <Users className="h-4 w-4 text-violet-600" /> ৪. ছাত্র-ছাত্রী বসার পদ্ধতি (মিশ্রিত কক্ষের জন্য)
                             </Label>
                             <Select value={genderPattern} onValueChange={(v: GenderPattern) => setGenderPattern(v)}>
                                 <SelectTrigger className="bg-white border-2 border-violet-200 font-bold h-11 text-xs">
@@ -716,7 +997,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                 </SelectContent>
                             </Select>
                             <p className="text-[11px] font-semibold text-slate-500">
-                                * এক বেঞ্চে ছাত্র এবং ছাত্রী ভারসাম্যপূর্ণভাবে সুনির্দিষ্ট ক্রমে বসবে।
+                                * "মিশ্রিত" জেন্ডার সাইড সেটিং-এর কক্ষে এই নিয়ম প্রযোজ্য হবে।
                             </p>
                         </div>
 
@@ -742,6 +1023,154 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                 * ক্রস-ক্লাস মোডে পাশাপাশি একই শ্রেণির শিক্ষার্থী না বসে অন্য শ্রেণির শিক্ষার্থী বসবে।
                             </p>
                         </div>
+                    </div>
+
+                    {/* 4. ABSENT STUDENTS FILTERING & MANAGER */}
+                    <div className="p-5 bg-rose-50/60 rounded-2xl border-2 border-rose-200 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center space-x-3">
+                                <Checkbox 
+                                    id="exclude-absents-checkbox"
+                                    checked={excludeAbsents}
+                                    onCheckedChange={(checked) => setExcludeAbsents(!!checked)}
+                                    className="h-5 w-5 border-2 border-rose-500 data-[state=checked]:bg-rose-600 data-[state=checked]:border-rose-600"
+                                />
+                                <div>
+                                    <Label htmlFor="exclude-absents-checkbox" className="font-black text-sm text-rose-950 cursor-pointer flex items-center gap-2">
+                                        <UserX className="h-4 w-4 text-rose-600" /> ৬. অনুপস্থিত শিক্ষার্থীদের সিট থেকে বাদ দিন
+                                    </Label>
+                                    <p className="text-xs text-rose-800 font-bold mt-0.5">
+                                        ফলাফল সেকশনের রেকর্ড অনুযায়ী বা নিচে ম্যানুয়ালি টিক দেওয়া অনুপস্থিত শিক্ষার্থীরা সিট পাবে না।
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={syncAbsentsFromResults}
+                                    disabled={isSyncingAbsents}
+                                    className="font-black text-xs h-9 border-rose-300 text-rose-800 hover:bg-rose-100 bg-white shadow-xs"
+                                >
+                                    {isSyncingAbsents ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                                    ফলাফল থেকে সিন্ক করুন
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setShowAbsentManager(prev => !prev)}
+                                    className="font-black text-xs h-9 border-rose-300 text-rose-800 hover:bg-rose-100 bg-white shadow-xs"
+                                >
+                                    {showAbsentManager ? <ChevronUp className="h-3.5 w-3.5 mr-1" /> : <ChevronDown className="h-3.5 w-3.5 mr-1" />}
+                                    শিক্ষার্থী নির্বাচন করুন ({toBengaliNumber(absentStudentIds.size)})
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* List of currently excluded absent students */}
+                        {absentStudentIds.size > 0 && (
+                            <div className="pt-2 border-t border-rose-200">
+                                <span className="text-[11px] font-bold text-rose-900 block mb-1.5">
+                                    বর্তমানে বাদ দেওয়া অনুপস্থিত শিক্ষার্থী ({toBengaliNumber(absentStudentIds.size)} জন):
+                                </span>
+                                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                                    {Array.from(absentStudentIds).map(stId => {
+                                        let foundStudent: Student | undefined = undefined;
+                                        for (const c of ['6','7','8','9','10']) {
+                                            foundStudent = (studentsByClass[c] || []).find(s => s.id === stId);
+                                            if (foundStudent) break;
+                                        }
+                                        return (
+                                            <Badge 
+                                                key={stId} 
+                                                variant="outline" 
+                                                className="bg-white border-rose-300 text-rose-900 font-bold text-xs py-1 px-2.5 flex items-center gap-1.5 shadow-2xs"
+                                            >
+                                                <span>
+                                                    {foundStudent ? `[${classNamesMap[foundStudent.className]}] রোল ${toBengaliNumber(foundStudent.roll)} - ${foundStudent.studentNameBn}` : stId}
+                                                </span>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => toggleStudentAbsent(stId)}
+                                                    className="text-rose-500 hover:text-rose-800 font-black ml-1 text-sm leading-none"
+                                                    title="উপস্থিত করুন"
+                                                >
+                                                    ×
+                                                </button>
+                                            </Badge>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Expandable On-Screen Student Absent Toggler */}
+                        {showAbsentManager && (
+                            <div className="mt-3 p-4 bg-white rounded-xl border border-rose-200 space-y-3 animate-in fade-in duration-300">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-2 border-b">
+                                    {/* Class tabs */}
+                                    <div className="flex flex-wrap items-center gap-1">
+                                        {selectedClasses.map(cName => (
+                                            <Button
+                                                key={`abs-c-${cName}`}
+                                                type="button"
+                                                size="sm"
+                                                variant={absentManagerClass === cName ? 'default' : 'ghost'}
+                                                onClick={() => setAbsentManagerClass(cName)}
+                                                className={cn("h-7 px-3 text-xs font-black", absentManagerClass === cName && "bg-rose-600 hover:bg-rose-700 text-white")}
+                                            >
+                                                {classNamesMap[cName]} শ্রেণি
+                                            </Button>
+                                        ))}
+                                    </div>
+
+                                    {/* Search by name/roll */}
+                                    <div className="relative w-full sm:w-60">
+                                        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                        <Input
+                                            value={absentSearchQuery}
+                                            onChange={e => setAbsentSearchQuery(e.target.value)}
+                                            placeholder="রোল বা নাম দিয়ে খুঁজুন..."
+                                            className="h-8 pl-8 text-xs bg-slate-50 border-slate-300"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Student check grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
+                                    {currentClassStudentsForAbsent.map(st => {
+                                        const isAbsent = absentStudentIds.has(st.id);
+                                        return (
+                                            <button
+                                                key={st.id}
+                                                type="button"
+                                                onClick={() => toggleStudentAbsent(st.id)}
+                                                className={cn(
+                                                    "p-2 rounded-lg border text-left flex items-center justify-between transition-all",
+                                                    isAbsent 
+                                                        ? "bg-rose-100 border-rose-400 text-rose-950 font-black shadow-xs" 
+                                                        : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-800 font-bold"
+                                                )}
+                                            >
+                                                <div className="min-w-0 pr-2">
+                                                    <span className="text-xs font-black mr-1 text-primary">
+                                                        #{toBengaliNumber(st.roll)}
+                                                    </span>
+                                                    <span className="text-xs truncate">{st.studentNameBn || st.studentNameEn}</span>
+                                                </div>
+                                                <Badge className={cn("text-[10px] shrink-0 font-bold", isAbsent ? "bg-rose-600 text-white" : "bg-slate-200 text-slate-700")}>
+                                                    {isAbsent ? "অনুপস্থিত" : "উপস্থিত"}
+                                                </Badge>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                 </CardContent>
@@ -796,7 +1225,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         </Button>
                     </div>
 
-                    {/* VIEW 1: Visual Interactive Room Grid (On Screen) */}
+                    {/* VIEW 1: Visual Interactive Room Grid (On Screen Only) */}
                     {activePrintTab === 'preview' && (
                         <div className="space-y-8 no-print">
                             {generatedRooms.map((room) => (
@@ -881,11 +1310,176 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         </div>
                     )}
 
-                    {/* VIEW 2: Door Notice Chart (Print View) */}
-                    {(activePrintTab === 'door_notice' || activePrintTab === 'preview') && (
-                        <div className={cn("space-y-6", activePrintTab === 'preview' ? "hidden" : "print-only block")}>
-                            {generatedRooms.map((room, rIdx) => (
-                                <div key={room.roomId} className="door-notice-box page-break bg-white text-black p-8 font-kalpurush border-2 border-black rounded-2xl">
+                    {/* PRINTABLE AREA - contains the active print view, always rendered but only visible on print */}
+                    <div className="printable-area seat-plan-print-root">
+                        {/* Door Notice - shown when activePrintTab is door_notice or preview (default print) */}
+                        {(activePrintContent === 'door_notice') && (
+                            <div className="space-y-8 w-full">
+                                {generatedRooms.map((room) => (
+                                    <div key={room.roomId} className="door-notice-box page-break bg-white text-black p-8 font-kalpurush border-2 border-black rounded-2xl">
+                                        <header className="text-center border-b-2 border-black pb-3 mb-4">
+                                            <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
+                                            <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
+                                            <div className="mt-2 inline-block border-2 border-black px-6 py-1 rounded-full font-black text-base bg-slate-100 uppercase">
+                                                {selectedExam} - {toBengaliNumber(academicYear)}
+                                            </div>
+                                            <h2 className="text-xl font-black mt-2 text-primary underline underline-offset-4">
+                                                কক্ষের সিট চার্ট ও নোটিশ: {room.roomName}
+                                            </h2>
+                                        </header>
+
+                                        <div className="my-4">
+                                            <table className="w-full border-collapse border-2 border-black text-center">
+                                                <thead>
+                                                    <tr className="bg-slate-100 border-b-2 border-black text-sm font-black">
+                                                        <th className="border-r-2 border-black p-2.5">ক্রমিক</th>
+                                                        <th className="border-r-2 border-black p-2.5">শ্রেণি</th>
+                                                        <th className="border-r-2 border-black p-2.5">রোল নম্বরসমূহ</th>
+                                                        <th className="p-2.5">মোট পরীক্ষার্থী</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {room.classSummaries.map((cs, cIdx) => (
+                                                        <tr key={cIdx} className="border-b border-black text-sm font-bold">
+                                                            <td className="border-r-2 border-black p-2 font-black">{toBengaliNumber(cIdx + 1)}</td>
+                                                            <td className="border-r-2 border-black p-2 font-black">{classNamesMap[cs.className]} শ্রেণি</td>
+                                                            <td className="border-r-2 border-black p-2 font-black text-base">{cs.rollsStr}</td>
+                                                            <td className="p-2 font-black text-base">{toBengaliNumber(cs.count)} জন</td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="bg-slate-100 font-black text-base border-t-2 border-black">
+                                                        <td colSpan={3} className="border-r-2 border-black p-2.5 text-right pr-4">এই কক্ষের মোট পরীক্ষার্থী:</td>
+                                                        <td className="p-2.5">{toBengaliNumber(room.totalStudents)} জন</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div className="mt-6 p-4 bg-slate-50 border border-black rounded-lg text-xs space-y-1">
+                                            <p className="font-bold">⚠️ পরীক্ষার্থীদের জন্য নির্দেশনাবলী:</p>
+                                            <p>১. নিজ নিজ নির্ধারিত কক্ষে বেঞ্চের স্টিকারে থাকা রোল অনুযায়ী নির্ধারিত আসনে বসতে হবে।</p>
+                                            <p>২. পরীক্ষা শুরুর অন্তত ১৫ মিনিট পূর্বে কক্ষে উপস্থিত থাকতে হবে।</p>
+                                        </div>
+
+                                        <div className="flex justify-between items-end mt-16 pt-8 text-xs font-black">
+                                            <div className="text-center w-40 border-t border-black pt-1">
+                                                আহ্বায়ক / পরীক্ষা কমিটি
+                                            </div>
+                                            <div className="text-center w-40 border-t border-black pt-1">
+                                                প্রধান শিক্ষক
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Desk Slips */}
+                        {activePrintContent === 'desk_slips' && (
+                            <div className="space-y-8 w-full">
+                                {generatedRooms.map((room) => {
+                                    const allAssigned = room.benches.flatMap(b => 
+                                        b.seats.filter(s => s.student).map(s => ({
+                                            benchNo: b.benchNumber,
+                                            seatNo: s.seatNo,
+                                            student: s.student!
+                                        }))
+                                    );
+                                    const chunkSize = 8;
+                                    const chunks: typeof allAssigned[] = [];
+                                    for (let i = 0; i < allAssigned.length; i += chunkSize) {
+                                        chunks.push(allAssigned.slice(i, i + chunkSize));
+                                    }
+                                    return (
+                                        <div key={room.roomId} className="space-y-6">
+                                            {chunks.map((chunk, cIdx) => (
+                                                <div key={cIdx} className="page-break p-4 bg-white text-black font-kalpurush">
+                                                    <div className="seat-sticker-grid grid grid-cols-2 gap-4">
+                                                        {chunk.map((item, idx) => (
+                                                            <div key={idx} className="border-2 border-dashed border-black rounded-xl p-3 bg-white space-y-1 relative">
+                                                                <div className="text-center border-b border-black pb-1">
+                                                                    <h4 className="text-[11px] font-black leading-tight">{schoolInfo.name}</h4>
+                                                                    <span className="text-[9px] font-bold text-slate-700">{selectedExam} - {toBengaliNumber(academicYear)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded border border-black/20 my-1">
+                                                                    <span>{room.roomName}</span>
+                                                                    <span>বেঞ্চ #{toBengaliNumber(item.benchNo)} | সিট #{toBengaliNumber(item.seatNo)}</span>
+                                                                </div>
+                                                                <div className="text-center py-1">
+                                                                    <span className="text-xs font-black text-primary border border-primary/30 px-2 py-0.5 rounded-full inline-block">
+                                                                        {classNamesMap[item.student.className]} শ্রেণি
+                                                                    </span>
+                                                                    <p className="text-xl font-black mt-1">রোল: {toBengaliNumber(item.student.roll)}</p>
+                                                                    <p className="text-xs font-bold truncate mt-0.5">{item.student.name}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Master Chart */}
+                        {activePrintContent === 'master_chart' && (
+                            <div className="space-y-8 w-full">
+                                {generatedRooms.map((room) => (
+                                    <div key={room.roomId} className="page-break bg-white text-black p-6 font-kalpurush border border-black">
+                                        <header className="text-center border-b-2 border-black pb-2 mb-3">
+                                            <h2 className="text-xl font-black">{schoolInfo.name}</h2>
+                                            <p className="text-xs font-bold">{selectedExam} - {toBengaliNumber(academicYear)}</p>
+                                            <h3 className="text-base font-black underline mt-1">কক্ষ পরিদর্শকের মাস্টার সিট প্ল্যান: {room.roomName}</h3>
+                                        </header>
+
+                                        <table className="w-full border-collapse border border-black text-center text-xs">
+                                            <thead>
+                                                <tr className="bg-slate-100 border-b border-black font-black">
+                                                    <th className="border-r border-black p-1.5 w-16">বেঞ্চ</th>
+                                                    <th className="border-r border-black p-1.5">আসন ১</th>
+                                                    <th className="border-r border-black p-1.5">আসন ২</th>
+                                                    {room.benches[0]?.seats.length > 2 && <th className="border-r border-black p-1.5">আসন ৩</th>}
+                                                    {room.benches[0]?.seats.length > 3 && <th className="p-1.5">আসন ৪</th>}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {room.benches.map((b) => (
+                                                    <tr key={b.benchNumber} className="border-b border-black">
+                                                        <td className="border-r border-black p-1 font-black bg-slate-50">বেঞ্চ #{toBengaliNumber(b.benchNumber)}</td>
+                                                        {b.seats.map((s, idx) => (
+                                                            <td key={idx} className="border-r last:border-r-0 border-black p-1">
+                                                                {s.student ? (
+                                                                    <div className="font-bold">
+                                                                        <span className="font-black text-primary">[{classNamesMap[s.student.className]}]</span> রোল: {toBengaliNumber(s.student.roll)}
+                                                                        <br/><span className="text-[10px] text-slate-700">{s.student.name}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-slate-400 italic">খালি</span>
+                                                                )}
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="flex justify-between items-end mt-12 pt-4 text-xs font-black">
+                                            <div>কক্ষ পরিদর্শকের স্বাক্ষর: ____________________</div>
+                                            <div>প্রধান শিক্ষক: ____________________</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* On-screen previews for non-preview tabs (no-print) */}
+                    {activePrintTab === 'door_notice' && (
+                        <div className="space-y-8 no-print max-w-4xl mx-auto">
+                            {generatedRooms.map((room) => (
+                                <div key={room.roomId} className="door-notice-box bg-white text-black font-kalpurush border-2 border-black rounded-2xl p-6 sm:p-8 shadow-xl mb-8">
                                     <header className="text-center border-b-2 border-black pb-3 mb-4">
                                         <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
                                         <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
@@ -931,23 +1525,17 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                     </div>
 
                                     <div className="flex justify-between items-end mt-16 pt-8 text-xs font-black">
-                                        <div className="text-center w-40 border-t border-black pt-1">
-                                            আহ্বায়ক / পরীক্ষা কমিটি
-                                        </div>
-                                        <div className="text-center w-40 border-t border-black pt-1">
-                                            প্রধান শিক্ষক
-                                        </div>
+                                        <div className="text-center w-40 border-t border-black pt-1">আহ্বায়ক / পরীক্ষা কমিটি</div>
+                                        <div className="text-center w-40 border-t border-black pt-1">প্রধান শিক্ষক</div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    {/* VIEW 3: Desk Slips / Stickers (Print View) */}
-                    {(activePrintTab === 'desk_slips') && (
-                        <div className="print-only block space-y-6">
+                    {activePrintTab === 'desk_slips' && (
+                        <div className="space-y-8 no-print max-w-4xl mx-auto">
                             {generatedRooms.map((room) => {
-                                // Flatten all assigned seats in room
                                 const allAssigned = room.benches.flatMap(b => 
                                     b.seats.filter(s => s.student).map(s => ({
                                         benchNo: b.benchNumber,
@@ -955,18 +1543,15 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                         student: s.student!
                                     }))
                                 );
-
-                                // Chunk by 8 per A4 page
                                 const chunkSize = 8;
                                 const chunks: typeof allAssigned[] = [];
                                 for (let i = 0; i < allAssigned.length; i += chunkSize) {
                                     chunks.push(allAssigned.slice(i, i + chunkSize));
                                 }
-
                                 return (
-                                    <div key={room.roomId} className="space-y-4">
+                                    <div key={room.roomId} className="space-y-6">
                                         {chunks.map((chunk, cIdx) => (
-                                            <div key={cIdx} className="page-break p-4 bg-white text-black font-kalpurush">
+                                            <div key={cIdx} className="p-6 rounded-2xl border-2 border-slate-300 shadow-xl mb-8 bg-white text-black font-kalpurush">
                                                 <div className="seat-sticker-grid grid grid-cols-2 gap-4">
                                                     {chunk.map((item, idx) => (
                                                         <div key={idx} className="border-2 border-dashed border-black rounded-xl p-3 bg-white space-y-1 relative">
@@ -996,11 +1581,10 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         </div>
                     )}
 
-                    {/* VIEW 4: Master Chart for Invigilators */}
-                    {(activePrintTab === 'master_chart') && (
-                        <div className="print-only block space-y-8">
+                    {activePrintTab === 'master_chart' && (
+                        <div className="space-y-8 no-print max-w-4xl mx-auto">
                             {generatedRooms.map((room) => (
-                                <div key={room.roomId} className="page-break bg-white text-black p-6 font-kalpurush border border-black">
+                                <div key={room.roomId} className="bg-white text-black font-kalpurush border border-black p-6 rounded-2xl shadow-xl mb-8">
                                     <header className="text-center border-b-2 border-black pb-2 mb-3">
                                         <h2 className="text-xl font-black">{schoolInfo.name}</h2>
                                         <p className="text-xs font-bold">{selectedExam} - {toBengaliNumber(academicYear)}</p>
