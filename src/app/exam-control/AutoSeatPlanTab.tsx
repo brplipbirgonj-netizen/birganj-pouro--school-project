@@ -711,10 +711,23 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                     }
                     .door-notice-box {
                         border: 2px solid black !important;
-                        padding: 16px !important;
-                        margin-bottom: 20px !important;
+                        padding: 10px !important;
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
+                    }
+                    .master-chart-block {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        page-break-after: always !important;
+                        break-after: page !important;
+                    }
+                    .master-chart-block table {
+                        font-size: 10px !important;
+                    }
+                    .signature-row {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        margin-top: 8px !important;
                     }
                 }
             `}</style>
@@ -1313,66 +1326,73 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                     {/* PRINTABLE AREA - contains the active print view, always rendered but only visible on print */}
                     <div className="printable-area seat-plan-print-root">
                         {/* Door Notice - shown when activePrintTab is door_notice or preview (default print) */}
-                        {(activePrintContent === 'door_notice') && (
-                            <div className="space-y-8 w-full">
-                                {generatedRooms.map((room) => (
-                                    <div key={room.roomId} className="door-notice-box page-break bg-white text-black p-8 font-kalpurush border-2 border-black rounded-2xl">
-                                        <header className="text-center border-b-2 border-black pb-3 mb-4">
-                                            <h1 className="text-2xl font-black">{schoolInfo.name}</h1>
-                                            <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
-                                            <div className="mt-2 inline-block border-2 border-black px-6 py-1 rounded-full font-black text-base bg-slate-100 uppercase">
-                                                {selectedExam} - {toBengaliNumber(academicYear)}
-                                            </div>
-                                            <h2 className="text-xl font-black mt-2 text-primary underline underline-offset-4">
-                                                কক্ষের সিট চার্ট ও নোটিশ: {room.roomName}
-                                            </h2>
-                                        </header>
+                        {(activePrintContent === 'door_notice') && (() => {
+                            // Group rooms into pairs (2 per page)
+                            const pairs: RoomSeating[][] = [];
+                            for (let i = 0; i < generatedRooms.length; i += 2) {
+                                pairs.push(generatedRooms.slice(i, i + 2));
+                            }
+                            return (
+                                <div className="w-full">
+                                    {pairs.map((pair, pIdx) => (
+                                        <div key={pIdx} className={pIdx < pairs.length - 1 ? 'page-break' : ''}>
+                                            {pair.map((room) => (
+                                                <div key={room.roomId} className="door-notice-box bg-white text-black font-kalpurush border-2 border-black mb-4" style={{padding:'10px'}}>
+                                                    <header className="text-center border-b-2 border-black pb-2 mb-3">
+                                                        <h1 className="text-lg font-black">{schoolInfo.name}</h1>
+                                                        <p className="text-[10px] font-bold text-slate-700">{schoolInfo.address}</p>
+                                                        <div className="mt-1 inline-block border-2 border-black px-4 py-0.5 rounded-full font-black text-sm bg-slate-100 uppercase">
+                                                            {selectedExam} - {toBengaliNumber(academicYear)}
+                                                        </div>
+                                                        <h2 className="text-base font-black mt-1 text-primary underline underline-offset-2">
+                                                            কক্ষের সিট চার্ট ও নোটিশ: {room.roomName}
+                                                        </h2>
+                                                    </header>
 
-                                        <div className="my-4">
-                                            <table className="w-full border-collapse border-2 border-black text-center">
-                                                <thead>
-                                                    <tr className="bg-slate-100 border-b-2 border-black text-sm font-black">
-                                                        <th className="border-r-2 border-black p-2.5">ক্রমিক</th>
-                                                        <th className="border-r-2 border-black p-2.5">শ্রেণি</th>
-                                                        <th className="border-r-2 border-black p-2.5">রোল নম্বরসমূহ</th>
-                                                        <th className="p-2.5">মোট পরীক্ষার্থী</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {room.classSummaries.map((cs, cIdx) => (
-                                                        <tr key={cIdx} className="border-b border-black text-sm font-bold">
-                                                            <td className="border-r-2 border-black p-2 font-black">{toBengaliNumber(cIdx + 1)}</td>
-                                                            <td className="border-r-2 border-black p-2 font-black">{classNamesMap[cs.className]} শ্রেণি</td>
-                                                            <td className="border-r-2 border-black p-2 font-black text-base">{cs.rollsStr}</td>
-                                                            <td className="p-2 font-black text-base">{toBengaliNumber(cs.count)} জন</td>
-                                                        </tr>
-                                                    ))}
-                                                    <tr className="bg-slate-100 font-black text-base border-t-2 border-black">
-                                                        <td colSpan={3} className="border-r-2 border-black p-2.5 text-right pr-4">এই কক্ষের মোট পরীক্ষার্থী:</td>
-                                                        <td className="p-2.5">{toBengaliNumber(room.totalStudents)} জন</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                    <div className="my-2">
+                                                        <table className="w-full border-collapse border-2 border-black text-center">
+                                                            <thead>
+                                                                <tr className="bg-slate-100 border-b-2 border-black text-xs font-black">
+                                                                    <th className="border-r-2 border-black p-1.5">ক্রমিক</th>
+                                                                    <th className="border-r-2 border-black p-1.5">শ্রেণি</th>
+                                                                    <th className="border-r-2 border-black p-1.5">রোল নম্বরসমূহ</th>
+                                                                    <th className="p-1.5">মোট পরীক্ষার্থী</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {room.classSummaries.map((cs, cIdx) => (
+                                                                    <tr key={cIdx} className="border-b border-black text-xs font-bold">
+                                                                        <td className="border-r-2 border-black p-1 font-black">{toBengaliNumber(cIdx + 1)}</td>
+                                                                        <td className="border-r-2 border-black p-1 font-black">{classNamesMap[cs.className]} শ্রেণি</td>
+                                                                        <td className="border-r-2 border-black p-1 font-black">{cs.rollsStr}</td>
+                                                                        <td className="p-1 font-black">{toBengaliNumber(cs.count)} জন</td>
+                                                                    </tr>
+                                                                ))}
+                                                                <tr className="bg-slate-100 font-black text-sm border-t-2 border-black">
+                                                                    <td colSpan={3} className="border-r-2 border-black p-1.5 text-right pr-3">এই কক্ষের মোট পরীক্ষার্থী:</td>
+                                                                    <td className="p-1.5">{toBengaliNumber(room.totalStudents)} জন</td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
 
-                                        <div className="mt-6 p-4 bg-slate-50 border border-black rounded-lg text-xs space-y-1">
-                                            <p className="font-bold">⚠️ পরীক্ষার্থীদের জন্য নির্দেশনাবলী:</p>
-                                            <p>১. নিজ নিজ নির্ধারিত কক্ষে বেঞ্চের স্টিকারে থাকা রোল অনুযায়ী নির্ধারিত আসনে বসতে হবে।</p>
-                                            <p>২. পরীক্ষা শুরুর অন্তত ১৫ মিনিট পূর্বে কক্ষে উপস্থিত থাকতে হবে।</p>
-                                        </div>
+                                                    <div className="mt-2 p-2 bg-slate-50 border border-black rounded text-[10px] space-y-0.5">
+                                                        <p className="font-bold">⚠️ পরীক্ষার্থীদের জন্য নির্দেশনাবলী:</p>
+                                                        <p>১. নির্ধারিত কক্ষে বেঞ্চের স্টিকার অনুযায়ী নির্ধারিত আসনে বসতে হবে।</p>
+                                                        <p>২. পরীক্ষা শুরুর অন্তত ১৫ মিনিট পূর্বে কক্ষে উপস্থিত থাকতে হবে।</p>
+                                                    </div>
 
-                                        <div className="flex justify-between items-end mt-16 pt-8 text-xs font-black">
-                                            <div className="text-center w-40 border-t border-black pt-1">
-                                                আহ্বায়ক / পরীক্ষা কমিটি
-                                            </div>
-                                            <div className="text-center w-40 border-t border-black pt-1">
-                                                প্রধান শিক্ষক
-                                            </div>
+                                                    <div className="signature-row flex justify-between items-end mt-6 pt-4 text-[10px] font-black">
+                                                        <div className="text-center w-36 border-t border-black pt-1">আহ্বায়ক / পরীক্ষা কমিটি</div>
+                                                        <div className="text-center w-36 border-t border-black pt-1">প্রধান শিক্ষক</div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            );
+                        })()}
 
                         {/* Desk Slips */}
                         {activePrintContent === 'desk_slips' && (
@@ -1385,7 +1405,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                             student: s.student!
                                         }))
                                     );
-                                    const chunkSize = 8;
+                                    const chunkSize = 10;
                                     const chunks: typeof allAssigned[] = [];
                                     for (let i = 0; i < allAssigned.length; i += chunkSize) {
                                         chunks.push(allAssigned.slice(i, i + chunkSize));
@@ -1427,7 +1447,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         {activePrintContent === 'master_chart' && (
                             <div className="space-y-8 w-full">
                                 {generatedRooms.map((room) => (
-                                    <div key={room.roomId} className="page-break bg-white text-black p-6 font-kalpurush border border-black">
+                                    <div key={room.roomId} className="master-chart-block bg-white text-black p-6 font-kalpurush border border-black">
                                         <header className="text-center border-b-2 border-black pb-2 mb-3">
                                             <h2 className="text-xl font-black">{schoolInfo.name}</h2>
                                             <p className="text-xs font-bold">{selectedExam} - {toBengaliNumber(academicYear)}</p>
@@ -1465,7 +1485,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                             </tbody>
                                         </table>
 
-                                        <div className="flex justify-between items-end mt-12 pt-4 text-xs font-black">
+                                        <div className="signature-row flex justify-between items-end mt-4 pt-3 text-xs font-black">
                                             <div>কক্ষ পরিদর্শকের স্বাক্ষর: ____________________</div>
                                             <div>প্রধান শিক্ষক: ____________________</div>
                                         </div>
@@ -1543,7 +1563,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                         student: s.student!
                                     }))
                                 );
-                                const chunkSize = 8;
+                                const chunkSize = 10;
                                 const chunks: typeof allAssigned[] = [];
                                 for (let i = 0; i < allAssigned.length; i += chunkSize) {
                                     chunks.push(allAssigned.slice(i, i + chunkSize));
