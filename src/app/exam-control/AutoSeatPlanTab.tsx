@@ -41,6 +41,13 @@ const getExamSlug = (name: string) => {
     return (name || '').trim().replace(/[^a-zA-Z0-9\u0980-\u09FF]+/g, '_');
 };
 
+const getDefaultSeatGenders = (spb: number): ('male' | 'female' | 'any')[] => {
+    if (spb === 2) return ['male', 'female'];
+    if (spb === 3) return ['male', 'female', 'male'];
+    if (spb === 4) return ['male', 'female', 'male', 'female'];
+    return Array(spb).fill('any');
+};
+
 export interface RoomSetup {
     id: string;
     roomName: string;
@@ -48,7 +55,8 @@ export interface RoomSetup {
     leftBenchCount: number;   // new
     rightBenchCount: number;  // new
     seatsPerBench: number;
-    genderSide: 'boys_left' | 'girls_left' | 'mixed'; // new
+    genderSide?: 'boys_left' | 'girls_left' | 'mixed'; // legacy
+    benchSeatGenders?: ('male' | 'female' | 'any')[];  // seat-by-seat gender selection
 }
 
 export interface SeatStudent {
@@ -102,9 +110,9 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
 
     // Room Configurations
     const [rooms, setRooms] = useState<RoomSetup[]>([
-        { id: 'r-1', roomName: 'কক্ষ নং ১০১', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' },
-        { id: 'r-2', roomName: 'কক্ষ নং ১০২', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' },
-        { id: 'r-3', roomName: 'কক্ষ নং ১০৩', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' },
+        { id: 'r-1', roomName: 'কক্ষ নং ১০১', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, benchSeatGenders: ['male', 'female'] },
+        { id: 'r-2', roomName: 'কক্ষ নং ১০২', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, benchSeatGenders: ['male', 'female'] },
+        { id: 'r-3', roomName: 'কক্ষ নং ১০৩', benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, benchSeatGenders: ['male', 'female'] },
     ]);
 
     // Seating Pattern
@@ -255,15 +263,29 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 }
                 if (data.roomsSetup) {
                     // Migrate old room setup that may lack new fields
-                    const migratedRooms: RoomSetup[] = (data.roomsSetup as any[]).map((r: any) => ({
-                        id: r.id,
-                        roomName: r.roomName,
-                        benchCount: r.benchCount || 20,
-                        leftBenchCount: r.leftBenchCount ?? Math.floor((r.benchCount || 20) / 2),
-                        rightBenchCount: r.rightBenchCount ?? Math.ceil((r.benchCount || 20) / 2),
-                        seatsPerBench: r.seatsPerBench || 2,
-                        genderSide: r.genderSide || 'mixed',
-                    }));
+                    const migratedRooms: RoomSetup[] = (data.roomsSetup as any[]).map((r: any) => {
+                        const spb = r.seatsPerBench || 2;
+                        let genders = r.benchSeatGenders;
+                        if (!Array.isArray(genders) || genders.length !== spb) {
+                            if (r.genderSide === 'boys_left') {
+                                genders = getDefaultSeatGenders(spb);
+                            } else if (r.genderSide === 'girls_left') {
+                                genders = spb === 3 ? ['female', 'male', 'female'] : ['female', 'male'];
+                            } else {
+                                genders = getDefaultSeatGenders(spb);
+                            }
+                        }
+                        return {
+                            id: r.id,
+                            roomName: r.roomName,
+                            benchCount: r.benchCount || 20,
+                            leftBenchCount: r.leftBenchCount ?? Math.floor((r.benchCount || 20) / 2),
+                            rightBenchCount: r.rightBenchCount ?? Math.ceil((r.benchCount || 20) / 2),
+                            seatsPerBench: spb,
+                            genderSide: r.genderSide || 'mixed',
+                            benchSeatGenders: genders,
+                        };
+                    });
                     setRooms(migratedRooms);
                 }
                 if (data.genderPattern) setGenderPattern(data.genderPattern);
@@ -336,7 +358,15 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         const nextNum = rooms.length + 101;
         setRooms(prev => [
             ...prev,
-            { id: `r-${Date.now()}`, roomName: `কক্ষ নং ${nextNum}`, benchCount: 20, leftBenchCount: 10, rightBenchCount: 10, seatsPerBench: 2, genderSide: 'boys_left' }
+            { 
+                id: `r-${Date.now()}`, 
+                roomName: `কক্ষ নং ${nextNum}`, 
+                benchCount: 20, 
+                leftBenchCount: 10, 
+                rightBenchCount: 10, 
+                seatsPerBench: 2, 
+                benchSeatGenders: ['male', 'female'] 
+            }
         ]);
     };
 
@@ -358,8 +388,33 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 const right = Math.max(0, parseInt(String(val)) || 0);
                 updated.rightBenchCount = right;
                 updated.benchCount = updated.leftBenchCount + right;
+            } else if (field === 'seatsPerBench') {
+                const spb = parseInt(String(val)) || 2;
+                updated.seatsPerBench = spb;
+                const prevGenders = r.benchSeatGenders || getDefaultSeatGenders(r.seatsPerBench);
+                const nextGenders: ('male' | 'female' | 'any')[] = [];
+                for (let i = 0; i < spb; i++) {
+                    if (i < prevGenders.length) {
+                        nextGenders.push(prevGenders[i]);
+                    } else {
+                        nextGenders.push(i % 2 === 0 ? 'male' : 'female');
+                    }
+                }
+                updated.benchSeatGenders = nextGenders;
             }
             return updated;
+        }));
+    };
+
+    const updateSeatGender = (roomId: string, seatIdx: number, gender: 'male' | 'female' | 'any') => {
+        setRooms(prev => prev.map(r => {
+            if (r.id !== roomId) return r;
+            const current = [...(r.benchSeatGenders || getDefaultSeatGenders(r.seatsPerBench))];
+            current[seatIdx] = gender;
+            return {
+                ...r,
+                benchSeatGenders: current,
+            };
         }));
     };
 
@@ -501,26 +556,17 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         classB = pair[1] || pair[0];
                     }
 
-                    // Determine gender preference based on room genderSide and bench position
-                    const isLeftSide = b <= rSetup.leftBenchCount;
-                    let benchGenderPref: 'male' | 'female' | undefined = undefined;
-                    if (rSetup.genderSide !== 'mixed') {
-                        if (isLeftSide) {
-                            benchGenderPref = rSetup.genderSide === 'boys_left' ? 'male' : 'female';
-                        } else {
-                            benchGenderPref = rSetup.genderSide === 'boys_left' ? 'female' : 'male';
-                        }
-                    }
+                    const roomSeatGenders = rSetup.benchSeatGenders || getDefaultSeatGenders(spb);
 
                     for (let sPos = 0; sPos < spb; sPos++) {
                         let targetClass = (sPos % 2 === 0) ? classA : classB;
-                        let preferredGender: 'male' | 'female' | undefined;
+                        const seatGenderSetting = roomSeatGenders[sPos];
 
-                        if (rSetup.genderSide !== 'mixed' && benchGenderPref) {
-                            // For non-mixed rooms, the bench-level gender overrides per-seat patterns
-                            preferredGender = benchGenderPref;
+                        let preferredGender: 'male' | 'female' | undefined;
+                        if (seatGenderSetting === 'male' || seatGenderSetting === 'female') {
+                            preferredGender = seatGenderSetting;
                         } else {
-                            // Use global gender pattern for mixed rooms
+                            // Fallback to global gender pattern if 'any'
                             if (genderPattern === 'opposite_sides') {
                                 preferredGender = (sPos === 0) ? 'male' : 'female';
                             } else if (genderPattern === 'sandwich_boy_middle') {
@@ -537,6 +583,10 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         }
                         if (!st) {
                             st = pullAnyRemaining(preferredGender);
+                        }
+                        // Fallback without gender restriction if preferred gender has no more students
+                        if (!st && preferredGender) {
+                            st = pullStudent(targetClass, undefined) || pullStudent((targetClass === classA ? classB : classA), undefined) || pullAnyRemaining(undefined);
                         }
 
                         if (st) {
@@ -939,44 +989,102 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                         <span>মোট আসন: <span className="text-violet-700 font-black">{toBengaliNumber(room.benchCount * room.seatsPerBench)} টি</span></span>
                                     </div>
 
-                                    {/* Gender Side Selector */}
+                                    {/* Per-Seat Gender Selector */}
                                     <div className="pt-2 border-t border-slate-200">
-                                        <Label className="text-[10px] font-bold text-slate-600 mb-1.5 flex items-center gap-1">
-                                            <ArrowLeftRight className="h-3 w-3" /> জেন্ডার সাইড নির্বাচন
-                                        </Label>
-                                        <div className="flex flex-col gap-1">
-                                            {[
-                                                { value: 'boys_left', label: 'বামে ছাত্র, ডানে ছাত্রী', icon: '👦◀▶👧' },
-                                                { value: 'girls_left', label: 'বামে ছাত্রী, ডানে ছাত্র', icon: '👧◀▶👦' },
-                                                { value: 'mixed', label: 'মিশ্রিত (গ্লোবাল প্যাটার্ন)', icon: '🔀' },
-                                            ].map(opt => (
-                                                <button
-                                                    key={opt.value}
-                                                    type="button"
-                                                    onClick={() => updateRoom(room.id, 'genderSide', opt.value as RoomSetup['genderSide'])}
-                                                    className={cn(
-                                                        "flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-bold text-left transition-all",
-                                                        room.genderSide === opt.value
-                                                            ? "bg-violet-600 text-white border-violet-600 shadow-sm"
-                                                            : "bg-white text-slate-700 border-slate-200 hover:border-violet-300"
-                                                    )}
-                                                >
-                                                    <span className="text-xs">{opt.icon}</span>
-                                                    <span>{opt.label}</span>
-                                                    {room.genderSide === opt.value && <Check className="h-3 w-3 ml-auto" />}
-                                                </button>
-                                            ))}
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <Label className="text-[10px] font-black text-slate-700 flex items-center gap-1">
+                                                <Users className="h-3.5 w-3.5 text-violet-600" /> বেঞ্চের আসন অনুযায়ী জেন্ডার নির্বাচন
+                                            </Label>
+                                            <span className="text-[9px] font-black text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-200">
+                                                {toBengaliNumber(room.seatsPerBench)} জনের বেঞ্চ
+                                            </span>
                                         </div>
-                                        {room.genderSide !== 'mixed' && (
-                                            <div className="mt-1.5 text-[9px] font-semibold text-slate-500 flex justify-between px-1">
-                                                <span className="text-blue-600">
-                                                    ◀ বাম ({toBengaliNumber(room.leftBenchCount)} বেঞ্চ): {room.genderSide === 'boys_left' ? 'ছাত্র' : 'ছাত্রী'}
-                                                </span>
-                                                <span className="text-rose-600">
-                                                    ডান ({toBengaliNumber(room.rightBenchCount)} বেঞ্চ): {room.genderSide === 'boys_left' ? 'ছাত্রী' : 'ছাত্র'} ▶
-                                                </span>
+
+                                        <div className="space-y-1.5 bg-slate-50/80 p-2 rounded-xl border border-slate-200">
+                                            {Array.from({ length: room.seatsPerBench }).map((_, seatIdx) => {
+                                                const seatGenders = room.benchSeatGenders || getDefaultSeatGenders(room.seatsPerBench);
+                                                const currentGender = seatGenders[seatIdx] || (seatIdx % 2 === 0 ? 'male' : 'female');
+
+                                                let seatLabel = `আসন ${toBengaliNumber(seatIdx + 1)}`;
+                                                if (room.seatsPerBench === 2) {
+                                                    seatLabel = seatIdx === 0 ? 'বামের আসন' : 'ডানের আসন';
+                                                } else if (room.seatsPerBench === 3) {
+                                                    seatLabel = seatIdx === 0 ? 'বামের আসন' : seatIdx === 1 ? 'মাঝের আসন' : 'ডানের আসন';
+                                                } else if (room.seatsPerBench === 4) {
+                                                    seatLabel = seatIdx === 0 ? 'বামের আসন (১)' : seatIdx === 1 ? 'মাঝ-বাম (২)' : seatIdx === 2 ? 'মাঝ-ডান (৩)' : 'ডানের আসন (৪)';
+                                                }
+
+                                                return (
+                                                    <div key={seatIdx} className="flex items-center justify-between bg-white px-2 py-1.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
+                                                        <span className="font-black text-slate-700 text-[11px] flex items-center gap-1">
+                                                            <span className={cn(
+                                                                "w-2 h-2 rounded-full",
+                                                                currentGender === 'male' ? "bg-blue-500" : currentGender === 'female' ? "bg-rose-500" : "bg-slate-400"
+                                                            )}></span>
+                                                            {seatLabel}:
+                                                        </span>
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateSeatGender(room.id, seatIdx, 'male')}
+                                                                className={cn(
+                                                                    "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black transition-all border",
+                                                                    currentGender === 'male'
+                                                                        ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                                                                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700"
+                                                                )}
+                                                            >
+                                                                {currentGender === 'male' && <Check className="h-3 w-3" />}
+                                                                👦 ছাত্র
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateSeatGender(room.id, seatIdx, 'female')}
+                                                                className={cn(
+                                                                    "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black transition-all border",
+                                                                    currentGender === 'female'
+                                                                        ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                                                                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-rose-50 hover:text-rose-700"
+                                                                )}
+                                                            >
+                                                                {currentGender === 'female' && <Check className="h-3 w-3" />}
+                                                                👧 ছাত্রী
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateSeatGender(room.id, seatIdx, 'any')}
+                                                                className={cn(
+                                                                    "flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold transition-all border",
+                                                                    currentGender === 'any'
+                                                                        ? "bg-slate-700 text-white border-slate-700 shadow-xs"
+                                                                        : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+                                                                )}
+                                                            >
+                                                                {currentGender === 'any' && <Check className="h-2.5 w-2.5" />}
+                                                                উভয়
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Visual bench layout indicator */}
+                                        <div className="mt-1.5 text-[10px] font-black text-slate-600 bg-violet-50/70 rounded-md px-2 py-1 flex items-center justify-between border border-violet-100">
+                                            <span className="text-slate-500 text-[9px]">বেঞ্চ বিন্যাস:</span>
+                                            <div className="flex items-center gap-1">
+                                                {(room.benchSeatGenders || getDefaultSeatGenders(room.seatsPerBench)).slice(0, room.seatsPerBench).map((g, idx) => (
+                                                    <span key={idx} className={cn(
+                                                        "px-1.5 py-0.5 rounded text-[9px] font-black border flex items-center gap-0.5",
+                                                        g === 'male' ? "bg-blue-100 text-blue-800 border-blue-200" :
+                                                        g === 'female' ? "bg-rose-100 text-rose-800 border-rose-200" :
+                                                        "bg-slate-100 text-slate-700 border-slate-200"
+                                                    )}>
+                                                        {idx === 0 ? 'বাম' : (room.seatsPerBench === 3 && idx === 1) ? 'মাঝ' : (idx === room.seatsPerBench - 1) ? 'ডান' : `#${idx+1}`}: {g === 'male' ? '👦 ছাত্র' : g === 'female' ? '👧 ছাত্রী' : 'উভয়'}
+                                                    </span>
+                                                ))}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -1010,7 +1118,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                 </SelectContent>
                             </Select>
                             <p className="text-[11px] font-semibold text-slate-500">
-                                * "মিশ্রিত" জেন্ডার সাইড সেটিং-এর কক্ষে এই নিয়ম প্রযোজ্য হবে।
+                                * যদি কোনো কক্ষের আসনে "উভয়" জেন্ডার রাখা থাকে, তবে সেখানে এই সাধারণ নিয়ম প্রযোজ্য হবে।
                             </p>
                         </div>
 
