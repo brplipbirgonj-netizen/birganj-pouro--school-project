@@ -267,7 +267,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-[60] flex h-14 sm:h-16 md:h-24 items-center justify-between border-b bg-primary px-2 sm:px-6 md:px-8 text-primary-foreground shadow-sm w-full max-w-full overflow-hidden box-border">
+      <header className="sticky top-0 z-[60] flex h-14 sm:h-16 md:h-24 items-center justify-between border-b bg-primary px-2 sm:px-6 md:px-8 text-primary-foreground shadow-sm w-full max-w-full overflow-x-clip box-border">
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {user && (
             <>
@@ -374,14 +374,14 @@ export function Header() {
           )}
         </div>
 
-        <Link href="/" className="flex items-center gap-1.5 sm:gap-3 md:gap-6 min-w-0 overflow-hidden mx-1 sm:mx-2">
+        <Link href="/" className="flex items-center gap-1.5 sm:gap-3 md:gap-6 min-w-0 mx-1 sm:mx-2 py-1">
             {!isSchoolInfoLoading && schoolInfo.logoUrl && (
               <div className="relative h-8 w-8 sm:h-10 sm:w-10 md:h-[70px] md:w-[70px] shrink-0">
                 <Image src={schoolInfo.logoUrl} alt="Logo" fill className="rounded-full object-contain" />
               </div>
             )}
-            <div className="flex flex-col items-center md:items-start min-w-0 overflow-hidden">
-              <div className="text-xs sm:text-lg md:text-[36px] lg:text-[40px] font-black truncate max-w-[130px] xs:max-w-[170px] sm:max-w-none tracking-tight md:[text-shadow:1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-tight text-center md:text-left">
+            <div className="flex flex-col items-center md:items-start min-w-0">
+              <div className="text-xs sm:text-lg md:text-[34px] lg:text-[38px] font-black max-w-[130px] xs:max-w-[170px] sm:max-w-none truncate sm:overflow-visible tracking-tight md:[text-shadow:1px_1px_0px_#000,2px_2px_4px_rgba(0,0,0,0.5)] leading-normal md:leading-normal pt-1.5 pb-0.5 md:pt-2 md:pb-1 text-center md:text-left">
                 {isSchoolInfoLoading ? <Skeleton className="h-5 w-24 md:h-12 md:w-80" /> : schoolInfo.name}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
