@@ -3339,13 +3339,13 @@ export default function ResultsPage() {
 
                                 const rowCount = left.length;
                                 const rowHeightClass = rowCount > 28 
-                                    ? 'h-[23px] text-[10px]' 
+                                    ? 'h-[25px] text-[10px]' 
                                     : rowCount > 23 
-                                        ? 'h-[25px] text-[10.5px]' 
+                                        ? 'h-[28px] text-[10.5px]' 
                                         : rowCount > 18 
-                                            ? 'h-[28px] text-[11px]' 
-                                            : 'h-[31px] text-[11.5px]';
-                                const headerHeightClass = rowCount > 25 ? 'h-[28px] text-[10.5px]' : 'h-[31px] text-[11.5px]';
+                                            ? 'h-[31px] text-[11.5px]' 
+                                            : 'h-[34px] text-[12px]';
+                                const headerHeightClass = rowCount > 25 ? 'h-[30px] text-[11px]' : 'h-[34px] text-[12px]';
 
                                 const renderHeaderCells = () => (
                                     <>
