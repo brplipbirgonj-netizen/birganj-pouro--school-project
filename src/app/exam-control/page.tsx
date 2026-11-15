@@ -28,6 +28,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getSubjects } from '@/lib/subjects';
 import { studentFromDoc, Student } from '@/lib/student-data';
+import { AutoSeatPlanTab } from './AutoSeatPlanTab';
+import { LayoutGrid } from 'lucide-react';
 
 const classNamesMap: Record<string, string> = { '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম' };
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
@@ -72,6 +74,7 @@ export default function ExamControlPage() {
 
     const sidebarItems = [
         { id: 'exam-routine', label: 'পরীক্ষার রুটিন', icon: List, color: 'text-blue-600 bg-blue-50' },
+        { id: 'auto-seat-plan', label: 'স্মার্ট সিট প্ল্যান', icon: LayoutGrid, color: 'text-violet-600 bg-violet-50' },
         { id: 'invigilator-roster', label: 'কক্ষ পরিদর্শকের তালিকা', icon: ShieldCheck, color: 'text-rose-600 bg-rose-50' },
         { id: 'exam-attendance-sheet', label: 'শিক্ষার্থী হাজিরা', icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' },
     ];
@@ -125,6 +128,7 @@ export default function ExamControlPage() {
 
                             <div className="animate-in fade-in duration-500">
                                 {activeSection === 'exam-routine' && <ExamRoutineTab />}
+                                {activeSection === 'auto-seat-plan' && <AutoSeatPlanTab academicYear={selectedYear} />}
                                 {activeSection === 'invigilator-roster' && <InvigilatorRosterTab staffList={allStaff} academicYear={selectedYear} />}
                                 {activeSection === 'exam-attendance-sheet' && <ExamAttendanceSheetTab academicYear={selectedYear} />}
                             </div>
