@@ -1762,7 +1762,7 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                                 {(s.practical || normalize(s.name).includes('তথ্য ও যোগাযোগ') || normalize(s.name).includes('আইসিটি')) && <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-medium h-10 box-border", bgColor, sr?.practicalFail && "text-rose-600 font-black bg-rose-100")}>{toBengaliNumber(sr?.practical ?? '-') }</td>}
                                                             </>
                                                         )}
-                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[13px] p-0.5 h-10 box-border", bgColor)}>{toBengaliNumber(sr?.marks ?? '-') }</td>
+                                                        <td className={cn("text-center border-r-2 border-b-2 border-black font-black bg-blue-100 text-blue-950 text-[13px] p-0.5 h-10 box-border", isEng && sr && !sr.isPass && "text-rose-600 bg-rose-100")}>{toBengaliNumber(sr?.marks ?? '-') }</td>
                                                         <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] font-black p-0.5 h-10 box-border", bgColor, sr && !sr.isPass && "text-rose-700 bg-rose-100")}>{sr?.grade ?? '-' }</td>
                                                         <td className={cn("text-center border-r-2 border-b-2 border-black text-[12px] p-0.5 font-bold h-10 box-border", bgColor)}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-') }</td>
                                                     </React.Fragment>
@@ -3706,7 +3706,7 @@ export default function ResultsPage() {
                                                         return (
                                                             <React.Fragment key={s.name}>
                                                                 {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{hasPrac && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
-                                                                <td className="font-black bg-blue-50/30">{toBengaliNumber(sr?.marks ?? '-')}</td>
+                                                                <td className={cn("font-black bg-blue-50/30", isEng && sr && !sr.isPass && "text-rose-600")}>{toBengaliNumber(sr?.marks ?? '-')}</td>
                                                                 <td className={cn(bg, sr && !sr.isPass && "text-rose-700 font-black")}>{sr?.grade ?? '-'}</td>
                                                                 <td className={bg}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-')}</td>
                                                             </React.Fragment>
@@ -3765,7 +3765,7 @@ export default function ResultsPage() {
                                                         return (
                                                             <React.Fragment key={s.name}>
                                                                 {!isEng && <><td className={cn(bg, sr?.writtenFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.written ?? '-')}</td><td className={cn(bg, sr?.mcqFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.mcq ?? '-')}</td>{hasPrac && <td className={cn(bg, sr?.practicalFail && "text-rose-600 font-black")}>{toBengaliNumber(sr?.practical ?? '-')}</td>}</>}
-                                                                <td className="font-black bg-blue-50/30">{toBengaliNumber(sr?.marks ?? '-')}</td>
+                                                                <td className={cn("font-black bg-blue-50/30", isEng && sr && !sr.isPass && "text-rose-600")}>{toBengaliNumber(sr?.marks ?? '-')}</td>
                                                                 <td className={cn(bg, sr && !sr.isPass && "text-rose-700 font-black")}>{sr?.grade ?? '-'}</td>
                                                                 <td className={bg}>{toBengaliNumber(sr?.point?.toFixed(2) ?? '-')}</td>
                                                             </React.Fragment>
