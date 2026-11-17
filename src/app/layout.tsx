@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { APP_ICON_URL, defaultSchoolInfo } from '@/lib/school-info';
 import { GoogleTranslateProvider } from '@/components/GoogleTranslateProvider';
 import { GlobalAiAssistant } from '@/components/GlobalAiAssistant';
+import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
   title: `${defaultSchoolInfo.name} - ম্যানেজমেন্ট সিস্টেম`,
@@ -42,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang="bn">
       <body className={cn("font-body antialiased", noto_sans_bengali.variable, pt_sans.variable)}>
+        <ServiceWorkerRegistrar />
         <FirebaseClientProvider>
           <GoogleTranslateProvider>
             <AuthProvider>

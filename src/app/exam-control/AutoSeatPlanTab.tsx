@@ -1433,18 +1433,6 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    onClick={syncAbsentsFromResults}
-                                    disabled={isSyncingAbsents}
-                                    className="font-black text-xs h-9 border-rose-300 text-rose-800 hover:bg-rose-100 bg-white shadow-xs"
-                                >
-                                    {isSyncingAbsents ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-                                    ফলাফল থেকে সিন্ক করুন
-                                </Button>
-
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
                                     onClick={() => setShowAbsentManager(prev => !prev)}
                                     className="font-black text-xs h-9 border-rose-300 text-rose-800 hover:bg-rose-100 bg-white shadow-xs"
                                 >

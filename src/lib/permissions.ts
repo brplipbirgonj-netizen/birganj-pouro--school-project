@@ -64,6 +64,9 @@ export const availablePermissions = [
   { id: 'view:proxy-classes', label: 'বদলি ক্লাস দেখুন' },
   { id: 'manage:proxy-classes', label: 'বদলি ক্লাস ম্যানেজ করুন' },
 
+  { id: 'view:exam-control', label: 'পরীক্ষা নিয়ন্ত্রণ দেখুন (রুটিন, সিট প্ল্যান, হাজিরা)' },
+  { id: 'manage:exam-control', label: 'পরীক্ষা নিয়ন্ত্রণ ম্যানেজ করুন (রুটিন, সিট প্ল্যান, পরিদর্শক)' },
+
   { id: 'send:messaging', label: 'মেসেজ পাঠানো' },
   { id: 'manage:messaging', label: 'মেসেজ ম্যানেজ করুন' },
 
@@ -84,6 +87,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'manage:attendance',
     'input:quick-roll-attendance',
     'view:missed-attendance',
+    'input:missed-attendance',
     'view:absent-student-list',
     'manage:lesson-plans',
     'view:syllabus-mgmt',
@@ -103,6 +107,7 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:cashbook-ledger',
     'view:routines',
     'view:proxy-classes',
+    'view:exam-control',
     'manage:documents',
     'view:archive',
     'send:messaging'

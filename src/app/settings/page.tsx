@@ -524,6 +524,7 @@ const permissionGroups = [
     { title: 'ফলাফল ও প্রমোশন', ids: ['input:results', 'manage:results', 'manage:full-marks', 'upload:marks', 'view:merit-list', 'promote:students', 'manage:special-results', 'view:public-records', 'manage:public-records'] },
     { title: 'হিসাব ও ফি', ids: ['view:accounts', 'collect:fees', 'manage:fee-setup', 'special:edit-transaction', 'special:delete-transaction', 'view:collection-report', 'view:expense-report', 'view:accounts-monthly-report', 'view:cashbook-ledger', 'manage:transactions'] },
     { title: 'রুটিন ও বদলি ক্লাস', ids: ['view:routines', 'manage:routines', 'view:proxy-classes', 'manage:proxy-classes'] },
+    { title: 'পরীক্ষা নিয়ন্ত্রণ ও সিট প্ল্যান', ids: ['view:exam-control', 'manage:exam-control'] },
     { title: 'ডকুমেন্ট', ids: ['manage:documents'] },
     { title: 'নথিপত্র ও আর্কাইভ', ids: ['view:archive', 'manage:archive'] },
     { title: 'মেসেজিং', ids: ['send:messaging', 'manage:messaging'] },

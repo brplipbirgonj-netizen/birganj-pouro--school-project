@@ -62,13 +62,13 @@ function getFirebaseInstances() {
 }
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [isInitialized, setIsInitialized] = useState(false);
-
   const instances = useMemo(() => getFirebaseInstances(), []);
+  const [isInitialized, setIsInitialized] = useState(() => Boolean(instances));
 
   useEffect(() => {
-    // Initialization is now handled inside getFirebaseInstances for v11+ stability
-    setIsInitialized(true);
+    if (instances) {
+      setIsInitialized(true);
+    }
   }, [instances]);
 
   if (!instances || !isInitialized) {
