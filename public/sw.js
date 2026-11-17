@@ -1,40 +1,37 @@
 // Service Worker for বীরগঞ্জ পৌর উচ্চ বিদ্যালয় School Management System
-// Offline support + fast loading
+// High-performance static asset caching without interfering with React SSR/Hydration
 
-const CACHE_NAME = 'bphs-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/login',
-];
+const CACHE_NAME = 'bphs-static-v2';
 
-// Install: cache static pages
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch(() => {});
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate: clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
+        keys.map((k) => {
+          if (k !== CACHE_NAME) {
+            return caches.delete(k);
+          }
+        })
       )
     )
   );
   self.clients.claim();
 });
 
-// Fetch: network-first for API/Firebase, cache-first for static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip: non-GET, Chrome extension, Firebase, Genkit, external APIs
+  // NEVER intercept document/HTML navigation requests to avoid React hydration mismatches
+  if (request.mode === 'navigate' || (request.headers.get('accept') && request.headers.get('accept').includes('text/html'))) {
+    return;
+  }
+
+  // Skip: non-GET, Chrome extension, Firebase, Genkit, internal API
   if (
     request.method !== 'GET' ||
     url.protocol === 'chrome-extension:' ||
@@ -42,19 +39,24 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('firebase') ||
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('gstatic.com') ||
-    url.hostname.includes('google.com') ||
     url.pathname.startsWith('/api/')
   ) {
     return;
   }
 
-  // Static Next.js assets: cache-first (they are content-hashed)
-  if (url.pathname.startsWith('/_next/static/')) {
+  // Content-hashed static Next.js assets & media: cache-first for ultra-fast loading
+  if (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.endsWith('.woff2') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.ico')
+  ) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
-          if (response.ok) {
+          if (response && response.status === 200 && response.type === 'basic') {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
@@ -62,27 +64,5 @@ self.addEventListener('fetch', (event) => {
         });
       })
     );
-    return;
-  }
-
-  // HTML pages: network-first, fallback to cache
-  if (request.headers.get('accept') && request.headers.get('accept').includes('text/html')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request).then((cached) => {
-            if (cached) return cached;
-            return caches.match('/');
-          });
-        })
-    );
-    return;
   }
 });

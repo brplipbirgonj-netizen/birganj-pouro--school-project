@@ -67,6 +67,7 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   const instances = useMemo(() => getFirebaseInstances(), []);
 
   useEffect(() => {
+    // Initialization is now handled inside getFirebaseInstances for v11+ stability
     setIsInitialized(true);
   }, [instances]);
 
