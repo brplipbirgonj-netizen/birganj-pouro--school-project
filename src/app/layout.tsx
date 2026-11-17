@@ -27,12 +27,14 @@ const noto_sans_bengali = Noto_Sans_Bengali({
   subsets: ['bengali'],
   weight: ['400', '700'],
   variable: '--font-noto-sans-bengali',
+  display: 'swap',
 });
 
 const pt_sans = PT_Sans({
   subsets: ['latin'],
   weight: ['400', '700'],
   variable: '--font-pt-sans',
+  display: 'swap',
 });
 
 export default function RootLayout({
