@@ -62,31 +62,13 @@ function getFirebaseInstances() {
 }
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [isInitialized, setIsInitialized] = useState(false);
-
   const instances = useMemo(() => getFirebaseInstances(), []);
-
-  useEffect(() => {
-    // Initialization is now handled inside getFirebaseInstances for v11+ stability
-    setIsInitialized(true);
-  }, [instances]);
-
-  if (!instances || !isInitialized) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-indigo-50 font-kalpurush">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="font-black text-primary animate-pulse">সার্ভারের সাথে সংযোগ স্থাপন করা হচ্ছে...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <FirebaseProvider
-      app={instances.app}
-      firestore={instances.firestore}
-      auth={instances.auth}
+      app={instances?.app ?? null}
+      firestore={instances?.firestore ?? null}
+      auth={instances?.auth ?? null}
     >
       {children}
     </FirebaseProvider>
