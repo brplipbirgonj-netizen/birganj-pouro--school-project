@@ -896,6 +896,8 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                     .master-chart-block {
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
+                    }
+                    .master-chart-block:not(:last-child) {
                         page-break-after: always !important;
                         break-after: page !important;
                     }
@@ -1765,7 +1767,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                         {/* Desk Slips */}
                         {activePrintContent === 'desk_slips' && (
                             <div className="space-y-8 w-full">
-                                {generatedRooms.map((room) => {
+                                {generatedRooms.map((room, rIdx) => {
                                     const allAssigned = room.benches.flatMap(b => 
                                         b.seats.filter(s => s.student).map(s => ({
                                             benchNo: b.benchNumber,
@@ -1781,7 +1783,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                     return (
                                         <div key={room.roomId} className="space-y-6">
                                             {chunks.map((chunk, cIdx) => (
-                                                <div key={cIdx} className="page-break p-4 bg-white text-black font-kalpurush">
+                                                <div key={cIdx} className={cIdx < chunks.length - 1 || rIdx < generatedRooms.length - 1 ? "page-break p-4 bg-white text-black font-kalpurush" : "p-4 bg-white text-black font-kalpurush"}>
                                                     <div className="seat-sticker-grid grid grid-cols-2 gap-4">
                                                         {chunk.map((item, idx) => (
                                                             <div key={idx} className="border-2 border-dashed border-black rounded-xl p-3 bg-white space-y-1 relative">
