@@ -43,7 +43,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { 
     ResultPublicationSettings, 
     defaultResultPublicationSettings, 
-    subscribeResultPublicationSettings, 
+    getResultPublicationSettings, 
     checkResultAccess 
 } from '@/lib/result-publication-data';
 
@@ -300,8 +300,8 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (!db) return;
-        return subscribeResultPublicationSettings(db, setResultSettings);
-    }, [db]);
+        getResultPublicationSettings(db).then(setResultSettings).catch(() => {});
+    }, [db, isSearchOpen]);
 
     // Fetch live stats
     useEffect(() => {

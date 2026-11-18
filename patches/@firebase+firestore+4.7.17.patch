@@ -1,0 +1,45 @@
+diff --git a/node_modules/@firebase/firestore/dist/index.cjs.js b/node_modules/@firebase/firestore/dist/index.cjs.js
+index 6b0b58f..0811641 100644
+--- a/node_modules/@firebase/firestore/dist/index.cjs.js
++++ b/node_modules/@firebase/firestore/dist/index.cjs.js
+@@ -6352,9 +6352,7 @@ class __PRIVATE_WatchTargetChange {
+         this.Fe += 1;
+     }
+     We() {
+-        this.Fe -= 1, __PRIVATE_hardAssert(this.Fe >= 0, 3241, {
+-            Fe: this.Fe
+-        });
++        this.Fe > 0 && (this.Fe -= 1);
+     }
+     Ge() {
+         this.Ne = !0, this.Oe = !0;
+diff --git a/node_modules/@firebase/firestore/dist/index.esm2017.js b/node_modules/@firebase/firestore/dist/index.esm2017.js
+index 84c976d..62dd4f5 100644
+--- a/node_modules/@firebase/firestore/dist/index.esm2017.js
++++ b/node_modules/@firebase/firestore/dist/index.esm2017.js
+@@ -6348,9 +6348,7 @@ class __PRIVATE_WatchTargetChange {
+         this.Fe += 1;
+     }
+     We() {
+-        this.Fe -= 1, __PRIVATE_hardAssert(this.Fe >= 0, 3241, {
+-            Fe: this.Fe
+-        });
++        this.Fe > 0 && (this.Fe -= 1);
+     }
+     Ge() {
+         this.Ne = !0, this.Oe = !0;
+diff --git a/node_modules/@firebase/firestore/dist/index.rn.js b/node_modules/@firebase/firestore/dist/index.rn.js
+index 89296fd..40d52d8 100644
+--- a/node_modules/@firebase/firestore/dist/index.rn.js
++++ b/node_modules/@firebase/firestore/dist/index.rn.js
+@@ -6361,9 +6361,7 @@ class __PRIVATE_WatchTargetChange {
+         this.Fe += 1;
+     }
+     We() {
+-        this.Fe -= 1, __PRIVATE_hardAssert(this.Fe >= 0, 3241, {
+-            Fe: this.Fe
+-        });
++        this.Fe > 0 && (this.Fe -= 1);
+     }
+     Ge() {
+         this.Ne = !0, this.Oe = !0;

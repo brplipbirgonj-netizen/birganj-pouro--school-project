@@ -52,7 +52,7 @@ import {
     ExamPublicationRule, 
     defaultResultPublicationSettings, 
     saveResultPublicationSettings, 
-    subscribeResultPublicationSettings 
+    getResultPublicationSettings 
 } from '@/lib/result-publication-data';
 
 // --- Utility Functions ---
@@ -1086,14 +1086,22 @@ function ResultPublicationSettingsSection() {
     const [yearExams, setYearExams] = useState<Exam[]>([]);
     const [isLoadingExams, setIsLoadingExams] = useState(false);
 
-    useEffect(() => {
+    const loadSettings = useCallback(async () => {
         if (!db) return;
-        const unsub = subscribeResultPublicationSettings(db, (data) => {
+        setIsLoading(true);
+        try {
+            const data = await getResultPublicationSettings(db);
             setSettings(data);
+        } catch (e) {
+            console.error(e);
+        } finally {
             setIsLoading(false);
-        });
-        return () => unsub();
+        }
     }, [db]);
+
+    useEffect(() => {
+        loadSettings();
+    }, [loadSettings]);
 
     useEffect(() => {
         if (!db || !selectedYear) return;
@@ -1145,6 +1153,7 @@ function ResultPublicationSettingsSection() {
         try {
             await saveResultPublicationSettings(db, settings);
             toast({ title: 'ফলাফল প্রকাশ সেটিংস সফলভাবে সংরক্ষিত হয়েছে' });
+            await loadSettings();
         } catch (e: any) {
             toast({ variant: 'destructive', title: 'সংরক্ষণ ব্যর্থ হয়েছে', description: e.message });
         } finally {
