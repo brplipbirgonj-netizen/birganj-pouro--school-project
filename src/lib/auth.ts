@@ -148,6 +148,12 @@ export async function signIn(email: string, password: string, role: UserRole): P
 
     return { success: true };
   } catch (error: any) {
+     if (error.code === 'auth/too-many-requests') {
+       return {
+         success: false,
+         error: 'অতিরিক্ত ভুল চেষ্টার কারণে অ্যাকাউন্টটি সাময়িকভাবে লক হয়েছে। পাসওয়ার্ড পরিবর্তন/রিসেট করলে এটি সাথে সাথে আনলক হবে, অথবা কিছুক্ষণ পর চেষ্টা করুন।'
+       };
+     }
      const authErrorCodes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-email', 'auth/user-disabled'];
      if (authErrorCodes.includes(error.code)) {
       return { 
