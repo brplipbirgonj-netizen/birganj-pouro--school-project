@@ -37,6 +37,7 @@ import { runUniversalAi, ChatMessage, UniversalAiOutput, LiveSchoolContext } fro
 import { useToast } from '@/hooks/use-toast';
 
 export function GlobalAiAssistant() {
+  const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputQuery, setInputQuery] = useState('');
@@ -65,6 +66,11 @@ export function GlobalAiAssistant() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Mount state to avoid hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Preload students and holidays in background for fast contextual replies
   useEffect(() => {
@@ -144,7 +150,7 @@ export function GlobalAiAssistant() {
     }
   };
 
-  if (typeof window !== 'undefined' && pathname === '/login') {
+  if (!isMounted || pathname === '/login') {
     return null;
   }
 

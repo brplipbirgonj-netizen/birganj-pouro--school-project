@@ -163,7 +163,11 @@ export function GoogleTranslateProvider({ children }: { children: ReactNode }) {
     <LanguageContext.Provider value={{ currentLang, switchLanguage }}>
       {children}
       {/* Hidden container for Google Translate Widget */}
-      <div id="google_translate_element" style={{ display: 'none', position: 'absolute', top: '-9999px', left: '-9999px' }} />
+      <div 
+        id="google_translate_element" 
+        style={{ display: 'none', position: 'absolute', top: '-9999px', left: '-9999px' }} 
+        suppressHydrationWarning 
+      />
       <Script
         id="google-translate-init"
         strategy="afterInteractive"
