@@ -1,7 +1,7 @@
 'use client';
 import { ReactNode, useMemo, useEffect, useState } from 'react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { initializeFirestore, Firestore, persistentLocalCache, persistentSingleTabManager, setLogLevel } from 'firebase/firestore';
+import { initializeFirestore, Firestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, setLogLevel } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
@@ -36,15 +36,22 @@ function getFirebaseInstances() {
   if (!window.__FIREBASE_FIRESTORE__) {
     /**
      * Modern Firestore Initialization (SDK v11+)
-     * Using persistentSingleTabManager with forceOwnership: true to prevent 
-     * IndexedDB corruption/lock errors often seen in dev environments.
+     * Using persistentMultipleTabManager so multiple tabs can safely
+     * share IndexedDB cache without throwing target/ownership assertion errors.
      */
-    window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentSingleTabManager({ forceOwnership: true }),
-      }),
-      experimentalForceLongPolling: true, // Required for Cloud Workstations and stability
-    });
+    try {
+      window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+        experimentalForceLongPolling: true,
+      });
+    } catch {
+      window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
+        localCache: memoryLocalCache(),
+        experimentalForceLongPolling: true,
+      });
+    }
 
     // Set log level to 'silent' to reduce noise in console
     setLogLevel('silent');

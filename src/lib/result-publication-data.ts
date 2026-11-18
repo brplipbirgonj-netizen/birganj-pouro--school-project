@@ -26,7 +26,7 @@ export const getResultPublicationSettings = async (
   db: Firestore
 ): Promise<ResultPublicationSettings> => {
   try {
-    const snap = await getDoc(doc(db, DOC_PATH));
+    const snap = await getDoc(doc(db, 'school', 'resultSettings'));
     if (snap.exists()) {
       return { ...defaultResultPublicationSettings, ...snap.data() } as ResultPublicationSettings;
     }
@@ -40,20 +40,45 @@ export const saveResultPublicationSettings = async (
   db: Firestore,
   settings: ResultPublicationSettings
 ): Promise<void> => {
-  await setDoc(doc(db, DOC_PATH), settings, { merge: true });
+  const cleanRules = (settings.examRules || []).map(r => ({
+    academicYear: r.academicYear || '',
+    examName: r.examName || '',
+    isHidden: Boolean(r.isHidden),
+    publishFrom: r.publishFrom ?? null,
+    publishUntil: r.publishUntil ?? null,
+  }));
+
+  const cleanData = {
+    globalPublicAccess: Boolean(settings.globalPublicAccess ?? true),
+    examRules: cleanRules,
+  };
+
+  await setDoc(doc(db, 'school', 'resultSettings'), cleanData, { merge: true });
 };
 
 export const subscribeResultPublicationSettings = (
   db: Firestore,
   callback: (settings: ResultPublicationSettings) => void
 ): (() => void) => {
-  return onSnapshot(doc(db, DOC_PATH), (snap) => {
-    if (snap.exists()) {
-      callback({ ...defaultResultPublicationSettings, ...snap.data() } as ResultPublicationSettings);
-    } else {
-      callback(defaultResultPublicationSettings);
-    }
-  }, () => callback(defaultResultPublicationSettings));
+  try {
+    return onSnapshot(
+      doc(db, 'school', 'resultSettings'),
+      (snap) => {
+        if (snap.exists()) {
+          callback({ ...defaultResultPublicationSettings, ...snap.data() } as ResultPublicationSettings);
+        } else {
+          callback(defaultResultPublicationSettings);
+        }
+      },
+      (error) => {
+        console.warn('Result settings listener warning:', error);
+        callback(defaultResultPublicationSettings);
+      }
+    );
+  } catch (err) {
+    console.warn('Failed to subscribe to result settings:', err);
+    return () => {};
+  }
 };
 
 /**
