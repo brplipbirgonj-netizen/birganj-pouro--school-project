@@ -3,12 +3,12 @@
 // This is a list of available permissions in the system.
 export const availablePermissions = [
   { id: 'view:dashboard', label: 'ড্যাশবোর্ড দেখুন' },
-  
+
   { id: 'view:students', label: 'শিক্ষার্থী তালিকা দেখুন' },
   { id: 'manage:students', label: 'শিক্ষার্থী যোগ করার অনুমতি' },
   { id: 'special:edit-student', label: 'স্পেশাল পারমিশন: শিক্ষার্থী এডিট করুন' },
   { id: 'special:delete-student', label: 'স্পেশাল পারমিশন: শিক্ষার্থী ডিলিট করুন' },
-  { id: 'upload:students', label: 'এক্সেল দিয়ে শিক্ষার্থী আপলোড (ভর্তি)' },
+  { id: 'upload:students', label: 'এক্সেল দিয়ে শিক্ষার্থী আপলোড (ভর্তি)' },
   { id: 'view:student-profile', label: 'শিক্ষার্থী প্রোফাইল সার্চ করুন' },
   { id: 'manage:photo-portal', label: 'স্মার্ট ফটো পোর্টাল (ছবি এডিট ও লিঙ্ক)' },
 
@@ -21,9 +21,9 @@ export const availablePermissions = [
   { id: 'view:staff-attendance-report', label: 'স্টাফ হাজিরা ও ছুটির রিপোর্ট দেখুন' },
 
   { id: 'manage:attendance', label: 'শিক্ষার্থীর হাজিরা ম্যানেজ করুন' },
-  { id: 'input:quick-roll-attendance', label: 'রোল ইনপুট দিয়ে দ্রুত হাজিরা' },
-  { id: 'view:missed-attendance', label: 'বকেয়া হাজিরা দেখুন' },
-  { id: 'input:missed-attendance', label: 'বকেয়া হাজিরা গ্রহণ করুন' },
+  { id: 'input:quick-roll-attendance', label: 'রোল ইনপুট দিয়ে দ্রুত হাজিরা' },
+  { id: 'view:missed-attendance', label: 'বকেয়া হাজিরা দেখুন' },
+  { id: 'input:missed-attendance', label: 'বকেয়া হাজিরা গ্রহণ করুন' },
   { id: 'view:absent-student-list', label: 'অনুপস্থিত শিক্ষার্থীর তালিকা দেখুন' },
 
   { id: 'manage:lesson-plans', label: 'লেসন প্ল্যান ও প্রগ্রেস ম্যানেজ করুন' },
@@ -32,30 +32,31 @@ export const availablePermissions = [
   { id: 'view:syllabus-tracker', label: 'সিলেবাস ট্র্যাকার (মনিটরিং) দেখুন' },
 
   { id: 'view:notices', label: 'নোটিশ বোর্ড দেখুন' },
-  { id: 'manage:notices', label: 'নোটিশ বোর্ড ব্যবস্থাপনা (প্রকাশ ও নিয়ন্ত্রণ)' },
+  { id: 'manage:notices', label: 'নোটিশ বোর্ড ব্যবস্থাপনা (প্রকাশ ও নিয়ন্ত্রণ)' },
 
-  { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
-  { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
-  { id: 'manage:full-marks', label: 'বিষয় ও পূর্ণমান ব্যবস্থাপনা' },
-  { id: 'upload:marks', label: 'এক্সেল দিয়ে ফলাফল আপলোড' },
+  { id: 'input:results', label: 'ফলাফল ও নম্বর ইনপুট (নির্ধারিত বিষয়)' },
+  { id: 'input:quick-marks', label: 'কুইক নম্বর ইনপুট (রোল-লিখিত-MCQ-ব্যবহারিক)' },
+  { id: 'manage:results', label: 'ফলাফল ও নম্বর ম্যানেজ (সকল বিষয় ও নিয়ন্ত্রণ)' },
+  { id: 'manage:full-marks', label: 'বিষয় ও পূর্ণমান ব্যবস্থাপনা' },
+  { id: 'upload:marks', label: 'এক্সেল দিয়ে ফলাফল আপলোড' },
   { id: 'view:merit-list', label: 'মেধা তালিকা দেখুন' },
   { id: 'promote:students', label: 'প্রমোশন ম্যানেজ করুন' },
   { id: 'manage:special-results', label: 'বিশেষ পরীক্ষা ম্যানেজ করুন' },
-  
+
   { id: 'view:public-records', label: 'রেকর্ড শাখা দেখুন' },
   { id: 'manage:public-records', label: 'রেকর্ড শাখা ম্যানেজ করুন' },
-  
+
   { id: 'view:accounts', label: 'হিসাব শাখা দেখুন' },
-  { id: 'collect:fees', label: 'বেতন আদায় করুন' },
+  { id: 'collect:fees', label: 'বেতন আদায় করুন' },
   { id: 'manage:fee-setup', label: 'শিক্ষার্থীর ফি নির্ধারণ (সেটআপ)' },
-  { id: 'special:edit-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় এডিট করুন' },
-  { id: 'special:delete-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় ডিলিট করুন' },
+  { id: 'special:edit-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় এডিট করুন' },
+  { id: 'special:delete-transaction', label: 'স্পেশাল পারমিশন: আদায়/আয়-ব্যয় ডিলিট করুন' },
   { id: 'view:collection-report', label: 'বেতন আদায়ের রিপোর্ট দেখুন' },
-  { id: 'view:expense-report', label: 'ব্যয়ের রিপোর্ট দেখুন' },
+  { id: 'view:expense-report', label: 'ব্যয়ের রিপোর্ট দেখুন' },
   { id: 'view:accounts-monthly-report', label: 'মাসিক আয়-ব্যয় রিপোর্ট দেখুন' },
-  { id: 'view:cashbook-ledger', label: 'ক্যাশবুক ও খতিয়ান দেখুন' },
+  { id: 'view:cashbook-ledger', label: 'ক্যাশবুক ও খতিয়ান দেখুন' },
   { id: 'manage:transactions', label: 'সাধারণ লেনদেন ম্যানেজ করুন' },
-  
+
   { id: 'manage:documents', label: 'ডকুমেন্ট ম্যানেজ করুন' },
   { id: 'view:archive', label: 'নথিপত্র (ডিজিটাল আর্কাইভ) দেখুন' },
   { id: 'manage:archive', label: 'ডিজিটাল আর্কাইভ (নথিপত্র) ম্যানেজ করুন' },
@@ -66,6 +67,7 @@ export const availablePermissions = [
 
   { id: 'view:exam-control', label: 'পরীক্ষা নিয়ন্ত্রণ দেখুন (রুটিন, সিট প্ল্যান, হাজিরা)' },
   { id: 'manage:exam-control', label: 'পরীক্ষা নিয়ন্ত্রণ ম্যানেজ করুন (রুটিন, সিট প্ল্যান, পরিদর্শক)' },
+  { id: 'manage:smart-seat-plan', label: 'স্মার্ট সিট প্ল্যান তৈরি ও সেভ করুন' },
 
   { id: 'send:messaging', label: 'মেসেজ পাঠানো' },
   { id: 'manage:messaging', label: 'মেসেজ ম্যানেজ করুন' },
@@ -93,7 +95,8 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:syllabus-mgmt',
     'view:notices',
     'manage:notices',
-    'input:results', 
+    'input:results',
+    'input:quick-marks',
     'view:merit-list',
     'promote:students',
     'manage:special-results',
@@ -110,6 +113,6 @@ export const defaultPermissions: { [key: string]: string[] } = {
     'view:exam-control',
     'manage:documents',
     'view:archive',
-    'send:messaging'
+    'send:messaging',
   ],
 };
