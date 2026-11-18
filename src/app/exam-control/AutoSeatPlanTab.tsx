@@ -477,7 +477,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
     }, [db, academicYear]);
 
     // Automatically sync absent students from results & attendance
-    const syncAbsentsFromResults = async () => {
+    const syncAbsentsFromResults = async (isManual = false) => {
         if (!db || !academicYear || !selectedExam) return;
         setIsSyncingAbsents(true);
         try {
@@ -526,11 +526,13 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
             setAbsentStudentIds(prev => new Set([...prev, ...foundAbsentIds]));
 
             if (foundAbsentIds.size > 0) {
-                toast({
-                    title: 'অনুপস্থিত শিক্ষার্থী সিন্ক হয়েছে!',
-                    description: `ফলাফল সেকশন থেকে ${foundAbsentIds.size} জন অনুপস্থিত শিক্ষার্থী শনাক্ত করা হয়েছে।`
-                });
-            } else {
+                if (isManual) {
+                    toast({
+                        title: 'অনুপস্থিত শিক্ষার্থী সিন্ক হয়েছে!',
+                        description: `ফলাফল সেকশন থেকে ${foundAbsentIds.size} জন অনুপস্থিত শিক্ষার্থী শনাক্ত করা হয়েছে।`
+                    });
+                }
+            } else if (isManual) {
                 toast({
                     title: 'ফলাফলে কোনো অনুপস্থিত মার্ক করা নেই',
                     description: 'আপনি নিচের তালিকা থেকে নিজে টিক দিয়ে যেকোনো শিক্ষার্থীকে অনুপস্থিত চিহ্নিত করতে পারেন।'
@@ -543,10 +545,10 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
         }
     };
 
-    // Auto-sync when exam changes
+    // Auto-sync when exam changes (without popup toast)
     useEffect(() => {
         if (selectedExam && academicYear) {
-            syncAbsentsFromResults();
+            syncAbsentsFromResults(false);
         }
     }, [selectedExam, academicYear]);
 
@@ -1121,7 +1123,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6">
                             {rooms.map((room) => {
                                 const rightCols = room.rightSideColumns || getDefaultSideColumns(room.seatsPerBench, 'male');
                                 const leftCols = room.leftSideColumns || getDefaultSideColumns(room.seatsPerBench, 'female');
@@ -1259,13 +1261,13 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
 
                                                 {/* Bench Rows Seating Table */}
                                                 <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px] bg-white">
-                                                    <div className="max-h-80 overflow-y-auto">
+                                                    <div className="max-h-96 overflow-y-auto overflow-x-auto">
                                                         <table className="w-full text-center border-collapse">
                                                             <thead className="sticky top-0 bg-blue-50 font-bold border-b border-blue-200 text-[9px] text-blue-900 z-10 shadow-2xs">
                                                                 <tr>
-                                                                    <th className="p-1 w-12 border-r border-blue-200 bg-blue-100/70">বেঞ্চ</th>
+                                                                    <th className="p-1.5 w-12 border-r border-blue-200 bg-blue-100/70">বেঞ্চ</th>
                                                                     {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
-                                                                        <th key={cIdx} className="p-1 border-r border-blue-200 last:border-r-0">
+                                                                        <th key={cIdx} className="p-1.5 border-r border-blue-200 last:border-r-0 min-w-[140px] sm:min-w-[160px]">
                                                                             {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
                                                                         </th>
                                                                     ))}
@@ -1274,7 +1276,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                             <tbody>
                                                                 {Array.from({ length: Math.max(1, room.rightBenchCount) }).map((_, bIdx) => (
                                                                     <tr key={bIdx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
-                                                                        <td className="p-1 border-r border-slate-200 font-black text-slate-500 bg-slate-50 text-[9px]">
+                                                                        <td className="p-1.5 border-r border-slate-200 font-black text-slate-500 bg-slate-50 text-[9px]">
                                                                             #{toBengaliNumber(bIdx + 1)}
                                                                         </td>
                                                                         {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
@@ -1286,21 +1288,21 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                             const isClassChangedHere = !!override?.className;
 
                                                                             return (
-                                                                                <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 align-top">
-                                                                                    <div className="flex flex-col gap-1">
-                                                                                        <div className="flex items-center justify-between text-[9px]">
+                                                                                <td key={cIdx} className="p-1.5 border-r border-slate-100 last:border-r-0 align-top min-w-[140px] sm:min-w-[160px]">
+                                                                                    <div className="flex flex-col gap-1 w-full">
+                                                                                        <div className="flex items-center justify-between text-[9px] pb-0.5">
                                                                                             <span className={cn(
-                                                                                                "font-black px-1 py-0.2 rounded text-[8px]",
+                                                                                                "font-black px-1.5 py-0.5 rounded text-[8.5px]",
                                                                                                 col.gender === 'female' ? "bg-rose-100 text-rose-800" : "bg-blue-100 text-blue-800"
                                                                                             )}>
-                                                                                                {classNamesMap[activeClass]} শ্রেণি
+                                                                                                {classNamesMap[activeClass]} শ্রেণি ({col.gender === 'female' ? 'ছাত্রী' : col.gender === 'male' ? 'ছাত্র' : 'উভয়'})
                                                                                             </span>
                                                                                             {isClassChangedHere && (
                                                                                                 <button
                                                                                                     type="button"
                                                                                                     title="শ্রেণি পরিবর্তন বাতিল করুন"
                                                                                                     onClick={() => handleClassTransition(room.id, 'right', bIdx, cIdx, '')}
-                                                                                                    className="text-[8px] text-red-500 hover:text-red-700 font-bold px-0.5"
+                                                                                                    className="text-[8.5px] text-red-500 hover:text-red-700 font-bold px-1 hover:bg-red-50 rounded"
                                                                                                 >
                                                                                                     ✕ রিসেট
                                                                                                 </button>
@@ -1308,8 +1310,8 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                         </div>
 
                                                                                         {seatInfo?.isRollsFinished && !seatInfo?.student ? (
-                                                                                            <div className="bg-amber-50 border border-amber-300 rounded p-1 text-center">
-                                                                                                <span className="text-[8.5px] font-black text-amber-900 block leading-tight">
+                                                                                            <div className="bg-amber-50 border border-amber-300 rounded p-1.5 text-center">
+                                                                                                <span className="text-[9px] font-black text-amber-900 block leading-tight">
                                                                                                     ⚠️ রোল শেষ! নতুন শ্রেণি:
                                                                                                 </span>
                                                                                                 <select
@@ -1319,7 +1321,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                                             handleClassTransition(room.id, 'right', bIdx, cIdx, e.target.value);
                                                                                                         }
                                                                                                     }}
-                                                                                                    className="mt-0.5 w-full h-6 text-[9px] font-black bg-white border border-amber-400 rounded px-1 text-amber-950"
+                                                                                                    className="mt-1 w-full h-7 text-[10px] font-black bg-white border border-amber-400 rounded px-1.5 text-amber-950 cursor-pointer"
                                                                                                 >
                                                                                                     <option value="">-- শ্রেণি বেছে নিন --</option>
                                                                                                     {selectedClasses.filter(c => c !== activeClass).map(c => (
@@ -1332,11 +1334,11 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                                 value={override?.studentId === 'empty' ? 'empty' : (seatInfo?.student?.id || '')}
                                                                                                 onChange={e => handleSeatStudentChange(room.id, 'right', bIdx, cIdx, e.target.value)}
                                                                                                 className={cn(
-                                                                                                    "w-full h-6 text-[9.5px] font-bold rounded border px-0.5 transition-all truncate",
+                                                                                                    "w-full h-8 text-[11px] font-black rounded-lg border px-2 py-0.5 transition-all shadow-2xs cursor-pointer",
                                                                                                     override?.studentId === 'empty' 
                                                                                                         ? "bg-slate-100 text-slate-400 border-slate-300"
                                                                                                         : seatInfo?.student 
-                                                                                                            ? (col.gender === 'female' ? "bg-rose-50/70 border-rose-300 text-rose-950 font-black" : "bg-blue-50/70 border-blue-300 text-blue-950 font-black")
+                                                                                                            ? (col.gender === 'female' ? "bg-rose-50 border-rose-300 text-rose-950 hover:bg-rose-100 font-black" : "bg-blue-50 border-blue-300 text-blue-950 hover:bg-blue-100 font-black")
                                                                                                             : "bg-white border-slate-200 text-slate-700"
                                                                                                 )}
                                                                                             >
@@ -1345,9 +1347,9 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                                         রোল {toBengaliNumber(seatInfo.student.roll)} - {seatInfo.student.name || 'শিক্ষার্থী'}
                                                                                                     </option>
                                                                                                 ) : (
-                                                                                                    <option value="">-- খালি --</option>
+                                                                                                    <option value="">-- খালি আসন --</option>
                                                                                                 )}
-                                                                                                <option value="empty">🚫 ফাঁকা রাখুন</option>
+                                                                                                <option value="empty">🚫 আসন ফাঁকা রাখুন</option>
                                                                                                 {seatInfo?.availableStudents
                                                                                                     ?.filter(st => st.id !== seatInfo?.student?.id)
                                                                                                     .map(st => (
@@ -1453,13 +1455,13 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
 
                                                 {/* Bench Rows Seating Table */}
                                                 <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px] bg-white">
-                                                    <div className="max-h-80 overflow-y-auto">
+                                                    <div className="max-h-96 overflow-y-auto overflow-x-auto">
                                                         <table className="w-full text-center border-collapse">
                                                             <thead className="sticky top-0 bg-rose-50 font-bold border-b border-rose-200 text-[9px] text-rose-900 z-10 shadow-2xs">
                                                                 <tr>
-                                                                    <th className="p-1 w-12 border-r border-rose-200 bg-rose-100/70">বেঞ্চ</th>
+                                                                    <th className="p-1.5 w-12 border-r border-rose-200 bg-rose-100/70">বেঞ্চ</th>
                                                                     {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
-                                                                        <th key={cIdx} className="p-1 border-r border-rose-200 last:border-r-0">
+                                                                        <th key={cIdx} className="p-1.5 border-r border-rose-200 last:border-r-0 min-w-[140px] sm:min-w-[160px]">
                                                                             {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
                                                                         </th>
                                                                     ))}
@@ -1468,7 +1470,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                             <tbody>
                                                                 {Array.from({ length: Math.max(1, room.leftBenchCount) }).map((_, bIdx) => (
                                                                     <tr key={bIdx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
-                                                                        <td className="p-1 border-r border-slate-200 font-black text-slate-500 bg-slate-50 text-[9px]">
+                                                                        <td className="p-1.5 border-r border-slate-200 font-black text-slate-500 bg-slate-50 text-[9px]">
                                                                             #{toBengaliNumber(bIdx + 1)}
                                                                         </td>
                                                                         {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
@@ -1480,21 +1482,21 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                             const isClassChangedHere = !!override?.className;
 
                                                                             return (
-                                                                                <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 align-top">
-                                                                                    <div className="flex flex-col gap-1">
-                                                                                        <div className="flex items-center justify-between text-[9px]">
+                                                                                <td key={cIdx} className="p-1.5 border-r border-slate-100 last:border-r-0 align-top min-w-[140px] sm:min-w-[160px]">
+                                                                                    <div className="flex flex-col gap-1 w-full">
+                                                                                        <div className="flex items-center justify-between text-[9px] pb-0.5">
                                                                                             <span className={cn(
-                                                                                                "font-black px-1 py-0.2 rounded text-[8px]",
+                                                                                                "font-black px-1.5 py-0.5 rounded text-[8.5px]",
                                                                                                 col.gender === 'female' ? "bg-rose-100 text-rose-800" : "bg-blue-100 text-blue-800"
                                                                                             )}>
-                                                                                                {classNamesMap[activeClass]} শ্রেণি
+                                                                                                {classNamesMap[activeClass]} শ্রেণি ({col.gender === 'female' ? 'ছাত্রী' : col.gender === 'male' ? 'ছাত্র' : 'উভয়'})
                                                                                             </span>
                                                                                             {isClassChangedHere && (
                                                                                                 <button
                                                                                                     type="button"
                                                                                                     title="শ্রেণি পরিবর্তন বাতিল করুন"
                                                                                                     onClick={() => handleClassTransition(room.id, 'left', bIdx, cIdx, '')}
-                                                                                                    className="text-[8px] text-red-500 hover:text-red-700 font-bold px-0.5"
+                                                                                                    className="text-[8.5px] text-red-500 hover:text-red-700 font-bold px-1 hover:bg-red-50 rounded"
                                                                                                 >
                                                                                                     ✕ রিসেট
                                                                                                 </button>
@@ -1502,8 +1504,8 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                         </div>
 
                                                                                         {seatInfo?.isRollsFinished && !seatInfo?.student ? (
-                                                                                            <div className="bg-amber-50 border border-amber-300 rounded p-1 text-center">
-                                                                                                <span className="text-[8.5px] font-black text-amber-900 block leading-tight">
+                                                                                            <div className="bg-amber-50 border border-amber-300 rounded p-1.5 text-center">
+                                                                                                <span className="text-[9px] font-black text-amber-900 block leading-tight">
                                                                                                     ⚠️ রোল শেষ! নতুন শ্রেণি:
                                                                                                 </span>
                                                                                                 <select
@@ -1513,7 +1515,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                                             handleClassTransition(room.id, 'left', bIdx, cIdx, e.target.value);
                                                                                                         }
                                                                                                     }}
-                                                                                                    className="mt-0.5 w-full h-6 text-[9px] font-black bg-white border border-amber-400 rounded px-1 text-amber-950"
+                                                                                                    className="mt-1 w-full h-7 text-[10px] font-black bg-white border border-amber-400 rounded px-1.5 text-amber-950 cursor-pointer"
                                                                                                 >
                                                                                                     <option value="">-- শ্রেণি বেছে নিন --</option>
                                                                                                     {selectedClasses.filter(c => c !== activeClass).map(c => (
@@ -1526,11 +1528,11 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                                 value={override?.studentId === 'empty' ? 'empty' : (seatInfo?.student?.id || '')}
                                                                                                 onChange={e => handleSeatStudentChange(room.id, 'left', bIdx, cIdx, e.target.value)}
                                                                                                 className={cn(
-                                                                                                    "w-full h-6 text-[9.5px] font-bold rounded border px-0.5 transition-all truncate",
+                                                                                                    "w-full h-8 text-[11px] font-black rounded-lg border px-2 py-0.5 transition-all shadow-2xs cursor-pointer",
                                                                                                     override?.studentId === 'empty' 
                                                                                                         ? "bg-slate-100 text-slate-400 border-slate-300"
                                                                                                         : seatInfo?.student 
-                                                                                                            ? (col.gender === 'female' ? "bg-rose-50/70 border-rose-300 text-rose-950 font-black" : "bg-blue-50/70 border-blue-300 text-blue-950 font-black")
+                                                                                                            ? (col.gender === 'female' ? "bg-rose-50 border-rose-300 text-rose-950 hover:bg-rose-100 font-black" : "bg-blue-50 border-blue-300 text-blue-950 hover:bg-blue-100 font-black")
                                                                                                             : "bg-white border-slate-200 text-slate-700"
                                                                                                 )}
                                                                                             >
@@ -1539,9 +1541,9 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                                                                         রোল {toBengaliNumber(seatInfo.student.roll)} - {seatInfo.student.name || 'শিক্ষার্থী'}
                                                                                                     </option>
                                                                                                 ) : (
-                                                                                                    <option value="">-- খালি --</option>
+                                                                                                    <option value="">-- খালি আসন --</option>
                                                                                                 )}
-                                                                                                <option value="empty">🚫 ফাঁকা রাখুন</option>
+                                                                                                <option value="empty">🚫 আসন ফাঁকা রাখুন</option>
                                                                                                 {seatInfo?.availableStudents
                                                                                                     ?.filter(st => st.id !== seatInfo?.student?.id)
                                                                                                     .map(st => (
@@ -1591,6 +1593,17 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                             </div>
 
                             <div className="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => syncAbsentsFromResults(true)}
+                                    disabled={isSyncingAbsents}
+                                    className="font-black text-xs h-9 border-rose-300 text-rose-800 hover:bg-rose-100 bg-white shadow-xs"
+                                >
+                                    {isSyncingAbsents ? <Loader2 className="animate-spin h-3.5 w-3.5 mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                                    ফলাফল থেকে সিঙ্ক করুন
+                                </Button>
                                 <Button
                                     type="button"
                                     size="sm"

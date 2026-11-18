@@ -23,6 +23,7 @@ import {
     BarChart3
 } from 'lucide-react';
 import { ResultStatisticsTab } from './ResultStatisticsTab';
+import { QuickMarksDialog } from '@/components/QuickMarksDialog';
 import * as XLSX from 'xlsx';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -375,6 +376,18 @@ const MarkManagementTab = ({ allStudents }: { allStudents: Student[] }) => {
                          </div>
                          {canUploadMarks && (
                              <div className="flex gap-2">
+                                <QuickMarksDialog 
+                                    initialClass={className} 
+                                    initialSubject={subject} 
+                                    initialExam={examName} 
+                                    initialGroup={group} 
+                                    onSaveSuccess={handleLoadStudents} 
+                                    triggerButton={
+                                        <Button variant="outline" size="sm" className="h-8 text-[10px] bg-amber-50 border-amber-300 text-amber-950 font-black hover:bg-amber-100">
+                                            <FilePen className="mr-1.5 h-3.5 w-3.5 text-amber-700" /> কুইক নম্বর ইনপুট
+                                        </Button>
+                                    } 
+                                />
                                 <Button variant="outline" size="sm" onClick={handleDownloadSample} className="h-8 text-[10px] bg-white"><Download className="mr-2 h-3.5 w-3.5" /> নমুনা</Button>
                                 <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-8 text-[10px] bg-white"><FileUp className="mr-2 h-3.5 w-3.5" /> আপলোড</Button>
                                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx, .xls" />

@@ -43,6 +43,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import Link from 'next/link';
+import { QuickMarksDialog } from '@/components/QuickMarksDialog';
 import { runMultiTaskAi } from '@/ai/flows/multi-task-ai-flow';
 
 const parseTeacherName = (cell: string): string => {
@@ -1444,6 +1445,8 @@ export default function Home() {
                     <Trophy className="h-5 w-5" /> কুইক ফলাফল
                 </Button>
             </Link>
+
+            <QuickMarksDialog />
 
             {/* AI Assistant Portal */}
             <Dialog open={isAiPortalOpen} onOpenChange={setIsAiPortalOpen}>
