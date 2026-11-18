@@ -40,6 +40,12 @@ import { bn } from 'date-fns/locale';
 import { GalleryConfig, defaultGalleryConfig } from '@/lib/gallery-data';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { 
+    ResultPublicationSettings, 
+    defaultResultPublicationSettings, 
+    subscribeResultPublicationSettings, 
+    checkResultAccess 
+} from '@/lib/result-publication-data';
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
@@ -269,6 +275,7 @@ export default function LoginPage() {
     const [searchStudentId, setSearchStudentId] = useState<string>('');
     const [searchExams, setSearchExams] = useState<Exam[]>([]);
     const [searchResult, setSearchResult] = useState<StudentProcessedResult | null>(null);
+    const [resultSettings, setResultSettings] = useState<ResultPublicationSettings>(defaultResultPublicationSettings);
 
     // Dynamic Stats States
     const [stats, setStats] = useState({ 
@@ -290,6 +297,11 @@ export default function LoginPage() {
             getExams(db, searchYear).then(setSearchExams);
         }
     }, [db, searchYear]);
+
+    useEffect(() => {
+        if (!db) return;
+        return subscribeResultPublicationSettings(db, setResultSettings);
+    }, [db]);
 
     // Fetch live stats
     useEffect(() => {
@@ -408,6 +420,18 @@ export default function LoginPage() {
             toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'সবগুলো ঘর পূরণ করুন। ' });
             return;
         }
+
+        // ফলাফল প্রকাশ নিয়ন্ত্রণ যাচাই
+        const access = checkResultAccess(resultSettings, searchYear, searchExam);
+        if (!access.allowed) {
+            toast({ 
+                variant: 'destructive', 
+                title: 'ফলাফল দেখা যাচ্ছে না', 
+                description: access.reason 
+            });
+            return;
+        }
+
         setIsSearching(true);
         try {
             const cleanRoll = parseInt(bnToEn(searchRoll).trim(), 10);
@@ -617,6 +641,12 @@ export default function LoginPage() {
                                 <DialogDescription className="text-white/80 font-bold text-lg mt-1">সঠিক তথ্য দিয়ে ড্রাফট রেজাল্ট সামারি দেখুন</DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleResultSearch} className="p-8 space-y-6 bg-white">
+                                {!resultSettings.globalPublicAccess && (
+                                    <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-xl flex items-center gap-3 text-rose-800">
+                                        <Info className="h-5 w-5 text-rose-600 shrink-0" />
+                                        <p className="text-xs font-bold leading-tight">বর্তমানে ফলাফল অনুসন্ধান সাময়িকভাবে বন্ধ রাখা হয়েছে। পরবর্তী নির্দেশনার জন্য অপেক্ষা করুন।</p>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="font-black text-xs uppercase">শিক্ষাবর্ষ</Label>
@@ -638,7 +668,14 @@ export default function LoginPage() {
                                     <Select value={searchExam} onValueChange={setSearchExam}>
                                         <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                                         <SelectContent>
-                                            {searchExams.length > 0 ? searchExams.map(e => <SelectItem key={e.id} value={e.name} className="font-bold">{e.name}</SelectItem>) : <SelectItem value="none" disabled>কোনো পরীক্ষা নেই</SelectItem>}
+                                            {searchExams.length > 0 ? searchExams.map(e => {
+                                                const access = checkResultAccess(resultSettings, searchYear, e.name);
+                                                return (
+                                                    <SelectItem key={e.id} value={e.name} className="font-bold">
+                                                        {e.name} {!access.allowed ? '🔒 (অপ্রকাশিত)' : ''}
+                                                    </SelectItem>
+                                                );
+                                            }) : <SelectItem value="none" disabled>কোনো পরীক্ষা নেই</SelectItem>}
                                         </SelectContent>
                                     </Select>
                                 </div>

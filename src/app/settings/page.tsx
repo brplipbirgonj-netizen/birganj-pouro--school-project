@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { 
     Trash2, Upload, Info, Database, Calculator, Clock, Loader2, ChevronRight, User, School, 
     Calendar, Users, HardDriveDownload, Monitor, ShieldAlert,
-    FileSpreadsheet, FileJson, Download, ImageIcon, Plus, CheckCircle2, Save, Eye, EyeOff, Bell, FilePen, Sparkles, Printer, FileText, ExternalLink
+    FileSpreadsheet, FileJson, Download, ImageIcon, Plus, CheckCircle2, Save, Eye, EyeOff, Bell, FilePen, Sparkles, Printer, FileText, ExternalLink,
+    BookOpen, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { format, formatDistanceToNow } from "date-fns";
 import { bn } from 'date-fns/locale';
@@ -44,6 +45,15 @@ import { Switch } from '@/components/ui/switch';
 import * as XLSX from 'xlsx';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { useAcademicYear } from '@/context/AcademicYearContext';
+import { getExams, Exam } from '@/lib/exam-data';
+import { 
+    ResultPublicationSettings, 
+    ExamPublicationRule, 
+    defaultResultPublicationSettings, 
+    saveResultPublicationSettings, 
+    subscribeResultPublicationSettings 
+} from '@/lib/result-publication-data';
 
 // --- Utility Functions ---
 const toBengaliNumber = (str: string | number | undefined | null) => {
@@ -1064,6 +1074,400 @@ function BackupAndExportSettings() {
     );
 }
 
+function ResultPublicationSettingsSection() {
+    const db = useFirestore();
+    const { toast } = useToast();
+    const { availableYears, selectedYear: defaultYear } = useAcademicYear();
+
+    const [settings, setSettings] = useState<ResultPublicationSettings>(defaultResultPublicationSettings);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [selectedYear, setSelectedYear] = useState<string>(defaultYear || '2026');
+    const [yearExams, setYearExams] = useState<Exam[]>([]);
+    const [isLoadingExams, setIsLoadingExams] = useState(false);
+
+    useEffect(() => {
+        if (!db) return;
+        const unsub = subscribeResultPublicationSettings(db, (data) => {
+            setSettings(data);
+            setIsLoading(false);
+        });
+        return () => unsub();
+    }, [db]);
+
+    useEffect(() => {
+        if (!db || !selectedYear) return;
+        setIsLoadingExams(true);
+        getExams(db, selectedYear).then((exams) => {
+            setYearExams(exams);
+        }).catch(() => {
+            setYearExams([]);
+        }).finally(() => {
+            setIsLoadingExams(false);
+        });
+    }, [db, selectedYear]);
+
+    const getRule = (year: string, examName: string): ExamPublicationRule => {
+        const found = settings.examRules.find(r => r.academicYear === year && r.examName === examName);
+        if (found) return found;
+        return {
+            academicYear: year,
+            examName,
+            isHidden: false,
+            publishFrom: null,
+            publishUntil: null
+        };
+    };
+
+    const updateRule = (year: string, examName: string, patch: Partial<ExamPublicationRule>) => {
+        setSettings(prev => {
+            const rules = [...prev.examRules];
+            const idx = rules.findIndex(r => r.academicYear === year && r.examName === examName);
+            if (idx >= 0) {
+                rules[idx] = { ...rules[idx], ...patch };
+            } else {
+                rules.push({
+                    academicYear: year,
+                    examName,
+                    isHidden: false,
+                    publishFrom: null,
+                    publishUntil: null,
+                    ...patch
+                });
+            }
+            return { ...prev, examRules: rules };
+        });
+    };
+
+    const handleSave = async () => {
+        if (!db) return;
+        setIsSaving(true);
+        try {
+            await saveResultPublicationSettings(db, settings);
+            toast({ title: 'ফলাফল প্রকাশ সেটিংস সফলভাবে সংরক্ষিত হয়েছে' });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'সংরক্ষণ ব্যর্থ হয়েছে', description: e.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const toLocalInput = (isoStr: string | null) => {
+        if (!isoStr) return '';
+        try {
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return '';
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        } catch {
+            return '';
+        }
+    };
+
+    const fromLocalInput = (val: string) => {
+        if (!val) return null;
+        try {
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? null : d.toISOString();
+        } catch {
+            return null;
+        }
+    };
+
+    const setAllHidden = (hidden: boolean) => {
+        setSettings(prev => {
+            const rules = [...prev.examRules];
+            yearExams.forEach(e => {
+                const idx = rules.findIndex(r => r.academicYear === selectedYear && r.examName === e.name);
+                if (idx >= 0) {
+                    rules[idx] = { ...rules[idx], isHidden: hidden };
+                } else {
+                    rules.push({
+                        academicYear: selectedYear,
+                        examName: e.name,
+                        isHidden: hidden,
+                        publishFrom: null,
+                        publishUntil: null
+                    });
+                }
+            });
+            return { ...prev, examRules: rules };
+        });
+        toast({ 
+            title: hidden ? `${toBengaliNumber(selectedYear)} সালের সব ফলাফল লুকানো হলো` : `${toBengaliNumber(selectedYear)} সালের সব ফলাফল উন্মুক্ত করা হলো` 
+        });
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center py-24">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    return (
+        <Card className="border-none shadow-none font-kalpurush">
+            <CardHeader className="px-0 pt-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <CardTitle className="text-2xl font-black flex items-center gap-2 text-slate-800">
+                            <BookOpen className="h-7 w-7 text-purple-600" /> ফলাফল প্রকাশ নিয়ন্ত্রণ ও সময় নির্ধারণ
+                        </CardTitle>
+                        <CardDescription className="text-base font-bold mt-1 text-slate-600">
+                            লগইন পেজে অভিভাবকদের জন্য কোন কোন পরীক্ষার ফলাফল কখন উন্মুক্ত হবে তা নিয়ন্ত্রণ করুন
+                        </CardDescription>
+                    </div>
+                    <Button 
+                        onClick={handleSave} 
+                        disabled={isSaving} 
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-black h-12 px-8 shadow-lg shrink-0 rounded-xl"
+                    >
+                        {isSaving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+                        পরিবর্তন সংরক্ষণ করুন
+                    </Button>
+                </div>
+            </CardHeader>
+
+            <CardContent className="px-0 pt-6 space-y-8">
+                {/* Global Toggle Card */}
+                <div className={cn(
+                    "p-6 rounded-2xl border-2 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4",
+                    settings.globalPublicAccess ? "bg-emerald-50/60 border-emerald-200" : "bg-rose-50/60 border-rose-200"
+                )}>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <Badge className={cn("font-black text-xs", settings.globalPublicAccess ? "bg-emerald-600 text-white" : "bg-rose-600 text-white")}>
+                                {settings.globalPublicAccess ? 'সার্বিক প্রকাশ চালু' : 'সার্বিক প্রকাশ বন্ধ'}
+                            </Badge>
+                            <h4 className="text-lg font-black text-slate-900">পাবলিক ফলাফল অনুসন্ধান সুইচ</h4>
+                        </div>
+                        <p className="text-sm font-bold text-slate-600 leading-relaxed">
+                            {settings.globalPublicAccess 
+                                ? 'লগইন পেজ থেকে অভিভাবক ও শিক্ষার্থীরা তাদের রোল ও আইডি দিয়ে নির্ধারিত ফলাফল অনুসন্ধান করতে পারবেন।' 
+                                : 'লগইন পেজ থেকে সকল ফলাফল অনুসন্ধান সাময়িকভাবে বন্ধ থাকবে। কোনো শিক্ষার্থী বা অভিভাবক রেজাল্ট দেখতে পারবেন না।'}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                        <Label htmlFor="global-toggle" className="font-black text-sm cursor-pointer">
+                            {settings.globalPublicAccess ? 'অন' : 'অফ'}
+                        </Label>
+                        <Switch 
+                            id="global-toggle"
+                            checked={settings.globalPublicAccess}
+                            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, globalPublicAccess: checked }))}
+                            className="scale-125"
+                        />
+                    </div>
+                </div>
+
+                {/* Academic Year Selection & Quick Actions */}
+                <div className="bg-slate-50 border-2 border-slate-200 p-6 rounded-2xl space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <Label className="text-sm font-black uppercase text-slate-700 whitespace-nowrap">শিক্ষাবর্ষ নির্বাচন:</Label>
+                            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                <SelectTrigger className="h-11 w-36 text-base font-black bg-white border-2 border-slate-300 rounded-xl shadow-sm">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableYears.map(y => (
+                                        <SelectItem key={y} value={y} className="font-bold">{toBengaliNumber(y)} শিক্ষাবর্ষ</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setAllHidden(false)}
+                                className="h-9 px-3 text-xs font-black bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                            >
+                                <Eye className="h-3.5 w-3.5 mr-1" /> সব উন্মুক্ত করুন
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setAllHidden(true)}
+                                className="h-9 px-3 text-xs font-black bg-white text-rose-700 border-rose-200 hover:bg-rose-50"
+                            >
+                                <EyeOff className="h-3.5 w-3.5 mr-1" /> সব লুকান
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Exams List for Selected Year */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-black text-xl text-slate-800 flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-primary" /> {toBengaliNumber(selectedYear)} সালের পরীক্ষার ফলাফল প্রকাশ নিয়ন্ত্রণ
+                        </h3>
+                        <Badge variant="outline" className="font-black bg-white border-2 text-xs">
+                            মোট পরীক্ষা: {toBengaliNumber(yearExams.length)} টি
+                        </Badge>
+                    </div>
+
+                    {isLoadingExams ? (
+                        <div className="p-12 text-center">
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />
+                            <p className="text-sm font-bold text-muted-foreground">পরীক্ষার তালিকা লোড হচ্ছে...</p>
+                        </div>
+                    ) : yearExams.length === 0 ? (
+                        <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                            <Info className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
+                            <p className="text-base font-black text-slate-700">{toBengaliNumber(selectedYear)} শিক্ষাবর্ষে কোনো পরীক্ষা পাওয়া যায়নি।</p>
+                            <p className="text-xs font-bold text-muted-foreground mt-1">প্রথমে পরীক্ষা নিয়ন্ত্রণ থেকে নতুন পরীক্ষা যুক্ত করুন।</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                            {yearExams.map((exam) => {
+                                const rule = getRule(selectedYear, exam.name);
+                                const isRuleHidden = rule.isHidden;
+                                const now = new Date();
+                                const isScheduledFuture = rule.publishFrom ? now < new Date(rule.publishFrom) : false;
+                                const isExpired = rule.publishUntil ? now > new Date(rule.publishUntil) : false;
+
+                                return (
+                                    <div 
+                                        key={exam.id || exam.name} 
+                                        className={cn(
+                                            "p-6 rounded-2xl border-2 bg-white shadow-sm transition-all space-y-4",
+                                            isRuleHidden 
+                                                ? "border-red-200 bg-red-50/20" 
+                                                : isScheduledFuture 
+                                                    ? "border-amber-200 bg-amber-50/20" 
+                                                    : isExpired 
+                                                        ? "border-slate-300 bg-slate-50/50" 
+                                                        : "border-slate-200 hover:border-emerald-300"
+                                        )}
+                                    >
+                                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b">
+                                            <div className="space-y-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h4 className="text-xl font-black text-slate-900">{exam.name}</h4>
+                                                    {isRuleHidden ? (
+                                                        <Badge className="bg-red-600 text-white font-black text-xs">
+                                                            <EyeOff className="h-3 w-3 mr-1" /> সম্পূর্ণ লুকানো
+                                                        </Badge>
+                                                    ) : isScheduledFuture ? (
+                                                        <Badge className="bg-amber-600 text-white font-black text-xs">
+                                                            <Clock className="h-3 w-3 mr-1" /> প্রকাশের অপেক্ষায়
+                                                        </Badge>
+                                                    ) : isExpired ? (
+                                                        <Badge className="bg-slate-600 text-white font-black text-xs">
+                                                            মেয়াদ উত্তীর্ণ
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="bg-emerald-600 text-white font-black text-xs">
+                                                            <CheckCircle2 className="h-3 w-3 mr-1" /> উন্মুক্ত (পাবলিক)
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs font-bold text-muted-foreground">
+                                                    শ্রেণি: {exam.classes?.map((c: string) => classNamesMap[c] || c).join(', ') || 'সকল শ্রেণি'}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200 shrink-0">
+                                                <div className="flex items-center gap-2">
+                                                    {isRuleHidden ? <EyeOff className="h-4 w-4 text-rose-600" /> : <Eye className="h-4 w-4 text-emerald-600" />}
+                                                    <Label htmlFor={`hide-toggle-${exam.id}`} className="text-xs font-black cursor-pointer">
+                                                        {isRuleHidden ? 'ফলাফল লুকানো আছে' : 'ফলাফল উন্মুক্ত'}
+                                                    </Label>
+                                                </div>
+                                                <Switch 
+                                                    id={`hide-toggle-${exam.id}`}
+                                                    checked={isRuleHidden}
+                                                    onCheckedChange={(checked) => updateRule(selectedYear, exam.name, { isHidden: checked })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Date-time controls */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                            <div className="space-y-1.5 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                                                        <Clock className="h-3.5 w-3.5 text-primary" /> প্রকাশের শুরুর সময় (Publish From)
+                                                    </Label>
+                                                    {rule.publishFrom && (
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => updateRule(selectedYear, exam.name, { publishFrom: null })}
+                                                            className="text-[10px] font-bold text-rose-600 hover:underline"
+                                                        >
+                                                            মুছুন
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <input 
+                                                    type="datetime-local" 
+                                                    value={toLocalInput(rule.publishFrom)}
+                                                    onChange={(e) => updateRule(selectedYear, exam.name, { publishFrom: fromLocalInput(e.target.value) })}
+                                                    className="w-full h-10 px-3 text-sm font-bold bg-white border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                                />
+                                                <p className="text-[10px] font-bold text-muted-foreground">
+                                                    {rule.publishFrom 
+                                                        ? `নির্ধারিত সময়: ${new Date(rule.publishFrom).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' })}` 
+                                                        : 'খালি রাখলে তাৎক্ষণিকভাবে যে কোনো সময় অভিভাবক দেখতে পারবেন।'}
+                                                </p>
+                                            </div>
+
+                                            <div className="space-y-1.5 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                                                        <Clock className="h-3.5 w-3.5 text-rose-600" /> প্রকাশের শেষ সময় (Publish Until - ঐচ্ছিক)
+                                                    </Label>
+                                                    {rule.publishUntil && (
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => updateRule(selectedYear, exam.name, { publishUntil: null })}
+                                                            className="text-[10px] font-bold text-rose-600 hover:underline"
+                                                        >
+                                                            মুছুন
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <input 
+                                                    type="datetime-local" 
+                                                    value={toLocalInput(rule.publishUntil)}
+                                                    onChange={(e) => updateRule(selectedYear, exam.name, { publishUntil: fromLocalInput(e.target.value) })}
+                                                    className="w-full h-10 px-3 text-sm font-bold bg-white border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                                />
+                                                <p className="text-[10px] font-bold text-muted-foreground">
+                                                    {rule.publishUntil 
+                                                        ? `মেয়াদ শেষ: ${new Date(rule.publishUntil).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' })}` 
+                                                        : 'খালি রাখলে আজীবন অভিভাবকরা দেখতে পারবেন।'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                <div className="pt-6 border-t flex justify-end">
+                    <Button 
+                        onClick={handleSave} 
+                        disabled={isSaving} 
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-black h-12 px-10 shadow-xl text-base rounded-xl"
+                    >
+                        {isSaving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+                        পরিবর্তন সংরক্ষণ করুন
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 // --- Main Page Component ---
 
 export default function SettingsPage() {
@@ -1082,6 +1486,7 @@ export default function SettingsPage() {
         if (isAdmin) {
             items.push(
                 { id: 'school', label: 'প্রতিষ্ঠানের তথ্য', icon: School, color: 'text-emerald-600 bg-emerald-50' },
+                { id: 'result-publish', label: 'ফলাফল প্রকাশ নিয়ন্ত্রণ', icon: BookOpen, color: 'text-purple-600 bg-purple-50' },
                 { id: 'gallery', label: 'গ্যালারি সেটিংস', icon: ImageIcon, color: 'text-primary bg-primary/10' },
                 { id: 'holidays', label: 'অতিরিক্ত ছুটি', icon: Calendar, color: 'text-rose-600 bg-rose-50' },
                 { id: 'users', label: 'ইউজার ম্যানেজমেন্ট', icon: Users, color: 'text-blue-600 bg-blue-50' },
@@ -1128,6 +1533,7 @@ export default function SettingsPage() {
                         <div className="p-6 sm:p-10 lg:p-14 flex-1">
                             {activeSection === 'profile' && <ProfileSettings />}
                             {activeSection === 'school' && isAdmin && <SchoolInfoSettings />}
+                            {activeSection === 'result-publish' && isAdmin && <ResultPublicationSettingsSection />}
                             {activeSection === 'gallery' && isAdmin && <GalleryManagementSettings />}
                             {activeSection === 'holidays' && isAdmin && <HolidaySettings />}
                             {activeSection === 'users' && isAdmin && <UserManagementSettings />}
