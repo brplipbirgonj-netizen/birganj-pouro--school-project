@@ -76,6 +76,11 @@ function sanitizeForFirestore(val: any): any {
     return cleaned;
 }
 
+export interface SeatAssignment {
+    className?: string;
+    studentId?: string;
+}
+
 export interface RoomSetup {
     id: string;
     roomName: string;
@@ -86,6 +91,7 @@ export interface RoomSetup {
     // Word Diagram layout: column configurations for right and left sides
     rightSideColumns?: ColumnSetting[];
     leftSideColumns?: ColumnSetting[];
+    seatAssignments?: Record<string, SeatAssignment>;
     genderSide?: 'boys_left' | 'girls_left' | 'mixed'; // legacy
     benchSeatGenders?: ('male' | 'female' | 'any')[];  // legacy
 }
@@ -125,6 +131,229 @@ export interface RoomSeating {
 
 type GenderPattern = 'normal' | 'opposite_sides' | 'sandwich_girl_middle' | 'sandwich_boy_middle';
 type ClassPattern = 'cross_class' | 'same_class';
+
+export interface ResolvedSeatInfo {
+    seatNo: number;
+    student: SeatStudent | null;
+    activeClass: string;
+    isRollsFinished: boolean;
+    availableStudents: SeatStudent[];
+}
+
+function formatRollsSummary(rolls: number[]): string {
+    if (!rolls || rolls.length === 0) return '';
+    const sorted = Array.from(new Set(rolls)).sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = sorted[0];
+    let end = sorted[0];
+
+    for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] === end + 1) {
+            end = sorted[i];
+        } else {
+            ranges.push(start === end ? `${toBengaliNumber(start)}` : `${toBengaliNumber(start)} - ${toBengaliNumber(end)}`);
+            start = sorted[i];
+            end = sorted[i];
+        }
+    }
+    ranges.push(start === end ? `${toBengaliNumber(start)}` : `${toBengaliNumber(start)} - ${toBengaliNumber(end)}`);
+    return ranges.join(', ');
+}
+
+export function resolveAllRoomsSeating(
+    roomsList: RoomSetup[],
+    studentsByClass: Record<string, Student[]>,
+    selectedClasses: string[],
+    excludeAbsents: boolean,
+    absentStudentIds: Set<string>
+): {
+    resolvedRooms: RoomSeating[];
+    roomSeatMap: Record<string, Record<string, ResolvedSeatInfo>>;
+} {
+    const classGenderPools: Record<string, { male: SeatStudent[]; female: SeatStudent[]; all: SeatStudent[] }> = {};
+
+    selectedClasses.forEach(cName => {
+        const rawList = studentsByClass[cName] || [];
+        const activeList = excludeAbsents ? rawList.filter(s => !absentStudentIds.has(s.id)) : rawList;
+        const mapped: SeatStudent[] = activeList.map(s => ({
+            id: s.id,
+            roll: s.roll || 0,
+            className: s.className,
+            name: s.studentNameBn || s.studentNameEn || '',
+            gender: (s.gender === 'female' ? 'female' : 'male') as 'male' | 'female'
+        })).sort((a, b) => a.roll - b.roll);
+
+        classGenderPools[cName] = {
+            male: mapped.filter(s => s.gender === 'male'),
+            female: mapped.filter(s => s.gender === 'female'),
+            all: mapped
+        };
+    });
+
+    const usedStudentIds = new Set<string>();
+
+    roomsList.forEach(r => {
+        if (r.seatAssignments) {
+            Object.values(r.seatAssignments).forEach(asgn => {
+                if (asgn.studentId && asgn.studentId !== 'empty') {
+                    usedStudentIds.add(asgn.studentId);
+                }
+            });
+        }
+    });
+
+    const poolIndices: Record<string, { male: number; female: number; all: number }> = {};
+    selectedClasses.forEach(c => {
+        poolIndices[c] = { male: 0, female: 0, all: 0 };
+    });
+
+    const getNextStudent = (className: string, gender: 'male' | 'female' | 'any'): SeatStudent | null => {
+        const pool = classGenderPools[className];
+        if (!pool) return null;
+        const list = gender === 'male' ? pool.male : gender === 'female' ? pool.female : pool.all;
+        const key = gender === 'male' ? 'male' : gender === 'female' ? 'female' : 'all';
+
+        if (!poolIndices[className]) {
+            poolIndices[className] = { male: 0, female: 0, all: 0 };
+        }
+
+        while (poolIndices[className][key] < list.length) {
+            const candidate = list[poolIndices[className][key]];
+            poolIndices[className][key]++;
+            if (!usedStudentIds.has(candidate.id)) {
+                usedStudentIds.add(candidate.id);
+                return candidate;
+            }
+        }
+        return null;
+    };
+
+    const resolvedRooms: RoomSeating[] = [];
+    const roomSeatMap: Record<string, Record<string, ResolvedSeatInfo>> = {};
+
+    for (const rSetup of roomsList) {
+        const roomBenches: BenchSlot[] = [];
+        const roomStudents: SeatStudent[] = [];
+        const seatDetails: Record<string, ResolvedSeatInfo> = {};
+
+        const spb = rSetup.seatsPerBench;
+        const rightCols = rSetup.rightSideColumns || getDefaultSideColumns(spb, 'male');
+        const leftCols = rSetup.leftSideColumns || getDefaultSideColumns(spb, 'female');
+
+        let benchNumberCounter = 1;
+
+        const processSide = (side: 'right' | 'left', benchCount: number, cols: ColumnSetting[]) => {
+            const activeClassPerCol: string[] = cols.map(c => 
+                (c.className && c.className !== 'auto') ? c.className : (selectedClasses[0] || '6')
+            );
+
+            for (let b = 0; b < benchCount; b++) {
+                const benchSeats: SeatSlot[] = [];
+
+                for (let sPos = 0; sPos < spb; sPos++) {
+                    const seatKey = `${side}_${b}_${sPos}`;
+                    const colConfig = cols[sPos] || { className: 'auto', gender: side === 'right' ? 'male' : 'female' };
+                    const override = rSetup.seatAssignments?.[seatKey];
+
+                    if (override?.className) {
+                        activeClassPerCol[sPos] = override.className;
+                    }
+
+                    const currentClass = activeClassPerCol[sPos];
+                    const targetGender = colConfig.gender;
+
+                    let st: SeatStudent | null = null;
+                    let isRollsFinished = false;
+
+                    if (override?.studentId === 'empty') {
+                        st = null;
+                    } else if (override?.studentId) {
+                        const allSts = classGenderPools[currentClass]?.all || [];
+                        st = allSts.find(s => s.id === override.studentId) || null;
+                        if (!st) {
+                            for (const c of selectedClasses) {
+                                const found = (classGenderPools[c]?.all || []).find(s => s.id === override.studentId);
+                                if (found) { st = found; break; }
+                            }
+                        }
+                    } else {
+                        st = getNextStudent(currentClass, targetGender);
+                        if (!st) {
+                            isRollsFinished = true;
+                        }
+                    }
+
+                    if (st) roomStudents.push(st);
+
+                    benchSeats.push({
+                        seatNo: sPos + 1,
+                        student: st
+                    });
+
+                    const classPool = classGenderPools[currentClass];
+                    const candidateList = classPool 
+                        ? (targetGender === 'male' ? classPool.male : targetGender === 'female' ? classPool.female : classPool.all)
+                        : [];
+                    
+                    const availableForSeat = candidateList.filter(candidate => 
+                        (st && candidate.id === st.id) || !usedStudentIds.has(candidate.id)
+                    );
+                    if (st && !availableForSeat.some(s => s.id === st.id)) {
+                        availableForSeat.unshift(st);
+                    }
+
+                    seatDetails[seatKey] = {
+                        seatNo: sPos + 1,
+                        student: st,
+                        activeClass: currentClass,
+                        isRollsFinished,
+                        availableStudents: availableForSeat
+                    };
+                }
+
+                roomBenches.push({
+                    benchNumber: benchNumberCounter++,
+                    seats: benchSeats
+                });
+            }
+        };
+
+        processSide('right', rSetup.rightBenchCount, rightCols);
+        processSide('left', rSetup.leftBenchCount, leftCols);
+
+        const classMap: Record<string, number[]> = {};
+        roomStudents.forEach(st => {
+            if (!classMap[st.className]) classMap[st.className] = [];
+            classMap[st.className].push(st.roll);
+        });
+
+        const summaries = Object.keys(classMap).sort((a,b) => parseInt(a) - parseInt(b)).map(cName => {
+            const rolls = classMap[cName].sort((a,b) => a - b);
+            const minRoll = rolls[0] || 0;
+            const maxRoll = rolls[rolls.length - 1] || 0;
+            return {
+                className: cName,
+                minRoll,
+                maxRoll,
+                count: rolls.length,
+                rollsStr: formatRollsSummary(rolls)
+            };
+        });
+
+        resolvedRooms.push({
+            roomId: rSetup.id,
+            roomName: rSetup.roomName,
+            benches: roomBenches,
+            classSummaries: summaries,
+            totalStudents: roomStudents.length,
+            capacity: rSetup.benchCount * spb
+        });
+
+        roomSeatMap[rSetup.id] = seatDetails;
+    }
+
+    return { resolvedRooms, roomSeatMap };
+}
 
 export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
     const db = useFirestore();
@@ -195,6 +424,16 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [generatedRooms, setGeneratedRooms] = useState<RoomSeating[]>([]);
     const [activePrintTab, setActivePrintTab] = useState<'preview' | 'door_notice' | 'desk_slips' | 'master_chart'>('preview');
+
+    const { resolvedRooms, roomSeatMap } = useMemo(() => {
+        return resolveAllRoomsSeating(rooms, studentsByClass, selectedClasses, excludeAbsents, absentStudentIds);
+    }, [rooms, studentsByClass, selectedClasses, excludeAbsents, absentStudentIds]);
+
+    useEffect(() => {
+        if (resolvedRooms.length > 0) {
+            setGeneratedRooms(resolvedRooms);
+        }
+    }, [resolvedRooms]);
 
     // Load available exams
     useEffect(() => {
@@ -352,6 +591,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                             seatsPerBench: spb,
                             rightSideColumns: rightCols,
                             leftSideColumns: leftCols,
+                            seatAssignments: r.seatAssignments || {},
                             genderSide: r.genderSide || 'mixed',
                             benchSeatGenders: genders,
                         };
@@ -511,9 +751,73 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                 ...current[colIdx],
                 [field]: value
             };
+            // Clear seat overrides for this column so it smoothly re-populates with new class/gender
+            const currentAsgns = { ...(r.seatAssignments || {}) };
+            Object.keys(currentAsgns).forEach(k => {
+                if (k.startsWith(`${side}_`) && k.endsWith(`_${colIdx}`)) {
+                    delete currentAsgns[k];
+                }
+            });
             return {
                 ...r,
+                seatAssignments: currentAsgns,
                 [key]: current
+            };
+        }));
+    };
+
+    const handleSeatStudentChange = (
+        roomId: string,
+        side: 'right' | 'left',
+        bIdx: number,
+        sPos: number,
+        studentId: string
+    ) => {
+        const key = `${side}_${bIdx}_${sPos}`;
+        setRooms(prev => prev.map(r => {
+            if (r.id !== roomId) return r;
+            const currentAsgns = { ...(r.seatAssignments || {}) };
+            currentAsgns[key] = {
+                ...(currentAsgns[key] || {}),
+                studentId: studentId || 'empty'
+            };
+            return {
+                ...r,
+                seatAssignments: currentAsgns
+            };
+        }));
+    };
+
+    const handleClassTransition = (
+        roomId: string,
+        side: 'right' | 'left',
+        bIdx: number,
+        sPos: number,
+        newClass: string
+    ) => {
+        const key = `${side}_${bIdx}_${sPos}`;
+        setRooms(prev => prev.map(r => {
+            if (r.id !== roomId) return r;
+            const currentAsgns = { ...(r.seatAssignments || {}) };
+            if (!newClass) {
+                delete currentAsgns[key];
+            } else {
+                currentAsgns[key] = {
+                    ...(currentAsgns[key] || {}),
+                    className: newClass,
+                    studentId: undefined
+                };
+            }
+            // Clear subsequent manual overrides for this column so rolls flow smoothly from the new class
+            Object.keys(currentAsgns).forEach(k => {
+                const parts = k.split('_');
+                if (parts[0] === side && parseInt(parts[2]) === sPos && parseInt(parts[1]) > bIdx) {
+                    delete currentAsgns[k];
+                }
+            });
+            return {
+                ...r,
+                seatAssignments: currentAsgns
             };
         }));
     };
@@ -539,241 +843,12 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
             return;
         }
 
-        if (activeExamineesCount === 0) {
-            toast({ variant: 'destructive', title: 'কোনো সক্রিয় পরীক্ষার্থী পাওয়া যায়নি' });
-            return;
-        }
-
-        if (totalCapacity < activeExamineesCount) {
-            toast({ 
-                variant: 'destructive', 
-                title: 'আসন সংখ্যা অপ্রতুল!', 
-                description: `মোট সক্রিয় পরীক্ষার্থী ${activeExamineesCount} জন, কিন্তু মোট আসন ক্ষমতা ${totalCapacity} টি। অনুগ্রহ করে আরও রুম বা বেঞ্চ যোগ করুন।` 
-            });
-            return;
-        }
-
-        setIsGenerating(true);
-
-        try {
-            // Prepare structured queues for each class (excluding absents if toggle active)
-            const classQueues: Record<string, {
-                male: SeatStudent[];
-                female: SeatStudent[];
-                all: SeatStudent[];
-            }> = {};
-
-            selectedClasses.forEach(cName => {
-                const list = studentsByClass[cName] || [];
-                const activeList = excludeAbsents 
-                    ? list.filter(s => !absentStudentIds.has(s.id))
-                    : list;
-
-                const mapped: SeatStudent[] = activeList.map(s => ({
-                    id: s.id,
-                    roll: s.roll || 0,
-                    className: s.className,
-                    name: s.studentNameBn || s.studentNameEn || '',
-                    gender: (s.gender === 'female' ? 'female' : 'male')
-                }));
-
-                classQueues[cName] = {
-                    male: mapped.filter(s => s.gender === 'male'),
-                    female: mapped.filter(s => s.gender === 'female'),
-                    all: [...mapped]
-                };
-            });
-
-            // Class pairing strategy for Cross-Class
-            const pairedClasses: [string, string | null][] = [];
-            const sortedClasses = [...selectedClasses].sort((a, b) => parseInt(b) - parseInt(a)); // e.g. 10, 9, 8, 7, 6
-            let leftIdx = 0;
-            let rightIdx = sortedClasses.length - 1;
-            while (leftIdx <= rightIdx) {
-                if (leftIdx === rightIdx) {
-                    pairedClasses.push([sortedClasses[leftIdx], null]);
-                } else {
-                    pairedClasses.push([sortedClasses[leftIdx], sortedClasses[rightIdx]]);
-                }
-                leftIdx++;
-                rightIdx--;
-            }
-
-            // Pull student from class queue
-            const pullStudent = (cName: string, preferGender?: 'male' | 'female'): SeatStudent | undefined => {
-                const q = classQueues[cName];
-                if (!q) return undefined;
-
-                if (preferGender === 'male' && q.male.length > 0) {
-                    const st = q.male.shift()!;
-                    const aIdx = q.all.findIndex(s => s.id === st.id);
-                    if (aIdx !== -1) q.all.splice(aIdx, 1);
-                    return st;
-                }
-                if (preferGender === 'female' && q.female.length > 0) {
-                    const st = q.female.shift()!;
-                    const aIdx = q.all.findIndex(s => s.id === st.id);
-                    if (aIdx !== -1) q.all.splice(aIdx, 1);
-                    return st;
-                }
-
-                if (q.all.length > 0) {
-                    const st = q.all.shift()!;
-                    if (st.gender === 'male') {
-                        const mIdx = q.male.findIndex(s => s.id === st.id);
-                        if (mIdx !== -1) q.male.splice(mIdx, 1);
-                    } else {
-                        const fIdx = q.female.findIndex(s => s.id === st.id);
-                        if (fIdx !== -1) q.female.splice(fIdx, 1);
-                    }
-                    return st;
-                }
-
-                return undefined;
-            };
-
-            // Global fallback
-            const pullAnyRemaining = (preferGender?: 'male' | 'female'): SeatStudent | undefined => {
-                for (const cName of selectedClasses) {
-                    const st = pullStudent(cName, preferGender);
-                    if (st) return st;
-                }
-                if (preferGender) {
-                    for (const cName of selectedClasses) {
-                        const st = pullStudent(cName, undefined);
-                        if (st) return st;
-                    }
-                }
-                return undefined;
-            };
-
-            // Allocate into rooms and benches
-            const newRoomPlans: RoomSeating[] = [];
-            let currentPairIdx = 0;
-
-            for (const rSetup of rooms) {
-                const roomBenches: BenchSlot[] = [];
-                const roomStudents: SeatStudent[] = [];
-                const spb = rSetup.seatsPerBench;
-
-                const rightCols = rSetup.rightSideColumns || getDefaultSideColumns(spb, 'male');
-                const leftCols = rSetup.leftSideColumns || getDefaultSideColumns(spb, 'female');
-
-                let benchNumberCounter = 1;
-
-                // 1. ডানের বেঞ্চসমূহ (Right side benches)
-                for (let b = 1; b <= rSetup.rightBenchCount; b++) {
-                    const benchSeats: SeatSlot[] = [];
-                    for (let sPos = 0; sPos < spb; sPos++) {
-                        const colConfig = rightCols[sPos] || { className: 'auto', gender: 'male' };
-                        let st: SeatStudent | undefined = undefined;
-
-                        if (colConfig.className !== 'auto') {
-                            st = pullStudent(colConfig.className, colConfig.gender === 'any' ? undefined : colConfig.gender);
-                        } else {
-                            st = pullAnyRemaining(colConfig.gender === 'any' ? undefined : colConfig.gender);
-                        }
-
-                        // Fallback without gender restriction if still not found
-                        if (!st) {
-                            if (colConfig.className !== 'auto') {
-                                st = pullStudent(colConfig.className, undefined);
-                            }
-                            if (!st) {
-                                st = pullAnyRemaining(undefined);
-                            }
-                        }
-
-                        benchSeats.push({
-                            seatNo: sPos + 1,
-                            student: st || null
-                        });
-                        if (st) roomStudents.push(st);
-                    }
-
-                    roomBenches.push({
-                        benchNumber: benchNumberCounter++,
-                        seats: benchSeats
-                    });
-                }
-
-                // 2. বামের বেঞ্চসমূহ (Left side benches)
-                for (let b = 1; b <= rSetup.leftBenchCount; b++) {
-                    const benchSeats: SeatSlot[] = [];
-                    for (let sPos = 0; sPos < spb; sPos++) {
-                        const colConfig = leftCols[sPos] || { className: 'auto', gender: 'female' };
-                        let st: SeatStudent | undefined = undefined;
-
-                        if (colConfig.className !== 'auto') {
-                            st = pullStudent(colConfig.className, colConfig.gender === 'any' ? undefined : colConfig.gender);
-                        } else {
-                            st = pullAnyRemaining(colConfig.gender === 'any' ? undefined : colConfig.gender);
-                        }
-
-                        // Fallback without gender restriction if still not found
-                        if (!st) {
-                            if (colConfig.className !== 'auto') {
-                                st = pullStudent(colConfig.className, undefined);
-                            }
-                            if (!st) {
-                                st = pullAnyRemaining(undefined);
-                            }
-                        }
-
-                        benchSeats.push({
-                            seatNo: sPos + 1,
-                            student: st || null
-                        });
-                        if (st) roomStudents.push(st);
-                    }
-
-                    roomBenches.push({
-                        benchNumber: benchNumberCounter++,
-                        seats: benchSeats
-                    });
-                }
-
-                const classMap: Record<string, number[]> = {};
-                roomStudents.forEach(st => {
-                    if (!classMap[st.className]) classMap[st.className] = [];
-                    classMap[st.className].push(st.roll);
-                });
-
-                const summaries = Object.keys(classMap).sort((a,b) => parseInt(a) - parseInt(b)).map(cName => {
-                    const rolls = classMap[cName].sort((a,b) => a - b);
-                    const minRoll = rolls[0] || 0;
-                    const maxRoll = rolls[rolls.length - 1] || 0;
-                    return {
-                        className: cName,
-                        minRoll,
-                        maxRoll,
-                        count: rolls.length,
-                        rollsStr: `${toBengaliNumber(minRoll)} - ${toBengaliNumber(maxRoll)}`
-                    };
-                });
-
-                newRoomPlans.push({
-                    roomId: rSetup.id,
-                    roomName: rSetup.roomName,
-                    benches: roomBenches,
-                    classSummaries: summaries,
-                    totalStudents: roomStudents.length,
-                    capacity: rSetup.benchCount * rSetup.seatsPerBench
-                });
-            }
-
-            setGeneratedRooms(newRoomPlans);
-            toast({
-                title: 'স্মার্ট সিট প্ল্যান সফলভাবে তৈরি হয়েছে!',
-                description: `মোট ${activeExamineesCount} জন শিক্ষার্থীর জন্য ${rooms.length}টি কক্ষে আসন বিন্যাস সম্পন্ন হয়েছে${excludeAbsents && absentInSelectedClasses > 0 ? ` (অনুপস্থিত ${absentInSelectedClasses} জন বাদ)` : ''}।`
-            });
-
-        } catch (err: any) {
-            console.error('Error in seat plan generation:', err);
-            toast({ variant: 'destructive', title: 'সিট প্ল্যান তৈরিতে সমস্যা হয়েছে', description: err?.message });
-        } finally {
-            setIsGenerating(false);
-        }
+        // Reset manual seat overrides to generate fresh sequential seat plan
+        setRooms(prev => prev.map(r => ({ ...r, seatAssignments: {} })));
+        toast({ 
+            title: 'স্মার্ট সিট প্ল্যান সফলভাবে তৈরি হয়েছে!',
+            description: `সকল কক্ষে শ্রেণি ও জেন্ডার অনুসারে রোল বিন্যাস সম্পন্ন হয়েছে।`
+        });
     };
 
     // Save to Firebase
@@ -1182,45 +1257,116 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                     })}
                                                 </div>
 
-                                                {/* Mini Bench Rows Preview Table */}
-                                                <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px]">
-                                                    <table className="w-full text-center border-collapse">
-                                                        <thead>
-                                                            <tr className="bg-blue-50 font-bold border-b border-blue-200 text-[9px] text-blue-900">
-                                                                {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
-                                                                    <th key={cIdx} className="p-1 border-r border-blue-200 last:border-r-0">
-                                                                        {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
-                                                                    </th>
-                                                                ))}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {Array.from({ length: Math.min(4, Math.max(1, room.rightBenchCount)) }).map((_, rIdx) => (
-                                                                <tr key={rIdx} className="border-b border-slate-100 last:border-b-0">
-                                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
-                                                                        const col = rightCols[cIdx] || { className: 'auto', gender: 'male' };
-                                                                        const isMale = col.gender === 'male';
-                                                                        return (
-                                                                            <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 font-bold">
-                                                                                <span className={cn(
-                                                                                    "inline-block px-1.5 py-0.5 rounded text-[9px] font-bold",
-                                                                                    isMale ? "bg-blue-50 text-blue-800 border border-blue-200" : col.gender === 'female' ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-700 border border-slate-200"
-                                                                                )}>
-                                                                                    {col.className !== 'auto' ? `[${classNamesMap[col.className]}] ` : ''}
-                                                                                    {isMale ? 'ছাত্র' : col.gender === 'female' ? 'ছাত্রী' : 'উভয়'}
-                                                                                </span>
-                                                                            </td>
-                                                                        );
-                                                                    })}
+                                                {/* Bench Rows Seating Table */}
+                                                <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px] bg-white">
+                                                    <div className="max-h-80 overflow-y-auto">
+                                                        <table className="w-full text-center border-collapse">
+                                                            <thead className="sticky top-0 bg-blue-50 font-bold border-b border-blue-200 text-[9px] text-blue-900 z-10 shadow-2xs">
+                                                                <tr>
+                                                                    <th className="p-1 w-12 border-r border-blue-200 bg-blue-100/70">বেঞ্চ</th>
+                                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
+                                                                        <th key={cIdx} className="p-1 border-r border-blue-200 last:border-r-0">
+                                                                            {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
+                                                                        </th>
+                                                                    ))}
                                                                 </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                    {room.rightBenchCount > 4 && (
-                                                        <div className="bg-slate-50 text-[9px] text-center py-0.5 text-slate-500 font-semibold border-t border-slate-100">
-                                                            + আরও {toBengaliNumber(room.rightBenchCount - 4)}টি বেঞ্চ নিচে সাজানো হবে
-                                                        </div>
-                                                    )}
+                                                            </thead>
+                                                            <tbody>
+                                                                {Array.from({ length: Math.max(1, room.rightBenchCount) }).map((_, bIdx) => (
+                                                                    <tr key={bIdx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                                                                        <td className="p-1 border-r border-slate-200 font-black text-slate-500 bg-slate-50 text-[9px]">
+                                                                            #{toBengaliNumber(bIdx + 1)}
+                                                                        </td>
+                                                                        {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
+                                                                            const seatKey = `right_${bIdx}_${cIdx}`;
+                                                                            const seatInfo = roomSeatMap[room.id]?.[seatKey];
+                                                                            const override = room.seatAssignments?.[seatKey];
+                                                                            const col = rightCols[cIdx] || { className: 'auto', gender: 'male' };
+                                                                            const activeClass = seatInfo?.activeClass || (col.className !== 'auto' ? col.className : (selectedClasses[0] || '6'));
+                                                                            const isClassChangedHere = !!override?.className;
+
+                                                                            return (
+                                                                                <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 align-top">
+                                                                                    <div className="flex flex-col gap-1">
+                                                                                        <div className="flex items-center justify-between text-[9px]">
+                                                                                            <span className={cn(
+                                                                                                "font-black px-1 py-0.2 rounded text-[8px]",
+                                                                                                col.gender === 'female' ? "bg-rose-100 text-rose-800" : "bg-blue-100 text-blue-800"
+                                                                                            )}>
+                                                                                                {classNamesMap[activeClass]} শ্রেণি
+                                                                                            </span>
+                                                                                            {isClassChangedHere && (
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    title="শ্রেণি পরিবর্তন বাতিল করুন"
+                                                                                                    onClick={() => handleClassTransition(room.id, 'right', bIdx, cIdx, '')}
+                                                                                                    className="text-[8px] text-red-500 hover:text-red-700 font-bold px-0.5"
+                                                                                                >
+                                                                                                    ✕ রিসেট
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        {seatInfo?.isRollsFinished && !seatInfo?.student ? (
+                                                                                            <div className="bg-amber-50 border border-amber-300 rounded p-1 text-center">
+                                                                                                <span className="text-[8.5px] font-black text-amber-900 block leading-tight">
+                                                                                                    ⚠️ রোল শেষ! নতুন শ্রেণি:
+                                                                                                </span>
+                                                                                                <select
+                                                                                                    value=""
+                                                                                                    onChange={e => {
+                                                                                                        if (e.target.value) {
+                                                                                                            handleClassTransition(room.id, 'right', bIdx, cIdx, e.target.value);
+                                                                                                        }
+                                                                                                    }}
+                                                                                                    className="mt-0.5 w-full h-6 text-[9px] font-black bg-white border border-amber-400 rounded px-1 text-amber-950"
+                                                                                                >
+                                                                                                    <option value="">-- শ্রেণি বেছে নিন --</option>
+                                                                                                    {selectedClasses.filter(c => c !== activeClass).map(c => (
+                                                                                                        <option key={c} value={c}>{classNamesMap[c]} শ্রেণি</option>
+                                                                                                    ))}
+                                                                                                </select>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <select
+                                                                                                value={override?.studentId === 'empty' ? 'empty' : (seatInfo?.student?.id || '')}
+                                                                                                onChange={e => handleSeatStudentChange(room.id, 'right', bIdx, cIdx, e.target.value)}
+                                                                                                className={cn(
+                                                                                                    "w-full h-6 text-[9.5px] font-bold rounded border px-0.5 transition-all truncate",
+                                                                                                    override?.studentId === 'empty' 
+                                                                                                        ? "bg-slate-100 text-slate-400 border-slate-300"
+                                                                                                        : seatInfo?.student 
+                                                                                                            ? (col.gender === 'female' ? "bg-rose-50/70 border-rose-300 text-rose-950 font-black" : "bg-blue-50/70 border-blue-300 text-blue-950 font-black")
+                                                                                                            : "bg-white border-slate-200 text-slate-700"
+                                                                                                )}
+                                                                                            >
+                                                                                                {seatInfo?.student ? (
+                                                                                                    <option value={seatInfo.student.id}>
+                                                                                                        রোল {toBengaliNumber(seatInfo.student.roll)} - {seatInfo.student.name || 'শিক্ষার্থী'}
+                                                                                                    </option>
+                                                                                                ) : (
+                                                                                                    <option value="">-- খালি --</option>
+                                                                                                )}
+                                                                                                <option value="empty">🚫 ফাঁকা রাখুন</option>
+                                                                                                {seatInfo?.availableStudents
+                                                                                                    ?.filter(st => st.id !== seatInfo?.student?.id)
+                                                                                                    .map(st => (
+                                                                                                        <option key={st.id} value={st.id}>
+                                                                                                            রোল {toBengaliNumber(st.roll)} - {st.name}
+                                                                                                        </option>
+                                                                                                    ))
+                                                                                                }
+                                                                                            </select>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        })}
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -1305,106 +1451,122 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                                     })}
                                                 </div>
 
-                                                {/* Mini Bench Rows Preview Table */}
-                                                <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px]">
-                                                    <table className="w-full text-center border-collapse">
-                                                        <thead>
-                                                            <tr className="bg-rose-50 font-bold border-b border-rose-200 text-[9px] text-rose-900">
-                                                                {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
-                                                                    <th key={cIdx} className="p-1 border-r border-rose-200 last:border-r-0">
-                                                                        {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
-                                                                    </th>
-                                                                ))}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {Array.from({ length: Math.min(4, Math.max(1, room.leftBenchCount)) }).map((_, rIdx) => (
-                                                                <tr key={rIdx} className="border-b border-slate-100 last:border-b-0">
-                                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
-                                                                        const col = leftCols[cIdx] || { className: 'auto', gender: 'female' };
-                                                                        const isMale = col.gender === 'male';
-                                                                        return (
-                                                                            <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 font-bold">
-                                                                                <span className={cn(
-                                                                                    "inline-block px-1.5 py-0.5 rounded text-[9px] font-bold",
-                                                                                    isMale ? "bg-blue-50 text-blue-800 border border-blue-200" : col.gender === 'female' ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-700 border border-slate-200"
-                                                                                )}>
-                                                                                    {col.className !== 'auto' ? `[${classNamesMap[col.className]}] ` : ''}
-                                                                                    {isMale ? 'ছাত্র' : col.gender === 'female' ? 'ছাত্রী' : 'উভয়'}
-                                                                                </span>
-                                                                            </td>
-                                                                        );
-                                                                    })}
+                                                {/* Bench Rows Seating Table */}
+                                                <div className="border border-slate-200 rounded-xl overflow-hidden text-[10px] bg-white">
+                                                    <div className="max-h-80 overflow-y-auto">
+                                                        <table className="w-full text-center border-collapse">
+                                                            <thead className="sticky top-0 bg-rose-50 font-bold border-b border-rose-200 text-[9px] text-rose-900 z-10 shadow-2xs">
+                                                                <tr>
+                                                                    <th className="p-1 w-12 border-r border-rose-200 bg-rose-100/70">বেঞ্চ</th>
+                                                                    {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => (
+                                                                        <th key={cIdx} className="p-1 border-r border-rose-200 last:border-r-0">
+                                                                            {cIdx === 0 ? 'আসন ১ (বাম)' : (room.seatsPerBench === 3 && cIdx === 1) ? 'আসন ২ (মাঝ)' : cIdx === room.seatsPerBench - 1 ? 'আসন ৩ (ডান)' : `আসন ${toBengaliNumber(cIdx + 1)}`}
+                                                                        </th>
+                                                                    ))}
                                                                 </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                    {room.leftBenchCount > 4 && (
-                                                        <div className="bg-slate-50 text-[9px] text-center py-0.5 text-slate-500 font-semibold border-t border-slate-100">
-                                                            + আরও {toBengaliNumber(room.leftBenchCount - 4)}টি বেঞ্চ নিচে সাজানো হবে
-                                                        </div>
-                                                    )}
+                                                            </thead>
+                                                            <tbody>
+                                                                {Array.from({ length: Math.max(1, room.leftBenchCount) }).map((_, bIdx) => (
+                                                                    <tr key={bIdx} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                                                                        <td className="p-1 border-r border-slate-200 font-black text-slate-500 bg-slate-50 text-[9px]">
+                                                                            #{toBengaliNumber(bIdx + 1)}
+                                                                        </td>
+                                                                        {Array.from({ length: room.seatsPerBench }).map((_, cIdx) => {
+                                                                            const seatKey = `left_${bIdx}_${cIdx}`;
+                                                                            const seatInfo = roomSeatMap[room.id]?.[seatKey];
+                                                                            const override = room.seatAssignments?.[seatKey];
+                                                                            const col = leftCols[cIdx] || { className: 'auto', gender: 'female' };
+                                                                            const activeClass = seatInfo?.activeClass || (col.className !== 'auto' ? col.className : (selectedClasses[0] || '6'));
+                                                                            const isClassChangedHere = !!override?.className;
+
+                                                                            return (
+                                                                                <td key={cIdx} className="p-1 border-r border-slate-100 last:border-r-0 align-top">
+                                                                                    <div className="flex flex-col gap-1">
+                                                                                        <div className="flex items-center justify-between text-[9px]">
+                                                                                            <span className={cn(
+                                                                                                "font-black px-1 py-0.2 rounded text-[8px]",
+                                                                                                col.gender === 'female' ? "bg-rose-100 text-rose-800" : "bg-blue-100 text-blue-800"
+                                                                                            )}>
+                                                                                                {classNamesMap[activeClass]} শ্রেণি
+                                                                                            </span>
+                                                                                            {isClassChangedHere && (
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    title="শ্রেণি পরিবর্তন বাতিল করুন"
+                                                                                                    onClick={() => handleClassTransition(room.id, 'left', bIdx, cIdx, '')}
+                                                                                                    className="text-[8px] text-red-500 hover:text-red-700 font-bold px-0.5"
+                                                                                                >
+                                                                                                    ✕ রিসেট
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        {seatInfo?.isRollsFinished && !seatInfo?.student ? (
+                                                                                            <div className="bg-amber-50 border border-amber-300 rounded p-1 text-center">
+                                                                                                <span className="text-[8.5px] font-black text-amber-900 block leading-tight">
+                                                                                                    ⚠️ রোল শেষ! নতুন শ্রেণি:
+                                                                                                </span>
+                                                                                                <select
+                                                                                                    value=""
+                                                                                                    onChange={e => {
+                                                                                                        if (e.target.value) {
+                                                                                                            handleClassTransition(room.id, 'left', bIdx, cIdx, e.target.value);
+                                                                                                        }
+                                                                                                    }}
+                                                                                                    className="mt-0.5 w-full h-6 text-[9px] font-black bg-white border border-amber-400 rounded px-1 text-amber-950"
+                                                                                                >
+                                                                                                    <option value="">-- শ্রেণি বেছে নিন --</option>
+                                                                                                    {selectedClasses.filter(c => c !== activeClass).map(c => (
+                                                                                                        <option key={c} value={c}>{classNamesMap[c]} শ্রেণি</option>
+                                                                                                    ))}
+                                                                                                </select>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <select
+                                                                                                value={override?.studentId === 'empty' ? 'empty' : (seatInfo?.student?.id || '')}
+                                                                                                onChange={e => handleSeatStudentChange(room.id, 'left', bIdx, cIdx, e.target.value)}
+                                                                                                className={cn(
+                                                                                                    "w-full h-6 text-[9.5px] font-bold rounded border px-0.5 transition-all truncate",
+                                                                                                    override?.studentId === 'empty' 
+                                                                                                        ? "bg-slate-100 text-slate-400 border-slate-300"
+                                                                                                        : seatInfo?.student 
+                                                                                                            ? (col.gender === 'female' ? "bg-rose-50/70 border-rose-300 text-rose-950 font-black" : "bg-blue-50/70 border-blue-300 text-blue-950 font-black")
+                                                                                                            : "bg-white border-slate-200 text-slate-700"
+                                                                                                )}
+                                                                                            >
+                                                                                                {seatInfo?.student ? (
+                                                                                                    <option value={seatInfo.student.id}>
+                                                                                                        রোল {toBengaliNumber(seatInfo.student.roll)} - {seatInfo.student.name || 'শিক্ষার্থী'}
+                                                                                                    </option>
+                                                                                                ) : (
+                                                                                                    <option value="">-- খালি --</option>
+                                                                                                )}
+                                                                                                <option value="empty">🚫 ফাঁকা রাখুন</option>
+                                                                                                {seatInfo?.availableStudents
+                                                                                                    ?.filter(st => st.id !== seatInfo?.student?.id)
+                                                                                                    .map(st => (
+                                                                                                        <option key={st.id} value={st.id}>
+                                                                                                            রোল {toBengaliNumber(st.roll)} - {st.name}
+                                                                                                        </option>
+                                                                                                    ))
+                                                                                                }
+                                                                                            </select>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        })}
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 );
                             })}
-                        </div>
-                    </div>
-
-                    {/* 3. Seating Pattern Options */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-violet-50/50 rounded-2xl border-2 border-violet-100">
-                        {/* Gender arrangement */}
-                        <div className="space-y-2">
-                            <Label className="font-black text-sm text-violet-950 flex items-center gap-1.5">
-                                <Users className="h-4 w-4 text-violet-600" /> ৪. ছাত্র-ছাত্রী বসার পদ্ধতি (মিশ্রিত কক্ষের জন্য)
-                            </Label>
-                            <Select value={genderPattern} onValueChange={(v: GenderPattern) => setGenderPattern(v)}>
-                                <SelectTrigger className="bg-white border-2 border-violet-200 font-bold h-11 text-xs">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="font-kalpurush text-xs">
-                                    <SelectItem value="opposite_sides" className="font-bold">
-                                        👫 এক বেঞ্চে একদিকে ছাত্র, একদিকে ছাত্রী (বিপরীত পাশে)
-                                    </SelectItem>
-                                    <SelectItem value="sandwich_girl_middle" className="font-bold">
-                                        🥪 ৩ জনের বেঞ্চ: দুই পাশে ছাত্র, মাঝখানে ছাত্রী (Boy - Girl - Boy)
-                                    </SelectItem>
-                                    <SelectItem value="sandwich_boy_middle" className="font-bold">
-                                        🥪 ৩ জনের বেঞ্চ: দুই পাশে ছাত্রী, মাঝখানে ছাত্র (Girl - Boy - Girl)
-                                    </SelectItem>
-                                    <SelectItem value="normal" className="font-bold">
-                                        📋 সাধারণ / স্বাভাবিক ক্রমবিন্যাস
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <p className="text-[11px] font-semibold text-slate-500">
-                                * যদি কোনো কক্ষের আসনে "উভয়" জেন্ডার রাখা থাকে, তবে সেখানে এই সাধারণ নিয়ম প্রযোজ্য হবে।
-                            </p>
-                        </div>
-
-                        {/* Class mixing pattern */}
-                        <div className="space-y-2">
-                            <Label className="font-black text-sm text-violet-950 flex items-center gap-1.5">
-                                <ShieldCheck className="h-4 w-4 text-emerald-600" /> ৫. নকল প্রতিরোধে শ্রেণি বিন্যাস
-                            </Label>
-                            <Select value={classPattern} onValueChange={(v: ClassPattern) => setClassPattern(v)}>
-                                <SelectTrigger className="bg-white border-2 border-violet-200 font-bold h-11 text-xs">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="font-kalpurush text-xs">
-                                    <SelectItem value="cross_class" className="font-bold">
-                                        🛡️ অল্টারনেট শ্রেণি (একই বেঞ্চে পাশাপাশি ভিন্ন শ্রেণি - যেমন: ১০ম + ৬ষ্ঠ)
-                                    </SelectItem>
-                                    <SelectItem value="same_class" className="font-bold">
-                                        📚 সাধারণ শ্রেণিভিত্তিক বিন্যাস
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <p className="text-[11px] font-semibold text-slate-500">
-                                * ক্রস-ক্লাস মোডে পাশাপাশি একই শ্রেণির শিক্ষার্থী না বসে অন্য শ্রেণির শিক্ষার্থী বসবে।
-                            </p>
                         </div>
                     </div>
 
@@ -1420,7 +1582,7 @@ export function AutoSeatPlanTab({ academicYear }: { academicYear: string }) {
                                 />
                                 <div>
                                     <Label htmlFor="exclude-absents-checkbox" className="font-black text-sm text-rose-950 cursor-pointer flex items-center gap-2">
-                                        <UserX className="h-4 w-4 text-rose-600" /> ৬. অনুপস্থিত শিক্ষার্থীদের সিট থেকে বাদ দিন
+                                        <UserX className="h-4 w-4 text-rose-600" /> ৪. অনুপস্থিত শিক্ষার্থীদের সিট থেকে বাদ দিন
                                     </Label>
                                     <p className="text-xs text-rose-800 font-bold mt-0.5">
                                         ফলাফল সেকশনের রেকর্ড অনুযায়ী বা নিচে ম্যানুয়ালি টিক দেওয়া অনুপস্থিত শিক্ষার্থীরা সিট পাবে না।
