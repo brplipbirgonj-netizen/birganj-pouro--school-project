@@ -28,6 +28,7 @@ import { useFirestore } from '@/firebase';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDocs, where, limit, FirestoreError } from 'firebase/firestore';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuth as useFirebaseAuth } from '@/firebase';
 import { User as SystemUser, userFromDoc, UserRole } from '@/lib/user';
 import { updateUserPermissions, updateUserRole, deleteUserRecord } from '@/lib/user-management';
 import { changePassword } from '@/lib/auth';
@@ -1076,6 +1077,7 @@ function BackupAndExportSettings() {
 
 function ResultPublicationSettingsSection() {
     const db = useFirestore();
+    const auth = useFirebaseAuth();
     const { toast } = useToast();
     const { availableYears, selectedYear: defaultYear } = useAcademicYear();
 
@@ -1151,7 +1153,7 @@ function ResultPublicationSettingsSection() {
         if (!db) return;
         setIsSaving(true);
         try {
-            await saveResultPublicationSettings(db, settings);
+            await saveResultPublicationSettings(db, settings, auth ?? undefined);
             toast({ title: 'ফলাফল প্রকাশ সেটিংস সফলভাবে সংরক্ষিত হয়েছে' });
             await loadSettings();
         } catch (e: any) {

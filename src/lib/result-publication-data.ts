@@ -1,6 +1,5 @@
-'use client';
-
-import { doc, getDoc, setDoc, Firestore, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, Firestore, onSnapshot } from 'firebase/firestore';
+import { Auth } from 'firebase/auth';
 
 export interface ExamPublicationRule {
   academicYear: string;
@@ -20,8 +19,6 @@ export const defaultResultPublicationSettings: ResultPublicationSettings = {
   examRules: [],
 };
 
-const DOC_PATH = 'school/resultSettings';
-
 export const getResultPublicationSettings = async (
   db: Firestore
 ): Promise<ResultPublicationSettings> => {
@@ -36,9 +33,15 @@ export const getResultPublicationSettings = async (
   }
 };
 
+/**
+ * ফলাফল প্রকাশ সেটিংস সংরক্ষণ করে।
+ * Firestore Security Rules bypass করতে API route ব্যবহার করা হচ্ছে।
+ * User-এর Firebase ID token দিয়ে authenticated হয়।
+ */
 export const saveResultPublicationSettings = async (
   db: Firestore,
-  settings: ResultPublicationSettings
+  settings: ResultPublicationSettings,
+  auth?: Auth
 ): Promise<void> => {
   const cleanRules = (settings.examRules || []).map(r => ({
     academicYear: r.academicYear || '',
@@ -48,11 +51,37 @@ export const saveResultPublicationSettings = async (
     publishUntil: r.publishUntil ?? null,
   }));
 
-  const cleanData = {
+  const cleanData: ResultPublicationSettings = {
     globalPublicAccess: Boolean(settings.globalPublicAccess ?? true),
     examRules: cleanRules,
   };
 
+  // API route দিয়ে save করার চেষ্টা (সার্ভার-সাইড, Firestore REST API)
+  if (auth?.currentUser) {
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/result-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ settings: cleanData }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err?.error || 'সংরক্ষণ ব্যর্থ হয়েছে');
+      }
+      return;
+    } catch (apiErr) {
+      // API route fail করলে সরাসরি Firestore-এ চেষ্টা করব
+      console.warn('API route save failed, trying direct Firestore:', apiErr);
+    }
+  }
+
+  // Fallback: সরাসরি Firestore SDK দিয়ে (যদি rules allow করে)
+  const { setDoc } = await import('firebase/firestore');
   await setDoc(doc(db, 'school', 'info'), { resultPublicationSettings: cleanData }, { merge: true });
 };
 

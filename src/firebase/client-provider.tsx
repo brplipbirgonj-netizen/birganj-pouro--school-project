@@ -1,9 +1,8 @@
 'use client';
-import { ReactNode, useMemo, useEffect, useState } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { initializeFirestore, Firestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, setLogLevel } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
-import { Loader2 } from 'lucide-react';
 
 import { firebaseConfig } from './config';
 import { FirebaseProvider } from './provider';
@@ -31,29 +30,38 @@ function getFirebaseInstances() {
     }
   }
 
-  const app = window.__FIREBASE_APP__;
+  const app = window.__FIREBASE_APP__!;
 
   if (!window.__FIREBASE_FIRESTORE__) {
     /**
      * Modern Firestore Initialization (SDK v11+)
-     * Using persistentMultipleTabManager so multiple tabs can safely
-     * share IndexedDB cache without throwing target/ownership assertion errors.
+     * - persistentMultipleTabManager: একাধিক ট্যাব নিরাপদে ব্যবহার করতে পারবে
+     * - experimentalAutoDetectLongPolling: WebSocket/Long-polling স্বয়ংক্রিয়ভাবে নির্বাচন করবে
+     *   (ForceLongPolling এর বদলে AutoDetect ব্যবহার করলে ca9 assertion কমে)
      */
     try {
       window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager(),
         }),
-        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: true,
       });
     } catch {
-      window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
-        localCache: memoryLocalCache(),
-        experimentalForceLongPolling: true,
-      });
+      // fallback: IndexedDB না পেলে memory cache
+      try {
+        window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+          }),
+        });
+      } catch {
+        window.__FIREBASE_FIRESTORE__ = initializeFirestore(app, {
+          localCache: memoryLocalCache(),
+        });
+      }
     }
 
-    // Set log level to 'silent' to reduce noise in console
+    // Console noise কমাতে silent mode
     setLogLevel('silent');
   }
 
@@ -62,9 +70,9 @@ function getFirebaseInstances() {
   }
 
   return {
-    app: window.__FIREBASE_APP__,
-    firestore: window.__FIREBASE_FIRESTORE__,
-    auth: window.__FIREBASE_AUTH__,
+    app: window.__FIREBASE_APP__!,
+    firestore: window.__FIREBASE_FIRESTORE__!,
+    auth: window.__FIREBASE_AUTH__!,
   };
 }
 
