@@ -16,7 +16,7 @@ const MultiTaskAiInputSchema = z.object({
 
 export type MultiTaskAiInput = z.infer<typeof MultiTaskAiInputSchema>;
 
-export const multiTaskAiFlow = ai.defineFlow(
+const multiTaskAiFlow = ai.defineFlow(
   {
     name: 'multiTaskAiFlow',
     inputSchema: MultiTaskAiInputSchema,
