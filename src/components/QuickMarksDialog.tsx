@@ -220,7 +220,9 @@ export function QuickMarksDialog({
 
         for (const entry of entries) {
             // Match: roll[-written[-mcq[-practical]]]
-            const parts = entry.split(/[-:=]/).map(p => p.trim()).filter(Boolean);
+            // Note: regex built dynamically to avoid Tailwind scanning the literal class
+            const sepPattern = new RegExp('[' + String.fromCharCode(45) + ':=]');
+            const parts = entry.split(sepPattern).map(p => p.trim()).filter(Boolean);
             const nums = parts.map(p => parseInt(p, 10)).filter(n => !isNaN(n));
             if (nums.length >= 1) {
                 const roll = nums[0];
