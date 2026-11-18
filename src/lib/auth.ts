@@ -132,9 +132,13 @@ export async function signIn(email: string, password: string, role: UserRole): P
     }
 
     const userData = userDoc.data();
-    if (userData.role !== role) {
+    // যদি ইউজার অ্যাডমিন হন, তবে তিনি শিক্ষক বা অ্যাডমিন যেকোনো ট্যাব থেকেই লগইন করতে পারবেন
+    if (userData.role !== role && userData.role !== 'admin') {
       await firebaseSignOut(auth);
-      return { success: false, error: `আপনি "${role === 'admin' ? 'অ্যাডমিন' : 'শিক্ষক'}" সেকশন থেকে লগইন করতে পারবেন না। সঠিক লগইন অপশন বেছে নিন।` };
+      return { 
+        success: false, 
+        error: 'আপনার অ্যাডমিন অ্যাক্সেস নেই। অনুগ্রহ করে "শিক্ষক" ট্যাবে গিয়ে লগইন করুন।' 
+      };
     }
 
     await setDoc(userDocRef, { 
@@ -146,9 +150,30 @@ export async function signIn(email: string, password: string, role: UserRole): P
   } catch (error: any) {
      const authErrorCodes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-email', 'auth/user-disabled'];
      if (authErrorCodes.includes(error.code)) {
-      return { success: false, error: 'আপনার ইমেইল অথবা পাসওয়ার্ডটি সঠিক নয়।' };
+      return { 
+        success: false, 
+        error: 'আপনার ইমেইল অথবা পাসওয়ার্ডটি সঠিক নয়। পাসওয়ার্ড মনে না থাকলে নিচে "পাসওয়ার্ড ভুলে গেছেন?" চাপুন।' 
+      };
     }
     return { success: false, error: error.message || 'লগইন করা যায়নি। অনুগ্রহ করে পুনরায় চেষ্টা করুন।' };
+  }
+}
+
+export async function sendPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+  const auth = getAuth();
+  const normalizedEmail = email.toLowerCase().trim();
+  if (!normalizedEmail) {
+    return { success: false, error: 'অনুগ্রহ করে আপনার ইমেইল ঠিকানাটি লিখুন।' };
+  }
+  try {
+    const { sendPasswordResetEmail } = await import('firebase/auth');
+    await sendPasswordResetEmail(auth, normalizedEmail);
+    return { success: true };
+  } catch (error: any) {
+    if (error.code === 'auth/user-not-found') {
+      return { success: false, error: 'এই ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি।' };
+    }
+    return { success: false, error: error.message || 'পাসওয়ার্ড রিসেট ইমেইল পাঠানো যায়নি।' };
   }
 }
 

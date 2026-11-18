@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { signIn, signUp } from '@/lib/auth';
+import { signIn, signUp, sendPasswordReset } from '@/lib/auth';
 import type { UserRole } from '@/lib/user';
 import { useAuth } from '@/hooks/useAuth';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -63,6 +63,27 @@ function AuthFormFields({ email, password, setEmail, setPassword }: {
     setEmail: (value: string) => void;
     setPassword: (value: string) => void;
 }) {
+    const { toast } = useToast();
+    const [isResetting, setIsResetting] = useState(false);
+
+    const handleForgotPassword = async () => {
+        if (!email.trim()) {
+            toast({ variant: 'destructive', title: 'ইমেইল লিখুন', description: 'পাসওয়ার্ড রিসেট করতে প্রথমে আপনার ইমেইল ঠিকানাটি লিখুন।' });
+            return;
+        }
+        setIsResetting(true);
+        try {
+            const res = await sendPasswordReset(email.trim());
+            if (res.success) {
+                toast({ title: 'রিসেট লিংক পাঠানো হয়েছে', description: `${email} ঠিকানায় পাসওয়ার্ড রিসেট করার একটি লিংক পাঠানো হয়েছে। আপনার ইনবক্স বা স্প্যাম ফোল্ডার চেক করুন।` });
+            } else {
+                toast({ variant: 'destructive', title: 'ব্যর্থ হয়েছে', description: res.error });
+            }
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="space-y-1.5">
@@ -78,7 +99,17 @@ function AuthFormFields({ email, password, setEmail, setPassword }: {
                 />
             </div>
             <div className="space-y-1.5">
-                <Label htmlFor="password" className="font-black text-[11px] uppercase tracking-wider text-primary">পাসওয়ার্ড</Label>
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="font-black text-[11px] uppercase tracking-wider text-primary">পাসওয়ার্ড</Label>
+                    <button 
+                        type="button" 
+                        onClick={handleForgotPassword}
+                        disabled={isResetting}
+                        className="text-[11px] font-bold text-primary hover:underline hover:text-primary/80 transition-colors"
+                    >
+                        {isResetting ? 'পাঠানো হচ্ছে...' : 'পাসওয়ার্ড ভুলে গেছেন?'}
+                    </button>
+                </div>
                 <Input 
                     id="password" 
                     type="password" 
