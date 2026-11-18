@@ -733,8 +733,12 @@ function matchStudentsAndResolveClass(
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
-  const isEn = typeof document !== 'undefined' && document.cookie.includes('googtrans=/bn/en');
+  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  
+  useEffect(() => { setIsMounted(true); }, []);
+  
+  const isEn = isMounted && typeof document !== 'undefined' && document.cookie.includes('googtrans=/bn/en');
   const { toast } = useToast();
   const [totalStudents, setTotalStudents] = useState(0);
   const [totalTeachers, setTotalTeachers] = useState(0);
@@ -1326,9 +1330,9 @@ export default function Home() {
     }));
   }, [classAttendance]);
 
-  if (authLoading || !user) {
+  if (!isMounted || authLoading || !user) {
     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-sky-100 font-kalpurush">
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-sky-100 font-kalpurush" suppressHydrationWarning>
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
           <p className="font-bold">লোড হচ্ছে...</p>
       </div>
