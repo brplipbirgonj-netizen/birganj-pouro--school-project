@@ -26,9 +26,9 @@ export const getResultPublicationSettings = async (
   db: Firestore
 ): Promise<ResultPublicationSettings> => {
   try {
-    const snap = await getDoc(doc(db, 'school', 'resultSettings'));
-    if (snap.exists()) {
-      return { ...defaultResultPublicationSettings, ...snap.data() } as ResultPublicationSettings;
+    const snap = await getDoc(doc(db, 'school', 'info'));
+    if (snap.exists() && snap.data().resultPublicationSettings) {
+      return { ...defaultResultPublicationSettings, ...snap.data().resultPublicationSettings } as ResultPublicationSettings;
     }
     return defaultResultPublicationSettings;
   } catch {
@@ -53,7 +53,7 @@ export const saveResultPublicationSettings = async (
     examRules: cleanRules,
   };
 
-  await setDoc(doc(db, 'school', 'resultSettings'), cleanData, { merge: true });
+  await setDoc(doc(db, 'school', 'info'), { resultPublicationSettings: cleanData }, { merge: true });
 };
 
 export const subscribeResultPublicationSettings = (
@@ -62,10 +62,10 @@ export const subscribeResultPublicationSettings = (
 ): (() => void) => {
   try {
     return onSnapshot(
-      doc(db, 'school', 'resultSettings'),
+      doc(db, 'school', 'info'),
       (snap) => {
-        if (snap.exists()) {
-          callback({ ...defaultResultPublicationSettings, ...snap.data() } as ResultPublicationSettings);
+        if (snap.exists() && snap.data().resultPublicationSettings) {
+          callback({ ...defaultResultPublicationSettings, ...snap.data().resultPublicationSettings } as ResultPublicationSettings);
         } else {
           callback(defaultResultPublicationSettings);
         }
