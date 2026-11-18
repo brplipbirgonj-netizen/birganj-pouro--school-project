@@ -33,7 +33,7 @@ import { addNotice } from '@/lib/notice-data';
 import { getStudents, Student } from '@/lib/student-data';
 import { getHolidays, Holiday } from '@/lib/holiday-data';
 import { usePathname, useRouter } from 'next/navigation';
-import type { ChatMessage, UniversalAiOutput, LiveSchoolContext } from '@/ai/flows/universal-ai-flow';
+import type { ChatMessage, UniversalAiOutput, LiveSchoolContext } from '@/types/ai-assistant';
 import { useToast } from '@/hooks/use-toast';
 
 export function GlobalAiAssistant() {

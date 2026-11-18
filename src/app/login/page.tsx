@@ -20,7 +20,7 @@ import {
     CheckCircle2, XCircle, ArrowLeft, GraduationCap, Users, 
     UserPlus, Bell, ChevronRight,
     TrendingUp, ShieldCheck, MapPin, Phone,
-    CalendarCheck, Trophy, ImageIcon, Megaphone, Sparkles, LogIn, Printer, Clock, UserRound
+    CalendarCheck, Trophy, ImageIcon, Megaphone, Sparkles, LogIn, Printer, Clock, UserRound, Eye, EyeOff
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useAcademicYear } from '@/context/AcademicYearContext';
@@ -65,6 +65,7 @@ function AuthFormFields({ email, password, setEmail, setPassword }: {
 }) {
     const { toast } = useToast();
     const [isResetting, setIsResetting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleForgotPassword = async () => {
         if (!email.trim()) {
@@ -110,15 +111,25 @@ function AuthFormFields({ email, password, setEmail, setPassword }: {
                         {isResetting ? 'পাঠানো হচ্ছে...' : 'পাসওয়ার্ড ভুলে গেছেন?'}
                     </button>
                 </div>
-                <Input 
-                    id="password" 
-                    type="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    required 
-                    placeholder="••••••••"
-                    className="h-11 border-2 focus:ring-primary" 
-                />
+                <div className="relative">
+                    <Input 
+                        id="password" 
+                        type={showPassword ? 'text' : 'password'} 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        required 
+                        placeholder="••••••••"
+                        className="h-11 border-2 focus:ring-primary pr-11" 
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-800 transition-colors p-1"
+                        title={showPassword ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখুন'}
+                    >
+                        {showPassword ? <EyeOff className="h-5 w-5 text-slate-700" /> : <Eye className="h-5 w-5 text-slate-400" />}
+                    </button>
+                </div>
             </div>
         </div>
     );
