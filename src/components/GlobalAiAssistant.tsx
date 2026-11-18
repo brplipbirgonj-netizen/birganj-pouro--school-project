@@ -33,7 +33,7 @@ import { addNotice } from '@/lib/notice-data';
 import { getStudents, Student } from '@/lib/student-data';
 import { getHolidays, Holiday } from '@/lib/holiday-data';
 import { usePathname, useRouter } from 'next/navigation';
-import { runUniversalAi, ChatMessage, UniversalAiOutput, LiveSchoolContext } from '@/ai/flows/universal-ai-flow';
+import type { ChatMessage, UniversalAiOutput, LiveSchoolContext } from '@/ai/flows/universal-ai-flow';
 import { useToast } from '@/hooks/use-toast';
 
 export function GlobalAiAssistant() {
@@ -218,14 +218,19 @@ export function GlobalAiAssistant() {
     };
 
     try {
-      const result = await runUniversalAi({
-        query: queryToSend,
-        academicYear: selectedYear,
-        institutionName: schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়',
-        currentPage: pathname,
-        chatHistory: messages,
-        liveContext,
+      const response = await fetch('/api/ai/universal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: queryToSend,
+          academicYear: selectedYear,
+          institutionName: schoolInfo.name || 'বীরগঞ্জ পৌর উচ্চ বিদ্যালয়',
+          currentPage: pathname,
+          chatHistory: messages,
+          liveContext,
+        })
       });
+      const result: UniversalAiOutput = await response.json();
 
       const aiMsg: ChatMessage = { role: 'ai', text: result.response };
       setMessages(prev => [...prev, aiMsg]);

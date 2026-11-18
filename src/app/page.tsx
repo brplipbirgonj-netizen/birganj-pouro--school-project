@@ -44,7 +44,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { QuickMarksDialog } from '@/components/QuickMarksDialog';
-import { runMultiTaskAi } from '@/ai/flows/multi-task-ai-flow';
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
@@ -1084,12 +1083,17 @@ export default function Home() {
     setAiProcessing(true);
     setAiResult(null);
     try {
-        const res = await runMultiTaskAi({ 
-            photoDataUri: aiImage || undefined, 
-            rawText: aiRawText.trim() || undefined,
-            taskType: aiTask,
-            academicYear: selectedYear
+        const response = await fetch('/api/ai/multi-task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                photoDataUri: aiImage || undefined, 
+                rawText: aiRawText.trim() || undefined,
+                taskType: aiTask,
+                academicYear: selectedYear
+            })
         });
+        const res = await response.json();
         if (res.error) {
             toast({ variant: 'destructive', title: 'এআই ত্রুটি', description: res.error });
         } else {

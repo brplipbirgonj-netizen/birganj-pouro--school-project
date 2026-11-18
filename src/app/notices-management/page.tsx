@@ -23,7 +23,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { addNotice, deleteNotice, updateNoticeScrolling, Notice } from '@/lib/notice-data';
-import { generateNotice } from '@/ai/flows/generate-notice-flow';
 import { getHolidays, Holiday } from '@/lib/holiday-data';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -108,12 +107,17 @@ export default function NoticeManagementPage() {
 
       setIsAiLoading(true);
       try {
-        const result = await generateNotice({ 
-            topic: topicToUse,
-            academicYear: selectedYear,
-            institutionName: schoolInfo.name,
-            holidays: systemHolidays.map(h => ({ date: h.date, description: h.description })),
+        const response = await fetch('/api/ai/generate-notice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                topic: topicToUse,
+                academicYear: selectedYear,
+                institutionName: schoolInfo.name,
+                holidays: systemHolidays.map(h => ({ date: h.date, description: h.description })),
+            })
         });
+        const result = await response.json();
         setNewNotice(prev => ({
           ...prev,
           title: result.title,
