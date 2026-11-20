@@ -820,40 +820,50 @@ function StudentProfileSearchContent() {
                         @media print {
                             @page {
                                 size: A4;
-                                margin: 0.4in !important;
+                                margin: 0.25in !important;
+                            }
+                            html, body {
+                                height: auto !important;
+                                overflow: visible !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                            }
+                            body > * {
+                                display: none !important;
                             }
                             .printable-area {
-                                position: absolute !important;
-                                top: 0 !important;
-                                left: 0 !important;
+                                display: block !important;
+                                position: static !important;
                                 width: 100% !important;
-                                max-height: 275mm !important;
-                                overflow: hidden !important;
-                                padding: 8mm !important;
+                                height: auto !important;
+                                overflow: visible !important;
+                                padding: 5mm !important;
                                 box-sizing: border-box !important;
                                 border: 6px double rgba(0, 0, 0, 0.3) !important;
-                                display: block !important;
+                                page-break-after: avoid !important;
                                 page-break-inside: avoid !important;
+                                break-after: avoid !important;
+                                break-inside: avoid !important;
                             }
                         }
                     `}</style>
                     {/* Header */}
-                    <div className="flex items-center justify-between border-b-4 border-[#2d572c] pb-2 mb-6">
-                        <div className="relative w-16 h-16">
-                             {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={64} height={64} className="object-contain" />}
+                    <div className="flex items-center justify-between border-b-4 border-[#2d572c] pb-1 mb-3">
+                        <div className="relative w-14 h-14">
+                             {schoolInfo.logoUrl && <Image src={schoolInfo.logoUrl} alt="Logo" width={56} height={56} className="object-contain" />}
                         </div>
                         <div className="text-center flex-grow">
-                            <h1 className="text-3xl font-black text-[#2d572c] mb-0.5">{schoolInfo.name}</h1>
-                            <p className="text-base font-bold text-slate-700">{schoolInfo.address}</p>
-                            <div className="mt-2 inline-block border-2 border-[#2d572c] px-6 py-0.5 rounded-full bg-[#f0faf9]">
-                                <h2 className="text-lg font-black uppercase text-[#2d572c]">{isEn ? `Student Progress & Profile Report - ${selectedYear}` : `শিক্ষার্থী প্রগতি ও প্রোফাইল রিপোর্ট - ${toBengaliNumber(selectedYear)}`}</h2>
+                            <h1 className="text-2xl font-black text-[#2d572c] mb-0.5">{schoolInfo.name}</h1>
+                            <p className="text-xs font-bold text-slate-700">{schoolInfo.address}</p>
+                            <div className="mt-1 inline-block border-2 border-[#2d572c] px-4 py-0.5 rounded-full bg-[#f0faf9]">
+                                <h2 className="text-sm font-black uppercase text-[#2d572c]">{isEn ? `Student Progress & Profile Report - ${selectedYear}` : `শিক্ষার্থী প্রগতি ও প্রোফাইল রিপোর্ট - ${toBengaliNumber(selectedYear)}`}</h2>
                             </div>
                         </div>
-                        <div className="w-16 h-16"></div>
+                        <div className="w-14 h-14"></div>
                     </div>
 
                     {/* Student Info Section */}
-                    <div className="flex justify-between items-start gap-8 mb-6">
+                    <div className="flex justify-between items-start gap-8 mb-3">
                         <div className="flex-1 space-y-2.5 font-bold text-sm">
                             <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
                                 <span className="w-32 text-slate-600">{isEn ? "Student Name" : "শিক্ষার্থীর নাম"}</span>
@@ -886,7 +896,7 @@ function StudentProfileSearchContent() {
                     </div>
 
                     {/* Stats Section */}
-                    <div className="grid grid-cols-2 gap-8 mb-6">
+                    <div className="grid grid-cols-2 gap-8 mb-3">
                         {/* Attendance Card */}
                         <div className="space-y-2">
                             <h3 className="text-lg font-black text-slate-800 border-l-4 border-[#2418ff] pl-2">{isEn ? "Attendance Statistics" : "হাজিরা পরিসংখ্যান"}</h3>
@@ -966,7 +976,7 @@ function StudentProfileSearchContent() {
                     </div>
 
                     {/* Signatures Footer - Reduced mt to fit on one page */}
-                    <div className="mt-12 flex justify-between px-16">
+                    <div className="mt-6 flex justify-between px-16">
                         <div className="text-center w-40 border-t-[1.5px] border-black pt-1 font-black text-sm">{isEn ? "Class Teacher's Signature" : "শ্রেণি শিক্ষকের স্বাক্ষর"}</div>
                         <div className="text-center w-40 border-t-[1.5px] border-black pt-1 font-black text-sm">{isEn ? "Headmaster's Signature" : "প্রধান শিক্ষকের স্বাক্ষর"}</div>
                     </div>
