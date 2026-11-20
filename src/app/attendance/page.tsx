@@ -461,8 +461,8 @@ const MonthlyAttendanceGrid = ({
                     <Table className="border-separate border-spacing-0 min-w-max">
                         <TableHeader className="sticky top-0 z-40">
                             <TableRow className="border-t-2 border-b-2 border-black bg-slate-100 h-20">
-                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 sticky left-0 z-[60] text-black">রোল</TableHead>
-                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 sticky left-14 z-[60] text-black">শিক্ষার্থীর নাম</TableHead>
+                                <TableHead className="w-14 text-center font-black border-r-2 border-black bg-slate-200 md:sticky md:left-0 z-[60] text-black">রোল</TableHead>
+                                <TableHead className="min-w-[180px] font-black border-r-2 border-black bg-slate-200 md:sticky md:left-14 z-[60] text-black">শিক্ষার্থীর নাম</TableHead>
                                 {daysInMonth.map(day => {
                                     const d = getDate(day);
                                     const isSelected = d === activeDay;
@@ -521,14 +521,14 @@ const MonthlyAttendanceGrid = ({
                                         </TableHead>
                                     );
                                 })}
-                                <TableHead className="w-20 text-center font-black border-l-2 border-black bg-slate-200 sticky right-0 z-[60] text-black shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">মোট উপস্থিত</TableHead>
+                                <TableHead className="w-20 text-center font-black border-l-2 border-black bg-slate-200 md:sticky md:right-0 z-[60] text-black md:shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">মোট উপস্থিত</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {students.map((student, sIdx) => (
                                 <TableRow key={student.id} className="h-8 hover:bg-slate-50 transition-colors">
-                                    <TableCell className="text-center font-black border-r-2 border-black bg-white sticky left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
-                                    <TableCell className="font-black border-r-2 border-black bg-white sticky left-14 z-30 whitespace-nowrap px-3 text-[11px] text-slate-800">{student.studentNameBn}</TableCell>
+                                    <TableCell className="text-center font-black border-r-2 border-black bg-white md:sticky md:left-0 z-30">{toBengaliNumber(student.roll)}</TableCell>
+                                    <TableCell className="font-black border-r-2 border-black bg-white md:sticky md:left-14 z-30 whitespace-nowrap px-3 text-[11px] text-slate-800">{student.studentNameBn}</TableCell>
                                     {daysInMonth.map(day => {
                                         const d = getDate(day);
                                         const isSelected = d === activeDay;
@@ -583,7 +583,7 @@ const MonthlyAttendanceGrid = ({
                                             </TableCell>
                                         );
                                     })}
-                                    <TableCell className="text-center font-black border-l-2 border-black bg-white sticky right-0 z-30 text-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
+                                    <TableCell className="text-center font-black border-l-2 border-black bg-white md:sticky md:right-0 z-30 text-blue-700 md:shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
                                         {toBengaliNumber(getStudentTotalPresent(student.id))}
                                     </TableCell>
                                 </TableRow>
@@ -591,7 +591,7 @@ const MonthlyAttendanceGrid = ({
                         </TableBody>
                         <TableFooter className="sticky bottom-0 z-40">
                             <TableRow className="h-10 border-t-2 border-black bg-slate-200">
-                                <TableCell colSpan={2} className="text-right pr-4 font-black bg-slate-200 sticky left-0 z-50 border-r-2 border-black">
+                                <TableCell colSpan={2} className="text-right pr-4 font-black bg-slate-200 md:sticky md:left-0 z-50 border-r-2 border-black">
                                     মোট উপস্থিত:
                                 </TableCell>
                                 {daysInMonth.map(day => (
@@ -599,7 +599,7 @@ const MonthlyAttendanceGrid = ({
                                         {toBengaliNumber(getDayTotalPresent(day))}
                                     </TableCell>
                                 ))}
-                                <TableCell className="sticky right-0 z-50 border-l-2 border-black bg-slate-200 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]"></TableCell>
+                                <TableCell className="md:sticky md:right-0 z-50 border-l-2 border-black bg-slate-200 md:shadow-[-2px_0_4px_rgba(0,0,0,0.1)]"></TableCell>
                             </TableRow>
                         </TableFooter>
                     </Table>
@@ -1079,11 +1079,11 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                 />
                 
                 <CardContent className="p-0">
-                    <div className="table-container max-h-[600px] overflow-auto print:max-h-none print:overflow-visible">
+                    <div className="table-container max-h-[600px] overflow-x-auto w-full print:max-h-none print:overflow-visible">
                         <Table className="min-w-[1000px] border-separate border-spacing-0 border-collapse print:min-w-full">
                             <TableHeader className="sticky top-0 z-30 print:bg-white print:static">
                                 <TableRow className="h-16 print:h-8">
-                                    <TableHead className="text-center font-black border-r border-b w-48 bg-muted z-40 sticky left-0 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black text-[14px]">তারিখ ও বার</TableHead>
+                                    <TableHead className="text-center font-black border-r border-b w-48 bg-muted z-40 md:sticky md:left-0 md:shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:bg-white print:shadow-none print:border-black text-[14px]">তারিখ ও বার</TableHead>
                                     {classes.map(cls => (
                                         <TableHead key={cls} className="text-center font-black border-r border-b text-[14px] leading-tight print:border-black">{classNamesMap[cls]}</TableHead>
                                     ))}
@@ -1107,7 +1107,7 @@ const MonthlySummaryBoard = ({ allStudents }: { allStudents: Student[] }) => {
                                             isOff ? "bg-red-100 hover:bg-red-200 print:bg-gray-100" : "hover:bg-slate-50"
                                         )}>
                                             <TableCell className={cn(
-                                                "text-center font-black border-r whitespace-nowrap sticky left-0 z-20 shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:shadow-none print:border-black text-[14px] group/row",
+                                                "text-center font-black border-r whitespace-nowrap md:sticky md:left-0 z-20 md:shadow-[2px_0_0px_rgba(0,0,0,0.1)] print:static print:shadow-none print:border-black text-[14px] group/row",
                                                 isOff ? "text-red-700 bg-red-200 print:bg-gray-100" : "text-slate-600 bg-white"
                                             )}>
                                                 <div className="flex items-center justify-between gap-2 px-2">
@@ -1286,14 +1286,14 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
 
             <Card className="border-2 border-amber-100 shadow-lg">
                 <CardHeader className="bg-amber-50/50">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <CardTitle className="text-amber-800 flex items-center gap-2">
                                 <CalendarX className="h-5 w-5" /> বকেয়া হাজিরার তালিকা (Missed Days)
                             </CardTitle>
                             <CardDescription>স্কুল খোলা থাকা সত্ত্বেও যেসব দিনে হাজিরা নেওয়া হয়নি</CardDescription>
                         </div>
-                        <Badge variant="outline" className="bg-white text-amber-800 border-amber-200 font-black h-8 px-4">
+                        <Badge variant="outline" className="bg-white text-amber-800 border-amber-200 font-black h-8 px-4 self-start sm:self-auto">
                             মোট বকেয়া: {toBengaliNumber(missedDays.length)} দিন
                         </Badge>
                     </div>
@@ -1309,37 +1309,39 @@ const MissedAttendanceTab = ({ onTakeAttendance }: { onTakeAttendance: (date: Da
                             অসাধারণ! এই মাসে এখন পর্যন্ত সকল কার্যদিবসের হাজিরা সম্পন্ন হয়েছে।
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader className="bg-muted/30">
-                                <TableRow>
-                                    <TableHead className="w-20 text-center">ক্রমিক</TableHead>
-                                    <TableHead>তারিখ</TableHead>
-                                    <TableHead>বার</TableHead>
-                                    <TableHead className="text-right">কার্যক্রম</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {missedDays.map((date, idx) => (
-                                    <TableRow key={date.getTime()} className="hover:bg-amber-50/50 h-12">
-                                        <TableCell className="text-center font-bold">{toBengaliNumber(idx + 1)}</TableCell>
-                                        <TableCell className="font-black text-slate-700">{format(date, 'd MMMM yyyy', { locale: bn })}</TableCell>
-                                        <TableCell className="font-bold text-muted-foreground">{format(date, 'EEEE', { locale: bn })}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button 
-                                                size="sm" 
-                                                onClick={() => {
-                                                    if (canTakeMissedAttendance) onTakeAttendance(date);
-                                                    else toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
-                                                }} 
-                                                className="bg-amber-600 hover:bg-amber-700 font-bold h-8 text-[10px]"
-                                            >
-                                                <Plus className="h-3 w-3 mr-1" /> পুনরায় হাজিরা নিন
-                                            </Button>
-                                        </TableCell>
+                        <div className="overflow-x-auto w-full">
+                            <Table className="min-w-full">
+                                <TableHeader className="bg-muted/30">
+                                    <TableRow>
+                                        <TableHead className="w-16 sm:w-20 text-center whitespace-nowrap">ক্রমিক</TableHead>
+                                        <TableHead className="whitespace-nowrap">তারিখ</TableHead>
+                                        <TableHead className="whitespace-nowrap">বার</TableHead>
+                                        <TableHead className="text-right whitespace-nowrap pr-4">কার্যক্রম</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {missedDays.map((date, idx) => (
+                                        <TableRow key={date.getTime()} className="hover:bg-amber-50/50 h-12">
+                                            <TableCell className="text-center font-bold whitespace-nowrap">{toBengaliNumber(idx + 1)}</TableCell>
+                                            <TableCell className="font-black text-slate-700 whitespace-nowrap">{format(date, 'd MMMM yyyy', { locale: bn })}</TableCell>
+                                            <TableCell className="font-bold text-muted-foreground whitespace-nowrap">{format(date, 'EEEE', { locale: bn })}</TableCell>
+                                            <TableCell className="text-right whitespace-nowrap pr-4">
+                                                <Button 
+                                                    size="sm" 
+                                                    onClick={() => {
+                                                        if (canTakeMissedAttendance) onTakeAttendance(date);
+                                                        else toast({ variant: 'destructive', title: 'দুঃখিত, আপনার এটি করার অনুমতি নেই।' });
+                                                    }} 
+                                                    className="bg-amber-600 hover:bg-amber-700 font-bold h-8 text-xs whitespace-nowrap"
+                                                >
+                                                    <Plus className="h-3 w-3 mr-1" /> পুনরায় হাজিরা নিন
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>
@@ -1438,7 +1440,7 @@ const AbsentStudentListTab = ({ allStudents }: { allStudents: Student[] }) => {
                             এই মাসে কোনো শিক্ষার্থী অনুপস্থিত ছিল না।
                         </div>
                     ) : (
-                        <div className="table-container">
+                        <div className="table-container w-full overflow-x-auto">
                             <Table>
                                 <TableHeader className="bg-muted/50">
                                     <TableRow>
@@ -1532,7 +1534,7 @@ const AbsenceAlertsTab = ({ allStudents }: { allStudents: Student[] }) => {
                     ) : alerts.length === 0 ? (
                         <div className="p-20 text-center text-emerald-600 font-black text-lg italic">টানা অনুপস্থিত কোনো শিক্ষার্থী পাওয়া যায়নি।</div>
                     ) : (
-                        <div className="table-container">
+                        <div className="table-container w-full overflow-x-auto">
                             <Table>
                                 <TableHeader className="bg-muted/50">
                                     <TableRow>
@@ -1650,8 +1652,8 @@ const ReportSheet = ({ classId, students, startDate, endDate }: { classId: strin
                 endDate={endDate}
             />
             
-            <div className="table-container !max-h-none !overflow-visible border-black">
-                <Table className="border-collapse border-black print:border-black print:border">
+            <div className="table-container w-full overflow-x-auto !max-h-none print:!overflow-visible border-black">
+                <Table className="border-collapse border-black print:border-black print:border min-w-full">
                     <TableHeader className="bg-muted/50 sticky top-0 z-10 print:static print:bg-white">
                         <TableRow className="print:border-black h-12">
                             <TableHead className="w-20 text-center font-black print:border-black print:border text-base">রোল</TableHead>

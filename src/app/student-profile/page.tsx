@@ -827,11 +827,13 @@ function StudentProfileSearchContent() {
                                 top: 0 !important;
                                 left: 0 !important;
                                 width: 100% !important;
-                                min-height: 100% !important;
+                                max-height: 275mm !important;
+                                overflow: hidden !important;
                                 padding: 8mm !important;
                                 box-sizing: border-box !important;
                                 border: 6px double rgba(0, 0, 0, 0.3) !important;
                                 display: block !important;
+                                page-break-inside: avoid !important;
                             }
                         }
                     `}</style>

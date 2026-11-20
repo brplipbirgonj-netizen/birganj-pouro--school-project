@@ -1716,8 +1716,8 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                             <table className="min-w-max border-separate border-spacing-0 w-full">
                                 <thead className="z-30">
                                     <tr>
-                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black sticky left-0 top-0 z-50 w-[60px] text-[12px] p-1 h-[64px] box-border">রোল</th>
-                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black sticky left-[60px] top-0 z-50 min-w-[200px] text-[12px] p-1 h-[64px] box-border">শিক্ষার্থীর নাম</th>
+                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black md:sticky md:left-0 top-0 z-50 w-[60px] text-[12px] p-1 h-[64px] box-border">রোল</th>
+                                        <th rowSpan={2} className="text-center font-black bg-white border-r-2 border-b-2 border-black md:sticky md:left-[60px] top-0 z-50 min-w-[200px] text-[12px] p-1 h-[64px] box-border">শিক্ষার্থীর নাম</th>
                                         {subs.map((s, idx) => (
                                             <th 
                                                 key={s.name} 
@@ -1730,11 +1730,11 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                 {s.name}
                                             </th>
                                         ))}
-                                        <th rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-black text-[14px] bg-[#fff1f2] p-1 sticky top-0 right-[280px] z-50 w-[70px] h-[64px] box-border">মোট</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[14px] bg-[#fff1f2] p-1 sticky top-0 right-[210px] z-50 w-[70px] h-[64px] box-border">GPA</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky top-0 right-[140px] bg-[#fff1f2] z-50 w-[70px] h-[64px] box-border">গ্রেড</th>
-                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky top-0 right-[70px] bg-[#fff1f2] z-50 w-[70px] h-[64px] box-border">মেধা</th>
-                                        <th rowSpan={2} className="text-center font-black border-b-2 border-black text-[14px] bg-[#fff1f2] p-1 sticky top-0 right-0 z-50 w-[70px] h-[64px] box-border">প্রিন্ট</th>
+                                        <th rowSpan={2} className="text-center font-black border-l-2 border-r-2 border-b-2 border-black text-[14px] bg-[#fff1f2] p-1 sticky top-0 md:right-[280px] z-50 w-[70px] h-[64px] box-border">মোট</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[14px] bg-[#fff1f2] p-1 sticky top-0 md:right-[210px] z-50 w-[70px] h-[64px] box-border">GPA</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky top-0 md:right-[140px] bg-[#fff1f2] z-50 w-[70px] h-[64px] box-border">গ্রেড</th>
+                                        <th rowSpan={2} className="text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky top-0 md:right-[70px] bg-[#fff1f2] z-50 w-[70px] h-[64px] box-border">মেধা</th>
+                                        <th rowSpan={2} className="text-center font-black border-b-2 border-black text-[14px] bg-[#fff1f2] p-1 sticky top-0 md:right-0 z-50 w-[70px] h-[64px] box-border">প্রিন্ট</th>
                                     </tr>
                                     <tr className="h-[32px]">
                                         {subs.map((s, idx) => {
@@ -1760,8 +1760,8 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                 <tbody>
                                     {results.map(res => (
                                         <tr key={res.student.id} className="h-10 hover:bg-slate-50 transition-colors">
-                                            <td className="text-center font-black sticky left-0 z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 w-[60px] h-10 box-border">{toBengaliNumber(res.student.roll)}</td>
-                                            <td className="font-bold sticky left-[60px] z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] h-10 box-border">{res.student.studentNameBn}</td>
+                                            <td className="text-center font-black md:sticky md:left-0 z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 w-[60px] h-10 box-border">{toBengaliNumber(res.student.roll)}</td>
+                                            <td className="font-bold md:sticky md:left-[60px] z-20 bg-white border-r-2 border-b-2 border-black text-[13px] p-0.5 px-3 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] h-10 box-border">{res.student.studentNameBn}</td>
                                             {subs.map((s, idx) => {
                                                 const sr = res.subjectResults.get(s.name);
                                                 const isEng = s.name.includes('ইংরেজি');
@@ -1781,11 +1781,11 @@ const ResultSheetTab = ({ allStudents, onPrint }: { allStudents: Student[], onPr
                                                     </React.Fragment>
                                                 )
                                             })}
-                                            <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[280px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.totalMarks)}</td>
-                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[14px] p-0.5 sticky right-[210px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.gpa.toFixed(2))}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[140px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-700")}>{res.finalGrade}</td>
-                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 sticky right-[70px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && (res.isAbsent ? "text-slate-500 italic text-[11px]" : "text-rose-500 italic text-[11px]"))}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল')}</td>
-                                            <td className="text-center p-0.5 border-b-2 border-black sticky right-0 bg-[#fff1f2] z-20 w-[70px] h-10 box-border">
+                                            <td className="text-center font-black text-primary border-l-2 border-r-2 border-b-2 border-black text-[14px] p-0.5 md:sticky md:right-[280px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.totalMarks)}</td>
+                                            <td className="text-center font-black border-r-2 border-b-2 border-black text-[14px] p-0.5 md:sticky md:right-[210px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border">{toBengaliNumber(res.gpa.toFixed(2))}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 md:sticky md:right-[140px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && "text-rose-700")}>{res.finalGrade}</td>
+                                            <td className={cn("text-center font-black border-r-2 border-b-2 border-black text-[13px] p-0.5 md:sticky md:right-[70px] bg-[#fff1f2] z-20 w-[70px] h-10 box-border", !res.isPass && (res.isAbsent ? "text-slate-500 italic text-[11px]" : "text-rose-500 italic text-[11px]"))}>{res.isPass ? (toBengaliNumber(res.meritPosition || '-')) : (res.isAbsent ? 'অনুপস্থিত' : 'ফেল')}</td>
+                                            <td className="text-center p-0.5 border-b-2 border-black md:sticky md:right-0 bg-[#fff1f2] z-20 w-[70px] h-10 box-border">
                                                 <Link href={`/marksheet/${res.student.id}?academicYear=${selectedYear}&examName=${examName}`} target="_blank">
                                                     <Button variant="ghost" size="icon" className="h-6 v-6 hover:bg-white shadow-sm border border-slate-200"><Printer className="h-4 w-4 text-primary" /></Button>
                                                 </Link>
@@ -2321,7 +2321,8 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                         </CardHeader>
                         <CardContent className="p-0">
                             {regularPassedStudents.length > 0 ? (
-                                <Table>
+                                <div className="overflow-x-auto w-full">
+                                    <Table className="min-w-[650px] sm:min-w-full">
                                     <TableHeader className="bg-slate-50">
                                         <TableRow>
                                             <TableHead className="w-16 text-center font-black">মেধা</TableHead>
@@ -2349,6 +2350,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
                             ) : (
                                 <div className="p-6 text-center text-sm font-bold text-muted-foreground">কোনো শিক্ষার্থী নিয়মিত পাস করেনি।</div>
                             )}
@@ -2366,7 +2368,8 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <Badge className="bg-amber-600 font-black px-4">{toBengaliNumber(specialPassedStudents.length)} জন</Badge>
                             </CardHeader>
                             <CardContent className="p-0">
-                                <Table>
+                                <div className="overflow-x-auto w-full">
+                                    <Table className="min-w-[750px] sm:min-w-full">
                                     <TableHeader className="bg-amber-50/50">
                                         <TableRow>
                                             <TableHead className="w-20 text-center font-black text-amber-950">মেধাক্রম</TableHead>
@@ -2396,6 +2399,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     )}
@@ -2411,7 +2415,8 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <Badge className="bg-rose-600 font-black px-4">{toBengaliNumber(failedStudents.length)} জন</Badge>
                             </CardHeader>
                             <CardContent className="p-0">
-                                <Table>
+                                <div className="overflow-x-auto w-full">
+                                    <Table className="min-w-[750px] sm:min-w-full">
                                     <TableHeader className="bg-rose-50/40">
                                         <TableRow>
                                             <TableHead className="w-20 text-center font-black text-rose-950">ক্রমিক</TableHead>
@@ -2441,6 +2446,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     )}
@@ -2456,7 +2462,8 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                 <Badge className="bg-slate-600 font-black px-4">{toBengaliNumber(absentStudents.length)} জন</Badge>
                             </CardHeader>
                             <CardContent className="p-0">
-                                <Table>
+                                <div className="overflow-x-auto w-full">
+                                    <Table className="min-w-[750px] sm:min-w-full">
                                     <TableHeader className="bg-slate-50">
                                         <TableRow>
                                             <TableHead className="w-20 text-center font-black text-slate-800">ক্রমিক</TableHead>
@@ -2480,6 +2487,7 @@ const MeritListTab = ({ allStudents }: { allStudents: Student[] }) => {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     )}
@@ -3142,16 +3150,16 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
 
                     {allSpecialResults.length > 0 && (
                         <div className="special-sheet-container w-full bg-white text-black font-kalpurush overflow-hidden border-[4px] border-black rounded-[32px] shadow-2xl">
-                            <div className="table-container !max-h-[550px] !overflow-auto !border-0 !rounded-none">
+                            <div className="table-container !max-h-[550px] !overflow-auto !border-0 !rounded-none overflow-x-auto w-full">
                                 <table className="w-full border-separate border-spacing-0 border-black text-[11px]">
                                     <thead>
                                         <tr className="bg-slate-100 h-[40px]">
-                                            <th rowSpan={2} className="border-r-2 border-b-2 border-black font-black p-1 w-[45px] text-center sticky left-0 top-0 z-[60] bg-slate-100 h-[80px] box-border">রোল</th>
-                                            <th rowSpan={2} className="border-r-2 border-b-2 border-black font-black p-1 text-left min-w-[180px] pl-3 sticky left-[10px] top-0 z-[60] bg-slate-100 h-[80px] box-border">শিক্ষার্থীর নাম</th>
+                                            <th rowSpan={2} className="border-r-2 border-b-2 border-black font-black p-1 w-[45px] text-center md:sticky md:left-0 top-0 z-[60] bg-slate-100 h-[80px] box-border">রোল</th>
+                                            <th rowSpan={2} className="border-r-2 border-b-2 border-black font-black p-1 text-left min-w-[180px] pl-3 md:sticky md:left-[10px] top-0 z-[60] bg-slate-100 h-[80px] box-border">শিক্ষার্থীর নাম</th>
                                             {availableSubjects.map((sub, i) => (
                                                 <th key={sub.name} colSpan={3} className={cn("border-r-2 border-b-2 border-black font-black p-1 text-center h-[40px] box-border sticky top-0 z-40", i % 2 === 0 ? "bg-blue-100" : "bg-emerald-100")}>{sub.name}</th>
                                             ))}
-                                            <th rowSpan={2} className="border-b-2 border-black font-black p-1 w-20 text-center bg-yellow-100 text-yellow-950 h-[80px] box-border sticky top-0 right-0 z-50">মোট নম্বর</th>
+                                            <th rowSpan={2} className="border-b-2 border-black font-black p-1 w-20 text-center bg-yellow-100 text-yellow-950 h-[80px] box-border sticky top-0 md:right-0 z-50">মোট নম্বর</th>
                                         </tr>
                                         <tr className="bg-slate-50 h-[40px]">
                                             {availableSubjects.map((sub, sIdx) => (
@@ -3168,8 +3176,8 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
                                             let studentTotal = 0;
                                             return (
                                                 <tr key={student.id} className="h-10 hover:bg-slate-50 transition-colors">
-                                                    <td className="border-r-2 border-b-2 border-black text-center font-black sticky left-0 z-30 bg-white w-[45px] h-10 box-border">{toBengaliNumber(student.roll)}</td>
-                                                    <td className="border-r-2 border-b-2 border-black font-bold px-3 whitespace-nowrap sticky left-[10px] z-30 bg-white min-w-[180px] h-10 box-border">{student.studentNameBn}</td>
+                                                    <td className="border-r-2 border-b-2 border-black text-center font-black md:sticky md:left-0 z-30 bg-white w-[45px] h-10 box-border">{toBengaliNumber(student.roll)}</td>
+                                                    <td className="border-r-2 border-b-2 border-black font-bold px-3 whitespace-nowrap md:sticky md:left-[10px] z-30 bg-white min-w-[180px] h-10 box-border">{student.studentNameBn}</td>
                                                     {availableSubjects.map((sub, sIdx) => (
                                                         <React.Fragment key={`${student.id}-${sub.name}`}>
                                                             {['বিশেষ পরীক্ষা-১', 'বিশেষ পরীক্ষা-২', 'বিশেষ পরীক্ষা-৩'].map((type) => {
@@ -3185,7 +3193,7 @@ const SpecialExamTab = ({ allStudents, onPrintRequested }: { allStudents: Studen
                                                             })}
                                                         </React.Fragment>
                                                     ))}
-                                                    <td className="text-center font-black bg-yellow-50 text-base border-b-2 border-black sticky right-0 z-20 w-20 min-w-20 h-10 box-border">{toBengaliNumber(studentTotal)}</td>
+                                                    <td className="text-center font-black bg-yellow-50 text-base border-b-2 border-black md:sticky md:right-0 z-20 w-20 min-w-20 h-10 box-border">{toBengaliNumber(studentTotal)}</td>
                                                 </tr>
                                             );
                                         })}

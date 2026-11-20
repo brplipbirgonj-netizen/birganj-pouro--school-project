@@ -168,7 +168,7 @@ function MarksheetContent() {
     const sortedSubjects = [...subjects].sort((a,b) => parseInt(a.code) - parseInt(b.code));
 
     return (
-        <div className="bg-slate-100 min-h-screen p-4 sm:p-8 font-sans print:p-0 print:bg-white flex flex-col items-center overflow-x-hidden">
+        <div className="bg-slate-100 min-h-screen p-2 sm:p-8 font-sans print:p-0 print:bg-white flex flex-col items-center overflow-x-auto w-full">
             <style jsx global>{`
                 @media print {
                     @page {
@@ -257,8 +257,9 @@ function MarksheetContent() {
                 </div>
             </div>
             
-            <div className="printable-area bg-white">
-                <div className="marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
+            <div className="w-full overflow-x-auto pb-8 flex justify-start sm:justify-center">
+                <div className="printable-area bg-white">
+                    <div className="marksheet-container w-[210mm] h-[297mm] bg-white p-8 relative flex flex-col box-border shadow-2xl print:shadow-none print:m-0">
                     {schoolInfo.logoUrl && (
                         <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none watermark-layer" style={{ opacity: watermarkOpacity }}>
                             <img src={schoolInfo.logoUrl} alt="Watermark" className="w-[300px] h-[300px] object-contain" />
@@ -410,6 +411,7 @@ function MarksheetContent() {
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     );
 }

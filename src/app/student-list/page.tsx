@@ -669,26 +669,26 @@ function StudentListContent() {
 
                     {activeSection === 'list' && (
                         <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-muted/20 rounded-2xl border-2 border-dashed border-primary/10 no-print">
-                            <select value={filterGender} onChange={(e) => setFilterGender(e.target.value)} className="h-9 px-3 rounded-lg border-2 bg-white text-xs font-bold text-blue-700 outline-none notranslate" translate="no">
+                            <select value={filterGender} onChange={(e) => setFilterGender(e.target.value)} className="h-9 px-3 rounded-lg border-2 bg-white text-xs font-bold text-blue-700 outline-none notranslate w-full sm:w-auto" translate="no">
                                 <option value="all">{isEn ? `Students (${classStats.gender.all})` : `ছাত্র-ছাত্রী (${toBengaliNumber(classStats.gender.all)})`}</option>
                                 <option value="male">{isEn ? `Male (${classStats.gender.male})` : `ছাত্র (${toBengaliNumber(classStats.gender.male)})`}</option>
                                 <option value="female">{isEn ? `Female (${classStats.gender.female})` : `ছাত্রী (${toBengaliNumber(classStats.gender.female)})`}</option>
                             </select>
-                            <select value={filterReligion} onChange={(e) => setFilterReligion(e.target.value)} className="h-9 px-3 rounded-lg border-2 bg-white text-xs font-bold text-primary outline-none notranslate" translate="no">
+                            <select value={filterReligion} onChange={(e) => setFilterReligion(e.target.value)} className="h-9 px-3 rounded-lg border-2 bg-white text-xs font-bold text-primary outline-none notranslate w-full sm:w-auto" translate="no">
                                 <option value="all">{isEn ? `All Religions (${classStats.religion.all})` : `সকল ধর্ম (${toBengaliNumber(classStats.religion.all)})`}</option>
                                 <option value="islam">{isEn ? `Islam (${classStats.religion.islam})` : `ইসলাম (${toBengaliNumber(classStats.religion.islam)})`}</option>
                                 <option value="hindu">{isEn ? `Hindu (${classStats.religion.hinduism})` : `হিন্দু (${toBengaliNumber(classStats.religion.hinduism)})`}</option>
                                 <option value="christian">{isEn ? `Christian (${classStats.religion.christianity})` : `খ্রিস্টান (${toBengaliNumber(classStats.religion.christianity)})`}</option>
                                 <option value="other">{isEn ? `Other (${classStats.religion.other})` : `অন্যান্য (${toBengaliNumber(classStats.religion.other)})`}</option>
                             </select>
-                            <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="h-9 px-3 rounded-lg border-2 bg-white text-xs font-bold text-emerald-700 outline-none notranslate" translate="no">
+                            <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="h-9 px-3 rounded-lg border-2 bg-white text-xs font-bold text-emerald-700 outline-none notranslate w-full sm:w-auto" translate="no">
                                 <option value="all">{isEn ? `All Groups (${classStats.group.all})` : `সকল বিভাগ (${toBengaliNumber(classStats.group.all)})`}</option>
                                 <option value="science">{isEn ? `Science (${classStats.group.science})` : `বিজ্ঞান (${toBengaliNumber(classStats.group.science)})`}</option>
                                 <option value="arts">{isEn ? `Humanities (${classStats.group.arts})` : `মানবিক (${toBengaliNumber(classStats.group.arts)})`}</option>
                                 <option value="commerce">{isEn ? `Business Studies (${classStats.group.commerce})` : `ব্যবসায় শিক্ষা (${toBengaliNumber(classStats.group.commerce)})`}</option>
                             </select>
                             
-                            <div className="ml-auto flex items-center gap-2">
+                            <div className="w-full sm:w-auto sm:ml-auto flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
                                 {canDeleteStudent && getStudentsByClass(activeTab).length > 0 && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -782,13 +782,13 @@ function StudentListContent() {
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="table-container shadow-xl border-2 border-black">
+                                        <div className="table-container w-full max-w-full overflow-x-auto shadow-xl border-2 border-black rounded-lg">
                                             <Table className="min-w-max border-separate border-spacing-0 border-t-2 border-black">
                                                 <TableHeader className="sticky top-0 z-40 bg-muted/95 backdrop-blur-sm shadow-sm border-b-2 border-black">
                                                     <TableRow className="h-14">
-                                                        <TableHead className="font-black text-center w-16 sticky left-0 z-50 bg-muted/95 border-r-2 border-b-2 border-black text-black">রোল</TableHead>
+                                                        <TableHead className="font-black text-center w-16 md:sticky md:left-0 z-50 bg-muted/95 border-r-2 border-b-2 border-black text-black">রোল</TableHead>
                                                         <TableHead className="font-black text-center w-20 border-r-2 border-b-2 border-black text-black">ছবি</TableHead>
-                                                        <TableHead className="font-black min-w-[220px] sticky left-[64px] z-50 bg-muted/95 border-r-2 border-b-2 border-black text-black">শিক্ষার্থীর নাম (বাংলা ও ইংরেজি)</TableHead>
+                                                        <TableHead className="font-black min-w-[220px] md:sticky md:left-[64px] z-50 bg-muted/95 border-r-2 border-b-2 border-black text-black">শিক্ষার্থীর নাম (বাংলা ও ইংরেজি)</TableHead>
                                                         <TableHead className="font-black min-w-[200px] border-r-2 border-b-2 border-black text-black">পিতা ও মাতার নাম</TableHead>
                                                         <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">মোবাইল</TableHead>
                                                         {isBulkEdit && (
@@ -804,7 +804,7 @@ function StudentListContent() {
                                                                 <TableHead className="font-black w-32 border-r-2 border-b-2 border-black text-black">ইউনিয়ন</TableHead>
                                                             </>
                                                         )}
-                                                        <TableHead className="text-center w-16 sticky right-0 z-50 bg-muted border-l-2 border-b-2 border-black">
+                                                        <TableHead className="text-center w-16 md:sticky md:right-0 z-50 bg-muted border-l-2 border-b-2 border-black">
                                                             <Link href="/add-student">
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary text-white hover:bg-primary/90" title="নতুন শিক্ষার্থী যোগ করুন">
                                                                     <Plus className="h-5 w-5" />
@@ -816,7 +816,7 @@ function StudentListContent() {
                                                 <TableBody>
                                                     {getStudentsByClass(activeTab).map((student) => (
                                                         <TableRow key={student.id} id={`student-row-${student.id}`} className={cn("transition-colors h-16 group", student.id === targetStudentId && "bg-yellow-50", editedData[student.id] && "bg-amber-50")}>
-                                                            <TableCell className="font-black text-center text-lg border-r-2 border-b-2 border-black sticky left-0 z-30 bg-white group-hover:bg-slate-50">
+                                                            <TableCell className="font-black text-center text-lg border-r-2 border-b-2 border-black md:sticky md:left-0 z-30 bg-white group-hover:bg-slate-50">
                                                                 {isBulkEdit ? (
                                                                     <Input 
                                                                         type="number"
@@ -845,7 +845,7 @@ function StudentListContent() {
                                                                     )}
                                                                 </div>
                                                             </TableCell>
-                                                            <TableCell className="border-r-2 border-b-2 border-black sticky left-[64px] z-30 bg-white group-hover:bg-slate-50 px-3">
+                                                            <TableCell className="border-r-2 border-b-2 border-black md:sticky md:left-[64px] z-30 bg-white group-hover:bg-slate-50 px-3">
                                                                 {isBulkEdit ? (
                                                                     <div className="space-y-1">
                                                                         <Input 
@@ -992,7 +992,7 @@ function StudentListContent() {
                                                                 </>
                                                             )}
 
-                                                            <TableCell className="text-right pr-6 sticky right-0 z-30 bg-white/95 border-l-2 border-b-2 border-black group-hover:bg-slate-50">
+                                                            <TableCell className="text-right pr-6 md:sticky md:right-0 z-30 bg-white/95 border-l-2 border-b-2 border-black group-hover:bg-slate-50">
                                                                 <div className="flex justify-end gap-1.5">
                                                                     {isBulkEdit ? (
                                                                         <Button 
