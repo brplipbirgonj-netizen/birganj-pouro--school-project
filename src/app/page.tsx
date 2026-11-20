@@ -38,12 +38,13 @@ import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { StudentFeeDialog } from '@/components/StudentFeeDialog';
+import dynamic from 'next/dynamic';
+const StudentFeeDialog = dynamic(() => import('@/components/StudentFeeDialog').then(m => m.StudentFeeDialog), { ssr: false });
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import Link from 'next/link';
-import { QuickMarksDialog } from '@/components/QuickMarksDialog';
+const QuickMarksDialog = dynamic(() => import('@/components/QuickMarksDialog').then(m => m.QuickMarksDialog), { ssr: false });
 
 const parseTeacherName = (cell: string): string => {
     if (!cell || !cell.includes(' - ')) return 'N/A';
