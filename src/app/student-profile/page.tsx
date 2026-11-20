@@ -824,12 +824,10 @@ function StudentProfileSearchContent() {
                             }
                             html, body {
                                 height: auto !important;
+                                min-height: unset !important;
                                 overflow: visible !important;
                                 margin: 0 !important;
                                 padding: 0 !important;
-                            }
-                            body > * {
-                                display: none !important;
                             }
                             .printable-area {
                                 display: block !important;
