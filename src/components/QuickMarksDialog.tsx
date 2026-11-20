@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -404,7 +405,7 @@ export function QuickMarksDialog({
         }}>
             <DialogTrigger asChild>
                 {triggerButton || (
-                    <Button className="h-12 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 shadow-lg font-black gap-2 transition-all border-b-4 border-amber-800 active:border-b-0 active:translate-y-1 text-white">
+                    <Button className="h-12 w-full sm:w-auto px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 shadow-lg font-black gap-2 transition-all border-b-4 border-amber-800 active:border-b-0 active:translate-y-1 text-white text-xs sm:text-sm">
                         <FilePen className="h-5 w-5" /> কুইক নম্বর ইনপুট
                     </Button>
                 )}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
@@ -65,7 +66,7 @@ const periodTimes = [
 
 const dayMap = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
 const classNamesMap: { [key: string]: string } = {
-    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': '১০ম'
+    '6': '৬ষ্ঠ', '7': '৭ম', '8': '৮ম', '9': '৯ম', '10': 'দশম'
 };
 
 // Scrolling Notice Ticker Component
@@ -1291,7 +1292,7 @@ export default function Home() {
                   toast({
                       variant: 'destructive',
                       title: 'হাজিরা সেভ করা যায়নি',
-                      description: 'কোনো শ্রেণির শিক্ষার্থী মেলানো যায়নি।'
+                      description: 'কোনো শ্রেণির শিক্ষার্থী মেলানো যায়নি। '
                   });
               }
           } catch (err) {
@@ -1354,17 +1355,17 @@ export default function Home() {
       <NoticeTicker />
       <main className="p-2 sm:p-4 md:p-8 pb-24 max-w-[1600px] mx-auto w-full overflow-x-hidden">
         
-        {/* Quick Actions Bar */}
-        <div className="mb-6 sm:mb-8 flex flex-wrap gap-2.5 sm:gap-4 items-center justify-center sm:justify-start">
-            <Link href="/add-student">
-                <Button className="h-12 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-500 shadow-lg font-black gap-2 transition-all border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 text-yellow-950">
+        {/* Quick Actions Bar - Two column grid on mobile */}
+        <div className="mb-6 sm:mb-8 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4 items-center justify-center sm:justify-start">
+            <Link href="/add-student" className="w-full sm:w-auto">
+                <Button className="h-12 w-full rounded-2xl bg-yellow-400 hover:bg-yellow-500 shadow-lg font-black gap-2 transition-all border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 text-yellow-950 px-2 sm:px-6 text-xs sm:text-sm">
                     <UserPlus className="h-5 w-5" /> কুইক ভর্তি
                 </Button>
             </Link>
 
             <Dialog open={isQuickPaymentOpen} onOpenChange={setIsQuickPaymentOpen}>
                 <DialogTrigger asChild>
-                    <Button className="h-12 px-6 rounded-2xl bg-red-600 hover:bg-red-700 shadow-lg font-black gap-2 transition-all border-b-4 border-red-900 active:border-b-0 active:translate-y-1">
+                    <Button className="h-12 w-full rounded-2xl bg-red-600 hover:bg-red-700 shadow-lg font-black gap-2 transition-all border-b-4 border-red-900 active:border-b-0 active:translate-y-1 px-2 sm:px-6 text-xs sm:text-sm">
                         <Banknote className="h-5 w-5" /> কুইক পেমেন্ট
                     </Button>
                 </DialogTrigger>
@@ -1403,7 +1404,7 @@ export default function Home() {
 
             <Dialog open={isQuickAttendanceOpen} onOpenChange={(o) => { setIsQuickAttendanceOpen(o); if(!o) setIsConfirmingQuickAttendance(false); }}>
                 <DialogTrigger asChild>
-                    <Button className={cn("h-12 px-6 rounded-2xl bg-pink-500 hover:bg-pink-600 shadow-lg font-black gap-2 transition-all border-b-4 border-pink-800 active:border-b-0 active:translate-y-1", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
+                    <Button className={cn("h-12 w-full rounded-2xl bg-pink-500 hover:bg-pink-600 shadow-lg font-black gap-2 transition-all border-b-4 border-pink-800 active:border-b-0 active:translate-y-1 px-2 sm:px-6 text-xs sm:text-sm", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
                         <UserCheck className="h-5 w-5" /> কুইক হাজিরা
                     </Button>
                 </DialogTrigger>
@@ -1450,8 +1451,8 @@ export default function Home() {
                 </DialogContent>
             </Dialog>
 
-            <Link href="/results">
-                <Button className="h-12 px-6 rounded-2xl bg-violet-600 hover:bg-violet-700 shadow-lg font-black gap-2 transition-all border-b-4 border-violet-900 active:border-b-0 active:translate-y-1 text-white">
+            <Link href="/results" className="w-full sm:w-auto">
+                <Button className="h-12 w-full rounded-2xl bg-violet-600 hover:bg-violet-700 shadow-lg font-black gap-2 transition-all border-b-4 border-violet-900 active:border-b-0 active:translate-y-1 text-white px-2 sm:px-6 text-xs sm:text-sm">
                     <Trophy className="h-5 w-5" /> কুইক ফলাফল
                 </Button>
             </Link>
@@ -1461,7 +1462,7 @@ export default function Home() {
             {/* AI Assistant Portal */}
             <Dialog open={isAiPortalOpen} onOpenChange={setIsAiPortalOpen}>
                 <DialogTrigger asChild>
-                    <Button className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 border-b-[6px] border-indigo-800 shadow-lg font-black gap-2 transition-all active:translate-y-1 text-white">
+                    <Button className="h-12 w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 border-b-[6px] border-indigo-800 shadow-lg font-black gap-2 transition-all active:translate-y-1 text-white px-2 sm:px-6 text-xs sm:text-sm">
                         <Sparkles className="h-5 w-5" /> এআই অ্যাসিস্ট্যান্ট
                     </Button>
                 </DialogTrigger>
