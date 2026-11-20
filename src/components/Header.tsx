@@ -80,11 +80,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Student, studentFromDoc, getStudentPlaceholderImage, sanitizePhotoUrl } from '@/lib/student-data';
-import { StudentFeeDialog } from './StudentFeeDialog';
+import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 import { getExams, Exam } from '@/lib/exam-data';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+
+const StudentFeeDialog = dynamic(() => import('./StudentFeeDialog').then(m => m.StudentFeeDialog), { ssr: false });
 
 const toBengaliNumber = (str: string | number | undefined | null) => {
     if (!str && str !== 0) return '';
