@@ -1355,17 +1355,17 @@ export default function Home() {
       <main className="p-2 sm:p-4 md:p-8 pb-24 max-w-[1600px] mx-auto w-full overflow-x-hidden">
         
         {/* Quick Actions Bar */}
-        <div className="mb-6 sm:mb-8 flex flex-wrap gap-2.5 sm:gap-4 items-center justify-center sm:justify-start">
-            <Link href="/add-student">
-                <Button className="h-12 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-500 shadow-lg font-black gap-2 transition-all border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 text-yellow-950">
-                    <UserPlus className="h-5 w-5" /> কুইক ভর্তি
+        <div className="mb-6 sm:mb-8 grid grid-cols-3 md:flex md:flex-wrap gap-2 sm:gap-3 md:gap-4 items-center justify-center md:justify-start">
+            <Link href="/add-student" className="w-full md:w-auto">
+                <Button className="w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-yellow-400 hover:bg-yellow-500 shadow-lg font-black gap-1 md:gap-2 transition-all border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 text-yellow-950 text-[11px] sm:text-xs md:text-base">
+                    <UserPlus className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">কুইক ভর্তি</span>
                 </Button>
             </Link>
 
             <Dialog open={isQuickPaymentOpen} onOpenChange={setIsQuickPaymentOpen}>
                 <DialogTrigger asChild>
-                    <Button className="h-12 px-6 rounded-2xl bg-red-600 hover:bg-red-700 shadow-lg font-black gap-2 transition-all border-b-4 border-red-900 active:border-b-0 active:translate-y-1">
-                        <Banknote className="h-5 w-5" /> কুইক পেমেন্ট
+                    <Button className="w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-red-600 hover:bg-red-700 shadow-lg font-black gap-1 md:gap-2 transition-all border-b-4 border-red-900 active:border-b-0 active:translate-y-1 text-white text-[11px] sm:text-xs md:text-base">
+                        <Banknote className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">কুইক পেমেন্ট</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="font-kalpurush sm:max-w-md">
@@ -1403,8 +1403,8 @@ export default function Home() {
 
             <Dialog open={isQuickAttendanceOpen} onOpenChange={(o) => { setIsQuickAttendanceOpen(o); if(!o) setIsConfirmingQuickAttendance(false); }}>
                 <DialogTrigger asChild>
-                    <Button className={cn("h-12 px-6 rounded-2xl bg-pink-500 hover:bg-pink-600 shadow-lg font-black gap-2 transition-all border-b-4 border-pink-800 active:border-b-0 active:translate-y-1", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
-                        <UserCheck className="h-5 w-5" /> কুইক হাজিরা
+                    <Button className={cn("w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-pink-500 hover:bg-pink-600 shadow-lg font-black gap-1 md:gap-2 transition-all border-b-4 border-pink-800 active:border-b-0 active:translate-y-1 text-white text-[11px] sm:text-xs md:text-base", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
+                        <UserCheck className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">কুইক হাজিরা</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent className={cn("font-kalpurush sm:max-w-md transition-all duration-300", isConfirmingQuickAttendance && "border-rose-500 ring-4 ring-rose-100")}>
@@ -1450,19 +1450,25 @@ export default function Home() {
                 </DialogContent>
             </Dialog>
 
-            <Link href="/results">
-                <Button className="h-12 px-6 rounded-2xl bg-violet-600 hover:bg-violet-700 shadow-lg font-black gap-2 transition-all border-b-4 border-violet-900 active:border-b-0 active:translate-y-1 text-white">
-                    <Trophy className="h-5 w-5" /> কুইক ফলাফল
+            <Link href="/results" className="w-full md:w-auto">
+                <Button className="w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-violet-600 hover:bg-violet-700 shadow-lg font-black gap-1 md:gap-2 transition-all border-b-4 border-violet-900 active:border-b-0 active:translate-y-1 text-white text-[11px] sm:text-xs md:text-base">
+                    <Trophy className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">কুইক ফলাফল</span>
                 </Button>
             </Link>
 
-            <QuickMarksDialog />
+            <QuickMarksDialog 
+                triggerButton={
+                    <Button className="w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-amber-500 hover:bg-amber-600 shadow-lg font-black gap-1 md:gap-2 transition-all border-b-4 border-amber-800 active:border-b-0 active:translate-y-1 text-white text-[11px] sm:text-xs md:text-base">
+                        <FilePen className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">কুইক নম্বর ইনপুট</span>
+                    </Button>
+                }
+            />
 
             {/* AI Assistant Portal */}
             <Dialog open={isAiPortalOpen} onOpenChange={setIsAiPortalOpen}>
                 <DialogTrigger asChild>
-                    <Button className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 border-b-[6px] border-indigo-800 shadow-lg font-black gap-2 transition-all active:translate-y-1 text-white">
-                        <Sparkles className="h-5 w-5" /> এআই অ্যাসিস্ট্যান্ট
+                    <Button className="w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 border-b-[6px] border-indigo-800 shadow-lg font-black gap-1 md:gap-2 transition-all active:translate-y-1 text-white text-[11px] sm:text-xs md:text-base">
+                        <Sparkles className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">এআই অ্যাসিস্ট্যান্ট</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="font-kalpurush sm:max-w-2xl max-h-[95vh] overflow-y-auto p-0 border-none shadow-2xl rounded-2xl">
