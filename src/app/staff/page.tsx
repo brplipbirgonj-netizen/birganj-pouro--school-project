@@ -174,74 +174,89 @@ const StaffProfileTab = ({ staffList, academicYear }: { staffList: Staff[], acad
     }, [fetchData, selectedStaffId]);
 
     const teacherRoutineInfo = useMemo(() => {
-        if (!selectedStaff || selectedStaff.staffType !== 'teacher' || !Array.isArray(routineRecords) || routineRecords.length === 0) return null;
-        
-        const teacherName = (selectedStaff.nameBn || '').trim();
-        if (!teacherName) return null;
-
-        const dailySchedule: Record<string, any[]> = {
-            "রবিবার": Array(6).fill(null),
-            "সোমবার": Array(6).fill(null),
-            "মঙ্গলবার": Array(6).fill(null),
-            "বুধবার": Array(6).fill(null),
-            "বৃহস্পতিবার": Array(6).fill(null)
-        };
-        const subjectSet = new Set<string>();
-        let totalClasses = 0;
-
-        routineRecords.forEach(routine => {
-            if (!routine || !routine.day || !Array.isArray(routine.periods)) return;
-            const day = routine.day;
-            if (!dailySchedule[day]) dailySchedule[day] = Array(6).fill(null);
+        try {
+            if (!selectedStaff || selectedStaff.staffType !== 'teacher' || !Array.isArray(routineRecords) || routineRecords.length === 0) {
+                return null;
+            }
             
-            routine.periods.forEach((cell, idx) => {
-                if (!cell || typeof cell !== 'string' || idx >= 6) return;
-                const { subject, teacher: routineTeacher } = parseSubjectTeacher(cell);
-                
-                if (routineTeacher) {
-                    const teachersInCell = routineTeacher.split('/').map(t => t.trim()).filter(Boolean);
-                    
-                    const isMatch = teachersInCell.some(t => 
-                        teacherName.includes(t) || t.includes(teacherName)
-                    );
+            const teacherName = (selectedStaff.nameBn || '').trim();
+            if (!teacherName) return null;
 
-                    if (isMatch) {
-                        dailySchedule[day][idx] = { className: routine.className || '', subject };
-                        if (subject) subjectSet.add(subject);
-                        totalClasses++;
+            const dailySchedule: Record<string, any[]> = {
+                "রবিবার": Array(6).fill(null),
+                "সোমবার": Array(6).fill(null),
+                "মঙ্গলবার": Array(6).fill(null),
+                "বুধবার": Array(6).fill(null),
+                "বৃহস্পতিবার": Array(6).fill(null)
+            };
+            const subjectSet = new Set<string>();
+            let totalClasses = 0;
+
+            for (const routine of routineRecords) {
+                if (!routine || !routine.day || !Array.isArray(routine.periods)) continue;
+                const day = routine.day;
+                if (!dailySchedule[day]) dailySchedule[day] = Array(6).fill(null);
+                
+                for (let idx = 0; idx < routine.periods.length; idx++) {
+                    if (idx >= 6) break;
+                    const cell = routine.periods[idx];
+                    if (!cell || typeof cell !== 'string') continue;
+                    
+                    const { subject, teacher: routineTeacher } = parseSubjectTeacher(cell);
+                    
+                    if (routineTeacher) {
+                        const teachersInCell = routineTeacher.split('/').map(t => t.trim()).filter(Boolean);
+                        
+                        const isMatch = teachersInCell.some(t => 
+                            teacherName.includes(t) || t.includes(teacherName)
+                        );
+
+                        if (isMatch) {
+                            dailySchedule[day][idx] = { className: routine.className || '', subject };
+                            if (subject) subjectSet.add(subject);
+                            totalClasses++;
+                        }
                     }
                 }
-            });
-        });
+            }
 
-        return { dailySchedule, subjects: Array.from(subjectSet), totalClasses };
+            return { dailySchedule, subjects: Array.from(subjectSet), totalClasses };
+        } catch (err) {
+            console.error("Error calculating teacher routine info:", err);
+            return null;
+        }
     }, [selectedStaff, routineRecords]);
 
     const attStats = useMemo(() => {
-        if (!selectedStaffId || !attendanceData || !startDate || !endDate) return { present: 0, leave: 0, absent: 0, total: 0 };
+        if (!selectedStaffId || !Array.isArray(attendanceData) || !startDate || !endDate) return { present: 0, leave: 0, absent: 0, total: 0 };
         
-        const daysInRange = eachDayOfInterval({ start: startDate, end: endDate });
-        let present = 0, leave = 0, absent = 0, totalWorkDays = 0;
+        try {
+            const daysInRange = eachDayOfInterval({ start: startDate, end: endDate });
+            let present = 0, leave = 0, absent = 0, totalWorkDays = 0;
 
-        daysInRange.forEach(day => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const isWeekend = day.getDay() === 5 || day.getDay() === 6;
-            const isHolidayDay = holidays.includes(dateStr);
-            
-            if (!isWeekend && !isHolidayDay && !isBefore(day, new Date(2020, 0, 1)) && !isAfter(day, new Date())) {
-                totalWorkDays++;
-                const record = attendanceData.find(r => r.date === dateStr);
-                const att = record?.attendance.find(a => a.staffId === selectedStaffId);
-                if (att) {
-                    if (att.status === 'present') present++;
-                    else if (att.status === 'leave') leave++;
-                } else {
-                    absent++;
+            for (const day of daysInRange) {
+                const dateStr = format(day, 'yyyy-MM-dd');
+                const isWeekend = day.getDay() === 5 || day.getDay() === 6;
+                const isHolidayDay = Array.isArray(holidays) && holidays.includes(dateStr);
+                
+                if (!isWeekend && !isHolidayDay && !isBefore(day, new Date(2020, 0, 1)) && !isAfter(day, new Date())) {
+                    totalWorkDays++;
+                    const record = attendanceData.find(r => r && r.date === dateStr);
+                    const att = Array.isArray(record?.attendance) ? record.attendance.find(a => a && a.staffId === selectedStaffId) : undefined;
+                    if (att) {
+                        if (att.status === 'present') present++;
+                        else if (att.status === 'leave') leave++;
+                    } else {
+                        absent++;
+                    }
                 }
             }
-        });
 
-        return { present, leave, absent, total: totalWorkDays };
+            return { present, leave, absent, total: totalWorkDays };
+        } catch (e) {
+            console.error("Error in attStats:", e);
+            return { present: 0, leave: 0, absent: 0, total: 0 };
+        }
     }, [selectedStaffId, attendanceData, holidays, startDate, endDate]);
 
     return (
