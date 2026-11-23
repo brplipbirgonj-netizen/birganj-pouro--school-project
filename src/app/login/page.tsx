@@ -20,7 +20,8 @@ import {
     CheckCircle2, XCircle, ArrowLeft, GraduationCap, Users, 
     UserPlus, Bell, ChevronRight,
     TrendingUp, ShieldCheck, MapPin, Phone,
-    CalendarCheck, Trophy, ImageIcon, Megaphone, Sparkles, LogIn, Printer, Clock, UserRound, Eye, EyeOff
+    CalendarCheck, Trophy, ImageIcon, Megaphone, Sparkles, LogIn, Printer, Clock, UserRound, Eye, EyeOff,
+    AlertCircle, AlertTriangle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useAcademicYear } from '@/context/AcademicYearContext';
@@ -318,6 +319,12 @@ export default function LoginPage() {
     const [searchExams, setSearchExams] = useState<Exam[]>([]);
     const [searchResult, setSearchResult] = useState<StudentProcessedResult | null>(null);
     const [resultSettings, setResultSettings] = useState<ResultPublicationSettings>(defaultResultPublicationSettings);
+    const [searchError, setSearchError] = useState<string | null>(null);
+
+    const examAccess = useMemo(() => {
+        if (!searchExam) return null;
+        return checkResultAccess(resultSettings, searchYear, searchExam);
+    }, [resultSettings, searchYear, searchExam]);
 
     // Dynamic Stats States
     const [stats, setStats] = useState({ 
@@ -457,8 +464,10 @@ export default function LoginPage() {
 
     const handleResultSearch = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSearchError(null);
         const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "0123456789"["০১২৩৪৫৬৭৮৯".indexOf(d)].toString());
         if (!db || !searchYear || !searchClass || !searchExam || !searchRoll || !searchStudentId) {
+            setSearchError('অনুগ্রহ করে সবগুলো ঘর পূরণ করুন।');
             toast({ variant: 'destructive', title: 'তথ্য অসম্পূর্ণ', description: 'সবগুলো ঘর পূরণ করুন। ' });
             return;
         }
@@ -466,6 +475,7 @@ export default function LoginPage() {
         // ফলাফল প্রকাশ নিয়ন্ত্রণ যাচাই
         const access = checkResultAccess(resultSettings, searchYear, searchExam);
         if (!access.allowed) {
+            setSearchError(access.reason);
             toast({ 
                 variant: 'destructive', 
                 title: 'ফলাফল দেখা যাচ্ছে না', 
@@ -489,6 +499,7 @@ export default function LoginPage() {
             const studentSnap = await getDocs(studentQuery);
             
             if (studentSnap.empty) {
+                setSearchError('প্রদত্ত রোল নম্বর অনুযায়ী এই শ্রেণিতে কোনো শিক্ষার্থী পাওয়া যায়নি।');
                 toast({ variant: 'destructive', title: 'শিক্ষার্থী পাওয়া যায়নি' });
                 setIsSearching(false); return;
             }
@@ -497,6 +508,7 @@ export default function LoginPage() {
             const dbStudentId = bnToEn(foundStudent.generatedId || '').trim().toUpperCase().replace(/\s/g, '');
             
             if (dbStudentId !== cleanStudentId && foundStudent.generatedId !== cleanStudentId) {
+                 setSearchError('শিক্ষার্থী আইডি মেলেনি। অনুগ্রহ করে সঠিক আইডি নম্বরটি পুনরায় লিখুন।');
                  toast({ variant: 'destructive', title: 'আইডি মেলেনি', description: 'অনুগ্রহ করে সঠিক আইডি নম্বরটি পুনরায় লিখুন।' });
                  setIsSearching(false); return;
             }
@@ -504,6 +516,7 @@ export default function LoginPage() {
             const allResults = await getAllResults(db, searchYear, searchExam);
             const classRes = allResults.filter(r => r.className === searchClass);
             if (classRes.length === 0) {
+                setSearchError(`"${searchExam}" পরীক্ষার ফলাফল এই শ্রেণির জন্য এখনও প্রকাশিত বা প্রক্রিয়াজাত হয়নি।`);
                 toast({ variant: 'destructive', title: 'ফলাফল প্রকাশিত হয়নি' });
                 setIsSearching(false); return;
             }
@@ -512,10 +525,15 @@ export default function LoginPage() {
             const subs = getSubjects(searchClass, foundStudent.group).filter(s => s.isExamSubject !== false);
             const processedResultsList = processStudentResults(classStudents, classRes, subs);
             const studentProcessed = processedResultsList.find(r => r.student.id === foundStudent.id);
-            if (studentProcessed) setSearchResult(studentProcessed);
-            else toast({ variant: 'destructive', title: 'ফলাফল পাওয়া যায়নি' });
+            if (studentProcessed) {
+                setSearchResult(studentProcessed);
+            } else {
+                setSearchError('এই শিক্ষার্থীর ফলাফল তালিকায় পাওয়া যায়নি।');
+                toast({ variant: 'destructive', title: 'ফলাফল পাওয়া যায়নি' });
+            }
         } catch (error: any) {
             console.error("Result Search Error:", error);
+            setSearchError('সার্ভারে ফলাফল খুঁজতে একটি ত্রুটি ঘটেছে।');
             toast({ variant: 'destructive', title: 'সার্ভার ত্রুটি' });
         } finally { setIsSearching(false); }
     };
@@ -674,15 +692,15 @@ export default function LoginPage() {
                 </div>
             </footer>
 
-            <Dialog open={isSearchOpen} onOpenChange={(o) => { setIsSearchOpen(o); if(!o) { setSearchResult(null); setSearchRoll(''); setSearchStudentId(''); }}}>
-                <DialogContent className="sm:max-w-xl p-0 font-kalpurush overflow-hidden border-none shadow-2xl rounded-2xl z-[150]">
+            <Dialog open={isSearchOpen} onOpenChange={(o) => { setIsSearchOpen(o); if(!o) { setSearchResult(null); setSearchRoll(''); setSearchStudentId(''); setSearchError(null); }}}>
+                <DialogContent className="sm:max-w-xl p-0 font-kalpurush overflow-hidden border-none shadow-2xl rounded-2xl z-[150] max-h-[92vh] flex flex-col">
                     {!searchResult ? (
                         <>
-                            <DialogHeader className="p-8 bg-primary text-white border-b-0 shrink-0">
-                                <DialogTitle className="text-3xl font-black flex items-center gap-2"><BookOpen className="h-8 w-8" /> ফলাফল অনুসন্ধান</DialogTitle>
-                                <DialogDescription className="text-white/80 font-bold text-lg mt-1">সঠিক তথ্য দিয়ে ড্রাফট রেজাল্ট সামারি দেখুন</DialogDescription>
+                            <DialogHeader className="p-5 sm:p-8 bg-primary text-white border-b-0 shrink-0">
+                                <DialogTitle className="text-2xl sm:text-3xl font-black flex items-center gap-2"><BookOpen className="h-7 w-7 sm:h-8 sm:w-8" /> ফলাফল অনুসন্ধান</DialogTitle>
+                                <DialogDescription className="text-white/80 font-bold text-base sm:text-lg mt-1">সঠিক তথ্য দিয়ে ড্রাফট রেজাল্ট সামারি দেখুন</DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleResultSearch} className="p-8 space-y-6 bg-white">
+                            <form onSubmit={handleResultSearch} className="p-5 sm:p-8 space-y-4 sm:space-y-6 bg-white overflow-y-auto flex-1">
                                 {!resultSettings.globalPublicAccess && (
                                     <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-xl flex items-center gap-3 text-rose-800">
                                         <Info className="h-5 w-5 text-rose-600 shrink-0" />
@@ -692,14 +710,14 @@ export default function LoginPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="font-black text-xs uppercase">শিক্ষাবর্ষ</Label>
-                                        <Select value={searchYear} onValueChange={setSearchYear}>
+                                        <Select value={searchYear} onValueChange={(y) => { setSearchYear(y); setSearchError(null); }}>
                                             <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue /></SelectTrigger>
                                             <SelectContent>{availableYears.map(y => <SelectItem key={y} value={y} className="font-bold">{toBengaliNumber(y)}</SelectItem>)}</SelectContent>
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-black text-xs uppercase">শ্রেণি</Label>
-                                        <Select value={searchClass} onValueChange={setSearchClass}>
+                                        <Select value={searchClass} onValueChange={(c) => { setSearchClass(c); setSearchError(null); }}>
                                             <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue placeholder="সিলেক্ট" /></SelectTrigger>
                                             <SelectContent>{Object.entries(classNamesMap).map(([id, label]) => <SelectItem key={id} value={id} className="font-bold">{label} শ্রেণি</SelectItem>)}</SelectContent>
                                         </Select>
@@ -707,7 +725,7 @@ export default function LoginPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-black text-xs uppercase">পরীক্ষার নাম</Label>
-                                    <Select value={searchExam} onValueChange={setSearchExam}>
+                                    <Select value={searchExam} onValueChange={(e) => { setSearchExam(e); setSearchError(null); }}>
                                         <SelectTrigger className="h-12 bg-slate-50 border-2 font-black text-lg"><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                                         <SelectContent>
                                             {searchExams.length > 0 ? searchExams.map(e => {
@@ -721,14 +739,34 @@ export default function LoginPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                {examAccess && !examAccess.allowed && (
+                                    <div className="p-3.5 bg-rose-50 border-2 border-rose-300 rounded-xl flex items-start gap-2.5 text-rose-900 shadow-sm animate-in fade-in duration-200">
+                                        <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                                        <div className="space-y-0.5">
+                                            <p className="font-black text-sm text-rose-950">ফলাফল অপ্রকাশিত</p>
+                                            <p className="text-xs font-bold text-rose-800 leading-relaxed">
+                                                {examAccess.reason}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {searchError && (!examAccess || examAccess.allowed) && (
+                                    <div className="p-3.5 bg-rose-50 border-2 border-rose-300 rounded-xl flex items-start gap-2.5 text-rose-900 shadow-sm animate-in fade-in duration-200">
+                                        <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                                        <p className="text-xs font-bold text-rose-800 leading-tight">{searchError}</p>
+                                    </div>
+                                )}
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="font-black text-xs uppercase">রোল নম্বর</Label>
-                                        <Input value={searchRoll} onChange={e => setSearchRoll(e.target.value)} placeholder="উদা: ১" className="font-black text-xl h-12 border-2" required />
+                                        <Input value={searchRoll} onChange={e => { setSearchRoll(e.target.value); setSearchError(null); }} placeholder="উদা: ১" className="font-black text-xl h-12 border-2" required />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="font-black text-xs uppercase">শিক্ষার্থী আইডি (ID)</Label>
-                                        <Input value={searchStudentId} onChange={e => setSearchStudentId(e.target.value)} placeholder="ID লিখুন" className="font-black text-xl h-12 uppercase border-2" required />
+                                        <Input value={searchStudentId} onChange={e => { setSearchStudentId(e.target.value); setSearchError(null); }} placeholder="ID লিখুন" className="font-black text-xl h-12 uppercase border-2" required />
                                     </div>
                                 </div>
                                 <div className="p-4 bg-amber-50 rounded-2xl border-2 border-dashed border-amber-200 flex items-start gap-3">
@@ -743,13 +781,13 @@ export default function LoginPage() {
                         </>
                     ) : (
                         <div className="flex flex-col bg-white animate-in zoom-in duration-300">
-                            <DialogHeader className="p-8 bg-primary text-white flex flex-row items-center gap-6 shrink-0 border-b-0">
-                                <div className="h-24 w-24 border-4 border-white/30 shadow-xl overflow-hidden shrink-0 rounded-full">
+                            <DialogHeader className="p-5 sm:p-8 bg-primary text-white flex flex-row items-center gap-4 sm:gap-6 shrink-0 border-b-0">
+                                <div className="h-16 w-16 sm:h-24 sm:w-24 border-4 border-white/30 shadow-xl overflow-hidden shrink-0 rounded-full">
                                     <img src={sanitizePhotoUrl(searchResult.student.photoUrl, searchResult.student.gender) || getStudentPlaceholderImage(searchResult.student.gender)} className="object-cover h-full w-full" alt="avatar" />
                                 </div>
                                 <div className="overflow-hidden">
-                                    <DialogTitle className="text-3xl font-black truncate">{searchResult.student.studentNameBn}</DialogTitle>
-                                    <DialogDescription className="text-white/80 font-bold text-lg mt-1">
+                                    <DialogTitle className="text-2xl sm:text-3xl font-black truncate">{searchResult.student.studentNameBn}</DialogTitle>
+                                    <DialogDescription className="text-white/80 font-bold text-base sm:text-lg mt-1">
                                         রোল: {toBengaliNumber(searchResult.student.roll)} | {classNamesMap[searchResult.student.className]} শ্রেণি | {searchExam}
                                     </DialogDescription>
                                 </div>
