@@ -486,14 +486,14 @@ function HolidaySettings() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
-                        <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
-                            <Table>
+                        <div className="border rounded-xl overflow-x-auto w-full max-w-full bg-white shadow-sm">
+                            <Table className="min-w-[500px] w-full">
                                 <TableHeader className="bg-muted/50">
                                     <TableRow>
-                                        <TableHead className="w-16">ক্রমিক</TableHead>
-                                        <TableHead>তারিখ ও বার</TableHead>
-                                        <TableHead>কারণ</TableHead>
-                                        <TableHead className="text-right">কার্যক্রম</TableHead>
+                                        <TableHead className="w-16 whitespace-nowrap">ক্রমিক</TableHead>
+                                        <TableHead className="whitespace-nowrap">তারিখ ও বার</TableHead>
+                                        <TableHead className="whitespace-nowrap">কারণ</TableHead>
+                                        <TableHead className="text-right whitespace-nowrap">কার্যক্রম</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -502,13 +502,13 @@ function HolidaySettings() {
                                     ) : (
                                         holidays.map((h, i) => (
                                             <TableRow key={h.id}>
-                                                <TableCell>{toBengaliNumber(i + 1)}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="whitespace-nowrap">{toBengaliNumber(i + 1)}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
                                                     <p className="font-bold">{format(new Date(h.date.replace(/-/g, '/')), "d MMMM yyyy", { locale: bn })}</p>
                                                     <p className="text-[10px] text-muted-foreground">{format(new Date(h.date.replace(/-/g, '/')), "EEEE", { locale: bn })}</p>
                                                 </TableCell>
-                                                <TableCell className="font-medium">{h.description}</TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="font-medium min-w-[200px]">{h.description}</TableCell>
+                                                <TableCell className="text-right whitespace-nowrap">
                                                     <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteHoliday(h.id)}><Trash2 className="h-4 w-4" /></Button>
                                                 </TableCell>
                                             </TableRow>
@@ -766,15 +766,15 @@ function UserManagementSettings() {
                 <CardDescription>সিস্টেমে প্রবেশাধিকার এবং ইউজার রোল নিয়ন্ত্রণ করুন</CardDescription>
             </CardHeader>
             <CardContent className="px-0 pt-4">
-                <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
-                    <Table>
+                <div className="border rounded-xl overflow-x-auto w-full max-w-full bg-white shadow-sm">
+                    <Table className="min-w-[650px] w-full">
                         <TableHeader className="bg-muted/50">
                             <TableRow>
-                                <TableHead>নাম ও ইমেইল</TableHead>
-                                <TableHead>রোল (Role)</TableHead>
-                                <TableHead>অবস্থা</TableHead>
-                                <TableHead>সবশেষ ব্যবহার</TableHead>
-                                <TableHead className="text-right">একশন</TableHead>
+                                <TableHead className="whitespace-nowrap">নাম ও ইমেইল</TableHead>
+                                <TableHead className="whitespace-nowrap">রোল (Role)</TableHead>
+                                <TableHead className="whitespace-nowrap">অবস্থা</TableHead>
+                                <TableHead className="whitespace-nowrap">সবশেষ ব্যবহার</TableHead>
+                                <TableHead className="text-right whitespace-nowrap">একশন</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -786,7 +786,7 @@ function UserManagementSettings() {
 
                                 return (
                                     <TableRow key={u.uid} className={isMe ? "bg-primary/5" : ""}>
-                                        <TableCell>
+                                        <TableCell className="whitespace-nowrap">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9 border shadow-sm">
                                                     <AvatarImage src={finalPhoto} />
@@ -798,16 +798,16 @@ function UserManagementSettings() {
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="whitespace-nowrap">
                                             <Select value={u.role} onValueChange={(v) => handleUpdateRole(u.uid, v as UserRole)} disabled={isMe}>
                                                 <SelectTrigger className="h-8 w-28 text-xs font-bold"><SelectValue /></SelectTrigger>
                                                 <SelectContent><SelectItem value="admin">এডমিন</SelectItem><SelectItem value="teacher">শিক্ষক</SelectItem></SelectContent>
                                             </Select>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="whitespace-nowrap">
                                             {u.isOnline ? <Badge className="bg-green-500 h-5 text-[10px]">অনলাইন</Badge> : <span className="text-[10px] text-muted-foreground">অফলাইন</span>}
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="whitespace-nowrap">
                                             {u.lastLoginAt ? (
                                                 <div>
                                                     <p className="text-[10px] font-bold">{format(u.lastLoginAt, 'd MMM yyyy', { locale: bn })}</p>
@@ -815,7 +815,7 @@ function UserManagementSettings() {
                                                 </div>
                                             ) : <span className="text-[10px] text-muted-foreground">কখনো নয়</span>}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right whitespace-nowrap">
                                             <div className="flex justify-end gap-2">
                                                 <Button variant="outline" size="sm" className="h-8 px-4 font-bold" onClick={() => { setSelectedUser(u); setIsPermissionDialogOpen(true); }} disabled={u.role === 'admin'}>পারমিশন</Button>
                                                 {!isMe && (
@@ -1541,7 +1541,7 @@ export default function SettingsPage() {
                     </aside>
 
                     <div className="flex-1 min-w-0 bg-white md:rounded-[32px] shadow-2xl md:border-[1px] border-slate-200/50 overflow-hidden min-h-[700px] flex flex-col transition-all duration-500 animate-in fade-in slide-in-from-right-4">
-                        <div className="p-6 sm:p-10 lg:p-14 flex-1">
+                        <div className="p-3 sm:p-6 md:p-10 lg:p-14 flex-1 w-full max-w-full overflow-x-hidden">
                             {activeSection === 'profile' && <ProfileSettings />}
                             {activeSection === 'school' && isAdmin && <SchoolInfoSettings />}
                             {activeSection === 'result-publish' && isAdmin && <ResultPublicationSettingsSection />}
