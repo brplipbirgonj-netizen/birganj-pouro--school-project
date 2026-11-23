@@ -31,10 +31,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip: non-GET, Chrome extension, Firebase, Genkit, internal API
+  // Skip: non-GET, Chrome extension, Firebase, Genkit, internal API, localhost dev
   if (
     request.method !== 'GET' ||
     url.protocol === 'chrome-extension:' ||
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
     url.hostname.includes('firestore.googleapis.com') ||
     url.hostname.includes('firebase') ||
     url.hostname.includes('googleapis.com') ||

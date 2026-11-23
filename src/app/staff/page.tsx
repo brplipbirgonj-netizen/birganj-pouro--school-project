@@ -114,7 +114,7 @@ const ensureAmPm = (timeStr: string, defaultType: 'AM' | 'PM') => {
 };
 
 const parseSubjectTeacher = (cell: string): { subject: string, teacher: string | null } => {
-    if (!cell) return { subject: '', teacher: null };
+    if (!cell || typeof cell !== 'string') return { subject: '', teacher: null };
     const trimmedCell = cell.trim();
     if (!trimmedCell.includes(' - ')) {
         return { subject: trimmedCell, teacher: null };
@@ -174,18 +174,28 @@ const StaffProfileTab = ({ staffList, academicYear }: { staffList: Staff[], acad
     }, [fetchData, selectedStaffId]);
 
     const teacherRoutineInfo = useMemo(() => {
-        if (!selectedStaff || selectedStaff.staffType !== 'teacher' || routineRecords.length === 0) return null;
+        if (!selectedStaff || selectedStaff.staffType !== 'teacher' || !Array.isArray(routineRecords) || routineRecords.length === 0) return null;
         
-        const teacherName = selectedStaff.nameBn.trim();
-        const dailySchedule: Record<string, any[]> = {};
+        const teacherName = (selectedStaff.nameBn || '').trim();
+        if (!teacherName) return null;
+
+        const dailySchedule: Record<string, any[]> = {
+            "রবিবার": Array(6).fill(null),
+            "সোমবার": Array(6).fill(null),
+            "মঙ্গলবার": Array(6).fill(null),
+            "বুধবার": Array(6).fill(null),
+            "বৃহস্পতিবার": Array(6).fill(null)
+        };
         const subjectSet = new Set<string>();
         let totalClasses = 0;
 
         routineRecords.forEach(routine => {
+            if (!routine || !routine.day || !Array.isArray(routine.periods)) return;
             const day = routine.day;
             if (!dailySchedule[day]) dailySchedule[day] = Array(6).fill(null);
             
             routine.periods.forEach((cell, idx) => {
+                if (!cell || typeof cell !== 'string' || idx >= 6) return;
                 const { subject, teacher: routineTeacher } = parseSubjectTeacher(cell);
                 
                 if (routineTeacher) {
@@ -196,8 +206,8 @@ const StaffProfileTab = ({ staffList, academicYear }: { staffList: Staff[], acad
                     );
 
                     if (isMatch) {
-                        dailySchedule[day][idx] = { className: routine.className, subject };
-                        subjectSet.add(subject);
+                        dailySchedule[day][idx] = { className: routine.className || '', subject };
+                        if (subject) subjectSet.add(subject);
                         totalClasses++;
                     }
                 }
