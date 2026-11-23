@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
 
   // ── Performance: compress responses ──────────────────────────────────────
   compress: true,
+  poweredByHeader: false,
 
   // ── Performance: optimise package imports (tree-shake large libs) ────────
   experimental: {
@@ -20,6 +21,11 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-select',
       '@radix-ui/react-checkbox',
       '@radix-ui/react-tooltip',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-popover',
       'recharts',
       'date-fns',
     ],

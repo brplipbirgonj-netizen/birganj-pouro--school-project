@@ -814,6 +814,9 @@ export default function Home() {
             if (todaysAttendance.length > 0) {
                 let totalPresentCount = 0;
                 let totalAbsentCount = 0;
+                const studentClassMap = new Map<string, string>();
+                list.forEach(s => studentClassMap.set(s.id, s.className));
+
                 todaysAttendance.forEach(classAttendanceRecord => {
                     const className = classAttendanceRecord.className;
                     if (classMap[className]) {
@@ -821,8 +824,7 @@ export default function Home() {
                         let absentCount = 0;
                         
                         classAttendanceRecord.attendance.forEach(studentAttendance => {
-                            const studentExistsInYear = list.some(s => s.id === studentAttendance.studentId && s.className === className);
-                            if (studentExistsInYear) {
+                            if (studentClassMap.get(studentAttendance.studentId) === className) {
                                 if (studentAttendance.status === 'present') {
                                     presentCount++;
                                 } else {
@@ -937,6 +939,9 @@ export default function Home() {
           if (todaysAttendance.length > 0) {
               let totalPresentCount = 0;
               let totalAbsentCount = 0;
+              const studentClassMap = new Map<string, string>();
+              list.forEach(s => studentClassMap.set(s.id, s.className));
+
               todaysAttendance.forEach(classAttendanceRecord => {
                   const className = classAttendanceRecord.className;
                   if (classMap[className]) {
@@ -944,8 +949,7 @@ export default function Home() {
                       let absentCount = 0;
                       
                       classAttendanceRecord.attendance.forEach(studentAttendance => {
-                          const studentExistsInYear = list.some(s => s.id === studentAttendance.studentId && s.className === className);
-                          if (studentExistsInYear) {
+                          if (studentClassMap.get(studentAttendance.studentId) === className) {
                               if (studentAttendance.status === 'present') {
                                   presentCount++;
                               } else {
@@ -1356,7 +1360,7 @@ export default function Home() {
         
         {/* Quick Actions Bar */}
         <div className="mb-6 sm:mb-8 grid grid-cols-3 md:flex md:flex-wrap gap-2 sm:gap-3 md:gap-4 items-center justify-center md:justify-start">
-            <Link href="/add-student" className="w-full md:w-auto">
+            <Link href="/add-student" prefetch={true} className="w-full md:w-auto">
                 <Button className="w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-yellow-400 hover:bg-yellow-500 shadow-lg font-black gap-1 md:gap-2 transition-all border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 text-yellow-950 text-[11px] sm:text-xs md:text-base">
                     <UserPlus className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">কুইক ভর্তি</span>
                 </Button>
@@ -1450,7 +1454,7 @@ export default function Home() {
                 </DialogContent>
             </Dialog>
 
-            <Link href="/results" className="w-full md:w-auto">
+            <Link href="/results" prefetch={true} className="w-full md:w-auto">
                 <Button className="w-full md:w-auto h-11 md:h-12 px-1.5 sm:px-3 md:px-6 rounded-xl md:rounded-2xl bg-violet-600 hover:bg-violet-700 shadow-lg font-black gap-1 md:gap-2 transition-all border-b-4 border-violet-900 active:border-b-0 active:translate-y-1 text-white text-[11px] sm:text-xs md:text-base">
                     <Trophy className="h-4 w-4 md:h-5 md:w-5 shrink-0" /> <span className="truncate">কুইক ফলাফল</span>
                 </Button>

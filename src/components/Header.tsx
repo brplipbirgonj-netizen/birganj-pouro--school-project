@@ -327,6 +327,7 @@ export function Header() {
                                 <SheetClose asChild key={item.id}>
                                     <Link
                                         href={item.href}
+                                        prefetch={true}
                                         className={cn(
                                             "flex items-center gap-2 px-2.5 py-2.5 rounded-lg border-2 transition-all shadow-sm",
                                             pathname === item.href ? "border-primary bg-primary text-white shadow-md" : cn(item.color, "hover:shadow-md")
